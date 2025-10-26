@@ -1,0 +1,507 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?  // Nullable para usuarios de OAuth
+  name      String
+  role      Role     @default(USER)
+
+  // OAuth fields
+  googleId  String?  @unique
+  provider  AuthProvider? // google, email, etc
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  poolPresets         PoolPreset[]
+  projects            Project[]
+  businessRules      BusinessRule[]
+  calculationSettings CalculationSettings?
+  professionRoles     ProfessionRole[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+enum Role {
+  SUPERADMIN  // Acceso total, gestiona otros admins
+  ADMIN       // Gestiona su organización/cuenta
+  USER        // Usuario estándar
+  VIEWER      // Solo lectura (para SaaS)
+}
+
+model ProfessionRole {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  hourlyRate  Float?
+  dailyRate   Float?
+  
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, name])
+}
+
+model PlumbingItem {
+  id           String       @id @default(uuid())
+  name         String
+  category     PlumbingCategory
+  type         PlumbingType
+  diameter     String?
+  length       Float?
+  unit         String
+  pricePerUnit Float
+  brand        String?
+  description  String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum PlumbingCategory {
+  PIPE
+  FITTING
+  VALVE
+  ACCESSORY
+}
+
+enum PlumbingType {
+  PVC
+  FUSION_FUSION
+  FUSION_ROSCA
+  POLIPROPILENO
+  COBRE
+  OTHER
+}
+
+model CalculationSettings {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Vereda
+  adhesiveKgPerM2 Float @default(5.0)
+  sidewalkBaseThicknessCm  Float @default(10.0)
+  cementKgPerM3            Float @default(200.0)
+  sandM3PerM3              Float @default(0.6)
+  gravelM3PerM3            Float @default(0.8)
+  groutJointWidthMm        Float @default(3.0)
+  whiteCementKgPerLinealM  Float @default(0.15)
+  marmolinaKgPerLinealM    Float @default(0.10)
+  wireMeshOverlapCm        Float @default(10.0)
+  wireMeshM2PerM2          Float @default(1.15)
+  waterproofingKgPerM2     Float @default(0.0)
+  waterproofingCoats       Int   @default(2)
+
+  // Cama interna de la piscina
+  bedThicknessCm           Float @default(10.0)
+  bedCementBagsPerM3       Float @default(5.0)
+  bedCementBagWeight       Float @default(50.0)
+  drainTrenchWidthCm       Float @default(15.0)
+  drainTrenchDepthCm       Float @default(15.0)
+  geomembraneM2PerM2       Float @default(1.0)
+  electroweldedMeshM2PerM2 Float @default(1.15)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PoolPreset {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  additionalImages String[] @default([])
+  backDescription  String?
+
+  length      Float
+  width       Float
+  depth       Float
+  depthEnd    Float?
+  
+  shape       PoolShape
+  constructionType ConstructionType @default(FIBERGLASS)
+  
+  lateralCushionSpace Float @default(0.15)
+  floorCushionDepth   Float @default(0.10)
+  
+  hasWetDeck        Boolean @default(false)
+  hasStairsOnly     Boolean @default(false)
+  
+  returnsCount      Int     @default(2)
+  hasHotWaterReturn Boolean @default(false)
+  hasHydroJets      Boolean @default(false)
+  hydroJetsCount    Int     @default(0)
+  
+  hasBottomDrain    Boolean @default(true)
+  hasVacuumIntake   Boolean @default(true)
+  vacuumIntakeCount Int     @default(1)
+  
+  hasSkimmer        Boolean @default(true)
+  skimmerCount      Int     @default(1)
+  
+  hasLighting       Boolean @default(false)
+  lightingCount     Int     @default(0)
+  lightingType      String?
+  
+  tileConfig        Json?
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+enum PoolShape {
+  RECTANGULAR
+  CIRCULAR
+  OVAL
+  JACUZZI
+}
+
+enum ConstructionType {
+  FIBERGLASS
+  CONCRETE
+  BLOCKS
+  PANELS
+}
+
+model TilePreset {
+  id          String   @id @default(uuid())
+  name        String
+  type        TileType
+  width       Float
+  length      Float
+  pricePerUnit Float
+  brand       String?
+  description String?
+
+  hasCorner          Boolean @default(false)
+  cornerPricePerUnit Float?
+  cornersPerTile     Int?
+  isForFirstRing     Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TileType {
+  COMMON
+  LOMO_BALLENA
+  L_FINISH
+  PERIMETER
+  OTHER
+}
+
+model AccessoryPreset {
+  id          String         @id @default(uuid())
+  name        String
+  type        AccessoryType
+  unit        String
+  pricePerUnit Float
+  description String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  projectAdditionals ProjectAdditional[]
+}
+
+enum AccessoryType {
+  CORNER
+  TRIM
+  GRILL
+  BASEBOARD
+  SKIMMER_ITEM
+  RETURN_ITEM
+  DRAIN_ITEM
+  OTHER
+}
+
+model EquipmentPreset {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  type        EquipmentType
+  category    EquipmentCategory @default(OPTIONAL)
+  brand       String?
+  model       String?
+  power       Float?         // HP para bombas, kW para calefactores
+  capacity    Float?         // Capacidad general
+  voltage     Int?           // Voltaje (220V, 380V, 12V)
+  pricePerUnit Float
+  description String?
+
+  // Campos para lógica de selección automática
+  minPoolVolume Float?       // Volumen mínimo de piscina en litros
+  maxPoolVolume Float?       // Volumen máximo de piscina en litros
+  flowRate      Float?       // Caudal en m³/h para bombas
+  maxHead       Float?       // Altura máxima en metros para bombas
+  filterArea    Float?       // Área de filtración en m² para filtros
+  filterDiameter Float?      // Diámetro del filtro en mm
+  thermalPower  Float?       // Potencia térmica en Kcal/h para calefactores
+  sandRequired  Float?       // Kg de arena necesarios para filtros
+  consumption   Float?       // Consumo eléctrico en Watts
+  connectionSize String?     // Tamaño de conexión (ej: "1 1/2\"", "2\"")
+
+  // Relaciones recomendadas
+  recommendedPumpModel String?   // Modelo de bomba recomendado para filtros
+  recommendedFilterModel String? // Modelo de filtro recomendado para bombas
+
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectAdditionals ProjectAdditional[]
+}
+
+enum EquipmentType {
+  PUMP              // Bombas de filtrado
+  FILTER            // Filtros de arena
+  HEATER            // Calefactores a gas
+  HEAT_PUMP         // Bombas de calor
+  CHLORINATOR       // Cloradores
+  LIGHTING          // Iluminación
+  TRANSFORMER       // Transformadores
+  SKIMMER           // Skimmers
+  RETURN            // Retornos
+  HYDRO_JET         // Hidrojets
+  VACUUM_INTAKE     // Tomas de barrefondo
+  OTHER             // Otros
+}
+
+enum EquipmentCategory {
+  REQUIRED          // Equipos obligatorios (bomba + filtro)
+  HEATING           // Climatización opcional
+  ACCESSORIES       // Accesorios opcionales
+  OPTIONAL          // Otros opcionales
+}
+
+model ConstructionMaterialPreset {
+  id          String         @id @default(uuid())
+  name        String
+  type        MaterialType
+  unit        String
+  bagWeight   Float?         // Peso de la bolsa en kg (25, 30, 50, etc) - null si no es bolsa
+  mixRatio    Json?
+  pricePerUnit Float
+  brand       String?
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectAdditionals ProjectAdditional[]
+}
+
+enum MaterialType {
+  CEMENT
+  WHITE_CEMENT
+  SAND
+  STONE
+  GRAVEL
+  MARMOLINA
+  WIRE_MESH
+  WIRE
+  NAILS
+  WATERPROOFING
+  GEOTEXTILE
+  OTHER
+}
+
+model Project {
+  id              String   @id @default(uuid())
+  name            String
+  clientName      String
+  clientEmail     String?
+  clientPhone     String?
+  location        String?
+
+  poolPresetId    String
+  poolPreset      PoolPreset @relation(fields: [poolPresetId], references: [id])
+
+  excavationLength Float
+  excavationWidth  Float
+  excavationDepth  Float
+
+  perimeter       Float
+  waterMirrorArea Float
+  volume          Float
+
+  tileCalculation Json
+  totalTileArea   Float
+  sidewalkArea    Float
+
+  plumbingConfig  Json     @default("{}")
+  electricalConfig Json    @default("{}")
+
+  materials       Json
+  tasks           Json
+
+  laborCost       Float    @default(0)
+  materialCost    Float    @default(0)
+  totalCost       Float    @default(0)
+
+  status          ProjectStatus @default(DRAFT)
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  projectAdditionals ProjectAdditional[]
+  projectUpdates     ProjectUpdate[]
+  projectShare       ProjectShare?
+}
+
+enum ProjectStatus {
+  DRAFT
+  BUDGETED
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model BusinessRule {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  category    String
+  trigger     String
+  conditions  Json
+  actions     Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId, category])
+}
+
+model ProjectAdditional {
+  id           String   @id @default(uuid())
+  projectId    String
+  accessoryId  String?
+  materialId   String?
+  equipmentId  String?
+
+  // Campos para items personalizados (cuando no se vincula con preset)
+  customName        String?
+  customCategory    String?
+  customUnit        String?
+  customPricePerUnit Float?
+  customLaborCost   Float?
+
+  baseQuantity Int
+  newQuantity  Int
+
+  dependencies Json
+
+  // Relación con tareas generadas automáticamente
+  generatedTaskId   String?  // ID de la tarea generada por este adicional
+  relatedTaskCategory String? // Categoría de la tarea (excavation, hydraulic, etc)
+  requiredRoleId    String?  // ID del rol/rubro requerido para esta tarea
+
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project   Project            @relation(fields: [projectId], references: [id])
+  accessory AccessoryPreset?   @relation(fields: [accessoryId], references: [id])
+  material  ConstructionMaterialPreset?    @relation(fields: [materialId], references: [id])
+  equipment EquipmentPreset?   @relation(fields: [equipmentId], references: [id])
+
+  @@index([projectId])
+}
+
+model ProjectUpdate {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    UpdateCategory @default(PROGRESS)
+
+  // Campos para imágenes (URLs o base64)
+  images      Json     @default("[]")
+
+  // Metadata adicional
+  metadata    Json?
+
+  // Control de visibilidad para compartir
+  isPublic    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+enum UpdateCategory {
+  PROGRESS
+  MILESTONE
+  ISSUE
+  NOTE
+  INSPECTION
+  DELIVERY
+  OTHER
+}
+
+model ProjectShare {
+  id          String   @id @default(uuid())
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  shareToken  String   @unique @default(uuid())
+  isActive    Boolean  @default(true)
+
+  // Autenticación para cliente
+  clientUsername String  @unique
+  clientPassword String  // Hash de la contraseña
+
+  // Configuración de qué mostrar
+  showCosts   Boolean  @default(false)
+  showDetails Boolean  @default(true)
+
+  expiresAt   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shareToken])
+  @@index([clientUsername])
+}

@@ -1,0 +1,205 @@
+{
+  "projectName": "Pool Calculator",
+  "description": "Calculadora de materiales para construcción de piscinas con gestión de proyectos, presets, accesorios, equipamiento, instalación eléctrica, tareas y exportación de documentos",
+  "lastUpdate": "2025-10-14",
+  "version": "2.0.0",
+  "changelog": [
+    {
+      "date": "2025-10-14",
+      "timestamp": "2025-10-14 22:38:12",
+      "author": "Jesus Olguin",
+      "changes": [
+        "Sistema de roles completamente integrado: TasksManager con dropdown de BD y cálculo automático (horas × tarifa), Vista General con sección Roles y Mano de Obra, nueva pestaña Estado del Proyecto, plantillas de exportación actualizadas con tabla de mano de obra, nueva plantilla Vista General Completa, corregidos errores TypeScript. Archivos: TasksManager.tsx, ProjectDetail.tsx, EnhancedExportManager.tsx, ProjectStatus.tsx (nuevo)",
+        "Corregido error en Vista General - Instalación Eléctrica: cambiado totalPower por totalWatts, totalAmperage ahora se calcula dinámicamente (totalWatts/220), removido campo recommendedBreaker que no existía. Card de instalación eléctrica ahora muestra 3 campos en lugar de 4. Archivo: frontend/src/pages/ProjectDetail.tsx líneas 646-665",
+        "Corregido NaN en items eléctricos de Vista General: cambiado item.power por item.watts en líneas 675, 682 y 685. El ElectricalEditor guarda el campo como 'watts' pero ProjectDetail intentaba leer 'power', causando valores NaN. Archivo: frontend/src/pages/ProjectDetail.tsx",
+        "Implementado sistema de Timeline de Proyecto con seguimiento de progreso e imágenes: BACKEND - Creado modelo ProjectUpdate en Prisma con categorías (PROGRESS, MILESTONE, ISSUE, NOTE, INSPECTION, DELIVERY, OTHER), campos title/description/category/images (JSON array base64)/metadata/timestamps, migración 20251014141626_add_project_updates, controlador projectUpdateController.ts con CRUD completo, rutas /api/project-updates con autenticación. FRONTEND - Creado ProjectTimeline.tsx con timeline visual, carga de imágenes base64, galería grid 4 columnas, modales para agregar y visualizar, fechas relativas, eliminar actualizaciones, iconos por categoría. Integrado en ProjectStatus.tsx. Sistema completo para documentar progreso de obra con fotos. Archivos: schema.prisma, projectUpdateController.ts, projectUpdates.ts, index.ts, ProjectTimeline.tsx, ProjectStatus.tsx",
+        "Corregido error en projectUpdates.ts: cambiado import de authenticateToken por authenticate (nombre correcto en middleware/auth.ts). El error impedía que el backend iniciara correctamente. Archivo: backend/src/routes/projectUpdates.ts línea 2 y 8",
+        "Agregada card destacada con TOTAL DEL PROYECTO al inicio de Vista General. Card grande con gradiente y borde destacado mostrando el gran total del proyecto más desglose de Materiales y Mano de Obra. Mejora la visibilidad del total general. Archivo: frontend/src/pages/ProjectDetail.tsx líneas 308-326"
+      ]
+    },
+    {
+      "date": "2025-10-11",
+      "timestamp": "2025-10-11 07:52:00",
+      "author": "Jesus Olguin",
+      "changes": [
+        "Agregado .gitignore para control de versiones",
+        "Creado status.sh para verificar estado de servicios",
+        "Creado README.md principal del proyecto con documentación completa",
+        "Sistema de contexto totalmente funcional y probado",
+        "Agregadas secciones faltantes en Vista General del proyecto",
+        "Instalación Eléctrica ahora se muestra con resumen de potencia, amperaje, cable y térmica recomendada",
+        "Tareas ahora se muestran con resumen de horas totales y costos de mano de obra",
+        "Vista General ahora incluye todos los cálculos: Materiales, Plomería, Eléctrica y Tareas",
+        "Corregido error en schema de Prisma: agregado campo electricalConfig",
+        "Corregido error en calculationSettingsController: filtrado de campos no actualizables (id, userId, createdAt, updatedAt)",
+        "Ejecutada migración de Prisma exitosamente",
+        "Backend ahora acepta y guarda configuración eléctrica correctamente",
+        "Regenerado Prisma Client después de agregar electricalConfig",
+        "Reiniciada aplicación completa con control.sh restart",
+        "Backend ahora reconoce correctamente el campo electricalConfig",
+        "Problema resuelto: tsx watch no detecta cambios en node_modules",
+        "Corregido error crítico en ElectricalEditor.tsx línea 209",
+        "Agregadas validaciones para config.items undefined/null",
+        "Aplicación restaurada y funcionando correctamente",
+        "Removidos console.log del TileEditor",
+        "Quitados emoticones del ElectricalEditor (reemplazados por etiquetas de texto)",
+        "Mejorado Footer con información de Jesús Olguín - Domotics & IoT Solutions",
+        "Agregada funcionalidad de envío por WhatsApp en exportaciones",
+        "Bot WhatsApp incluye: Presupuesto Cliente, Lista de Materiales y Presupuesto Detallado"
+      ]
+    },
+    {
+      "date": "2025-10-10",
+      "timestamp": "2025-10-10 23:22:58",
+      "author": "Jesus Olguin",
+      "changes": [
+        "Implementado sistema de contexto persistente",
+        "Creado context-manager.py para gestión de historial",
+        "Agregado CONTEXT-SYSTEM.md con documentación completa",
+        "Sistema probado y funcionando correctamente"
+      ]
+    },
+    {
+      "date": "2025-10-10",
+      "author": "Claude Code",
+      "changes": [
+        "Creado sistema de contexto persistente con historial de cambios",
+        "Aplicación verificada y funcionando correctamente",
+        "Backend: http://localhost:3000",
+        "Frontend: http://localhost:5173",
+        "PostgreSQL: localhost:5433"
+      ]
+    },
+    {
+      "date": "2025-10-08",
+      "author": "Jesus Olguin & Claude Code",
+      "changes": [
+        "Implementado editor de instalación eléctrica con cálculos automáticos",
+        "Sistema de exportación mejorado con 5 plantillas profesionales",
+        "Gestión de tareas con categorías y estimación de costos",
+        "Sistema de adicionales con dependencias automáticas",
+        "Gestión de roles/oficios con tarifas",
+        "Base de datos poblada con 64 productos reales argentinos (Oct 2025)",
+        "Actualizado seedProducts.ts con precios de marcas reconocidas"
+      ]
+    }
+  ],
+  "structure": {
+    "backend": {
+      "path": "/home/jesusolguin/Projects/pool-calculator/backend",
+      "tech": "Node.js + Express + TypeScript + Prisma",
+      "port": 3000,
+      "database": "PostgreSQL (Docker en puerto 5433)",
+      "routes": [
+        "/api/auth - Autenticación y registro",
+        "/api/projects - Gestión de proyectos",
+        "/api/pool-presets - Presets de piscinas",
+        "/api/tile-presets - Presets de losetas",
+        "/api/accessory-presets - Presets de accesorios",
+        "/api/equipment-presets - Presets de equipamiento",
+        "/api/construction-materials - Materiales de construcción",
+        "/api/profession-roles - Roles profesionales",
+        "/api/calculation-settings - Configuraciones de cálculo",
+        "/api/plumbing-items - Items de plomería",
+        "/api/additionals - Adicionales con dependencias"
+      ],
+      "keyFiles": {
+        "src/index.ts": "Entry point del servidor Express",
+        "src/config/database.ts": "Configuración de Prisma",
+        "src/config/jwt.ts": "Configuración de JWT",
+        "src/middleware/auth.ts": "Middleware de autenticación",
+        "src/utils/calculations.ts": "Cálculos de materiales y eléctricos",
+        "prisma/schema.prisma": "Schema de base de datos",
+        "prisma/seedProducts.ts": "Seed de 64 productos argentinos",
+        "prisma/seedRules.ts": "Seed de reglas de dependencias"
+      }
+    },
+    "frontend": {
+      "path": "/home/jesusolguin/Projects/pool-calculator/frontend",
+      "tech": "React + TypeScript + Vite + TailwindCSS",
+      "port": 5173,
+      "keyComponents": {
+        "src/App.tsx": "Componente raíz con rutas",
+        "src/pages/auth/Login.tsx": "Login de usuarios",
+        "src/pages/auth/Register.tsx": "Registro de usuarios",
+        "src/pages/ProjectDetail.tsx": "Vista principal del proyecto con pestañas",
+        "src/components/ElectricalEditor.tsx": "Editor de instalación eléctrica",
+        "src/components/EnhancedExportManager.tsx": "Sistema de exportación con 5 plantillas",
+        "src/components/TasksManager.tsx": "Gestor de tareas",
+        "src/components/AdditionalsManager.tsx": "Gestor de adicionales"
+      },
+      "services": {
+        "src/services/api.ts": "Cliente Axios configurado",
+        "src/services/authService.ts": "Servicio de autenticación",
+        "src/services/projectService.ts": "Servicio de proyectos",
+        "src/services/accessoryPresetService.ts": "Servicio de presets"
+      }
+    },
+    "scripts": {
+      "control.sh": "Script de control principal (start|stop|restart|logs)",
+      "start-backend.sh": "Iniciar solo backend",
+      "start-frontend.sh": "Iniciar solo frontend",
+      "migrate.sh": "Ejecutar migraciones de Prisma",
+      "restart.sh": "Reiniciar servicios"
+    }
+  },
+  "features": {
+    "auth": "Sistema de autenticación con JWT y bcrypt",
+    "projects": "Gestión completa de proyectos de piscinas",
+    "presets": "Presets reutilizables de piscinas, losetas, accesorios y equipamiento",
+    "electrical": "Editor de instalación eléctrica con cálculos automáticos (AEA 90364, IRAM 2178)",
+    "tasks": "Sistema de gestión de tareas con estimación de horas y costos",
+    "additionals": "Sistema de adicionales con detección automática de dependencias",
+    "roles": "Gestión de roles/oficios profesionales con tarifas",
+    "export": "5 plantillas de exportación: Cliente, Profesional, Materiales, Presupuesto, Reporte Completo"
+  },
+  "database": {
+    "products": "64 productos reales argentinos con precios Oct 2025",
+    "categories": [
+      "Materiales de Construcción (12 items)",
+      "Items de Plomería (16 items)",
+      "Accesorios Piscina (9 items)",
+      "Equipamiento (18 items)",
+      "Losetas y Cerámicos (9 items)"
+    ],
+    "brands": [
+      "AstralPool",
+      "Loma Negra",
+      "Tigre",
+      "Awaduct",
+      "Vulcano",
+      "Peabody",
+      "Cerro Negro",
+      "Ilva",
+      "San Lorenzo",
+      "Venecitas Córdoba"
+    ]
+  },
+  "howToUse": {
+    "start": "./control.sh start",
+    "stop": "./control.sh stop",
+    "restart": "./control.sh restart",
+    "seedProducts": "cd backend && npm run seed:products",
+    "logs": "./control.sh logs postgres"
+  },
+  "environment": {
+    "node": "v20+",
+    "npm": "v10+",
+    "docker": "Para PostgreSQL",
+    "ports": {
+      "backend": 3000,
+      "frontend": 5173,
+      "postgres": 5433
+    }
+  },
+  "documentation": {
+    "NUEVAS_FUNCIONALIDADES.md": "Documentación completa de las 5 funcionalidades principales implementadas",
+    "estructura_proyecto_20251007_203143.txt": "Estructura detallada del proyecto"
+  },
+  "notes": [
+    "Los precios de productos están actualizados a Octubre 2025",
+    "El sistema de dependencias automáticas ayuda a no olvidar materiales",
+    "Las exportaciones generan HTML, CSV y son imprimibles",
+    "Los cálculos eléctricos siguen normativas argentinas (AEA 90364, IRAM 2178)"
+  ]
+}

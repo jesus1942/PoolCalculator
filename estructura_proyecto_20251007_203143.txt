@@ -1,0 +1,246 @@
+======================================
+  PROYECTO: Pool Calculator
+  Fecha: mar 07 oct 2025 20:31:57 -03
+======================================
+
+ESTRUCTURA DE DIRECTORIOS:
+-------------------------------------
+.
+├── backend
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── prisma
+│   │   ├── migrations
+│   │   │   ├── 20251002235134_init
+│   │   │   ├── 20251003002023_add_complete_presets
+│   │   │   ├── 20251003010035_make_tileconfig_optional
+│   │   │   ├── 20251003121532_add_pool_features_complete
+│   │   │   ├── 20251004133050_add_calculation_settings
+│   │   │   ├── 20251004174606_update_sidewalk_base_thickness
+│   │   │   ├── 20251005013531_add_profession_roles
+│   │   │   ├── 20251005022433_add_plumbing_items
+│   │   │   ├── 20251006014305_add_plumbing_config
+│   │   │   ├── 20251006020943_add_bed_calculations_and_construction_type
+│   │   │   └── migration_lock.toml
+│   │   ├── schema.prisma
+│   │   └── seedRules.ts
+│   ├── src
+│   │   ├── config
+│   │   │   ├── database.ts
+│   │   │   ├── jwt.ts
+│   │   │   └── multer.ts
+│   │   ├── controllers
+│   │   │   ├── accessoryPresetController.ts
+│   │   │   ├── additionalsController.ts
+│   │   │   ├── authController.ts
+│   │   │   ├── calculationSettingsController.ts
+│   │   │   ├── constructionMaterialController.ts
+│   │   │   ├── equipmentPresetController.ts
+│   │   │   ├── plumbingItemController.ts
+│   │   │   ├── poolPresetController.ts
+│   │   │   ├── professionRoleController.ts
+│   │   │   ├── projectController.ts
+│   │   │   └── tilePresetController.ts
+│   │   ├── index.ts
+│   │   ├── middleware
+│   │   │   └── auth.ts
+│   │   ├── routes
+│   │   │   ├── accessoryPresetRoutes.ts
+│   │   │   ├── additionalsRoutes.ts
+│   │   │   ├── authRoutes.ts
+│   │   │   ├── calculationSettingsRoutes.ts
+│   │   │   ├── constructionMaterialRoutes.ts
+│   │   │   ├── equipmentPresetRoutes.ts
+│   │   │   ├── plumbingItemRoutes.ts
+│   │   │   ├── poolPresetRoutes.ts
+│   │   │   ├── professionRoleRoutes.ts
+│   │   │   ├── projectRoutes.ts
+│   │   │   └── tilePresetRoutes.ts
+│   │   ├── services
+│   │   │   ├── constructionMaterialService.ts
+│   │   │   └── equipmentPresetService.ts
+│   │   └── utils
+│   │       ├── bedCalculations.ts
+│   │       ├── calculations.ts
+│   │       └── tileCalculations.ts
+│   └── tsconfig.json
+├── control.sh
+├── estructura_proyecto_20251007_203143.txt
+├── frontend
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── postcss.config.js
+│   ├── src
+│   │   ├── App.tsx
+│   │   ├── components
+│   │   │   ├── layout
+│   │   │   ├── Layout.tsx
+│   │   │   ├── PlumbingEditor.tsx
+│   │   │   ├── PlumbingManager.tsx
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   ├── RolesManager.tsx
+│   │   │   ├── TileEditor.tsx
+│   │   │   └── ui
+│   │   ├── context
+│   │   │   └── AuthContext.tsx
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   ├── pages
+│   │   │   ├── auth
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── PoolModels.tsx
+│   │   │   ├── PoolPresets.tsx
+│   │   │   ├── ProjectDetail.tsx
+│   │   │   ├── ProjectDetail.tsx.backup
+│   │   │   ├── ProjectDetail.tsx.backup2
+│   │   │   ├── Projects.tsx
+│   │   │   ├── Register.tsx
+│   │   │   ├── Settings.tsx
+│   │   │   └── Settings.tsx.backup
+│   │   ├── services
+│   │   │   ├── accessoryPresetService.ts
+│   │   │   ├── additionalsService.ts
+│   │   │   ├── api.ts
+│   │   │   ├── authService.ts
+│   │   │   ├── calculationSettingsService.ts
+│   │   │   ├── constructionMaterialService.ts
+│   │   │   ├── equipmentPresetService.ts
+│   │   │   ├── plumbingItemService.ts
+│   │   │   ├── poolPresetService.ts
+│   │   │   ├── projectService.ts
+│   │   │   └── tilePresetService.ts
+│   │   └── types
+│   │       └── index.ts
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── logs
+│   ├── backend.log
+│   ├── backend.pid
+│   ├── frontend.log
+│   └── frontend.pid
+├── migrate.sh
+├── restart.sh
+├── setup-pool.sh
+├── start-backend.sh
+└── start-frontend.sh
+
+32 directories, 90 files
+
+
+LISTA COMPLETA DE ARCHIVOS:
+-------------------------------------
+./backend/.env
+./backend/.env.example
+./backend/package.json
+./backend/prisma/migrations/20251002235134_init/migration.sql
+./backend/prisma/migrations/20251003002023_add_complete_presets/migration.sql
+./backend/prisma/migrations/20251003010035_make_tileconfig_optional/migration.sql
+./backend/prisma/migrations/20251003121532_add_pool_features_complete/migration.sql
+./backend/prisma/migrations/20251004133050_add_calculation_settings/migration.sql
+./backend/prisma/migrations/20251004174606_update_sidewalk_base_thickness/migration.sql
+./backend/prisma/migrations/20251005013531_add_profession_roles/migration.sql
+./backend/prisma/migrations/20251005022433_add_plumbing_items/migration.sql
+./backend/prisma/migrations/20251006014305_add_plumbing_config/migration.sql
+./backend/prisma/migrations/20251006020943_add_bed_calculations_and_construction_type/migration.sql
+./backend/prisma/migrations/migration_lock.toml
+./backend/prisma/schema.prisma
+./backend/prisma/seedRules.ts
+./backend/src/config/database.ts
+./backend/src/config/jwt.ts
+./backend/src/config/multer.ts
+./backend/src/controllers/accessoryPresetController.ts
+./backend/src/controllers/additionalsController.ts
+./backend/src/controllers/authController.ts
+./backend/src/controllers/calculationSettingsController.ts
+./backend/src/controllers/constructionMaterialController.ts
+./backend/src/controllers/equipmentPresetController.ts
+./backend/src/controllers/plumbingItemController.ts
+./backend/src/controllers/poolPresetController.ts
+./backend/src/controllers/professionRoleController.ts
+./backend/src/controllers/projectController.ts
+./backend/src/controllers/tilePresetController.ts
+./backend/src/index.ts
+./backend/src/middleware/auth.ts
+./backend/src/routes/accessoryPresetRoutes.ts
+./backend/src/routes/additionalsRoutes.ts
+./backend/src/routes/authRoutes.ts
+./backend/src/routes/calculationSettingsRoutes.ts
+./backend/src/routes/constructionMaterialRoutes.ts
+./backend/src/routes/equipmentPresetRoutes.ts
+./backend/src/routes/plumbingItemRoutes.ts
+./backend/src/routes/poolPresetRoutes.ts
+./backend/src/routes/professionRoleRoutes.ts
+./backend/src/routes/projectRoutes.ts
+./backend/src/routes/tilePresetRoutes.ts
+./backend/src/services/constructionMaterialService.ts
+./backend/src/services/equipmentPresetService.ts
+./backend/src/utils/bedCalculations.ts
+./backend/src/utils/calculations.ts
+./backend/src/utils/tileCalculations.ts
+./backend/tsconfig.json
+./control.sh
+./estructura_proyecto_20251007_203143.txt
+./frontend/.env
+./frontend/index.html
+./frontend/package.json
+./frontend/postcss.config.js
+./frontend/src/App.tsx
+./frontend/src/components/layout/Footer.tsx
+./frontend/src/components/layout/Header.tsx
+./frontend/src/components/layout/Layout.tsx
+./frontend/src/components/Layout.tsx
+./frontend/src/components/PlumbingEditor.tsx
+./frontend/src/components/PlumbingManager.tsx
+./frontend/src/components/ProtectedRoute.tsx
+./frontend/src/components/RolesManager.tsx
+./frontend/src/components/TileEditor.tsx
+./frontend/src/components/ui/Button.tsx
+./frontend/src/components/ui/Card.tsx
+./frontend/src/components/ui/Input.tsx
+./frontend/src/components/ui/Modal.tsx
+./frontend/src/components/ui/Select.tsx
+./frontend/src/context/AuthContext.tsx
+./frontend/src/index.css
+./frontend/src/main.tsx
+./frontend/src/pages/auth/Login.tsx
+./frontend/src/pages/auth/Register.tsx
+./frontend/src/pages/Dashboard.tsx
+./frontend/src/pages/Login.tsx
+./frontend/src/pages/PoolModels.tsx
+./frontend/src/pages/PoolPresets.tsx
+./frontend/src/pages/ProjectDetail.tsx
+./frontend/src/pages/ProjectDetail.tsx.backup
+./frontend/src/pages/ProjectDetail.tsx.backup2
+./frontend/src/pages/Projects.tsx
+./frontend/src/pages/Register.tsx
+./frontend/src/pages/Settings.tsx
+./frontend/src/pages/Settings.tsx.backup
+./frontend/src/services/accessoryPresetService.ts
+./frontend/src/services/additionalsService.ts
+./frontend/src/services/api.ts
+./frontend/src/services/authService.ts
+./frontend/src/services/calculationSettingsService.ts
+./frontend/src/services/constructionMaterialService.ts
+./frontend/src/services/equipmentPresetService.ts
+./frontend/src/services/plumbingItemService.ts
+./frontend/src/services/poolPresetService.ts
+./frontend/src/services/projectService.ts
+./frontend/src/services/tilePresetService.ts
+./frontend/src/types/index.ts
+./frontend/tailwind.config.js
+./frontend/tsconfig.json
+./frontend/tsconfig.node.json
+./frontend/vite.config.ts
+./logs/backend.log
+./logs/backend.pid
+./logs/frontend.log
+./logs/frontend.pid
+./migrate.sh
+./restart.sh
+./setup-pool.sh
+./start-backend.sh
+./start-frontend.sh

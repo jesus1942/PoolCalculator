@@ -1,0 +1,131 @@
+[
+  {
+    "name": "ACQUAM CLASSIC 7x3",
+    "length": 7.0,
+    "width": 3.0,
+    "depth": 1.4,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 7x3. Profundidad uniforme de 1.40m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM CLASSIC 8x4",
+    "length": 8.0,
+    "width": 4.0,
+    "depth": 1.4,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 8x4. Profundidad uniforme de 1.40m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM CLASSIC 9x4",
+    "length": 9.0,
+    "width": 4.0,
+    "depth": 1.5,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 9x4. Profundidad uniforme de 1.50m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM CLASSIC 10x4",
+    "length": 10.0,
+    "width": 4.0,
+    "depth": 1.5,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 10x4. Profundidad uniforme de 1.50m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM CLASSIC 11x4",
+    "length": 11.0,
+    "width": 4.0,
+    "depth": 1.5,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 11x4. Profundidad uniforme de 1.50m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM CLASSIC 12x4",
+    "length": 12.0,
+    "width": 4.0,
+    "depth": 1.5,
+    "description": "Piscina rectangular de fibra de vidrio modelo Classic 12x4. Profundidad uniforme de 1.50m. Incluye escalera romana integrada.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM PREMIUM 8x3.5",
+    "length": 8.0,
+    "width": 3.5,
+    "depth": 1.4,
+    "depthEnd": 1.8,
+    "description": "Piscina rectangular de fibra de vidrio modelo Premium 8x3.5. Profundidad variable de 1.40m a 1.80m. Incluye escalera romana integrada y bancos internos.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM PREMIUM 9x4",
+    "length": 9.0,
+    "width": 4.0,
+    "depth": 1.4,
+    "depthEnd": 1.9,
+    "description": "Piscina rectangular de fibra de vidrio modelo Premium 9x4. Profundidad variable de 1.40m a 1.90m. Incluye escalera romana integrada y bancos internos.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM PREMIUM 10x4.5",
+    "length": 10.0,
+    "width": 4.5,
+    "depth": 1.4,
+    "depthEnd": 2.0,
+    "description": "Piscina rectangular de fibra de vidrio modelo Premium 10x4.5. Profundidad variable de 1.40m a 2.00m. Incluye escalera romana integrada y bancos internos.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR"
+  },
+  {
+    "name": "ACQUAM OVAL 6x3",
+    "length": 6.0,
+    "width": 3.0,
+    "depth": 1.4,
+    "description": "Piscina ovalada de fibra de vidrio. Profundidad uniforme de 1.40m. Incluye escalera interior.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL"
+  },
+  {
+    "name": "ACQUAM OVAL 7x3.5",
+    "length": 7.0,
+    "width": 3.5,
+    "depth": 1.4,
+    "description": "Piscina ovalada de fibra de vidrio. Profundidad uniforme de 1.40m. Incluye escalera interior.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL"
+  },
+  {
+    "name": "ACQUAM OVAL 8x4",
+    "length": 8.0,
+    "width": 4.0,
+    "depth": 1.5,
+    "description": "Piscina ovalada de fibra de vidrio. Profundidad uniforme de 1.50m. Incluye escalera interior.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL"
+  },
+  {
+    "name": "ACQUAM SPA 3x2",
+    "length": 3.0,
+    "width": 2.0,
+    "depth": 1.0,
+    "description": "Spa de fibra de vidrio. Capacidad para 4-6 personas. Incluye asientos ergonómicos y jets de hidromasaje.",
+    "vendor": "ACQUAM",
+    "shape": "JACUZZI"
+  },
+  {
+    "name": "ACQUAM SPA 2.5x2.5",
+    "length": 2.5,
+    "width": 2.5,
+    "depth": 1.0,
+    "description": "Spa circular de fibra de vidrio. Capacidad para 4-5 personas. Incluye asientos ergonómicos y jets de hidromasaje.",
+    "vendor": "ACQUAM",
+    "shape": "CIRCULAR"
+  }
+]

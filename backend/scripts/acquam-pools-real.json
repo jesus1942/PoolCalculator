@@ -1,0 +1,259 @@
+[
+  {
+    "name": "Jacuzzi",
+    "length": 1.9,
+    "width": 1.9,
+    "depth": 0.8,
+    "description": "Jacuzzi circular con 11 jets regulables, 1 bomba aireadora y 1 bomba de 3/4. Capacidad para 4-6 personas.",
+    "vendor": "ACQUAM",
+    "shape": "CIRCULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Topacio",
+    "length": 3.35,
+    "width": 2.0,
+    "depth": 0.9,
+    "description": "Modelo de la línea ACQUAM classic. Piscina con estilo, ideal para espacios reducidos. Profundidad uniforme 0.90m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Cuarzo",
+    "length": 4.1,
+    "width": 2.3,
+    "depth": 1.05,
+    "description": "Modelo de la línea ACQUAM classic. Piscina de formato rectangular, óptima para espacios reducidos. Profundidad uniforme 1.05m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Tanzanita",
+    "length": 4.55,
+    "width": 2.55,
+    "depth": 1.1,
+    "description": "Modelo de la línea ACQUAM classic. Diseño sobrio y robusto. La más resistente del mercado por su forma curva. Profundidad uniforme 1.10m.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL",
+    "line": "classic"
+  },
+  {
+    "name": "Jaspe",
+    "length": 5.45,
+    "width": 3.0,
+    "depth": 1.3,
+    "description": "Modelo de la línea ACQUAM classic. Diseño compacto y delicado, de composición resistente por su forma curva. Profundidad uniforme 1.30m.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL",
+    "line": "classic"
+  },
+  {
+    "name": "Circón",
+    "length": 5.5,
+    "width": 2.8,
+    "depth": 1.3,
+    "depthEnd": 1.4,
+    "description": "Modelo de la línea ACQUAM classic. Diseño rectangular que incorpora Playa Húmeda y escalinata. Profundidad de 1.30 a 1.40m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Ambar",
+    "length": 5.6,
+    "width": 2.8,
+    "depth": 1.25,
+    "depthEnd": 1.5,
+    "description": "Modelo de la línea ACQUAM classic. Destaca su estética con escaleras dentro del arco romano, con espacio libre para nadar. Profundidad de 1.25 a 1.50m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Amatista",
+    "length": 6.5,
+    "width": 3.1,
+    "depth": 1.45,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño que se destaca por su estilo definido cuenta con escaleras dentro del arco romano. Profundidad de 1.45 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Turquesa",
+    "length": 6.5,
+    "width": 3.1,
+    "depth": 1.3,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño elegante que incorpora escaleras en todo el ancho de la piscina. Amplitud para disfrutar. Profundidad de 1.30 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Turmalina",
+    "length": 7.3,
+    "width": 3.5,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño práctico que incorpora Playa Húmeda y escalinata para tomar sol. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Gema Azul",
+    "length": 7.3,
+    "width": 3.55,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño cómodo y funcional. Es todo lo que necesitás para disfrutar de tu piscina en casa. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Ópalo",
+    "length": 7.3,
+    "width": 3.4,
+    "depth": 1.4,
+    "depthEnd": 1.55,
+    "description": "Modelo de la línea ACQUAM classic. Con arco romano, Playa Húmeda y escaleras que invitan a un relax. Todo el confort en una sola Piscina. Profundidad de 1.40 a 1.55m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Agua Marina",
+    "length": 7.3,
+    "width": 3.5,
+    "depth": 1.45,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño clásico y distinguido con arco romano. Escaleras independientes del área de nado. Profundidad de 1.45 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Ágata",
+    "length": 7.4,
+    "width": 3.5,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Piscina de diseño ovalado en ambos extremos, una de las más robustas del mercado. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "OVAL",
+    "line": "classic"
+  },
+  {
+    "name": "Zafiro Azul",
+    "length": 8.0,
+    "width": 3.6,
+    "depth": 1.4,
+    "depthEnd": 1.5,
+    "description": "Modelo de la línea ACQUAM classic. Diseño y funcionalidad con Playa Húmeda y escalinata. Viví el verano disfrutando del sol y el agua. Profundidad de 1.40 a 1.50m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Onix",
+    "length": 8.0,
+    "width": 4.0,
+    "depth": 1.45,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Diseño con estilo propio. Escaleras que abarcan todo el ancho de la piscina con un escalón más amplio para tomar sol. Profundidad de 1.45 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Zafiro",
+    "length": 8.4,
+    "width": 4.0,
+    "depth": 1.5,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Bellísima piscina con escaleras dentro del arco romano, especial para embellecer un jardín tradicional. Profundidad de 1.50 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Espinela",
+    "length": 9.0,
+    "width": 3.75,
+    "depth": 1.4,
+    "depthEnd": 1.5,
+    "description": "Modelo de la línea ACQUAM classic. Para vivir tu verano en libertad disfrutando de sus amplias escalinatas que invitan a compartir un refrescante baño. Profundidad de 1.40 a 1.50m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Aventurina",
+    "length": 9.0,
+    "width": 4.0,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Una Piscina con todo lo que necesitás para vivir un verano feliz. Playa húmeda, escalinatas, caja de nado amplísima. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Alejandrita",
+    "length": 10.0,
+    "width": 4.0,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Confort y lujo para tu verano. Extensa Playa Húmeda y dos escalones en una esquina. El modelo ideal para invitar a divertirse. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Diamante Rojo",
+    "length": 10.0,
+    "width": 4.9,
+    "depth": 1.4,
+    "depthEnd": 1.6,
+    "description": "Modelo de la línea ACQUAM classic. Un diamante rojo no solo es atemporal y elegante, sino que es una pieza destacada para cualquier joyero. Esta piscina es la más amplia. Profundidad de 1.40 a 1.60m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "classic"
+  },
+  {
+    "name": "Kriptonita",
+    "length": 6.0,
+    "width": 2.9,
+    "depth": 1.3,
+    "description": "Modelo de la línea ACQUAM compact. Cuenta con doble Playa Húmeda. Ideal para descansar en familia disfrutando el calor y el confort. Profundidad uniforme 1.30m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "compact"
+  },
+  {
+    "name": "Coral",
+    "length": 7.0,
+    "width": 3.1,
+    "depth": 1.4,
+    "description": "Modelo de la línea ACQUAM compact. Diseño que se adapta a las necesidades del espacio. Amplitud y funcionalidad en evolución para disfrutar de un verano diferente. Profundidad uniforme 1.40m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "compact"
+  },
+  {
+    "name": "Jade",
+    "length": 8.0,
+    "width": 3.3,
+    "depth": 1.4,
+    "depthEnd": 1.45,
+    "description": "Modelo de la línea ACQUAM compact. Tamaño especial para nadar y disfrutar del sol con amigos haciendo uso de su doble Playa Húmeda. Adelantate al verano. Profundidad de 1.40 a 1.45m.",
+    "vendor": "ACQUAM",
+    "shape": "RECTANGULAR",
+    "line": "compact"
+  }
+]
