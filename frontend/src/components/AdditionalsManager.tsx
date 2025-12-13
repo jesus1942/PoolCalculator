@@ -9,7 +9,8 @@ import { additionalsService } from '@/services/additionalsService';
 import { accessoryPresetService } from '@/services/accessoryPresetService';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { constructionMaterialService } from '@/services/constructionMaterialService';
-import { Plus, Trash2, Package, AlertCircle } from 'lucide-react';
+import { productImageService } from '@/services/productImageService';
+import { Plus, Trash2, Package, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 interface ProjectAdditional {
   id: string;
@@ -244,59 +245,87 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project 
           <div className="space-y-4">
             {additionals.map(additional => {
               const costs = getItemCost(additional);
+              const getItemImage = () => {
+                if (additional.accessory?.imageUrl) return additional.accessory.imageUrl;
+                if (additional.equipment?.imageUrl) return additional.equipment.imageUrl;
+                if (additional.material?.imageUrl) return additional.material.imageUrl;
+                return null;
+              };
+              const imageUrl = getItemImage();
+
               return (
                 <div key={additional.id} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h5 className="font-medium">{getItemName(additional)}</h5>
-                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                          {getItemType(additional)}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
-                        <span>Cantidad: <strong>{additional.newQuantity} {additional.customUnit || 'unidades'}</strong></span>
-                        <span>Material: <strong>${costs.materialCost.toLocaleString('es-AR')}</strong></span>
-                        {costs.laborCost > 0 && (
-                          <span>M.O.: <strong>${costs.laborCost.toLocaleString('es-AR')}</strong></span>
-                        )}
-                        <span className="text-green-600">Total: <strong>${costs.total.toLocaleString('es-AR')}</strong></span>
-                      </div>
-
-                      {additional.notes && (
-                        <p className="text-sm text-gray-600 italic mb-2">Nota: {additional.notes}</p>
-                      )}
-
-                      {additional.dependencies && additional.dependencies.length > 0 && (
-                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                          <div className="flex items-start gap-2">
-                            <AlertCircle size={16} className="text-yellow-600 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-yellow-800 mb-1">
-                                Dependencias detectadas:
-                              </p>
-                              <ul className="text-xs text-yellow-700 space-y-1">
-                                {additional.dependencies.map((dep: any, idx: number) => (
-                                  <li key={idx}>
-                                    {dep.type === 'material' && `• ${dep.name}: ${dep.quantity} ${dep.unit} (${dep.reason})`}
-                                    {dep.type === 'accessory' && `• ${dep.name}: ${dep.quantity} unidades (${dep.reason})`}
-                                    {dep.type === 'pump_check' && `• Verificar bomba: +${dep.additionalGPM} GPM requeridos (${dep.reason})`}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                  <div className="flex gap-4">
+                    {/* Imagen del producto */}
+                    <div className="flex-shrink-0">
+                      <div className="w-20 h-20 rounded-lg border-2 border-gray-300 overflow-hidden bg-white">
+                        {imageUrl ? (
+                          <img
+                            src={productImageService.getImageUrl(imageUrl) || undefined}
+                            alt={getItemName(additional)}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-10 h-10 text-gray-300" />
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteAdditional(additional.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {/* Contenido principal */}
+                    <div className="flex-1 flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h5 className="font-medium">{getItemName(additional)}</h5>
+                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            {getItemType(additional)}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
+                          <span>Cantidad: <strong>{additional.newQuantity} {additional.customUnit || 'unidades'}</strong></span>
+                          <span>Material: <strong>${costs.materialCost.toLocaleString('es-AR')}</strong></span>
+                          {costs.laborCost > 0 && (
+                            <span>M.O.: <strong>${costs.laborCost.toLocaleString('es-AR')}</strong></span>
+                          )}
+                          <span className="text-green-600">Total: <strong>${costs.total.toLocaleString('es-AR')}</strong></span>
+                        </div>
+
+                        {additional.notes && (
+                          <p className="text-sm text-gray-600 italic mb-2">Nota: {additional.notes}</p>
+                        )}
+
+                        {additional.dependencies && additional.dependencies.length > 0 && (
+                          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle size={16} className="text-yellow-600 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-yellow-800 mb-1">
+                                  Dependencias detectadas:
+                                </p>
+                                <ul className="text-xs text-yellow-700 space-y-1">
+                                  {additional.dependencies.map((dep: any, idx: number) => (
+                                    <li key={idx}>
+                                      {dep.type === 'material' && `• ${dep.name}: ${dep.quantity} ${dep.unit} (${dep.reason})`}
+                                      {dep.type === 'accessory' && `• ${dep.name}: ${dep.quantity} unidades (${dep.reason})`}
+                                      {dep.type === 'pump_check' && `• Verificar bomba: +${dep.additionalGPM} GPM requeridos (${dep.reason})`}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteAdditional(additional.id)}
+                        className="text-red-600 hover:text-red-800 ml-4"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

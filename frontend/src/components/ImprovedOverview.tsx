@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Project } from '@/types';
+import { Project, EquipmentPreset } from '@/types';
+import { PoolVisualizationCanvas, exportCanvasToImage } from '@/components/PoolVisualizationCanvas';
+import { Button } from '@/components/ui/Button';
+import { EquipmentComparison } from '@/components/EquipmentComparison';
+import { professionalCalculationsService } from '@/services/professionalCalculationsService';
+import { productImageService } from '@/services/productImageService';
 import {
   DollarSign,
   Droplets,
@@ -15,7 +20,12 @@ import {
   ListTodo,
   Clock,
   CheckCircle,
-  Circle
+  Circle,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Grid3x3,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface ImprovedOverviewProps {
@@ -31,6 +41,48 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
   rolesCostSummary,
   additionals
 }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showEquipmentComparison, setShowEquipmentComparison] = useState(false);
+  const [selectedPump, setSelectedPump] = useState<EquipmentPreset | null>(null);
+  const [recommendedPump, setRecommendedPump] = useState<EquipmentPreset | null>(null);
+  const [hydraulicSpecs, setHydraulicSpecs] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'planta' | 'cad'>('planta');
+
+  // Cargar comparación de equipos
+  useEffect(() => {
+    if (showEquipmentComparison) {
+      loadEquipmentComparison();
+    }
+  }, [showEquipmentComparison, project.id]);
+
+  const loadEquipmentComparison = async () => {
+    try {
+      // Cargar bomba seleccionada
+      const pumpAdditional = additionals.find(
+        (item: any) => item.equipment && item.equipment.type === 'PUMP'
+      );
+      if (pumpAdditional) {
+        setSelectedPump(pumpAdditional.equipment);
+      }
+
+      // Cargar análisis hidráulico para obtener recomendación
+      const hydraulicData = await professionalCalculationsService.getHydraulicAnalysis(project.id, {
+        distanceToEquipment: 8,
+        staticLift: 1.5
+      });
+
+      if (hydraulicData.analysis) {
+        setRecommendedPump(hydraulicData.analysis.recommendedPump);
+        setHydraulicSpecs({
+          minFlowRate: hydraulicData.analysis.pumpSelectionDetails?.requiredFlowRate,
+          minHead: hydraulicData.analysis.totalDynamicHead
+        });
+      }
+    } catch (error) {
+      console.error('Error loading equipment comparison:', error);
+    }
+  };
+
   const materials = project.materials as any;
   const hasMaterials = materials && Object.keys(materials).length > 0;
   const plumbingConfig = project.plumbingConfig as any;
@@ -136,14 +188,27 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           <div>
             <h2 className="text-3xl font-bold mb-2">{project.name}</h2>
             <p className="text-blue-100 text-lg">Cliente: {project.clientName}</p>
-            {project.location && <p className="text-blue-200 text-sm mt-1">📍 {project.location}</p>}
+            {project.location && (
+              <div className="flex items-center gap-1 mt-1">
+                <svg className="w-3 h-3 text-blue-200" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                </svg>
+                <p className="text-blue-200 text-sm">{project.location}</p>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="text-blue-200 text-sm mb-1">TOTAL DEL PROYECTO</p>
             <p className="text-5xl font-bold">${grandTotal.toLocaleString('es-AR')}</p>
             <div className="flex gap-4 mt-2 text-sm">
-              <span>💰 Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
-              <span>👷 M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
+              <span className="flex items-center gap-1">
+                <Package className="w-4 h-4" />
+                Materiales: ${totalMaterialCost.toLocaleString('es-AR')}
+              </span>
+              <span className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                M.O.: ${totalLaborCost.toLocaleString('es-AR')}
+              </span>
             </div>
           </div>
         </div>
@@ -191,6 +256,63 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             <p className="font-semibold">{project.poolPreset?.skimmerCount} unidades</p>
           </div>
         </div>
+      </Card>
+
+      {/* COMPARACIÓN DE EQUIPOS - EXPANDIBLE */}
+      <Card className="border-2 border-purple-200">
+        <div
+          className="flex items-center justify-between cursor-pointer hover:bg-purple-50 transition-colors p-4 -m-4 mb-4 rounded-t-lg"
+          onClick={() => setShowEquipmentComparison(!showEquipmentComparison)}
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="text-purple-600" size={24} />
+            <h3 className="text-xl font-bold">Comparación de Equipos</h3>
+            <span className="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+              Selección vs Recomendación
+            </span>
+          </div>
+          <button className="p-2 hover:bg-purple-100 rounded-full transition-colors">
+            {showEquipmentComparison ? (
+              <ChevronUp className="text-purple-600" size={20} />
+            ) : (
+              <ChevronDown className="text-purple-600" size={20} />
+            )}
+          </button>
+        </div>
+
+        {showEquipmentComparison && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <p className="text-sm text-gray-600 mb-4">
+              Compara los equipos que seleccionaste manualmente con las recomendaciones del sistema basadas en los cálculos hidráulicos y eléctricos profesionales.
+            </p>
+
+            {hydraulicSpecs && (
+              <EquipmentComparison
+                title="Bomba de Filtración - Comparación"
+                selectedEquipment={selectedPump}
+                recommendedEquipment={recommendedPump}
+                requiredSpecs={{
+                  minFlowRate: hydraulicSpecs.minFlowRate,
+                  minHead: hydraulicSpecs.minHead,
+                }}
+                showDetailedComparison={true}
+              />
+            )}
+
+            {!hydraulicSpecs && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                <p className="text-gray-600">Cargando recomendaciones del sistema...</p>
+              </div>
+            )}
+
+            {additionals.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                <p className="font-medium mb-1">No has seleccionado equipos</p>
+                <p>Ve a la pestaña "Eléctrica" para seleccionar los equipos que vas a instalar en este proyecto.</p>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* PROGRESO DE TAREAS */}
@@ -441,10 +563,48 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           {/* Losetas */}
           {materials.tiles && Array.isArray(materials.tiles) && materials.tiles.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-green-600" />
-                Losetas y Cerámicos
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                  <CheckCircle2 size={18} className="text-green-600" />
+                  Losetas y Cerámicos
+                </h4>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'cad' ? 'primary' : 'secondary'}
+                    onClick={() => setViewMode(viewMode === 'planta' ? 'cad' : 'planta')}
+                    className="flex items-center gap-2"
+                  >
+                    <Grid3x3 size={16} />
+                    {viewMode === 'planta' ? 'Vista CAD' : 'Vista Planta'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => canvasRef.current && exportCanvasToImage(canvasRef.current, `pool-${project.name.replace(/\s+/g, '-')}-visualization.png`)}
+                    className="flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    Exportar Dibujo
+                  </Button>
+                </div>
+              </div>
+
+              {/* Visualización de la Piscina */}
+              <div className="mb-4 bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-center">
+                <div className="w-full max-w-4xl">
+                  <PoolVisualizationCanvas
+                    ref={canvasRef}
+                    project={project}
+                    tileConfig={project.tileCalculation}
+                    width={800}
+                    height={500}
+                    showMeasurements={true}
+                    viewMode={viewMode}
+                  />
+                </div>
+              </div>
+
               <div className="bg-blue-50 p-3 rounded-lg mb-3">
                 <p className="text-sm text-blue-800">
                   Área total de vereda: <strong>{project.sidewalkArea.toFixed(2)} m²</strong>
@@ -460,7 +620,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                             ? 'bg-orange-100 text-orange-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {tile.type === 'first_ring' ? '🔶 PRIMER ANILLO' : '🔷 FILAS ADICIONALES'}
+                          {tile.type === 'first_ring' ? 'PRIMER ANILLO' : 'FILAS ADICIONALES'}
                         </span>
                         <p className="font-medium">{tile.tileName}</p>
                       </div>
@@ -537,8 +697,9 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             </div>
             {plumbingConfig.distanceToEquipment && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
-                <p className="text-sm text-purple-800">
-                  📏 Distancia a cabecera: <strong>{plumbingConfig.distanceToEquipment} metros</strong>
+                <p className="text-sm text-purple-800 flex items-center gap-2">
+                  <Ruler className="w-4 h-4" />
+                  Distancia a cabecera: <strong>{plumbingConfig.distanceToEquipment} metros</strong>
                 </p>
               </div>
             )}
@@ -586,8 +747,9 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             </div>
             {electricalConfig.recommendedCableSection && (
               <div className="bg-yellow-100 p-3 rounded-lg mb-3">
-                <p className="text-sm text-yellow-900">
-                  ⚡ Cable recomendado: <strong>{electricalConfig.recommendedCableSection}</strong>
+                <p className="text-sm text-yellow-900 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Cable recomendado: <strong>{electricalConfig.recommendedCableSection}</strong>
                 </p>
               </div>
             )}
@@ -634,6 +796,13 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 return 'Sin nombre';
               };
 
+              const getItemImage = () => {
+                if (additional.accessory?.imageUrl) return additional.accessory.imageUrl;
+                if (additional.equipment?.imageUrl) return additional.equipment.imageUrl;
+                if (additional.material?.imageUrl) return additional.material.imageUrl;
+                return null;
+              };
+
               const quantity = additional.newQuantity || 0;
               let materialCost = 0;
 
@@ -647,14 +816,36 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 materialCost = additional.material.pricePerUnit * quantity;
               }
 
+              const imageUrl = getItemImage();
+
               return (
                 <div key={additional.id} className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <p className="font-medium text-teal-900">{getItemName()}</p>
-                      <p className="text-xs text-teal-600">{quantity} {additional.customUnit || 'unidades'}</p>
+                  <div className="flex gap-3">
+                    {/* Imagen del producto */}
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-16 rounded border-2 border-teal-300 overflow-hidden bg-white">
+                        {imageUrl ? (
+                          <img
+                            src={productImageService.getImageUrl(imageUrl) || undefined}
+                            alt={getItemName()}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-8 h-8 text-teal-300" />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="font-bold text-teal-700">${materialCost.toLocaleString('es-AR')}</p>
+
+                    {/* Información del item */}
+                    <div className="flex-1 flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-teal-900">{getItemName()}</p>
+                        <p className="text-xs text-teal-600">{quantity} {additional.customUnit || 'unidades'}</p>
+                      </div>
+                      <p className="font-bold text-teal-700">${materialCost.toLocaleString('es-AR')}</p>
+                    </div>
                   </div>
                 </div>
               );
@@ -669,24 +860,45 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {project.clientEmail && (
             <div>
-              <p className="text-xs text-gray-600 mb-1">📧 Email</p>
+              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                </svg>
+                Email
+              </p>
               <p className="font-medium text-sm">{project.clientEmail}</p>
             </div>
           )}
           {project.clientPhone && (
             <div>
-              <p className="text-xs text-gray-600 mb-1">📱 Teléfono</p>
+              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                </svg>
+                Teléfono
+              </p>
               <p className="font-medium text-sm">{project.clientPhone}</p>
             </div>
           )}
           {project.location && (
             <div>
-              <p className="text-xs text-gray-600 mb-1">📍 Ubicación</p>
+              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                </svg>
+                Ubicación
+              </p>
               <p className="font-medium text-sm">{project.location}</p>
             </div>
           )}
           <div>
-            <p className="text-xs text-gray-600 mb-1">📅 Creado</p>
+            <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+              </svg>
+              Creado
+            </p>
             <p className="font-medium text-sm">{new Date(project.createdAt).toLocaleDateString('es-AR')}</p>
           </div>
         </div>

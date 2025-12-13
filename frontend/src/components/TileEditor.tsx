@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Project, TilePreset } from '@/types';
 import { tilePresetService } from '@/services/tilePresetService';
-import { Save, RotateCcw, Calculator, Layers } from 'lucide-react';
+import { productImageService } from '@/services/productImageService';
+import { PoolVisualizationCanvas, exportCanvasToImage } from '@/components/PoolVisualizationCanvas';
+import { Save, RotateCcw, Calculator, Layers, Download, Eye, Grid3x3 } from 'lucide-react';
 
 interface TileEditorProps {
   project: Project;
@@ -21,6 +23,16 @@ interface SideConfig {
 export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
   const [tilePresets, setTilePresets] = useState<TilePreset[]>([]);
   const [calculationMode, setCalculationMode] = useState<'automatic' | 'manual'>('automatic');
+  const [showDetailedView, setShowDetailedView] = useState(false);
+  const [viewMode, setViewMode] = useState<'planta' | 'cad'>('planta');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // NO hay orientación variable - siempre es fija como en Kotlin
+  // Skimmer = Oeste (izquierda)
+  // Escalera = Este (derecha)
+  // Izquierdo = Norte (arriba)
+  // Derecho = Sur (abajo)
+
   const [config, setConfig] = useState<{
     north: SideConfig;
     south: SideConfig;
@@ -83,6 +95,27 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
     });
   };
 
+  const handleExportVisualization = () => {
+    if (canvasRef.current) {
+      exportCanvasToImage(canvasRef.current, `pool-${project.name.replace(/\s+/g, '-')}-visualization.png`);
+    }
+  };
+
+  // Mapeo FIJO como en Kotlin
+  // Skimmer = Oeste (izquierda)
+  // Escalera = Este (derecha)
+  // Izquierdo = Norte (arriba)
+  // Derecho = Sur (abajo)
+  const getSideLabel = (side: 'north' | 'south' | 'east' | 'west'): string => {
+    const labels = {
+      north: 'Izquierdo (Cabecera Superior)',
+      south: 'Derecho (Cabecera Inferior)',
+      west: 'Skimmer (Lateral Izquierdo)',
+      east: 'Escalera (Lateral Derecho)'
+    };
+    return labels[side];
+  };
+
   const poolLength = project.poolPreset?.length || 8;
   const poolWidth = project.poolPreset?.width || 4;
   const scale = 40; // píxeles por metro
@@ -120,122 +153,180 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
         </div>
       </Card>
 
+
       {/* Configurador Visual */}
       <>
-          {/* Croquis Visual */}
+          {/* Vista de Configuración Simple o Detallada */}
           <Card>
-        <h3 className="text-lg font-semibold mb-4">Croquis de la Piscina (Vista Superior)</h3>
-        
-        <div className="flex justify-center p-8 bg-gray-50 rounded-lg">
-          <div className="relative" style={{ 
-            width: `${poolLength * scale + 100}px`,
-            height: `${poolWidth * scale + 100}px`
-          }}>
-            {/* Etiqueta Norte */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-8 text-sm font-medium text-gray-600">
-              Norte
-            </div>
-
-            {/* Lado Norte */}
-            <div
-              className="absolute top-0 left-0 right-0 h-12 border-t-4 rounded-t-lg transition-colors"
-              style={{ 
-                borderColor: getSideColor('north'),
-                backgroundColor: `${getSideColor('north')}20`,
-                marginLeft: '50px',
-                marginRight: '50px'
-              }}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Vista de la Piscina con Losetas</h3>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={showDetailedView ? 'primary' : 'secondary'}
+              onClick={() => setShowDetailedView(!showDetailedView)}
+              className="flex items-center gap-2"
             >
-              <div className="text-center text-xs font-medium pt-1">
-                {config.north.rows > 0 ? `${config.north.rows} filas` : 'Sin configurar'}
-              </div>
-            </div>
-
-            {/* Lado Oeste */}
-            <div
-              className="absolute top-12 left-0 bottom-12 w-12 border-l-4 transition-colors"
-              style={{ 
-                borderColor: getSideColor('west'),
-                backgroundColor: `${getSideColor('west')}20`,
-                marginTop: '50px',
-                marginBottom: '50px'
-              }}
-            >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-xs font-medium whitespace-nowrap">
-                {config.west.rows > 0 ? `${config.west.rows} filas` : 'Sin configurar'}
-              </div>
-            </div>
-
-            {/* Lado Este */}
-            <div
-              className="absolute top-12 right-0 bottom-12 w-12 border-r-4 transition-colors"
-              style={{ 
-                borderColor: getSideColor('east'),
-                backgroundColor: `${getSideColor('east')}20`,
-                marginTop: '50px',
-                marginBottom: '50px'
-              }}
-            >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 text-xs font-medium whitespace-nowrap">
-                {config.east.rows > 0 ? `${config.east.rows} filas` : 'Sin configurar'}
-              </div>
-            </div>
-
-            {/* Lado Sur */}
-            <div
-              className="absolute bottom-0 left-0 right-0 h-12 border-b-4 rounded-b-lg transition-colors"
-              style={{ 
-                borderColor: getSideColor('south'),
-                backgroundColor: `${getSideColor('south')}20`,
-                marginLeft: '50px',
-                marginRight: '50px'
-              }}
-            >
-              <div className="text-center text-xs font-medium pt-1">
-                {config.south.rows > 0 ? `${config.south.rows} filas` : 'Sin configurar'}
-              </div>
-            </div>
-
-            {/* Etiqueta Oeste */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-sm font-medium text-gray-600">
-              Oeste
-            </div>
-
-            {/* Etiqueta Este */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-sm font-medium text-gray-600">
-              Este
-            </div>
-
-            {/* Etiqueta Sur */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-8 text-sm font-medium text-gray-600">
-              Sur
-            </div>
-
-            {/* Espejo de agua (centro) */}
-            <div
-              className="absolute bg-blue-100 border-2 border-blue-300 rounded flex items-center justify-center"
-              style={{
-                top: '62px',
-                left: '62px',
-                right: '62px',
-                bottom: '62px'
-              }}
-            >
-              <div className="text-center text-blue-600">
-                <div className="text-sm font-semibold">Espejo de Agua</div>
-                <div className="text-xs">{poolLength}m x {poolWidth}m</div>
-              </div>
-            </div>
+              <Eye size={16} />
+              {showDetailedView ? 'Vista Detallada' : 'Vista Simple'}
+            </Button>
+            {showDetailedView && (
+              <>
+                <Button
+                  size="sm"
+                  variant={viewMode === 'cad' ? 'primary' : 'secondary'}
+                  onClick={() => setViewMode(viewMode === 'planta' ? 'cad' : 'planta')}
+                  className="flex items-center gap-2"
+                >
+                  <Grid3x3 size={16} />
+                  {viewMode === 'planta' ? 'Vista CAD' : 'Vista Planta'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleExportVisualization}
+                  className="flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Exportar Imagen
+                </Button>
+              </>
+            )}
           </div>
         </div>
+
+        <div className="flex justify-center p-4 bg-gray-50 rounded-lg">
+          {showDetailedView ? (
+            <PoolVisualizationCanvas
+              ref={canvasRef}
+              project={project}
+              tileConfig={config}
+              width={900}
+              height={600}
+              showMeasurements={true}
+              viewMode={viewMode}
+            />
+          ) : (
+            <div className="relative" style={{
+              width: `${poolLength * scale + 100}px`,
+              height: `${poolWidth * scale + 100}px`
+            }}>
+              {/* Etiqueta Norte */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-8 text-sm font-medium text-gray-600">
+                Norte
+              </div>
+
+              {/* Lado Norte */}
+              <div
+                className="absolute top-0 left-0 right-0 h-12 border-t-4 rounded-t-lg transition-colors"
+                style={{
+                  borderColor: getSideColor('north'),
+                  backgroundColor: `${getSideColor('north')}20`,
+                  marginLeft: '50px',
+                  marginRight: '50px'
+                }}
+              >
+                <div className="text-center text-xs font-medium pt-1">
+                  {config.north.rows > 0 ? `${config.north.rows} filas` : 'Sin configurar'}
+                </div>
+              </div>
+
+              {/* Lado Oeste */}
+              <div
+                className="absolute top-12 left-0 bottom-12 w-12 border-l-4 transition-colors"
+                style={{
+                  borderColor: getSideColor('west'),
+                  backgroundColor: `${getSideColor('west')}20`,
+                  marginTop: '50px',
+                  marginBottom: '50px'
+                }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-xs font-medium whitespace-nowrap">
+                  {config.west.rows > 0 ? `${config.west.rows} filas` : 'Sin configurar'}
+                </div>
+              </div>
+
+              {/* Lado Este */}
+              <div
+                className="absolute top-12 right-0 bottom-12 w-12 border-r-4 transition-colors"
+                style={{
+                  borderColor: getSideColor('east'),
+                  backgroundColor: `${getSideColor('east')}20`,
+                  marginTop: '50px',
+                  marginBottom: '50px'
+                }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 text-xs font-medium whitespace-nowrap">
+                  {config.east.rows > 0 ? `${config.east.rows} filas` : 'Sin configurar'}
+                </div>
+              </div>
+
+              {/* Lado Sur */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-12 border-b-4 rounded-b-lg transition-colors"
+                style={{
+                  borderColor: getSideColor('south'),
+                  backgroundColor: `${getSideColor('south')}20`,
+                  marginLeft: '50px',
+                  marginRight: '50px'
+                }}
+              >
+                <div className="text-center text-xs font-medium pt-1">
+                  {config.south.rows > 0 ? `${config.south.rows} filas` : 'Sin configurar'}
+                </div>
+              </div>
+
+              {/* Etiqueta Oeste */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 text-sm font-medium text-gray-600">
+                Oeste
+              </div>
+
+              {/* Etiqueta Este */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 text-sm font-medium text-gray-600">
+                Este
+              </div>
+
+              {/* Etiqueta Sur */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-8 text-sm font-medium text-gray-600">
+                Sur
+              </div>
+
+              {/* Espejo de agua (centro) */}
+              <div
+                className="absolute bg-blue-100 border-2 border-blue-300 rounded flex items-center justify-center"
+                style={{
+                  top: '62px',
+                  left: '62px',
+                  right: '62px',
+                  bottom: '62px'
+                }}
+              >
+                <div className="text-center text-blue-600">
+                  <div className="text-sm font-semibold">Espejo de Agua</div>
+                  <div className="text-xs">{poolLength}m x {poolWidth}m</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showDetailedView && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Vista Detallada:</strong> Cada loseta se dibuja individualmente con sus juntas.
+              Las losetas son de 50cm x 50cm con junta de 3mm. El rectángulo azul central representa
+              la piscina con sus dimensiones exactas.
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* Configuración por Lateral */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {(['north', 'south', 'east', 'west'] as const).map((side) => (
           <Card key={side}>
-            <h3 className="text-lg font-semibold mb-4 capitalize">
-              Lateral {side === 'north' ? 'Norte' : side === 'south' ? 'Sur' : side === 'east' ? 'Este' : 'Oeste'}
+            <h3 className="text-lg font-semibold mb-4">
+              Lado {getSideLabel(side)}
             </h3>
             
             <div className="space-y-4">
@@ -252,6 +343,29 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
                 value={config[side].selectedTileId}
                 onChange={(e) => handleSideChange(side, 'selectedTileId', e.target.value)}
               />
+
+              {/* Mostrar imagen de loseta seleccionada */}
+              {config[side].selectedTileId && tilePresets.find(t => t.id === config[side].selectedTileId)?.imageUrl && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={productImageService.getImageUrl(
+                        tilePresets.find(t => t.id === config[side].selectedTileId)?.imageUrl
+                      ) || undefined}
+                      alt="Loseta seleccionada"
+                      className="w-16 h-16 object-contain rounded border"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {tilePresets.find(t => t.id === config[side].selectedTileId)?.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {tilePresets.find(t => t.id === config[side].selectedTileId)?.width}m x {tilePresets.find(t => t.id === config[side].selectedTileId)?.length}m
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Input
                 type="number"

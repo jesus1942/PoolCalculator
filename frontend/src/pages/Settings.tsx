@@ -21,6 +21,8 @@ import {
 } from '@/types';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Save, Search, Filter } from 'lucide-react';
 import { PlumbingManager } from '@/components/PlumbingManager';
+import { HybridImageManager } from '@/components/HybridImageManager';
+import { ProductCard } from '@/components/ProductCard';
 
 type TabType = 'tiles' | 'accessories' | 'equipment' | 'materials' | 'plumbing' | 'calculations';
 
@@ -629,58 +631,27 @@ export const Settings: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredTiles.map((tile) => (
-                  <div key={tile.id} className="rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-600">
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <h3 className="font-semibold text-gray-900">{tile.name}</h3>
-                          {tile.isForFirstRing && (
-                            <span className="px-2 py-1 text-xs rounded-md bg-blue-600 text-white font-semibold">
-                              1er Anillo
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm space-y-1">
-                          <span className="inline-block px-3 py-1 text-xs rounded-md bg-blue-600 text-white font-semibold mb-2">
-                            {tile.type}
-                          </span>
-                          <p className="text-gray-700">
-                            Dimensiones: {tile.width}m x {tile.length}m
-                          </p>
-                          <p className="font-bold text-gray-900 text-lg">
-                            Loseta: ${tile.pricePerUnit.toLocaleString('es-AR')}
-                          </p>
-                          {tile.hasCorner && (
-                            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mt-2">
-                              <p className="text-xs font-semibold text-blue-600">Con Esquineros</p>
-                              <p className="text-xs text-gray-700">
-                                {tile.cornersPerTile} esq. x ${tile.cornerPricePerUnit?.toLocaleString('es-AR')}
-                              </p>
-                            </div>
-                          )}
-                          {tile.brand && <p className="text-gray-700">Marca: {tile.brand}</p>}
-                        </div>
-                        <div className="flex space-x-2 pt-3 border-t border-gray-200">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleEditTile(tile)}
-                            className="flex-1"
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDeleteTile(tile.id)}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={tile.id}
+                    name={tile.name}
+                    type={tile.type}
+                    imageUrl={tile.imageUrl}
+                    additionalImages={tile.additionalImages || []}
+                    price={tile.pricePerUnit}
+                    details={[
+                      { label: 'Dimensiones', value: `${tile.width}m x ${tile.length}m` },
+                      { label: 'Marca', value: tile.brand },
+                      ...(tile.hasCorner ? [
+                        { label: 'Esquineros', value: `${tile.cornersPerTile} x $${tile.cornerPricePerUnit?.toLocaleString('es-AR')}` }
+                      ] : [])
+                    ]}
+                    badges={[
+                      tile.isForFirstRing && '1er Anillo',
+                      tile.hasCorner && 'Con Esquineros'
+                    ]}
+                    onEdit={() => handleEditTile(tile)}
+                    onDelete={() => handleDeleteTile(tile.id)}
+                  />
                 ))}
               </div>
             )}
@@ -801,6 +772,32 @@ export const Settings: React.FC = () => {
                 onChange={(e) => setTileFormData({ ...tileFormData, description: e.target.value })}
               />
 
+              {/* Sección de Imágenes */}
+              {editingTile && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                  <HybridImageManager
+                    productType="tiles"
+                    productId={editingTile.id}
+                    currentImageUrl={editingTile.imageUrl}
+                    currentAdditionalImages={editingTile.additionalImages || []}
+                    onImageUploaded={() => loadData()}
+                    onImageDeleted={() => loadData()}
+                    onAdditionalImagesUploaded={() => loadData()}
+                    onAdditionalImageDeleted={() => loadData()}
+                    mode="edit"
+                  />
+                </div>
+              )}
+
+              {!editingTile && (
+                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Nota:</strong> Primero guarda la loseta, luego podrás editarla para agregar imágenes.
+                  </p>
+                </div>
+              )}
+
               <div className="flex space-x-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingTile ? 'Actualizar' : 'Crear'}
@@ -899,40 +896,21 @@ export const Settings: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredAccessories.map((acc) => (
-                  <div key={acc.id} className="rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-600">
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-900">{acc.name}</h3>
-                        <div className="text-sm space-y-1">
-                          <span className="inline-block px-3 py-1 text-xs rounded-md bg-blue-600 text-white font-semibold mb-2">
-                            {acc.type}
-                          </span>
-                          <p className="text-gray-700">Unidad: {acc.unit}</p>
-                          <p className="font-bold text-gray-900 text-lg">
-                            ${acc.pricePerUnit.toLocaleString('es-AR')}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2 pt-3 border-t border-gray-200">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleEditAccessory(acc)}
-                            className="flex-1"
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDeleteAccessory(acc.id)}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={acc.id}
+                    name={acc.name}
+                    type={acc.type}
+                    imageUrl={acc.imageUrl}
+                    additionalImages={acc.additionalImages || []}
+                    price={acc.pricePerUnit}
+                    details={[
+                      { label: 'Unidad', value: acc.unit },
+                      { label: 'Descripción', value: acc.description }
+                    ]}
+                    badges={[]}
+                    onEdit={() => handleEditAccessory(acc)}
+                    onDelete={() => handleDeleteAccessory(acc.id)}
+                  />
                 ))}
               </div>
             )}
@@ -978,6 +956,33 @@ export const Settings: React.FC = () => {
                 value={accessoryFormData.description}
                 onChange={(e) => setAccessoryFormData({ ...accessoryFormData, description: e.target.value })}
               />
+
+              {/* Sección de Imágenes */}
+              {editingAccessory && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                  <HybridImageManager
+                    productType="accessories"
+                    productId={editingAccessory.id}
+                    currentImageUrl={editingAccessory.imageUrl}
+                    currentAdditionalImages={editingAccessory.additionalImages || []}
+                    onImageUploaded={() => loadData()}
+                    onImageDeleted={() => loadData()}
+                    onAdditionalImagesUploaded={() => loadData()}
+                    onAdditionalImageDeleted={() => loadData()}
+                    mode="edit"
+                  />
+                </div>
+              )}
+
+              {!editingAccessory && (
+                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Nota:</strong> Primero guarda el accesorio, luego podrás editarlo para agregar imágenes.
+                  </p>
+                </div>
+              )}
+
               <div className="flex space-x-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingAccessory ? 'Actualizar' : 'Crear'}
@@ -1076,42 +1081,22 @@ export const Settings: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredEquipment.map((equip) => (
-                  <div key={equip.id} className="rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-600">
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-900">{equip.name}</h3>
-                        <div className="text-sm space-y-1">
-                          <span className="inline-block px-3 py-1 text-xs rounded-md bg-blue-600 text-white font-semibold mb-2">
-                            {equip.type}
-                          </span>
-                          {equip.brand && <p className="text-gray-700">Marca: {equip.brand}</p>}
-                          {equip.model && <p className="text-gray-700">Modelo: {equip.model}</p>}
-                          {equip.power && <p className="text-gray-700">Potencia: {equip.power} HP</p>}
-                          <p className="font-bold text-gray-900 text-lg">
-                            ${equip.pricePerUnit.toLocaleString('es-AR')}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2 pt-3 border-t border-gray-200">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleEditEquipment(equip)}
-                            className="flex-1"
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDeleteEquipment(equip.id)}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={equip.id}
+                    name={equip.name}
+                    type={equip.type}
+                    imageUrl={equip.imageUrl}
+                    additionalImages={equip.additionalImages || []}
+                    price={equip.pricePerUnit}
+                    details={[
+                      { label: 'Marca', value: equip.brand },
+                      { label: 'Modelo', value: equip.model },
+                      { label: 'Potencia', value: equip.power ? `${equip.power} HP` : null }
+                    ]}
+                    badges={[]}
+                    onEdit={() => handleEditEquipment(equip)}
+                    onDelete={() => handleDeleteEquipment(equip.id)}
+                  />
                 ))}
               </div>
             )}
@@ -1184,6 +1169,33 @@ export const Settings: React.FC = () => {
                 value={equipmentFormData.description}
                 onChange={(e) => setEquipmentFormData({ ...equipmentFormData, description: e.target.value })}
               />
+
+              {/* Sección de Imágenes */}
+              {editingEquipment && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                  <HybridImageManager
+                    productType="equipment"
+                    productId={editingEquipment.id}
+                    currentImageUrl={editingEquipment.imageUrl}
+                    currentAdditionalImages={editingEquipment.additionalImages || []}
+                    onImageUploaded={() => loadData()}
+                    onImageDeleted={() => loadData()}
+                    onAdditionalImagesUploaded={() => loadData()}
+                    onAdditionalImageDeleted={() => loadData()}
+                    mode="edit"
+                  />
+                </div>
+              )}
+
+              {!editingEquipment && (
+                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Nota:</strong> Primero guarda el equipo, luego podrás editarlo para agregar imágenes.
+                  </p>
+                </div>
+              )}
+
               <div className="flex space-x-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingEquipment ? 'Actualizar' : 'Crear'}
@@ -1282,41 +1294,22 @@ export const Settings: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredMaterials.map((mat) => (
-                  <div key={mat.id} className="rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-blue-600">
-                    <div className="p-6">
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-900">{mat.name}</h3>
-                        <div className="text-sm space-y-1">
-                          <span className="inline-block px-3 py-1 text-xs rounded-md bg-blue-600 text-white font-semibold mb-2">
-                            {mat.type}
-                          </span>
-                          <p className="text-gray-700">Unidad: {mat.unit}</p>
-                          {mat.brand && <p className="text-gray-700">Marca: {mat.brand}</p>}
-                          <p className="font-bold text-gray-900 text-lg">
-                            ${mat.pricePerUnit.toLocaleString('es-AR')}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2 pt-3 border-t border-gray-200">
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleEditMaterial(mat)}
-                            className="flex-1"
-                          >
-                            <Edit size={14} className="mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDeleteMaterial(mat.id)}
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={mat.id}
+                    name={mat.name}
+                    type={mat.type}
+                    imageUrl={mat.imageUrl}
+                    additionalImages={mat.additionalImages || []}
+                    price={mat.pricePerUnit}
+                    details={[
+                      { label: 'Unidad', value: mat.unit },
+                      { label: 'Marca', value: mat.brand },
+                      { label: 'Descripción', value: mat.description }
+                    ]}
+                    badges={[]}
+                    onEdit={() => handleEditMaterial(mat)}
+                    onDelete={() => handleDeleteMaterial(mat.id)}
+                  />
                 ))}
               </div>
             )}
@@ -1367,6 +1360,33 @@ export const Settings: React.FC = () => {
                 value={materialFormData.description}
                 onChange={(e) => setMaterialFormData({ ...materialFormData, description: e.target.value })}
               />
+
+              {/* Sección de Imágenes */}
+              {editingMaterial && (
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                  <HybridImageManager
+                    productType="materials"
+                    productId={editingMaterial.id}
+                    currentImageUrl={editingMaterial.imageUrl}
+                    currentAdditionalImages={editingMaterial.additionalImages || []}
+                    onImageUploaded={() => loadData()}
+                    onImageDeleted={() => loadData()}
+                    onAdditionalImagesUploaded={() => loadData()}
+                    onAdditionalImageDeleted={() => loadData()}
+                    mode="edit"
+                  />
+                </div>
+              )}
+
+              {!editingMaterial && (
+                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Nota:</strong> Primero guarda el material, luego podrás editarlo para agregar imágenes.
+                  </p>
+                </div>
+              )}
+
               <div className="flex space-x-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingMaterial ? 'Actualizar' : 'Crear'}

@@ -6,6 +6,8 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { plumbingItemService, PlumbingItem } from '@/services/plumbingItemService';
 import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { HybridImageManager } from '@/components/HybridImageManager';
+import { ProductCard } from '@/components/ProductCard';
 
 export const PlumbingManager: React.FC = () => {
   const [items, setItems] = useState<PlumbingItem[]>([]);
@@ -263,79 +265,24 @@ export const PlumbingManager: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-lg transition-shadow">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
-                        {getCategoryLabel(item.category)}
-                      </span>
-                      <span className="inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-800">
-                        {getTypeLabel(item.type)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1 text-sm">
-                  {item.diameter && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Diámetro:</span>
-                      <span className="font-medium">{item.diameter}</span>
-                    </div>
-                  )}
-                  {item.length && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Largo:</span>
-                      <span className="font-medium">{item.length}m</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Unidad:</span>
-                    <span className="font-medium">{item.unit}</span>
-                  </div>
-                  {item.brand && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Marca:</span>
-                      <span className="font-medium">{item.brand}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="text-gray-600">Precio:</span>
-                    <span className="font-bold text-primary-600">
-                      ${item.pricePerUnit.toLocaleString('es-AR')}
-                    </span>
-                  </div>
-                </div>
-
-                {item.description && (
-                  <p className="text-xs text-gray-600 border-t pt-2">
-                    {item.description}
-                  </p>
-                )}
-
-                <div className="flex space-x-2 pt-3 border-t">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleEdit(item)}
-                    className="flex-1"
-                  >
-                    <Edit size={14} className="mr-1" />
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
+            <ProductCard
+              key={item.id}
+              name={item.name}
+              type={`${getCategoryLabel(item.category)} - ${getTypeLabel(item.type)}`}
+              imageUrl={item.imageUrl}
+              additionalImages={item.additionalImages || []}
+              price={item.pricePerUnit}
+              details={[
+                { label: 'Diámetro', value: item.diameter },
+                { label: 'Largo', value: item.length ? `${item.length}m` : null },
+                { label: 'Unidad', value: item.unit },
+                { label: 'Marca', value: item.brand },
+                { label: 'Descripción', value: item.description }
+              ]}
+              badges={[]}
+              onEdit={() => handleEdit(item)}
+              onDelete={() => handleDelete(item.id)}
+            />
           ))}
         </div>
       )}
@@ -424,6 +371,32 @@ export const PlumbingManager: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="Detalles adicionales"
           />
+
+          {/* Sección de Imágenes */}
+          {editingItem && (
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+              <HybridImageManager
+                productType="plumbing"
+                productId={editingItem.id}
+                currentImageUrl={editingItem.imageUrl}
+                currentAdditionalImages={editingItem.additionalImages || []}
+                onImageUploaded={() => loadItems()}
+                onImageDeleted={() => loadItems()}
+                onAdditionalImagesUploaded={() => loadItems()}
+                onAdditionalImageDeleted={() => loadItems()}
+                mode="edit"
+              />
+            </div>
+          )}
+
+          {!editingItem && (
+            <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
+              <p className="text-sm text-gray-700">
+                <strong>Nota:</strong> Primero guarda el item, luego podrás editarlo para agregar imágenes.
+              </p>
+            </div>
+          )}
 
           <div className="flex space-x-3 pt-4">
             <Button type="submit" className="flex-1">
