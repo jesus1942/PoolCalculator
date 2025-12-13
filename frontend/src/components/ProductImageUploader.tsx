@@ -146,6 +146,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
                 className="w-64 h-64 object-contain rounded-lg border-2 border-gray-300"
               />
               <button
+                type="button"
                 onClick={handleDeleteMainImage}
                 className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-2 hover:bg-red-700 transition-colors"
                 title="Eliminar imagen"
@@ -213,6 +214,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
                   className="w-full h-32 object-contain rounded-lg border-2 border-gray-300"
                 />
                 <button
+                  type="button"
                   onClick={() => handleDeleteAdditionalImage(index)}
                   className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                   title="Eliminar imagen"

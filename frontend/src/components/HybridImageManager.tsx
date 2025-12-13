@@ -188,6 +188,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
       <div className="border-b border-gray-200">
         <div className="flex space-x-4">
           <button
+            type="button"
             onClick={() => setActiveTab('upload')}
             className={`pb-3 px-1 font-medium text-sm transition-colors ${
               activeTab === 'upload'
@@ -199,6 +200,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
             Subir Archivo
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('url')}
             className={`pb-3 px-1 font-medium text-sm transition-colors ${
               activeTab === 'url'
@@ -326,6 +328,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
                   />
                   {additionalUrls.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => handleRemoveAdditionalUrl(index)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Eliminar"
