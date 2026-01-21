@@ -1,9 +1,54 @@
 #!/usr/bin/env python3
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.drawing.image import Image as XLImage
 import sys
 import json
 from datetime import datetime
+import os
+from pathlib import Path
+
+def add_image_to_cell(ws, image_url, cell_ref, width=100, height=100):
+    """
+    Agrega una imagen a una celda del Excel si existe
+
+    Args:
+        ws: Hoja de trabajo
+        image_url: URL relativa de la imagen (ej: /uploads/products/equipment/bomba.jpg)
+        cell_ref: Referencia de celda (ej: 'B10')
+        width: Ancho de la imagen en píxeles
+        height: Alto de la imagen en píxeles
+
+    Returns:
+        True si se agregó la imagen, False si no
+    """
+    try:
+        # Construir ruta absoluta desde la URL relativa
+        if not image_url or not image_url.startswith('/'):
+            return False
+
+        # Ruta base del proyecto
+        base_path = Path(__file__).parent.parent  # backend/
+        image_path = base_path / image_url.lstrip('/')
+
+        if not image_path.exists():
+            print(f"⚠ Imagen no encontrada: {image_path}")
+            return False
+
+        # Crear objeto de imagen
+        img = XLImage(str(image_path))
+
+        # Redimensionar
+        img.width = width
+        img.height = height
+
+        # Agregar a la celda
+        ws.add_image(img, cell_ref)
+        print(f"✓ Imagen agregada: {image_path.name} en {cell_ref}")
+        return True
+    except Exception as e:
+        print(f"Error al agregar imagen {image_url}: {e}")
+        return False
 
 def export_project_to_excel(excel_path, project_data):
     """
@@ -181,20 +226,39 @@ def export_project_to_excel(excel_path, project_data):
         ws[f'B{current_row}'].font = section_font
         current_row += 1
 
-        # Bomba
+        # Bomba (con imagen si está disponible)
         pump = electrical.get('pump', {})
+        pump_image_url = pump.get('imageUrl', None)
+
         ws[f'B{current_row}'] = 'Bomba'
         ws[f'C{current_row}'] = pump.get('power', '-')
         ws[f'E{current_row}'] = 1
         ws[f'F{current_row}'] = pump.get('observations', '-')
+
+        # Intentar agregar imagen de la bomba
+        if pump_image_url:
+            # La imagen se inserta en la columna A de las siguientes filas
+            image_added = add_image_to_cell(ws, pump_image_url, f'A{current_row}', width=80, height=80)
+            if image_added:
+                ws.row_dimensions[current_row].height = 60  # Ajustar altura de fila
+
         current_row += 1
 
-        # Filtro
+        # Filtro (con imagen si está disponible)
         filter_data = electrical.get('filter', {})
+        filter_image_url = filter_data.get('imageUrl', None)
+
         ws[f'B{current_row}'] = 'Filtro'
         ws[f'C{current_row}'] = filter_data.get('diameter', '-')
         ws[f'E{current_row}'] = 1
         ws[f'F{current_row}'] = filter_data.get('observations', '-')
+
+        # Intentar agregar imagen del filtro
+        if filter_image_url:
+            image_added = add_image_to_cell(ws, filter_image_url, f'A{current_row}', width=80, height=80)
+            if image_added:
+                ws.row_dimensions[current_row].height = 60  # Ajustar altura de fila
+
         current_row += 1
 
         # Especificaciones eléctricas
@@ -215,6 +279,206 @@ def export_project_to_excel(excel_path, project_data):
             for item in consumption:
                 ws[f'B{current_row}'] = f"  {item.get('item', '-')}"
                 ws[f'E{current_row}'] = f"{item.get('watts', 0)} W"
+                current_row += 1
+
+        current_row += 1
+
+    # ===== SECCIÓN: ANÁLISIS HIDRÁULICO PROFESIONAL =====
+    hydraulic_analysis = project_data.get('hydraulicAnalysis', None)
+    if sections.get('hydraulicAnalysis', True) and hydraulic_analysis:
+        ws[f'B{current_row}'] = 'ANÁLISIS HIDRÁULICO PROFESIONAL'
+        ws[f'B{current_row}'].font = section_font
+        current_row += 1
+
+        # TDH (Total Dynamic Head)
+        tdh = hydraulic_analysis.get('totalDynamicHead', 0)
+        ws[f'B{current_row}'] = 'TDH Total (Altura Dinámica Total)'
+        ws[f'E{current_row}'] = f"{tdh:.2f} m"
+        ws[f'F{current_row}'] = 'Altura que debe vencer la bomba'
+        current_row += 1
+
+        # Pérdidas por fricción
+        friction = hydraulic_analysis.get('frictionLoss', {})
+        ws[f'B{current_row}'] = 'Pérdida por fricción (succión)'
+        ws[f'E{current_row}'] = f"{friction.get('suction', 0):.2f} m"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Pérdida por fricción (retorno)'
+        ws[f'E{current_row}'] = f"{friction.get('return', 0):.2f} m"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Pérdida por fricción total'
+        ws[f'E{current_row}'] = f"{friction.get('total', 0):.2f} m"
+        ws[f'B{current_row}'].font = header_font
+        current_row += 1
+
+        # Pérdidas singulares
+        singular = hydraulic_analysis.get('singularLoss', {})
+        ws[f'B{current_row}'] = 'Pérdida singular (accesorios succión)'
+        ws[f'E{current_row}'] = f"{singular.get('suction', 0):.2f} m"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Pérdida singular (accesorios retorno)'
+        ws[f'E{current_row}'] = f"{singular.get('return', 0):.2f} m"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Pérdida singular total'
+        ws[f'E{current_row}'] = f"{singular.get('total', 0):.2f} m"
+        ws[f'B{current_row}'].font = header_font
+        current_row += 1
+
+        # Validaciones de velocidad
+        velocity_checks = hydraulic_analysis.get('velocityChecks', [])
+        if velocity_checks:
+            ws[f'B{current_row}'] = 'Validación de velocidades:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+            for check in velocity_checks:
+                line_type = check.get('lineType', '-')
+                velocity = check.get('velocity', 0)
+                is_ok = check.get('isOk', False)
+                status = '✓ OK' if is_ok else '⚠ Fuera de rango'
+                ws[f'B{current_row}'] = f"  {line_type}: {velocity:.2f} m/s - {status}"
+                ws[f'F{current_row}'] = 'Rango óptimo: 1.5-2.5 m/s'
+                current_row += 1
+
+        # Advertencias
+        warnings = hydraulic_analysis.get('warnings', [])
+        if warnings:
+            ws[f'B{current_row}'] = 'Advertencias:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+            for warning in warnings:
+                ws[f'B{current_row}'] = f"  ⚠ {warning}"
+                current_row += 1
+
+        # Bomba recomendada
+        recommended_pump = hydraulic_analysis.get('recommendedPump', None)
+        if recommended_pump:
+            ws[f'B{current_row}'] = 'Bomba seleccionada según TDH:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+
+            pump_name = recommended_pump.get('name', '-')
+            pump_flow_rate = recommended_pump.get('flowRate', '-')
+            pump_description = recommended_pump.get('description', '-')
+            pump_image_url = recommended_pump.get('imageUrl', None)
+
+            ws[f'B{current_row}'] = f"  {pump_name}"
+            ws[f'C{current_row}'] = pump_flow_rate
+            ws[f'F{current_row}'] = pump_description
+
+            # Intentar agregar imagen de la bomba recomendada
+            if pump_image_url:
+                image_added = add_image_to_cell(ws, pump_image_url, f'A{current_row}', width=80, height=80)
+                if image_added:
+                    ws.row_dimensions[current_row].height = 60  # Ajustar altura de fila
+
+            current_row += 1
+
+        current_row += 1
+
+    # ===== SECCIÓN: ANÁLISIS ELÉCTRICO PROFESIONAL =====
+    electrical_analysis = project_data.get('electricalAnalysis', None)
+    if sections.get('electricalAnalysis', True) and electrical_analysis:
+        ws[f'B{current_row}'] = 'ANÁLISIS ELÉCTRICO PROFESIONAL'
+        ws[f'B{current_row}'].font = section_font
+        current_row += 1
+
+        # Potencia total
+        total_power = electrical_analysis.get('totalPowerInstalled', 0)
+        demand_power = electrical_analysis.get('totalPowerDemand', 0)
+        total_current = electrical_analysis.get('totalCurrent', 0)
+
+        ws[f'B{current_row}'] = 'Potencia instalada total'
+        ws[f'E{current_row}'] = f"{total_power:.0f} W"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Potencia de demanda (con simultaneidad)'
+        ws[f'E{current_row}'] = f"{demand_power:.0f} W"
+        ws[f'F{current_row}'] = 'Considera factor de simultaneidad'
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Corriente total calculada'
+        ws[f'E{current_row}'] = f"{total_current:.2f} A"
+        ws[f'F{current_row}'] = 'Con factor de potencia y eficiencia'
+        ws[f'B{current_row}'].font = header_font
+        current_row += 1
+
+        # Cable dimensionado
+        cable = electrical_analysis.get('cable', {})
+        ws[f'B{current_row}'] = 'Cable recomendado'
+        ws[f'C{current_row}'] = f"{cable.get('section', '-')} mm²"
+        ws[f'F{current_row}'] = f"Caída de tensión: {cable.get('voltageDrop', 0):.2f}% (máx 3%)"
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Capacidad de corriente del cable'
+        ws[f'E{current_row}'] = f"{cable.get('currentCapacity', 0):.1f} A"
+        current_row += 1
+
+        # Protecciones
+        protection = electrical_analysis.get('protection', {})
+        ws[f'B{current_row}'] = 'Interruptor termomagnético (Breaker)'
+        ws[f'C{current_row}'] = f"{protection.get('breakerSize', 0)} A"
+        ws[f'F{current_row}'] = 'Curva C recomendada'
+        current_row += 1
+
+        ws[f'B{current_row}'] = 'Diferencial (RCD)'
+        ws[f'C{current_row}'] = f"{protection.get('rcdSize', 0)} A / 30 mA"
+        ws[f'F{current_row}'] = 'Obligatorio para piscinas'
+        current_row += 1
+
+        # Cargas individuales
+        loads = electrical_analysis.get('loads', [])
+        if loads:
+            ws[f'B{current_row}'] = 'Desglose de cargas eléctricas:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+            ws[f'B{current_row}'] = 'Equipo'
+            ws[f'C{current_row}'] = 'Potencia (W)'
+            ws[f'D{current_row}'] = 'Corriente (A)'
+            ws[f'E{current_row}'] = 'FP (cos φ)'
+            ws[f'F{current_row}'] = 'Observaciones'
+            for col in ['B', 'C', 'D', 'E', 'F']:
+                ws[f'{col}{current_row}'].font = header_font
+            current_row += 1
+
+            for load in loads:
+                ws[f'B{current_row}'] = load.get('name', '-')
+                ws[f'C{current_row}'] = f"{load.get('power', 0)} W"
+                ws[f'D{current_row}'] = f"{load.get('current', 0):.2f} A"
+                ws[f'E{current_row}'] = f"{load.get('powerFactor', 1):.2f}"
+                ws[f'F{current_row}'] = f"Eficiencia: {load.get('efficiency', 1):.0%}"
+                current_row += 1
+
+        # Costo operativo
+        operating_cost = electrical_analysis.get('operatingCost', {})
+        if operating_cost:
+            ws[f'B{current_row}'] = 'Costo operativo estimado:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+
+            ws[f'B{current_row}'] = 'Consumo diario'
+            ws[f'E{current_row}'] = f"{operating_cost.get('dailyKwh', 0):.2f} kWh"
+            current_row += 1
+
+            ws[f'B{current_row}'] = 'Costo mensual estimado'
+            ws[f'E{current_row}'] = f"${operating_cost.get('monthlyCost', 0):.2f}"
+            ws[f'F{current_row}'] = '8 hrs/día promedio'
+            current_row += 1
+
+            ws[f'B{current_row}'] = 'Costo anual estimado'
+            ws[f'E{current_row}'] = f"${operating_cost.get('annualCost', 0):.2f}"
+            current_row += 1
+
+        # Advertencias eléctricas
+        elec_warnings = electrical_analysis.get('warnings', [])
+        if elec_warnings:
+            ws[f'B{current_row}'] = 'Advertencias eléctricas:'
+            ws[f'B{current_row}'].font = header_font
+            current_row += 1
+            for warning in elec_warnings:
+                ws[f'B{current_row}'] = f"  ⚠ {warning}"
                 current_row += 1
 
         current_row += 1

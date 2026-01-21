@@ -1,8 +1,9 @@
 #!/bin/bash
 
-DB_PORT="5432"
-DB_NAME="pool_calculator"
+DB_PORT="5433"
+DB_NAME="poolcalculator"
 PROJECT_DIR=$(pwd)
+USE_DOCKER=true  # true = usar Docker, false = usar PostgreSQL local
 
 case "$1" in
   start)
@@ -31,21 +32,40 @@ case "$1" in
     echo "✅ Puertos liberados"
     echo ""
 
-    # Verificar PostgreSQL local
-    echo "🐘 Verificando PostgreSQL local..."
-    if ! systemctl is-active --quiet postgresql; then
-      echo "⚠️  PostgreSQL no está corriendo. Iniciando..."
-      sudo systemctl start postgresql
-      sleep 2
+    # Verificar PostgreSQL
+    if [ "$USE_DOCKER" = true ]; then
+      echo "🐘 Verificando PostgreSQL Docker..."
+      if ! docker ps | grep -q pool-calculator-db; then
+        if docker ps -a | grep -q pool-calculator-db; then
+          echo "⚠️  Contenedor detenido. Iniciando..."
+          docker start pool-calculator-db
+          sleep 3
+        else
+          echo "📦 Creando contenedor PostgreSQL..."
+          docker run --name pool-calculator-db \
+            -e POSTGRES_PASSWORD=password \
+            -e POSTGRES_USER=usuario \
+            -e POSTGRES_DB=poolcalculator \
+            -p 5433:5432 \
+            --restart=unless-stopped \
+            -d postgres:15
+          sleep 5
+        fi
+      fi
+      echo "✅ PostgreSQL Docker listo en puerto $DB_PORT"
+    else
+      echo "🐘 Verificando PostgreSQL local..."
+      if ! systemctl is-active --quiet postgresql; then
+        echo "⚠️  PostgreSQL no está corriendo. Iniciando..."
+        sudo systemctl start postgresql
+        sleep 2
+      fi
+      if ! psql -U postgres -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+        echo "📦 Creando base de datos $DB_NAME..."
+        sudo -u postgres createdb $DB_NAME
+      fi
+      echo "✅ PostgreSQL local listo en puerto $DB_PORT"
     fi
-
-    # Verificar que la base de datos existe
-    if ! psql -U postgres -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-      echo "📦 Creando base de datos $DB_NAME..."
-      sudo -u postgres createdb $DB_NAME
-    fi
-
-    echo "✅ PostgreSQL listo en puerto $DB_PORT"
     echo ""
 
     # Ejecutar migraciones
@@ -57,19 +77,20 @@ case "$1" in
     echo "✅ Base de datos lista"
     echo ""
 
-    # Abrir terminal para PostgreSQL Logs
-    echo "📊 Abriendo terminal de logs PostgreSQL..."
-    gnome-terminal --title="PostgreSQL Logs" -- bash -c "
-      echo '========================================='
-      echo '  PostgreSQL Logs'
-      echo '  Monitoreando: $DB_NAME'
-      echo '========================================='
-      echo ''
-      sudo tail -f /var/log/postgresql/postgresql-*.log
-      exec bash
-    " &
-
-    sleep 1
+    # Abrir terminal para PostgreSQL Logs (solo si es local)
+    if [ "$USE_DOCKER" = false ]; then
+      echo "📊 Abriendo terminal de logs PostgreSQL..."
+      gnome-terminal --title="PostgreSQL Logs" -- bash -c "
+        echo '========================================='
+        echo '  PostgreSQL Logs'
+        echo '  Monitoreando: $DB_NAME'
+        echo '========================================='
+        echo ''
+        sudo tail -f /var/log/postgresql/postgresql-*.log
+        exec bash
+      " &
+      sleep 1
+    fi
 
     # Abrir terminal para Backend
     echo "🚀 Abriendo terminal Backend..."
@@ -171,7 +192,12 @@ case "$1" in
   logs)
     case "$2" in
       postgres|db)
-        sudo tail -f /var/log/postgresql/postgresql-*.log
+        if [ "$USE_DOCKER" = true ]; then
+          echo "📊 Logs de PostgreSQL Docker:"
+          docker logs -f pool-calculator-db
+        else
+          sudo tail -f /var/log/postgresql/postgresql-*.log
+        fi
         ;;
       *)
         echo "Uso: $0 logs {postgres|db}"

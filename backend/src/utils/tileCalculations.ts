@@ -8,9 +8,9 @@ interface TileConfig {
 }
 
 interface SideConfig {
-  firstRingType: string;
+  firstRingType: string | null;
   rows: number;
-  selectedTileId: string;
+  selectedTileId: string | null;
 }
 
 interface CalculationSettings {
@@ -88,17 +88,21 @@ export function calculateTileMaterials(
   const whiteCementMaterial = materialPrices.find(m => m.type === 'WHITE_CEMENT');
   const marmolinaMaterial = materialPrices.find(m => m.type === 'MARMOLINA');
 
-  const cementBagWeight = cementMaterial?.bagWeight || 50; // Fallback a 50kg
+  const cementBagWeight = cementMaterial?.bagWeight || 25; // Fallback a 25kg (nuevo estándar)
   const whiteCementBagWeight = whiteCementMaterial?.bagWeight || 25; // Fallback a 25kg
   const marmolinaBagWeight = marmolinaMaterial?.bagWeight || 30; // Fallback a 30kg
+
+  // Redondear materiales en m³ hacia arriba (arena, grava, calcáreo, mixto, terciada)
+  const sandRounded = Math.ceil(sand);
+  const gravelRounded = Math.ceil(gravel);
 
   // Calcular costos
   const adhesiveCost = Math.ceil(adhesive) * findPrice('ADHESIVE', 'kg');
   // Calcular cemento por BOLSAS usando bagWeight de BD
   const cementBags = Math.ceil(cement / cementBagWeight);
   const cementCost = cementBags * findPrice('CEMENT', 'bolsa');
-  const sandCost = parseFloat(sand.toFixed(2)) * findPrice('SAND', 'm³');
-  const gravelCost = parseFloat(gravel.toFixed(2)) * findPrice('STONE', 'm³');
+  const sandCost = sandRounded * findPrice('SAND', 'm³');
+  const gravelCost = gravelRounded * findPrice('STONE', 'm³');
   // Calcular cemento blanco por BOLSAS usando bagWeight de BD
   const whiteCementBags = Math.ceil(whiteCement / whiteCementBagWeight);
   const whiteCementCost = whiteCementBags * findPrice('WHITE_CEMENT', 'bolsa');
@@ -116,11 +120,14 @@ export function calculateTileMaterials(
     tiles,
     materials: {
       adhesive: { quantity: Math.ceil(adhesive), unit: 'kg', cost: adhesiveCost },
-      cement: { quantity: Math.ceil(cement), unit: 'kg', cost: cementCost },
-      sand: { quantity: sand.toFixed(2), unit: 'm³', cost: sandCost },
-      gravel: { quantity: gravel.toFixed(2), unit: 'm³', cost: gravelCost },
-      whiteCement: { quantity: Math.ceil(whiteCement), unit: 'kg', cost: whiteCementCost },
-      marmolina: { quantity: Math.ceil(marmolina), unit: 'kg', cost: marmolinaCost },
+      cement: { quantity: cementBags, unit: `bolsas de ${cementBagWeight}kg`, cost: cementCost },
+      cementKg: { quantity: Math.ceil(cement), unit: 'kg', cost: cementCost }, // Referencia en kg
+      sand: { quantity: sandRounded, unit: 'm³', cost: sandCost },
+      gravel: { quantity: gravelRounded, unit: 'm³', cost: gravelCost },
+      whiteCement: { quantity: whiteCementBags, unit: `bolsas de ${whiteCementBagWeight}kg`, cost: whiteCementCost },
+      whiteCementKg: { quantity: Math.ceil(whiteCement), unit: 'kg', cost: whiteCementCost }, // Referencia en kg
+      marmolina: { quantity: marmolinaBags, unit: `bolsas de ${marmolinaBagWeight}kg`, cost: marmolinaCost },
+      marmolinaKg: { quantity: Math.ceil(marmolina), unit: 'kg', cost: marmolinaCost }, // Referencia en kg
       wireMesh: { quantity: Math.ceil(wireMesh), unit: 'm²', cost: wireMeshCost },
       waterproofing: { quantity: Math.ceil(waterproofing), unit: 'kg', cost: waterproofingCost },
     },
@@ -171,6 +178,43 @@ function calculateSidewalkArea(sideLength: number, sideConfig: SideConfig, tileP
   return totalArea;
 }
 
+/**
+ * Calcula la cantidad de losetas para una dimensión siguiendo las reglas profesionales:
+ * 1. Distribución desde extremos hacia el centro
+ * 2. Preferencia por loseta completa en el centro
+ * 3. Si la loseta central queda <50%, redistribuir desde 2-3 losetas antes
+ * 4. El anillo perimetral (primera vuelta) siempre existe
+ */
+function calculateTilesForDimension(dimensionLength: number): number {
+  // Constantes
+  const TILE_SIZE = 0.5; // 50cm
+  const JOINT_SIZE = 0.003; // 3mm
+  const EFFECTIVE_TILE_SIZE = TILE_SIZE + JOINT_SIZE; // 0.503m
+
+  // Calcular cuántas losetas completas caben
+  const fullTilesCount = Math.floor(dimensionLength / EFFECTIVE_TILE_SIZE);
+
+  // Calcular espacio restante después de colocar losetas completas
+  const remainingSpace = dimensionLength - (fullTilesCount * EFFECTIVE_TILE_SIZE);
+
+  // REGLA 1: Si no hay espacio restante o solo es la junta
+  if (remainingSpace <= JOINT_SIZE) {
+    return fullTilesCount;
+  }
+
+  // REGLA 2: Si el espacio restante es >= 50% del tamaño de una loseta
+  // Agregar una loseta más (será la loseta central, puede estar ligeramente cortada)
+  if (remainingSpace >= (TILE_SIZE / 2)) {
+    return fullTilesCount + 1;
+  }
+
+  // REGLA 3: Si el espacio restante es < 50% del tamaño de una loseta
+  // Significa que la loseta central quedaría muy pequeña
+  // En este caso, redistribuimos el espacio entre las últimas 2-3 losetas
+  // Para efectos de conteo, agregamos 1 loseta más para compensar los cortes
+  return fullTilesCount + 1;
+}
+
 function calculateTileQuantities(
   poolLength: number,
   poolWidth: number,
@@ -179,38 +223,34 @@ function calculateTileQuantities(
 ) {
   const quantities: any = {};
 
-  // Calcular para cada lado
+  // ========================================
+  // PASO 1: PRIMER ANILLO (SIEMPRE EXISTE)
+  // ========================================
+  let hasLomoBalena = false;
+
   ['north', 'south', 'east', 'west'].forEach((side) => {
     const sideConfig = tileConfig[side as keyof TileConfig];
-    const sideLength = (side === 'north' || side === 'south') ? poolLength : poolWidth;
 
-    // PRIMER ANILLO (obligatorio si está configurado)
+    // El primer anillo SIEMPRE debe existir (regla del usuario)
     if (sideConfig.firstRingType) {
+      // Mapeo: Norte/Sur = largo de piscina, Este/Oeste = ancho de piscina
+      const sideLength = (side === 'north' || side === 'south') ? poolLength : poolWidth;
+
       const firstRingKey = `firstRing_${sideConfig.firstRingType}`;
 
-      // Junta entre losetas: 8mm = 0.008m
-      const jointSize = 0.008;
-
-      // Dimensiones reales de losetas de primer anillo según tipo (en metros)
-      let firstRingTileLength = 0.40; // metros por defecto (40cm)
       let firstRingTileName = 'Primer Anillo';
 
       if (sideConfig.firstRingType === 'LOMO_BALLENA') {
-        firstRingTileLength = 0.50; // 50cm (Lomo Ballena real)
-        firstRingTileName = 'Primer Anillo LOMO BALLENA (40x50cm)';
+        firstRingTileName = 'Loseta Lomo Ballena (50x50cm)';
+        hasLomoBalena = true;
       } else if (sideConfig.firstRingType === 'L_FINISH') {
-        firstRingTileLength = 0.40; // 40cm (Terminación L)
-        firstRingTileName = 'Primer Anillo TERMINACIÓN L (40x40cm)';
+        firstRingTileName = 'Loseta Terminación L (50x50cm)';
       } else if (sideConfig.firstRingType === 'PERIMETER') {
-        firstRingTileLength = 0.40; // 40cm (Perimetral)
-        firstRingTileName = 'Primer Anillo PERIMETRAL (40x40cm)';
+        firstRingTileName = 'Loseta Perímetro (50x50cm)';
       }
 
-      // Largo efectivo considerando junta
-      const effectiveTileLength = firstRingTileLength + jointSize;
-
-      // Calcular cantidad de losetas necesarias para el lado
-      const tilesInFirstRing = Math.ceil(sideLength / effectiveTileLength);
+      // Calcular cuántas losetas caben en este lado usando el algoritmo profesional
+      const tilesInSide = calculateTilesForDimension(sideLength);
 
       if (!quantities[firstRingKey]) {
         quantities[firstRingKey] = {
@@ -221,57 +261,112 @@ function calculateTileQuantities(
           unit: 'unidades',
         };
       }
-      quantities[firstRingKey].quantity += tilesInFirstRing;
-    }
-
-    // FILAS ADICIONALES (opcionales, después del primer anillo)
-    if (sideConfig.selectedTileId && sideConfig.rows > 0) {
-      const tile = tilePresets.find(t => t.id === sideConfig.selectedTileId);
-      if (tile) {
-        // Junta entre losetas: 8mm = 0.008m
-        const jointSize = 0.008;
-
-        // tile.length y tile.width están en centímetros, convertir a metros
-        const tileLengthMeters = tile.length / 100;
-        const tileWidthMeters = tile.width / 100;
-
-        // Largo efectivo considerando junta
-        const effectiveTileLength = tileLengthMeters + jointSize;
-
-        // Calcular cantidad de losetas por fila
-        const tilesPerRow = Math.ceil(sideLength / effectiveTileLength);
-
-        // Total de losetas = losetas por fila × número de filas
-        const totalTiles = tilesPerRow * sideConfig.rows;
-
-        if (!quantities[sideConfig.selectedTileId]) {
-          quantities[sideConfig.selectedTileId] = {
-            tileId: tile.id,
-            tileName: `${tile.name} (${tileWidthMeters * 100}x${tileLengthMeters * 100}cm)`,
-            type: 'additional_rows',
-            quantity: 0,
-            unit: 'unidades',
-          };
-        }
-        quantities[sideConfig.selectedTileId].quantity += totalTiles;
-      }
+      quantities[firstRingKey].quantity += tilesInSide;
     }
   });
 
-  // LOSETAS ESQUINERAS (solo para Lomo Ballena)
-  // Contar cuántos lados tienen Lomo Ballena
-  const sidesWithLomoBalena = ['north', 'south', 'east', 'west'].filter(
-    side => tileConfig[side as keyof TileConfig].firstRingType === 'LOMO_BALLENA'
-  );
-
-  // Si hay Lomo Ballena, necesitamos 4 losetas esquineras (una por esquina)
-  if (sidesWithLomoBalena.length > 0) {
+  // Agregar esquineros amarillos si hay Lomo Ballena
+  if (hasLomoBalena) {
     const cornerKey = 'corner_LOMO_BALLENA';
     quantities[cornerKey] = {
       tileId: cornerKey,
-      tileName: 'Loseta Esquinera LOMO BALLENA (40x40cm)',
+      tileName: 'Esquinero Lomo Ballena (50x50cm)',
       type: 'corner',
-      quantity: 4, // Siempre 4 esquinas en una piscina rectangular
+      quantity: 4,
+      unit: 'unidades',
+    };
+  }
+
+  // ========================================
+  // PASO 2: FILAS ADICIONALES (mosaicos comunes 50x50cm)
+  // Solo contar filas EXTRA más allá del primer anillo
+  // ========================================
+  let totalCommonTiles = 0;
+
+  // Calcular cuántas filas extras tiene cada lado (si tiene firstRingType, restar 1)
+  const getExtraRows = (sideKey: string) => {
+    const sideConfig = tileConfig[sideKey as keyof TileConfig];
+    const totalRows = sideConfig.rows || 0;
+    const hasFirstRing = !!sideConfig.firstRingType;
+    return hasFirstRing ? Math.max(0, totalRows - 1) : totalRows;
+  };
+
+  const northExtraRows = getExtraRows('north');
+  const southExtraRows = getExtraRows('south');
+  const eastExtraRows = getExtraRows('east');
+  const westExtraRows = getExtraRows('west');
+
+  // 1. NORTE (cabecera superior - lado largo)
+  if (northExtraRows > 0) {
+    for (let fila = 0; fila < northExtraRows; fila++) {
+      const tilesInRow = calculateTilesForDimension(poolLength);
+      totalCommonTiles += tilesInRow;
+    }
+  }
+
+  // 2. SUR (cabecera inferior - lado largo)
+  if (southExtraRows > 0) {
+    for (let fila = 0; fila < southExtraRows; fila++) {
+      const tilesInRow = calculateTilesForDimension(poolLength);
+      totalCommonTiles += tilesInRow;
+    }
+  }
+
+  // 3. ESTE (lateral derecho - lado corto)
+  if (eastExtraRows > 0) {
+    for (let col = 0; col < eastExtraRows; col++) {
+      const tilesInColumn = calculateTilesForDimension(poolWidth);
+      totalCommonTiles += tilesInColumn;
+    }
+  }
+
+  // 4. OESTE (lateral izquierdo/skimmer - lado corto)
+  if (westExtraRows > 0) {
+    for (let col = 0; col < westExtraRows; col++) {
+      const tilesInColumn = calculateTilesForDimension(poolWidth);
+      totalCommonTiles += tilesInColumn;
+    }
+  }
+
+  // 5. ESQUINAS - Solo para las filas TOTALES (incluyendo primer anillo)
+  // porque las esquinas se dibujan para TODAS las intersecciones
+  let cornerTiles = 0;
+
+  // Esquina SUPERIOR IZQUIERDA (North + West)
+  if (tileConfig.north.rows > 0 && tileConfig.west.rows > 0) {
+    cornerTiles += tileConfig.north.rows * tileConfig.west.rows;
+  }
+
+  // Esquina SUPERIOR DERECHA (North + East)
+  if (tileConfig.north.rows > 0 && tileConfig.east.rows > 0) {
+    cornerTiles += tileConfig.north.rows * tileConfig.east.rows;
+  }
+
+  // Esquina INFERIOR IZQUIERDA (South + West)
+  if (tileConfig.south.rows > 0 && tileConfig.west.rows > 0) {
+    cornerTiles += tileConfig.south.rows * tileConfig.west.rows;
+  }
+
+  // Esquina INFERIOR DERECHA (South + East)
+  if (tileConfig.south.rows > 0 && tileConfig.east.rows > 0) {
+    cornerTiles += tileConfig.south.rows * tileConfig.east.rows;
+  }
+
+  // Restar las 4 esquinas del primer anillo (ya contadas con los esquineros)
+  if (hasLomoBalena) {
+    cornerTiles -= 4;
+  }
+
+  totalCommonTiles += cornerTiles;
+
+  // Agregar losetas comunes al resultado
+  if (totalCommonTiles > 0) {
+    const commonKey = 'common_tile_50x50';
+    quantities[commonKey] = {
+      tileId: commonKey,
+      tileName: 'Mosaico Común 50x50cm',
+      type: 'common_tiles',
+      quantity: totalCommonTiles,
       unit: 'unidades',
     };
   }

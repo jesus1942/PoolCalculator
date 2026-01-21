@@ -1,4 +1,13 @@
-import { EquipmentPreset } from '@prisma/client';
+import { EquipmentPreset, Project, PoolPreset } from '@prisma/client';
+import {
+  calculateHydraulicSystem,
+  HydraulicCalculationResult
+} from './hydraulicCalculations';
+import {
+  calculateElectricalSystem,
+  ElectricalSystemResult,
+  ElectricalConfig
+} from './electricalCalculations';
 
 export interface EquipmentRecommendation {
   pump: EquipmentPreset;
@@ -7,6 +16,9 @@ export interface EquipmentRecommendation {
   heatingOptions: EquipmentPreset[];
   optionalAccessories: EquipmentPreset[];
   electricalSpecs: ElectricalSpecification;
+  // Nuevos cálculos profesionales
+  hydraulicAnalysis?: HydraulicCalculationResult;
+  electricalAnalysis?: ElectricalSystemResult;
 }
 
 export interface ElectricalSpecification {
@@ -311,5 +323,117 @@ export function generateEquipmentRecommendation(
     heatingOptions,
     optionalAccessories,
     electricalSpecs,
+  };
+}
+
+/**
+ * Genera recomendación profesional con análisis hidráulico y eléctrico completo
+ * Esta función reemplaza a generateEquipmentRecommendation con cálculos avanzados
+ */
+export function generateProfessionalRecommendation(
+  project: Project & { poolPreset: PoolPreset },
+  distanceToEquipment: number,
+  staticLift: number,
+  allEquipment: EquipmentPreset[],
+  electricalConfig?: Partial<ElectricalConfig>
+): EquipmentRecommendation | null {
+  const poolVolume = project.volume;
+  const preset = project.poolPreset;
+
+  const poolConfig = {
+    hasSkimmer: preset.hasSkimmer,
+    skimmerCount: preset.skimmerCount,
+    hasLighting: preset.hasLighting,
+    lightingCount: preset.lightingCount,
+    returnsCount: preset.returnsCount,
+    hasVacuumIntake: preset.hasVacuumIntake,
+    vacuumIntakeCount: preset.vacuumIntakeCount || 1,
+  };
+
+  // ========== ANÁLISIS HIDRÁULICO PROFESIONAL ==========
+  const hydraulicAnalysis = calculateHydraulicSystem(
+    project,
+    distanceToEquipment,
+    staticLift,
+    allEquipment
+  );
+
+  // Seleccionar bomba basada en TDH real (si hay una recomendada)
+  let pump: EquipmentPreset | null = hydraulicAnalysis.recommendedPump;
+
+  // Si no hay bomba recomendada por TDH, usar método tradicional
+  if (!pump) {
+    console.log('[PROF-REC] No hay bomba recomendada por análisis hidráulico, usando selección tradicional para volumen:', poolVolume, 'm³');
+    pump = selectPump(poolVolume, allEquipment);
+  } else {
+    console.log('[PROF-REC] Bomba seleccionada por análisis hidráulico:', pump.name);
+  }
+
+  // Seleccionar filtro
+  const filter = selectFilter(poolVolume, allEquipment);
+
+  if (!pump) {
+    console.error('[PROF-REC] ERROR: No se encontró bomba adecuada para volumen', poolVolume, 'm³');
+    console.error('[PROF-REC] Bombas disponibles:', allEquipment.filter(e => e.type === 'PUMP' && e.isActive).length);
+    return null;
+  }
+
+  if (!filter) {
+    console.error('[PROF-REC] ERROR: No se encontró filtro adecuado para volumen', poolVolume, 'm³');
+    console.error('[PROF-REC] Filtros disponibles:', allEquipment.filter(e => e.type === 'FILTER' && e.isActive).length);
+    return null;
+  }
+
+  console.log('[PROF-REC] Recomendación generada exitosamente - Bomba:', pump.name, '| Filtro:', filter.name);
+
+  // Accesorios obligatorios
+  const requiredAccessories = selectRequiredAccessories(poolConfig, allEquipment);
+
+  // Opciones de climatización
+  const heatingOptions = getHeatingOptions(poolVolume, allEquipment);
+
+  // Accesorios opcionales
+  const optionalAccessories = allEquipment.filter(
+    (e) =>
+      e.category === 'OPTIONAL' &&
+      e.isActive &&
+      !['PUMP', 'FILTER'].includes(e.type)
+  );
+
+  // ========== ANÁLISIS ELÉCTRICO PROFESIONAL ==========
+  const defaultElectricalConfig: ElectricalConfig = {
+    distanceToPanel: distanceToEquipment,
+    voltage: 220,
+    installationType: 'CONDUIT',
+    ambientTemp: 25,
+    maxVoltageDrop: 3,
+    electricityCostPerKwh: 50, // ARS
+    ...electricalConfig
+  };
+
+  const electricalAnalysis = calculateElectricalSystem(
+    project,
+    defaultElectricalConfig
+  );
+
+  // Calcular especificaciones eléctricas (mantener compatibilidad con código existente)
+  const electricalSpecs = calculateElectricalSpecs(
+    {
+      pump,
+      filter,
+      accessories: requiredAccessories,
+    },
+    distanceToEquipment
+  );
+
+  return {
+    pump,
+    filter,
+    requiredAccessories,
+    heatingOptions,
+    optionalAccessories,
+    electricalSpecs,
+    hydraulicAnalysis,
+    electricalAnalysis,
   };
 }

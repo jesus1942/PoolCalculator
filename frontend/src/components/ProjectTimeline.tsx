@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Image as ImageIcon, X, Clock, FileText, AlertTriangle, CheckCircle, Package, Eye, EyeOff, Trash2, Edit2, Share2 } from 'lucide-react';
+import { Plus, Image as ImageIcon, X, Clock, FileText, AlertTriangle, CheckCircle, Package, Eye, EyeOff, Trash2, Edit2, Share2, Calendar, MessageCircle } from 'lucide-react';
 import api from '@/services/api';
 import { ShareTimelineModal } from './ShareTimelineModal';
 
@@ -26,8 +26,36 @@ interface ProjectTimelineProps {
   clientName?: string;
 }
 
+interface TimelineItem {
+  id: string;
+  type: 'PROJECT_UPDATE' | 'AGENDA_EVENT' | 'AGENDA_MESSAGE';
+  createdAt: string;
+  title: string;
+  description?: string | null;
+  category?: ProjectUpdate['category'];
+  images?: string[];
+  isPublic?: boolean;
+  event?: {
+    id: string;
+    title: string;
+    startAt: string;
+    endAt: string;
+    status: string;
+    type: string;
+    location?: string | null;
+  };
+  message?: {
+    id: string;
+    body: string;
+    images: string[];
+    visibility?: 'ALL' | 'ADMIN_ONLY';
+    user?: { id: string; name?: string | null; email?: string | null; role?: string | null };
+  };
+}
+
 export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, projectName = 'Proyecto', clientName }) => {
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -48,8 +76,9 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
   const loadUpdates = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/project-updates/project/${projectId}`);
-      setUpdates(response.data);
+      const response = await api.get(`/project-updates/project/${projectId}/timeline`);
+      setUpdates(response.data.updates || []);
+      setTimelineItems(response.data.timeline || []);
     } catch (error) {
       console.error('Error loading updates:', error);
     } finally {
@@ -217,6 +246,28 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
     return categories[category] || categories.OTHER;
   };
 
+  const getTimelineInfo = (item: TimelineItem) => {
+    if (item.type === 'PROJECT_UPDATE') {
+      return getCategoryInfo(item.category || 'OTHER');
+    }
+    if (item.type === 'AGENDA_MESSAGE') {
+      return { label: 'Mensaje', icon: MessageCircle, color: 'emerald' };
+    }
+    return { label: 'La Agenda', icon: Calendar, color: 'indigo' };
+  };
+
+  const getRoleLabel = (role?: string | null) => {
+    if (!role) return '';
+    const map: Record<string, string> = {
+      SUPERADMIN: 'Superadmin',
+      ADMIN: 'Admin',
+      INSTALLER: 'Instalador',
+      USER: 'Usuario',
+      VIEWER: 'Lector',
+    };
+    return map[role] || role;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -261,7 +312,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="text-gray-500 mt-4">Cargando actualizaciones...</p>
           </div>
-        ) : updates.length === 0 ? (
+        ) : timelineItems.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Clock size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600 mb-2">No hay actualizaciones registradas</p>
@@ -274,12 +325,12 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
 
             {/* Lista de actualizaciones */}
             <div className="space-y-6">
-              {updates.map((update) => {
-                const categoryInfo = getCategoryInfo(update.category);
+              {timelineItems.map((item) => {
+                const categoryInfo = getTimelineInfo(item);
                 const CategoryIcon = categoryInfo.icon;
 
                 return (
-                  <div key={update.id} className="relative pl-20">
+                  <div key={item.id} className="relative pl-20">
                     {/* Icono en la línea del timeline */}
                     <div className={`absolute left-4 w-8 h-8 rounded-full bg-${categoryInfo.color}-100 border-4 border-white flex items-center justify-center`}>
                       <CategoryIcon size={16} className={`text-${categoryInfo.color}-600`} />
@@ -290,60 +341,97 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="font-semibold text-gray-900">{update.title}</h4>
+                            <h4 className="font-semibold text-gray-900">{item.title}</h4>
                             <span className={`px-2 py-0.5 text-xs rounded-full bg-${categoryInfo.color}-100 text-${categoryInfo.color}-700`}>
                               {categoryInfo.label}
                             </span>
-                            <span className={`px-2 py-0.5 text-xs rounded-full ${update.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                              {update.isPublic ? 'Público' : 'Privado'}
-                            </span>
+                            {item.type === 'PROJECT_UPDATE' && (
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${item.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                                {item.isPublic ? 'Público' : 'Privado'}
+                              </span>
+                            )}
+                            {item.message?.visibility && (
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${item.message.visibility === 'ADMIN_ONLY' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                {item.message.visibility === 'ADMIN_ONLY' ? 'Solo admin' : 'Visible'}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500">{formatDate(update.createdAt)}</p>
+                          <p className="text-xs text-gray-500">{formatDate(item.createdAt)}</p>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleToggleVisibility(update.id)}
-                            className={`${update.isPublic ? 'text-green-600 hover:text-green-800' : 'text-gray-400 hover:text-gray-600'} p-1`}
-                            title={update.isPublic ? 'Visible para clientes (click para ocultar)' : 'Oculto para clientes (click para mostrar)'}
-                          >
-                            {update.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
-                          </button>
-                          <button
-                            onClick={() => handleEditClick(update)}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                            title="Editar actualización"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUpdate(update.id)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Eliminar actualización"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        {item.type === 'PROJECT_UPDATE' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleVisibility(item.id)}
+                              className={`${item.isPublic ? 'text-green-600 hover:text-green-800' : 'text-gray-400 hover:text-gray-600'} p-1`}
+                              title={item.isPublic ? 'Visible para clientes (click para ocultar)' : 'Oculto para clientes (click para mostrar)'}
+                            >
+                              {item.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(item as ProjectUpdate)}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Editar actualización"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUpdate(item.id)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Eliminar actualización"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      {update.description && (
-                        <p className="text-sm text-gray-700 mt-2 mb-3">{update.description}</p>
+                      {item.description && (
+                        <p className="text-sm text-gray-700 mt-2 mb-3">{item.description}</p>
+                      )}
+
+                      {item.event && (
+                        <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                          <div className="font-medium text-gray-800">Evento</div>
+                          <div className="mt-1">
+                            {new Date(item.event.startAt).toLocaleString('es-AR')} -{' '}
+                            {new Date(item.event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          {item.event.location && (
+                            <div className="mt-1 text-gray-500">Ubicación: {item.event.location}</div>
+                          )}
+                          <div className="mt-1 text-gray-500">
+                            {item.event.type} · {item.event.status}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.message && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3 text-sm text-emerald-900">
+                          <div className="font-medium">Mensaje</div>
+                          {item.message.user && (
+                            <div className="text-xs text-emerald-700 mt-1">
+                              {item.message.user.name || item.message.user.email || 'Usuario'}{item.message.user.role ? ` · ${getRoleLabel(item.message.user.role)}` : ''}
+                            </div>
+                          )}
+                          <div className="mt-1">{item.message.body}</div>
+                        </div>
                       )}
 
                       {/* Galería de imágenes */}
-                      {update.images && update.images.length > 0 && (
+                      {item.images && item.images.length > 0 && (
                         <div className="grid grid-cols-4 gap-2 mt-3">
-                          {(update.images as string[]).map((image, index) => (
+                          {(item.images as string[]).map((image, index) => (
                             <div
                               key={index}
                               className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => {
-                                setSelectedImages(update.images as string[]);
+                                setSelectedImages(item.images as string[]);
                                 setShowImageModal(true);
                               }}
                             >
                               <img
                                 src={image}
-                                alt={`${update.title} - ${index + 1}`}
+                                alt={`${item.title} - ${index + 1}`}
                                 className="w-full h-full object-cover"
                               />
                             </div>

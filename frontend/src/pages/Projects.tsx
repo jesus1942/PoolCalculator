@@ -119,12 +119,12 @@ export const Projects: React.FC = () => {
 
   const getStatusColor = (status: ProjectStatus) => {
     const colors = {
-      DRAFT: 'bg-gray-100 text-gray-700 border border-gray-200',
-      BUDGETED: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-      APPROVED: 'bg-blue-50 text-blue-700 border border-blue-200',
-      IN_PROGRESS: 'bg-purple-50 text-purple-700 border border-purple-200',
-      COMPLETED: 'bg-green-50 text-green-700 border border-green-200',
-      CANCELLED: 'bg-red-50 text-red-700 border border-red-200',
+      DRAFT: 'bg-white/10 text-zinc-200 border border-white/20',
+      BUDGETED: 'bg-amber-500/15 text-amber-200 border border-amber-400/30',
+      APPROVED: 'bg-cyan-500/15 text-cyan-200 border border-cyan-400/30',
+      IN_PROGRESS: 'bg-indigo-500/15 text-indigo-200 border border-indigo-400/30',
+      COMPLETED: 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30',
+      CANCELLED: 'bg-rose-500/15 text-rose-200 border border-rose-400/30',
     };
     return colors[status] || colors.DRAFT;
   };
@@ -149,8 +149,11 @@ export const Projects: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-700 text-lg font-medium">Cargando proyectos...</p>
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin"></div>
+          </div>
+          <p className="text-gray-600 text-lg font-medium">Cargando proyectos...</p>
         </div>
       </div>
     );
@@ -163,19 +166,19 @@ export const Projects: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
                 <FolderOpen className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
                   Proyectos
                 </h1>
-                <p className="text-gray-500 mt-1">Administra todos tus proyectos de piscinas</p>
+                <p className="text-gray-600 mt-1">Administra todos tus proyectos de piscinas</p>
               </div>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg"
             >
               <Plus size={20} />
               <span>Nuevo Proyecto</span>
@@ -185,20 +188,20 @@ export const Projects: React.FC = () => {
 
         {/* Empty State */}
         {projects.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-white/10 rounded-xl border border-white/15 shadow-2xl">
             <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-lg bg-gray-100 flex items-center justify-center">
-                <FolderOpen className="h-8 w-8 text-gray-400" />
+              <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <FolderOpen className="h-8 w-8 text-zinc-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-xl font-semibold text-white mb-2">
                 No tenes proyectos todavia
               </h3>
-              <p className="text-gray-500 mb-8 max-w-md mx-auto">
+              <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                 Empieza creando tu primer proyecto de piscina y gestiona todos los detalles de construccion
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 inline-flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg"
               >
                 <Plus size={20} />
                 <span>Crear Primer Proyecto</span>
@@ -212,7 +215,7 @@ export const Projects: React.FC = () => {
               return (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200"
+                  className="group relative bg-white/10 rounded-xl border border-white/15 hover:border-cyan-400/40 shadow-2xl transition-all duration-200"
                 >
                   <div className="p-6 space-y-4">
                     {/* Header */}
@@ -221,9 +224,9 @@ export const Projects: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
                           {project.name}
                         </h3>
-                        <p className="text-sm text-gray-500">{project.clientName}</p>
+                        <p className="text-sm text-zinc-400">{project.clientName}</p>
                       </div>
-                      <span className={`px-2.5 py-1 text-xs font-medium rounded-md flex items-center gap-1.5 flex-shrink-0 ${getStatusColor(project.status)}`}>
+                      <span className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center gap-1.5 flex-shrink-0 ${getStatusColor(project.status)}`}>
                         <StatusIcon className="h-3 w-3" />
                         {getStatusLabel(project.status)}
                       </span>
@@ -231,30 +234,30 @@ export const Projects: React.FC = () => {
 
                     {/* Pool Preset Info */}
                     {project.poolPreset && (
-                      <div className="border-t border-gray-200 pt-4">
+                      <div className="border-t border-white/10 pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Waves className="h-4 w-4 text-blue-600" />
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Modelo de Piscina</p>
+                          <Waves className="h-4 w-4 text-cyan-300" />
+                          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Modelo de Piscina</p>
                         </div>
-                        <p className="font-semibold text-gray-900">{project.poolPreset.name}</p>
-                        <p className="text-sm text-gray-700 mt-1">
+                        <p className="font-semibold text-white">{project.poolPreset.name}</p>
+                        <p className="text-sm text-zinc-400 mt-1">
                           {project.poolPreset.length}m × {project.poolPreset.width}m × {project.poolPreset.depth}m
                         </p>
                       </div>
                     )}
 
                     {/* Details Grid */}
-                    <div className="border-t border-gray-200 pt-4 grid grid-cols-2 gap-3">
+                    <div className="border-t border-white/10 pt-4 grid grid-cols-2 gap-3">
                       {project.location && (
-                        <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                          <p className="text-xs text-gray-500 mb-1 font-medium">Ubicacion</p>
-                          <p className="font-medium text-gray-900 text-sm truncate">{project.location}</p>
+                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                          <p className="text-xs text-zinc-500 mb-1 font-medium">Ubicacion</p>
+                          <p className="font-medium text-white text-sm truncate">{project.location}</p>
                         </div>
                       )}
                       {project.totalCost > 0 && (
-                        <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                          <p className="text-xs text-gray-500 mb-1 font-medium">Costo Total</p>
-                          <p className="font-semibold text-green-600 text-sm">
+                        <div className="bg-white/5 rounded-md p-3 border border-white/10">
+                          <p className="text-xs text-zinc-500 mb-1 font-medium">Costo Total</p>
+                          <p className="font-semibold text-emerald-300 text-sm">
                             ${project.totalCost.toLocaleString('es-AR')}
                           </p>
                         </div>
@@ -262,23 +265,23 @@ export const Projects: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 pt-4 border-t border-gray-200">
+                    <div className="flex gap-2 pt-4 border-t border-white/10">
                       <button
                         onClick={() => handleView(project.id)}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 bg-cyan-400 text-zinc-950 font-semibold rounded-lg hover:bg-cyan-300 transition-colors duration-200 flex items-center justify-center gap-2"
                       >
                         <Eye size={16} />
                         <span>Ver</span>
                       </button>
                       <button
                         onClick={() => handleEdit(project)}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors duration-200 border border-gray-200"
+                        className="px-4 py-2 bg-white/5 text-zinc-200 hover:bg-white/10 rounded-lg transition-colors duration-200 border border-white/10"
                       >
                         <Edit size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(project.id)}
-                        className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors duration-200 border border-red-200"
+                        className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
                       >
                         <Trash2 size={16} />
                       </button>

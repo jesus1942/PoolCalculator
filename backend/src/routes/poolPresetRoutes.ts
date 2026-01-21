@@ -12,19 +12,20 @@ import { upload } from '../config/multer';
 
 const router = express.Router();
 
-router.use(authenticate);
+// Rutas públicas (GET) - accesibles desde landing page
+router.get('/', getPoolPresets);
+router.get('/:id', getPoolPresetById);
+router.get('/:id/calculate', calculatePresetMeasurements);
 
-router.post('/', upload.fields([
+// Rutas protegidas (POST, PUT, DELETE) - requieren autenticación
+router.post('/', authenticate, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'additionalImages', maxCount: 5 }
 ]), createPoolPreset);
-router.get('/', getPoolPresets);
-router.get('/:id', getPoolPresetById);
-router.put('/:id', upload.fields([
+router.put('/:id', authenticate, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'additionalImages', maxCount: 5 }
 ]), updatePoolPreset);
-router.delete('/:id', deletePoolPreset);
-router.get('/:id/calculate', calculatePresetMeasurements);
+router.delete('/:id', authenticate, deletePoolPreset);
 
 export default router;

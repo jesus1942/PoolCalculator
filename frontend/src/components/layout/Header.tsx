@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { LogOut, User, Settings, Layout, Waves, Droplets, Menu, X } from 'lucide-react';
+import { LogOut, User, Settings, Layout, Waves, Menu, X, Database, Calendar } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -19,6 +19,7 @@ export const Header: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const isInstaller = user?.role === 'INSTALLER';
 
   return (
     <>
@@ -32,13 +33,13 @@ export const Header: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-3 group z-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl blur-md opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>
-                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Droplets className="h-6 w-6 text-white" />
+                <div className="absolute inset-0 rounded-2xl bg-white/10 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative h-10 w-10 rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
+                  <img src="/logo-isotipo.png" alt="Pool Installer" className="h-6 w-auto" />
                 </div>
               </div>
               <span className="text-xl font-light text-white tracking-wide">
-                Pool <span className="font-semibold">Calculator</span>
+                Pool <span className="font-semibold">Installer</span>
               </span>
             </Link>
 
@@ -46,6 +47,19 @@ export const Header: React.FC = () => {
               <>
                 {/* Desktop Navigation */}
                 <nav className="hidden lg:flex items-center space-x-2">
+                  {isInstaller ? (
+                    <Link
+                      to="/installer"
+                      className={`px-4 py-2 rounded-xl font-light transition-all duration-200 ${
+                        isActive('/installer')
+                          ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                      }`}
+                    >
+                      Instalador
+                    </Link>
+                  ) : (
+                    <>
                   <Link
                     to="/dashboard"
                     className={`px-4 py-2 rounded-xl font-light transition-all duration-200 ${
@@ -54,7 +68,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    Dashboard
+                    Panel
                   </Link>
                   <Link
                     to="/projects"
@@ -65,6 +79,17 @@ export const Header: React.FC = () => {
                     }`}
                   >
                     Proyectos
+                  </Link>
+                  <Link
+                    to="/agenda"
+                    className={`px-4 py-2 rounded-xl font-light transition-all duration-200 flex items-center space-x-2 ${
+                      isActive('/agenda')
+                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                    }`}
+                  >
+                    <Calendar size={18} />
+                    <span>La Agenda</span>
                   </Link>
                   <Link
                     to="/pool-models"
@@ -88,6 +113,21 @@ export const Header: React.FC = () => {
                     <Settings size={18} />
                     <span>Presets</span>
                   </Link>
+                  {user?.role === 'SUPERADMIN' && (
+                    <Link
+                      to="/admin/catalogs"
+                      className={`px-4 py-2 rounded-xl font-light transition-all duration-200 flex items-center space-x-2 ${
+                        isActive('/admin/catalogs')
+                          ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                      }`}
+                    >
+                      <Database size={18} />
+                      <span>Catálogos</span>
+                    </Link>
+                  )}
+                    </>
+                  )}
                   <div className="flex items-center space-x-3 border-l border-zinc-800 pl-4 ml-2">
                     <div className="flex items-center space-x-2 bg-zinc-900/50 border border-zinc-800/50 px-3 py-2 rounded-xl backdrop-blur-sm">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
@@ -174,6 +214,21 @@ export const Header: React.FC = () => {
 
               {/* Navigation Links */}
               <div className="flex-1 space-y-2">
+                {isInstaller ? (
+                  <Link
+                    to="/installer"
+                    onClick={closeMobileMenu}
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl font-light transition-all duration-200 ${
+                      isActive('/installer')
+                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                    }`}
+                  >
+                    <Calendar size={20} />
+                    <span>Instalador</span>
+                  </Link>
+                ) : (
+                  <>
                 <Link
                   to="/dashboard"
                   onClick={closeMobileMenu}
@@ -184,7 +239,7 @@ export const Header: React.FC = () => {
                   }`}
                 >
                   <Layout size={20} />
-                  <span>Dashboard</span>
+                  <span>Panel</span>
                 </Link>
                 <Link
                   to="/projects"
@@ -197,6 +252,18 @@ export const Header: React.FC = () => {
                 >
                   <Droplets size={20} />
                   <span>Proyectos</span>
+                </Link>
+                <Link
+                  to="/agenda"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl font-light transition-all duration-200 ${
+                    isActive('/agenda')
+                      ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                  }`}
+                >
+                  <Calendar size={20} />
+                  <span>La Agenda</span>
                 </Link>
                 <Link
                   to="/pool-models"
@@ -222,6 +289,22 @@ export const Header: React.FC = () => {
                   <Settings size={20} />
                   <span>Presets</span>
                 </Link>
+                {user?.role === 'SUPERADMIN' && (
+                  <Link
+                    to="/admin/catalogs"
+                    onClick={closeMobileMenu}
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl font-light transition-all duration-200 ${
+                      isActive('/admin/catalogs')
+                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/20'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
+                    }`}
+                  >
+                    <Database size={20} />
+                      <span>Catálogos</span>
+                    </Link>
+                  )}
+                  </>
+                )}
               </div>
 
               {/* Logout Button */}

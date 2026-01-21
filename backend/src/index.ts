@@ -54,6 +54,41 @@ console.log('[INIT] publicShareRoutes cargado');
 import passwordResetRoutes from './routes/passwordResetRoutes';
 console.log('[INIT] passwordResetRoutes cargado');
 
+import publicContactRoutes from './routes/publicContactRoutes';
+console.log('[INIT] publicContactRoutes cargado');
+
+import catalogScraperRoutes from './routes/catalogScraperRoutes';
+console.log('[INIT] catalogScraperRoutes cargado');
+
+import professionalCalculationsRoutes from './routes/professionalCalculationsRoutes';
+console.log('[INIT] professionalCalculationsRoutes cargado');
+
+import productImageRoutes from './routes/productImageRoutes';
+console.log('[INIT] productImageRoutes cargado');
+
+import weatherRoutes from './routes/weatherRoutes';
+console.log('[INIT] weatherRoutes cargado');
+
+import agendaRoutes from './routes/agendaRoutes';
+console.log('[INIT] agendaRoutes cargado');
+
+import crewRoutes from './routes/crewRoutes';
+console.log('[INIT] crewRoutes cargado');
+
+import userRoutes from './routes/userRoutes';
+console.log('[INIT] userRoutes cargado');
+
+import docsRoutes from './routes/docsRoutes';
+console.log('[INIT] docsRoutes cargado');
+
+import organizationRoutes from './routes/organizationRoutes';
+console.log('[INIT] organizationRoutes cargado');
+
+import opsRoutes from './routes/opsRoutes';
+console.log('[INIT] opsRoutes cargado');
+
+import { startAgendaReminderEmailService } from './services/agendaReminderEmailService';
+
 dotenv.config();
 console.log('[INIT] Variables de entorno cargadas');
 
@@ -106,6 +141,17 @@ app.use('/api/project-updates', projectUpdatesRoutes);
 app.use('/api/project-share', projectShareRoutes);
 app.use('/api/public/timeline', publicShareRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api', publicContactRoutes); // Rutas públicas de contacto
+app.use('/api/catalog-scraper', catalogScraperRoutes); // Scraping de catálogos
+app.use('/api/professional-calculations', professionalCalculationsRoutes); // Cálculos profesionales hidráulicos y eléctricos
+app.use('/api/products', productImageRoutes); // Gestión de imágenes de productos
+app.use('/api', weatherRoutes); // Clima (proxy Open-Meteo)
+app.use('/api/agenda', agendaRoutes); // Agenda pro
+app.use('/api/crews', crewRoutes); // Crews
+app.use('/api', userRoutes); // Usuarios
+app.use('/api/docs', docsRoutes); // Documentación interna
+app.use('/api/organizations', organizationRoutes); // Organizaciones
+app.use('/api/admin/ops', opsRoutes); // Observabilidad backend/db
 
 console.log('[INIT] Configurando middlewares y rutas...');
 
@@ -118,7 +164,12 @@ app.listen(PORT, () => {
   console.log(`Health: http://localhost:${PORT}/health`);
   console.log(`Auth: http://localhost:${PORT}/api/auth`);
   console.log(`Equipment: http://localhost:${PORT}/api/equipment`);
+  console.log(`Professional Calculations: http://localhost:${PORT}/api/professional-calculations`);
+  console.log(`Product Images: http://localhost:${PORT}/api/products`);
   console.log(`DB: PostgreSQL@localhost:5433`);
   console.log('========================================');
   console.log('');
+
+  startAgendaReminderEmailService();
+  console.log('[INIT] Agenda reminders email service iniciado');
 });

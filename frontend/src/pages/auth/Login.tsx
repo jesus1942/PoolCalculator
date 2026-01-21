@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Droplets, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 
 // Para OAuth necesitamos la URL base sin /api
 const BACKEND_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '');
@@ -22,8 +22,12 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const loggedUser = await login(email, password);
+      if (loggedUser.role === 'INSTALLER') {
+        navigate('/installer');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al iniciar sesión');
     } finally {
@@ -36,29 +40,38 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        <div className="relative overflow-hidden rounded-2xl bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-cyan-500/10"></div>
+        {/* Botón para volver a la landing */}
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">Volver al inicio</span>
+          </Link>
+        </div>
 
-          <div className="relative p-8">
+        <div className="bg-white/5 rounded-2xl border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
+          <div className="p-8">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-xl">
-                <Droplets className="h-9 w-9 text-white" />
+              <div className="w-16 h-16 rounded-2xl bg-black border border-black/80 flex items-center justify-center shadow-lg">
+                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-9 w-auto" />
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              Pool Calculator
+            <h2 className="text-3xl font-bold text-center mb-2 text-white">
+              Pool Installer
             </h2>
-            <p className="text-center text-slate-400 mb-8 font-medium">
+            <p className="text-center text-zinc-400 mb-8">
               Ingresá a tu cuenta para continuar
             </p>
 
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300 text-sm font-medium">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 text-sm font-medium">{error}</p>
               </div>
             )}
 
@@ -84,7 +97,7 @@ export const Login: React.FC = () => {
                 <div className="mt-2 text-right">
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                    className="text-sm text-cyan-300 hover:text-cyan-200 transition-colors font-medium"
                   >
                     ¿Olvidaste tu contraseña?
                   </Link>
@@ -103,10 +116,10 @@ export const Login: React.FC = () => {
             {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-700"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-800/50 text-slate-400 font-medium">O continuar con</span>
+                <span className="px-4 bg-zinc-950 text-zinc-400 font-medium">O continuar con</span>
               </div>
             </div>
 
@@ -114,7 +127,7 @@ export const Login: React.FC = () => {
             <button
               onClick={handleGoogleLogin}
               type="button"
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/15 text-zinc-200 border border-white/10 rounded-xl font-medium transition-all duration-200"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -137,9 +150,9 @@ export const Login: React.FC = () => {
               Continuar con Google
             </button>
 
-            <p className="mt-6 text-center text-sm text-slate-400">
+            <p className="mt-6 text-center text-sm text-zinc-400">
               ¿No tenés cuenta?{' '}
-              <Link to="/register" className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">
+              <Link to="/register" className="text-cyan-300 hover:text-cyan-200 font-semibold transition-colors">
                 Registrate acá
               </Link>
             </p>

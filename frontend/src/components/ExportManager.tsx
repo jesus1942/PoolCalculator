@@ -48,7 +48,7 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ project }) => {
 <body>
   <div class="header">
     <h1>PRESUPUESTO DE PISCINA</h1>
-    <div class="subtitle">Pool Calculator - ${new Date().toLocaleDateString('es-AR')}</div>
+    <div class="subtitle">Pool Installer - ${new Date().toLocaleDateString('es-AR')}</div>
   </div>
 
   <div class="section">
@@ -204,7 +204,7 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ project }) => {
   </div>
 
   <div class="footer">
-    <p>Presupuesto generado por Pool Calculator el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR')}</p>
+    <p>Presupuesto generado por Pool Installer el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR')}</p>
     <p>Este presupuesto tiene una validez de 30 días desde su emisión</p>
   </div>
 </body>

@@ -21,6 +21,96 @@ export const projectUpdateController = {
     }
   },
 
+  // Obtener timeline combinado (actualizaciones + agenda)
+  async getTimeline(req: Request, res: Response) {
+    try {
+      const { projectId } = req.params;
+
+      const [updates, agendaEvents] = await Promise.all([
+        prisma.projectUpdate.findMany({
+          where: { projectId },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.agendaEvent.findMany({
+          where: { projectId },
+          include: {
+            messages: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                user: { select: { id: true, name: true, email: true, role: true } },
+              },
+            },
+          },
+          orderBy: { startAt: 'desc' },
+        }),
+      ]);
+
+      const updateItems = updates.map((update) => ({
+        id: update.id,
+        type: 'PROJECT_UPDATE',
+        createdAt: update.createdAt,
+        title: update.title,
+        description: update.description,
+        category: update.category,
+        images: update.images,
+        isPublic: update.isPublic,
+      }));
+
+      const eventItems = agendaEvents.map((event) => ({
+        id: `event-${event.id}`,
+        type: 'AGENDA_EVENT',
+        createdAt: event.startAt,
+        title: event.title,
+        description: event.location,
+        event: {
+          id: event.id,
+          title: event.title,
+          startAt: event.startAt,
+          endAt: event.endAt,
+          status: event.status,
+          type: event.type,
+          location: event.location,
+        },
+      }));
+
+      const messageItems = agendaEvents.flatMap((event) =>
+        event.messages.map((message) => ({
+          id: `message-${message.id}`,
+          type: 'AGENDA_MESSAGE',
+          createdAt: message.createdAt,
+          title: `Mensaje en ${event.title}`,
+          description: message.body,
+          images: message.images,
+          message: {
+            id: message.id,
+            body: message.body,
+            images: message.images,
+            visibility: message.visibility,
+            user: message.user,
+          },
+          event: {
+            id: event.id,
+            title: event.title,
+            startAt: event.startAt,
+            endAt: event.endAt,
+            status: event.status,
+            type: event.type,
+            location: event.location,
+          },
+        }))
+      );
+
+      const timeline = [...updateItems, ...eventItems, ...messageItems].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      res.json({ updates, timeline });
+    } catch (error) {
+      console.error('Error fetching project timeline:', error);
+      res.status(500).json({ error: 'Error al obtener timeline del proyecto' });
+    }
+  },
+
   // Crear una nueva actualización
   async create(req: Request, res: Response) {
     try {

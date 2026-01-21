@@ -1,9 +1,17 @@
 {
   "projectName": "Pool Calculator",
   "description": "Calculadora de materiales para construcción de piscinas con gestión de proyectos, presets, accesorios, equipamiento, instalación eléctrica, tareas y exportación de documentos",
-  "lastUpdate": "2025-10-14",
+  "lastUpdate": "2025-12-20",
   "version": "2.0.0",
   "changelog": [
+    {
+      "date": "2025-12-20",
+      "timestamp": "2025-12-20 15:26:21",
+      "author": "Jesus Olguin",
+      "changes": [
+        "Docs admin, export editor/preview persistente, mallas 2x6 y logos claro/oscuro"
+      ]
+    },
     {
       "date": "2025-10-14",
       "timestamp": "2025-10-14 22:38:12",

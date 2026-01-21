@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div>
-            <h3 className="text-lg font-light text-white mb-4 tracking-wide">Pool Calculator</h3>
+            <h3 className="text-lg font-light text-white mb-4 tracking-wide">Pool Installer</h3>
             <p className="text-zinc-400 text-sm font-light leading-relaxed">
               Sistema completo de cálculo de materiales para montaje de piscinas de fibra de vidrio.
             </p>
@@ -92,7 +92,7 @@ export const Footer: React.FC = () => {
         <div className="border-t border-zinc-800/50 pt-8">
           <div className="text-center space-y-2">
             <p className="text-zinc-500 text-sm font-light">
-              © {currentYear} Pool Calculator. Todos los derechos reservados.
+              © {currentYear} Pool Installer. Todos los derechos reservados.
             </p>
             <p className="text-zinc-600 text-xs font-light">
               Desarrollado por <span className="font-normal text-cyan-400">Jesús Olguín</span> - Domotics & IoT Solutions

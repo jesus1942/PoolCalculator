@@ -16,10 +16,10 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variantStyles = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md',
-    secondary: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50',
-    danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm hover:shadow-md',
-    success: 'bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md',
+    primary: 'bg-cyan-400 text-zinc-950 hover:bg-cyan-300 shadow-sm hover:shadow-md',
+    secondary: 'bg-white/5 border border-white/10 text-zinc-200 hover:bg-white/10',
+    danger: 'bg-red-500 text-white hover:bg-red-400 shadow-sm hover:shadow-md',
+    success: 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-sm hover:shadow-md',
   };
 
   const sizeStyles = {

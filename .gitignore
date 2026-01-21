@@ -77,3 +77,6 @@ backend/logs/
 *.pid
 *.seed
 *.pid.lock
+
+# Local repo not tracked
+PoolCalculatorRN/

@@ -9,6 +9,8 @@ import {
 import { calculateTileMaterials } from '../utils/tileCalculations';
 import { calculateBedMaterials } from '../utils/bedCalculations';
 import { generateDefaultTasks } from '../utils/taskGenerator';
+import { calculateHydraulicSystem } from '../utils/hydraulicCalculations';
+import { calculateElectricalSystem } from '../utils/electricalCalculations';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -18,6 +20,7 @@ const execAsync = promisify(exec);
 export const createProject = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
+    const orgId = req.user?.orgId || null;
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
@@ -57,6 +60,9 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         name: true,
         hourlyRate: true,
         dailyRate: true,
+        billingType: true,
+        ratePerUnit: true,
+        bocaRates: true,
       },
     });
     // Convertir null a undefined para compatibilidad con RoleRate
@@ -65,6 +71,9 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       name: r.name,
       hourlyRate: r.hourlyRate ?? undefined,
       dailyRate: r.dailyRate ?? undefined,
+      billingType: r.billingType,
+      ratePerUnit: r.ratePerUnit ?? undefined,
+      bocaRates: r.bocaRates ?? undefined,
     }));
     console.log(`[PROJECT] Roles cargados: ${roles.length}`);
 
@@ -106,6 +115,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         totalCost: totalLaborCost,
         status: status || 'DRAFT',
         userId,
+        organizationId: orgId,
       },
     });
 
@@ -119,10 +129,11 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 export const getProjects = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const isAdmin = req.user?.role === 'ADMIN';
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
     const projects = await prisma.project.findMany({
-      where: isAdmin ? {} : { userId },
+      where: orgId ? { organizationId: orgId } : (isAdmin ? {} : { userId }),
       include: {
         poolPreset: true,
         user: {
@@ -149,10 +160,11 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
-    const isAdmin = req.user?.role === 'ADMIN';
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
-    const project = await prisma.project.findUnique({
-      where: { id },
+    const project = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
       include: {
         poolPreset: true,
         user: {
@@ -201,8 +213,8 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       });
 
       // Recargar proyecto con valores corregidos
-      const correctedProject = await prisma.project.findUnique({
-        where: { id },
+      const correctedProject = await prisma.project.findFirst({
+        where: { id, ...(orgId ? { organizationId: orgId } : {}) },
         include: {
           poolPreset: true,
           user: {
@@ -234,10 +246,11 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
 
     const { id } = req.params;
     const userId = req.user?.userId;
-    const isAdmin = req.user?.role === 'ADMIN';
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
-    const existingProject = await prisma.project.findUnique({
-      where: { id },
+    const existingProject = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
       include: { poolPreset: true },
     });
 
@@ -388,10 +401,11 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId;
-    const isAdmin = req.user?.role === 'ADMIN';
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
-    const existingProject = await prisma.project.findUnique({
-      where: { id },
+    const existingProject = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
     });
 
     if (!existingProject) {
@@ -418,11 +432,12 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { sections } = req.body;
     const userId = req.user?.userId;
-    const isAdmin = req.user?.role === 'ADMIN';
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
 
     // Obtener el proyecto con todos sus datos
-    const project = await prisma.project.findUnique({
-      where: { id },
+    const project = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
       include: {
         poolPreset: true,
         projectAdditionals: {
@@ -492,6 +507,8 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
     }
 
     // Preparar datos completos para el Excel
+    const totalWatts = electricalConfig.totalWatts ?? electricalConfig.totalPower ?? 0;
+
     const projectData = {
       // Información básica
       projectId: project.id.substring(0, 8).toUpperCase(),
@@ -542,7 +559,7 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
         materials: {
           area: project.sidewalkArea || 0,
           cement: materials.cement?.quantity || 0,
-          cementUnit: materials.cement?.unit || 'kg',
+          cementUnit: materials.cement?.unit || 'bolsas',
           sand: materials.sand?.quantity || 0,
           sandUnit: materials.sand?.unit || 'm³',
           stone: materials.gravel?.quantity || 0,
@@ -552,9 +569,9 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
           adhesive: materials.adhesive?.quantity || 0,
           adhesiveUnit: materials.adhesive?.unit || 'kg',
           whiteCement: materials.whiteCement?.quantity || 0,
-          whiteCementUnit: materials.whiteCement?.unit || 'kg',
+          whiteCementUnit: materials.whiteCement?.unit || 'bolsas',
           marmolina: materials.marmolina?.quantity || 0,
-          marmolinaUnit: materials.marmolina?.unit || 'kg',
+          marmolinaUnit: materials.marmolina?.unit || 'bolsas',
         }
       },
 
@@ -570,8 +587,8 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
 
       // Instalación eléctrica
       electrical: {
-        watts: electricalConfig.totalWatts || 0,
-        amps: electricalConfig.totalWatts ? parseFloat((electricalConfig.totalWatts / 220).toFixed(1)) : 0,
+        watts: totalWatts,
+        amps: totalWatts ? parseFloat((totalWatts / 220).toFixed(1)) : 0,
         recommendedBreaker: electricalConfig.recommendedBreaker || 16,
         recommendedRCD: electricalConfig.recommendedRCD || 16,
         cableSection: electricalConfig.cableSection || '2.5mm²',
@@ -580,10 +597,12 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
         pump: {
           power: electricalConfig.pump?.power || '-',
           observations: electricalConfig.pump?.observations || '-',
+          imageUrl: electricalConfig.pump?.imageUrl || null,
         },
         filter: {
           diameter: electricalConfig.filter?.diameter || '-',
           observations: electricalConfig.filter?.observations || '-',
+          imageUrl: electricalConfig.filter?.imageUrl || null,
         },
         // Desglose de consumo
         consumptionBreakdown: electricalConfig.consumptionBreakdown || [],
@@ -604,8 +623,62 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
         labor: true,
         sequence: true,
         standards: true,
+        hydraulicAnalysis: true,     // Nueva sección
+        electricalAnalysis: true,    // Nueva sección
       },
+
+      // Placeholder para cálculos profesionales (se llenarán después)
+      hydraulicAnalysis: null as any,
+      electricalAnalysis: null as any,
     };
+
+    // ========== CÁLCULOS PROFESIONALES ==========
+    // Ejecutar análisis hidráulico profesional
+    let hydraulicAnalysis: any = null;
+    let electricalAnalysis: any = null;
+
+    try {
+      // Obtener equipos disponibles para cálculos
+      const availableEquipment = await prisma.equipmentPreset.findMany({
+        where: { type: { in: ['PUMP', 'FILTER'] } }
+      });
+
+      // Parámetros de instalación
+      const distanceToEquipment = plumbingConfig.distanceToEquipment || 8;  // metros
+      const staticLift = 1.5;  // metros (altura desde nivel de agua a equipo)
+
+      // Análisis hidráulico
+      hydraulicAnalysis = calculateHydraulicSystem(
+        project as any,
+        distanceToEquipment,
+        staticLift,
+        availableEquipment
+      );
+
+      // Análisis eléctrico profesional
+      electricalAnalysis = calculateElectricalSystem(
+        project as any,
+        {
+          voltage: 220,
+          distanceToPanel: plumbingConfig.distanceToEquipment || 15,
+          installationType: 'CONDUIT',
+          ambientTemp: 25,
+          maxVoltageDrop: 3,
+          electricityCostPerKwh: 0.15,
+        }
+      );
+
+      // Agregar análisis al projectData
+      projectData.hydraulicAnalysis = hydraulicAnalysis;
+      projectData.electricalAnalysis = electricalAnalysis;
+
+      console.log('[EXPORT] Cálculos profesionales ejecutados correctamente');
+    } catch (calcError) {
+      console.error('[EXPORT] Error al ejecutar cálculos profesionales:', calcError);
+      // Continuar con la exportación sin los cálculos profesionales
+      projectData.hydraulicAnalysis = null;
+      projectData.electricalAnalysis = null;
+    }
 
     // Escapar JSON para pasarlo como argumento
     const jsonData = JSON.stringify(projectData).replace(/"/g, '\\"');

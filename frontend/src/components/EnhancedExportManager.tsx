@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Project } from '@/types';
 import { plumbingCalculationService } from '@/services/plumbingCalculationService';
 import { projectService } from '@/services/projectService';
-import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown } from 'lucide-react';
+import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
+import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File } from 'lucide-react';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -12,11 +13,33 @@ import QRCode from 'qrcode';
 
 interface EnhancedExportManagerProps {
   project: Project;
+  /**
+   * Opcional. URL del logo (ideal: un archivo en /public, ej: "/domotics-logo.png").
+   * Se convierte a DataURL para evitar problemas de CORS/"tainted canvas" al exportar.
+   */
+  brandLogoUrl?: string;
 }
 
 type ExportTemplate = 'client' | 'professional' | 'materials' | 'complete' | 'budget' | 'overview';
 
-export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ project }) => {
+type ExportTemplateSettings = {
+  title?: string;
+  subtitle?: string;
+  conditions?: string;
+  sections?: Record<string, boolean>;
+  drawingView?: 'cad' | 'planta';
+  values?: {
+    materialCost?: number;
+    laborCost?: number;
+    totalCost?: number;
+  };
+};
+
+type ExportSettings = {
+  templates?: Partial<Record<ExportTemplate, ExportTemplateSettings>>;
+};
+
+export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ project, brandLogoUrl }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ExportTemplate>('client');
   const [roles, setRoles] = useState<any[]>([]);
   const [projectUpdates, setProjectUpdates] = useState<any[]>([]);
@@ -25,6 +48,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [equipmentRecommendation, setEquipmentRecommendation] = useState<any>(null);
   const [calculatedElectricalSpecs, setCalculatedElectricalSpecs] = useState<any>(null);
   const [calculatedSidewalkArea, setCalculatedSidewalkArea] = useState<number>(0);
+  const poolCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cadCanvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedSections, setSelectedSections] = useState({
     header: true,
     characteristics: true,
@@ -33,6 +58,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     costs: true,
     conditions: true,
   });
+  const [exportSettings, setExportSettings] = useState<ExportSettings>(() => {
+    return (project.exportSettings as ExportSettings) || { templates: {} };
+  });
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [draftSettings, setDraftSettings] = useState<ExportSettings>({ templates: {} });
+  const [savingSettings, setSavingSettings] = useState(false);
   const [excelSections, setExcelSections] = useState({
     excavation: true,
     supportBed: true,
@@ -44,11 +75,117 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     standards: true,
   });
 
+  // -------------------------------
+  // Branding (logo) para exportación
+  // -------------------------------
+  const DEFAULT_BRAND_LOGO_DARK_URL = '/domotics-logo-dark.png';
+  const DEFAULT_BRAND_LOGO_LIGHT_URL = '/domotics-logo-light.png';
+  const [brandLogoDarkDataUrl, setBrandLogoDarkDataUrl] = useState<string | null>(null);
+  const [brandLogoLightDataUrl, setBrandLogoLightDataUrl] = useState<string | null>(null);
+  const [brandLogoError, setBrandLogoError] = useState<string>('');
+
+  const blobToDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error('No se pudo leer el archivo del logo'));
+      fr.readAsDataURL(blob);
+    });
+
+  const fetchAsDataUrl = async (url: string) => {
+    // Usa fetch + DataURL para evitar CORS/tainted canvas en html2canvas.
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    return blobToDataUrl(blob);
+  };
+
+  const downscalePngDataUrl = async (dataUrl: string, maxPx = 320) => {
+    // Reduce peso del PDF: logo gigante (5000x5000) -> ~320px.
+    return new Promise<string>((resolve) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        const ratio = img.width / img.height;
+        const w = Math.max(1, Math.round(ratio >= 1 ? maxPx : maxPx * ratio));
+        const h = Math.max(1, Math.round(ratio >= 1 ? maxPx / ratio : maxPx));
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const cctx = c.getContext('2d');
+        if (!cctx) return resolve(dataUrl);
+        cctx.clearRect(0, 0, w, h);
+        cctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      setBrandLogoError('');
+
+      // 1) Prop explícita
+      // 2) Algún campo en el project (por si ya lo guardan en el backend)
+      // 3) Fallback a /public
+      const urlDark =
+        brandLogoUrl ||
+        (project as any)?.brandLogoUrl ||
+        (project as any)?.companyLogoUrl ||
+        DEFAULT_BRAND_LOGO_DARK_URL;
+      const urlLight =
+        brandLogoUrl ||
+        (project as any)?.brandLogoUrlLight ||
+        (project as any)?.companyLogoUrlLight ||
+        DEFAULT_BRAND_LOGO_LIGHT_URL;
+
+      try {
+        const [darkDataUrl, lightDataUrl] = await Promise.all([
+          fetchAsDataUrl(urlDark),
+          fetchAsDataUrl(urlLight),
+        ]);
+        const [darkSmall, lightSmall] = await Promise.all([
+          downscalePngDataUrl(darkDataUrl, 320),
+          downscalePngDataUrl(lightDataUrl, 320),
+        ]);
+        if (alive) {
+          setBrandLogoDarkDataUrl(darkSmall);
+          setBrandLogoLightDataUrl(lightSmall);
+        }
+      } catch (e) {
+        console.warn(e);
+        if (!alive) return;
+        setBrandLogoDarkDataUrl(null);
+        setBrandLogoLightDataUrl(null);
+        setBrandLogoError(
+          'No pude cargar los logos. Sugerencia: poné los archivos en /public como /domotics-logo-dark.png y /domotics-logo-light.png.'
+        );
+      }
+    };
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [brandLogoUrl, project]);
+
+  const getLogoForTemplate = (template: ExportTemplate) => {
+    const isDarkHeader = template !== 'overview';
+    return isDarkHeader ? brandLogoLightDataUrl : brandLogoDarkDataUrl;
+  };
+
   useEffect(() => {
     loadRoles();
     loadProjectUpdates();
     loadEquipmentRecommendations();
   }, []);
+
+  useEffect(() => {
+    setExportSettings((project.exportSettings as ExportSettings) || { templates: {} });
+  }, [project]);
 
   const loadRoles = async () => {
     try {
@@ -112,7 +249,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return firstRingArea;
   };
 
-  // Calcular costos por rol basado en tareas asignadas
   const getRolesCostSummary = () => {
     const summary: Record<string, { hours: number; cost: number; tasksCount: number; roleName: string }> = {};
     const tasks = project.tasks as any;
@@ -143,56 +279,60 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return summary;
   };
 
+  const getTasksLaborCost = () => {
+    const tasks = project.tasks as any;
+    if (!tasks || typeof tasks !== 'object') return 0;
+    return Object.values(tasks).reduce((sum: number, categoryTasks: any) => {
+      if (!Array.isArray(categoryTasks)) return sum;
+      return sum + categoryTasks.reduce((inner: number, task: any) => inner + (task.laborCost || 0), 0);
+    }, 0);
+  };
+
   const templates = [
     {
       id: 'client' as ExportTemplate,
-      name: 'Presupuesto para Cliente',
-      description: 'Presupuesto simplificado sin detalles técnicos, enfocado en costos',
+      name: 'Presupuesto Cliente',
+      description: 'Documento simplificado con costos e información esencial para presentar al cliente',
       icon: User,
-      color: 'blue',
     },
     {
       id: 'professional' as ExportTemplate,
       name: 'Especificaciones Técnicas',
-      description: 'Detalles completos para profesionales: albaniles, plomeros, electricistas',
+      description: 'Documento técnico detallado para profesionales de construcción',
       icon: Briefcase,
-      color: 'green',
     },
     {
       id: 'materials' as ExportTemplate,
       name: 'Lista de Materiales',
-      description: 'Lista detallada de materiales para compra',
+      description: 'Listado completo de materiales necesarios para el proyecto',
       icon: Wrench,
-      color: 'orange',
     },
     {
       id: 'budget' as ExportTemplate,
       name: 'Presupuesto Detallado',
-      description: 'Presupuesto completo con costos unitarios y totales',
+      description: 'Presupuesto completo con costos unitarios y subtotales',
       icon: DollarSign,
-      color: 'purple',
     },
     {
       id: 'complete' as ExportTemplate,
       name: 'Reporte Completo',
-      description: 'Documentación completa del proyecto con todos los detalles',
+      description: 'Documentación integral del proyecto con todos los detalles',
       icon: FileText,
-      color: 'gray',
     },
     {
       id: 'overview' as ExportTemplate,
-      name: 'Vista General Completa',
-      description: 'Exportación de la vista general con todos los detalles visibles',
-      icon: FileText,
-      color: 'indigo',
+      name: 'Vista General',
+      description: 'Resumen ejecutivo del proyecto',
+      icon: File,
     },
   ];
 
-  const generateClientBudget = () => {
+  const calculateCosts = () => {
     const additionals = (project as any).additionals || [];
     const plumbingConfig = project.plumbingConfig as any;
+    const tasksLaborCost = getTasksLaborCost();
+    const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
 
-    // Calcular costos actualizados
     const additionalsCosts = additionals.reduce((acc: any, additional: any) => {
       const quantity = additional.newQuantity || 0;
       let materialCost = 0;
@@ -220,348 +360,361 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       : 0;
 
     const totalMaterialCost = project.materialCost + additionalsCosts.materialCost + plumbingCosts;
-    const totalLaborCost = project.laborCost + additionalsCosts.laborCost;
+    const totalLaborCost = baseLaborCost + additionalsCosts.laborCost;
     const grandTotal = totalMaterialCost + totalLaborCost;
+
+    return {
+      additionals,
+      additionalsCosts,
+      plumbingCosts,
+      totalMaterialCost,
+      totalLaborCost,
+      grandTotal,
+      baseLaborCost,
+    };
+  };
+
+  const getTaskMaterials = () => {
+    const tasks = project.tasks as any;
+    const map = new Map<string, { name: string; quantity: number; unit: string }>();
+
+    if (!tasks) return [];
+
+    Object.values(tasks).forEach((task: any) => {
+      if (!task || !Array.isArray(task.materials)) return;
+      task.materials.forEach((material: any) => {
+        if (!material?.name) return;
+        const quantity = Number(material.quantity || 0);
+        const unit = material.unit || 'ud';
+        if (!map.has(material.name)) {
+          map.set(material.name, { name: material.name, quantity, unit });
+        } else {
+          const existing = map.get(material.name)!;
+          existing.quantity += quantity;
+        }
+      });
+    });
+
+    return Array.from(map.values());
+  };
+
+  const getTemplateSettings = (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
+    return settings.templates?.[template] || {};
+  };
+
+  const resolveCostOverrides = (templateSettings: ExportTemplateSettings) => {
+    const costs = calculateCosts();
+    const overrides = templateSettings.values || {};
+    return {
+      ...costs,
+      totalMaterialCost: overrides.materialCost ?? costs.totalMaterialCost,
+      totalLaborCost: overrides.laborCost ?? costs.totalLaborCost,
+      grandTotal: overrides.totalCost ?? costs.grandTotal,
+    };
+  };
+
+  const getConditionsList = (customConditions?: string) => {
+    if (customConditions && customConditions.trim()) {
+      return customConditions
+        .split('\n')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [
+      'Presupuesto válido por 30 días corridos',
+      'Plazo de ejecución: 15-20 días hábiles',
+      'Forma de pago: 50% al inicio de obra, 50% a la finalización',
+      'Garantía: 1 año en mano de obra, según fabricante en equipos',
+      'No incluye: Conexión eléctrica al tablero principal, provisión de agua',
+    ];
+  };
+
+  const generateClientBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
+    const sections = templateSettings.sections || selectedSections;
+    const { additionalsCosts, plumbingCosts, totalMaterialCost, totalLaborCost, grandTotal } = resolveCostOverrides(templateSettings);
+    const headerSubtitle = templateSettings.subtitle || 'Presupuesto de Construcción de Piscina';
+    const documentTitle = templateSettings.title || `Presupuesto - ${project.name}`;
+    const conditions = getConditionsList(templateSettings.conditions);
+    const logoDataUrl = getLogoForTemplate('client');
 
     const html = `
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Presupuesto - ${project.name}</title>
+  <title>${documentTitle}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 40px;
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f9fafb;
+      padding: 20px;
     }
     .container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 0 auto;
       background: white;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      border-radius: 12px;
-      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .header {
-      text-align: center;
-      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+      background: #2563eb;
       color: white;
-      padding: 40px 20px;
-      position: relative;
-    }
-    .header::after {
-      content: '';
-      position: absolute;
-      bottom: -20px;
-      left: 0;
-      right: 0;
-      height: 20px;
-      background: white;
-      border-radius: 50% 50% 0 0 / 20px 20px 0 0;
+      padding: 30px 40px;
+      text-align: center;
     }
     .logo {
-      font-size: 36px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
     }
     .subtitle {
-      font-size: 18px;
-      margin-top: 10px;
-      opacity: 0.95;
+      font-size: 16px;
+      opacity: 0.9;
     }
     .date {
-      font-size: 14px;
+      font-size: 13px;
+      opacity: 0.7;
       margin-top: 10px;
-      opacity: 0.8;
     }
     .content {
       padding: 40px;
     }
     .section {
-      margin: 40px 0;
+      margin: 30px 0;
       page-break-inside: avoid;
     }
     .section h2 {
       color: #1e40af;
-      border-left: 5px solid #2563eb;
-      padding-left: 15px;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 10px;
       margin-bottom: 20px;
-      font-size: 24px;
+      font-size: 20px;
+      font-weight: 600;
     }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 20px;
-      border-bottom: 1px solid #e2e8f0;
-      transition: background 0.2s;
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+      margin: 20px 0;
     }
-    .info-row:hover {
-      background: #f8fafc;
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 20px 0;
     }
-    .info-row span:first-child {
-      color: #64748b;
+    .info-item {
+      padding: 15px;
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
     }
-    .info-row strong {
-      color: #1e293b;
+    .info-label {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    .info-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1f2937;
     }
     .features-list {
       list-style: none;
       padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
     }
     .features-list li {
-      padding: 12px 20px;
-      border-left: 3px solid #10b981;
-      margin: 10px 0;
-      background: #f0fdf4;
-      border-radius: 0 8px 8px 0;
+      padding: 10px 15px;
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
+      font-size: 14px;
     }
-    .cost-box {
-      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-      padding: 30px;
-      border-radius: 12px;
-      margin: 30px 0;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    .cost-section {
+      background: #eff6ff;
+      padding: 25px;
+      margin: 20px 0;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
     }
-    .cost-box h2 {
-      border: none;
-      padding: 0;
-      margin-bottom: 20px;
-    }
-    .cost-item {
+    .cost-row {
       display: flex;
       justify-content: space-between;
-      margin: 15px 0;
-      font-size: 18px;
-      padding: 10px 0;
+      padding: 12px 0;
+      border-bottom: 1px solid #bfdbfe;
     }
-    .cost-section-title {
-      font-size: 14px;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(0,0,0,0.1);
+    .cost-row:last-child {
+      border-bottom: none;
     }
-    .total {
-      font-size: 36px;
-      font-weight: bold;
-      color: #1e40af;
-      border-top: 3px solid #2563eb;
-      padding-top: 20px;
-      margin-top: 20px;
+    .cost-label {
+      font-weight: 500;
+      color: #4b5563;
+      font-size: 15px;
+    }
+    .cost-value {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 15px;
+    }
+    .total-row {
+      background: #2563eb;
+      color: white;
+      padding: 20px;
+      margin-top: 15px;
+      font-size: 22px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .conditions-list {
       list-style: none;
       padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
     }
     .conditions-list li {
-      padding: 12px 20px;
-      margin: 10px 0;
-      background: #fef3c7;
-      border-left: 3px solid #f59e0b;
-      border-radius: 0 8px 8px 0;
+      padding: 10px 15px;
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
+      font-size: 14px;
     }
     .footer {
       margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
       text-align: center;
-      color: #64748b;
       font-size: 12px;
-      border-top: 2px solid #e2e8f0;
-      padding: 30px 0 0;
-    }
-    .footer p {
-      margin: 5px 0;
-    }
-    .badge {
-      display: inline-block;
-      background: #10b981;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: bold;
-      margin-left: 10px;
+      color: #999;
     }
     @media print {
-      body {
-        background: white;
-        padding: 0;
-      }
-      .container {
-        box-shadow: none;
-      }
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">POOL CALCULATOR</div>
-      <p class="subtitle">Presupuesto de Construcción de Piscina</p>
-      <p class="date">${new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
     </div>
 
     <div class="content">
-
-  <div class="section">
-    <h2>Datos del Cliente</h2>
-    <div class="info-row"><span>Nombre:</span><strong>${project.clientName}</strong></div>
-    ${project.clientEmail ? `<div class="info-row"><span>Email:</span><strong>${project.clientEmail}</strong></div>` : ''}
-    ${project.clientPhone ? `<div class="info-row"><span>Teléfono:</span><strong>${project.clientPhone}</strong></div>` : ''}
-    ${project.location ? `<div class="info-row"><span>Ubicación:</span><strong>${project.location}</strong></div>` : ''}
-  </div>
-
-  <div class="section">
-    <h2>Descripción del Proyecto <span class="badge">ID: ${project.id.substring(0, 8).toUpperCase()}</span></h2>
-    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">PROYECTO</p>
-          <p style="font-size: 20px; font-weight: bold; color: #1e40af;">${project.name}</p>
-        </div>
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">MODELO DE PISCINA</p>
-          <p style="font-size: 18px; font-weight: 600; color: #1e293b;">${project.poolPreset?.name}</p>
-        </div>
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">DIMENSIONES</p>
-          <p style="font-weight: 600;">${project.poolPreset?.length}m × ${project.poolPreset?.width}m × ${project.poolPreset?.depth}m</p>
-        </div>
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">VOLUMEN</p>
-          <p style="font-weight: 600;">${project.volume.toFixed(2)} m³ <span style="color: #64748b;">(${(project.volume * 1000).toFixed(0)} litros)</span></p>
-        </div>
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">FORMA</p>
-          <p style="font-weight: 600;">${project.poolPreset?.shape || 'RECTANGULAR'}</p>
-        </div>
-        <div>
-          <p style="color: #64748b; font-size: 12px; margin-bottom: 5px;">ÁREA ESPEJO DE AGUA</p>
-          <p style="font-weight: 600;">${project.waterMirrorArea.toFixed(2)} m²</p>
+      ${sections.header ? `
+      <div class="section">
+        <h2>Información del Cliente</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Cliente</div>
+            <div class="info-value">${project.clientName}</div>
+          </div>
+          ${project.clientEmail ? `<div class="info-item"><div class="info-label">Email</div><div class="info-value">${project.clientEmail}</div></div>` : ''}
+          ${project.clientPhone ? `<div class="info-item"><div class="info-label">Teléfono</div><div class="info-value">${project.clientPhone}</div></div>` : ''}
+          ${project.location ? `<div class="info-item"><div class="info-label">Ubicación</div><div class="info-value">${project.location}</div></div>` : ''}
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="section">
-    <h2>Características Incluidas</h2>
-    <ul class="features-list">
-      <li>✓ Excavación y preparación del terreno</li>
-      <li>✓ Instalación de la piscina de fibra de vidrio</li>
-      <li>✓ Sistema de filtración completo</li>
-      <li>✓ Instalación hidráulica (${project.poolPreset?.returnsCount} retornos, ${project.poolPreset?.skimmerCount} skimmers)</li>
-      ${project.poolPreset?.hasLighting ? `<li>✓ Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
-      ${project.poolPreset?.hasBottomDrain ? `<li>✓ Desagüe de fondo</li>` : ''}
-      ${project.poolPreset?.hasVacuumIntake ? `<li>✓ Toma de limpiafondos</li>` : ''}
-      <li>✓ Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)</li>
-      <li>✓ Materiales de construcción completos</li>
-      ${equipmentRecommendation ? `<li>✓ Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
-      ${equipmentRecommendation ? `<li>✓ Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
-    </ul>
-  </div>
-
-  <div class="cost-box">
-    <h2 style="margin-top: 0;">Inversión Total</h2>
-
-    <div class="cost-item" style="font-size: 14px; color: #64748b;">
-      <span>Materiales Base:</span>
-      <strong>$${project.materialCost.toLocaleString('es-AR')}</strong>
-    </div>
-    ${plumbingCosts > 0 ? `<div class="cost-item" style="font-size: 14px; color: #64748b;">
-      <span>+ Plomería:</span>
-      <strong>$${plumbingCosts.toLocaleString('es-AR')}</strong>
-    </div>` : ''}
-    ${additionalsCosts.materialCost > 0 ? `<div class="cost-item" style="font-size: 14px; color: #64748b;">
-      <span>+ Adicionales:</span>
-      <strong>$${additionalsCosts.materialCost.toLocaleString('es-AR')}</strong>
-    </div>` : ''}
-    <div class="cost-item">
-      <span>Total Materiales y Equipamiento:</span>
-      <strong>$${totalMaterialCost.toLocaleString('es-AR')}</strong>
-    </div>
-
-    <div class="cost-item" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-      <span>Mano de Obra:</span>
-      <strong>$${totalLaborCost.toLocaleString('es-AR')}</strong>
-    </div>
-
-    <div class="cost-item total">
-      <span>TOTAL:</span>
-      <span>$${grandTotal.toLocaleString('es-AR')}</span>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>Condiciones Comerciales</h2>
-    <ul class="conditions-list">
-      <li>Presupuesto válido por 30 días corridos</li>
-      <li>Plazo de ejecución: 15-20 días hábiles</li>
-      <li>Forma de pago: 50% al inicio de obra, 50% a la finalización</li>
-      <li>Garantía: 1 año en mano de obra, según fabricante en equipos</li>
-      <li>No incluye: Conexión eléctrica al tablero principal, provisión de agua</li>
-    </ul>
-  </div>
-
-  ${projectUpdates.length > 0 ? `
-  <div class="section" style="page-break-before: always;">
-    <h2>Historial del Proyecto</h2>
-    <p style="color: #64748b; margin-bottom: 20px;">Registro cronológico de actualizaciones y eventos</p>
-    ${projectUpdates.map((update: any) => {
-      const categoryLabels: Record<string, string> = {
-        'PROGRESS': 'Progreso',
-        'MILESTONE': 'Hito',
-        'ISSUE': 'Problema',
-        'NOTE': 'Nota',
-        'INSPECTION': 'Inspección',
-        'DELIVERY': 'Entrega',
-        'OTHER': 'Otro',
-      };
-      const categoryLabel = categoryLabels[update.category] || 'Actualización';
-      const date = new Date(update.createdAt).toLocaleDateString('es-AR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      return `
-        <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #2563eb; background: #f8fafc; border-radius: 0 8px 8px 0;">
-          <div style="display: flex; justify-between; align-items: start; margin-bottom: 10px;">
-            <div>
-              <h3 style="margin: 0 0 5px 0; font-size: 16px; color: #1e293b;">${update.title}</h3>
-              <span style="display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">
-                ${categoryLabel}
-              </span>
-            </div>
-            <span style="font-size: 12px; color: #64748b;">${date}</span>
+      <div class="section">
+        <h2>Descripción del Proyecto</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Nombre del Proyecto</div>
+            <div class="info-value">${project.name}</div>
           </div>
-          ${update.description ? `<p style="color: #475569; margin: 10px 0; font-size: 14px;">${update.description}</p>` : ''}
-          ${update.images && update.images.length > 0 ? `
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 15px;">
-              ${update.images.map((img: string, idx: number) => `
-                <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0;">
-                  <img src="${img}" alt="Imagen ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
+          <div class="info-item">
+            <div class="info-label">Modelo de Piscina</div>
+            <div class="info-value">${project.poolPreset?.name}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Dimensiones</div>
+            <div class="info-value">${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${project.poolPreset?.depth}m</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Volumen</div>
+            <div class="info-value">${project.volume.toFixed(2)} m³</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Forma</div>
+            <div class="info-value">${project.poolPreset?.shape || 'RECTANGULAR'}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Área de Espejo de Agua</div>
+            <div class="info-value">${project.waterMirrorArea.toFixed(2)} m²</div>
+          </div>
         </div>
-      `;
-    }).join('')}
-  </div>
-  ` : ''}
+      </div>
+      ` : ''}
 
-  <div class="footer">
-    <p><strong>Pool Calculator</strong> - Sistema Profesional de Cálculo de Materiales para Piscinas</p>
-    <p>Generado el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR')}</p>
-    <p style="margin-top: 10px; font-size: 10px;">Jesús Olguín - Domotics & IoT Solutions</p>
-  </div>
+      ${sections.includes ? `
+      <div class="section">
+        <h2>Alcance del Proyecto</h2>
+        <ul class="features-list">
+          <li>Excavación y preparación del terreno</li>
+          <li>Instalación de la piscina de fibra de vidrio</li>
+          <li>Sistema de filtración completo</li>
+          <li>Instalación hidráulica (${project.poolPreset?.returnsCount} retornos, ${project.poolPreset?.skimmerCount} skimmers)</li>
+          ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
+          ${project.poolPreset?.hasBottomDrain ? `<li>Desagüe de fondo</li>` : ''}
+          ${project.poolPreset?.hasVacuumIntake ? `<li>Toma de limpiafondos</li>` : ''}
+          <li>Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)</li>
+          <li>Materiales de construcción completos</li>
+          ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
+          ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
+        </ul>
+      </div>
+      ` : ''}
+
+      ${sections.costs ? `
+      <div class="section">
+        <h2>Detalle de Costos</h2>
+        <div class="cost-section">
+          <div class="cost-row">
+            <span class="cost-label">Materiales Base</span>
+            <span class="cost-value">$ ${project.materialCost.toLocaleString('es-AR')}</span>
+          </div>
+          ${plumbingCosts > 0 ? `<div class="cost-row"><span class="cost-label">Plomería</span><span class="cost-value">$ ${plumbingCosts.toLocaleString('es-AR')}</span></div>` : ''}
+          ${additionalsCosts.materialCost > 0 ? `<div class="cost-row"><span class="cost-label">Adicionales</span><span class="cost-value">$ ${additionalsCosts.materialCost.toLocaleString('es-AR')}</span></div>` : ''}
+          <div class="cost-row" style="font-weight: 600;">
+            <span class="cost-label">Total Materiales</span>
+            <span class="cost-value">$ ${totalMaterialCost.toLocaleString('es-AR')}</span>
+          </div>
+          <div class="cost-row" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
+            <span class="cost-label">Mano de Obra</span>
+            <span class="cost-value">$ ${totalLaborCost.toLocaleString('es-AR')}</span>
+          </div>
+          <div class="total-row">
+            <span>INVERSIÓN TOTAL</span>
+            <span>$ ${grandTotal.toLocaleString('es-AR')}</span>
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${sections.conditions ? `
+      <div class="section">
+        <h2>Condiciones Comerciales</h2>
+        <ul class="conditions-list">
+          ${conditions.map((item) => `<li>${item}</li>`).join('')}
+        </ul>
+      </div>
+      ` : ''}
+
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Sistema Profesional de Cálculo de Materiales para Piscinas</p>
+        <p>Documento generado el ${new Date().toLocaleDateString('es-AR')} | Código: ${project.id.substring(0, 8).toUpperCase()}</p>
+      </div>
     </div>
   </div>
 </body>
@@ -569,279 +722,895 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return html;
   };
 
-  const generateProfessionalSpec = () => {
+  const generateTechnicalSpec = (
+    templateSettings: ExportTemplateSettings = getTemplateSettings('professional'),
+    drawingImageDataUrl?: string
+  ) => {
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
-    const electricalConfig = calculatedElectricalSpecs || (project.electricalConfig as any);
+    const headerSubtitle = templateSettings.subtitle || 'Especificaciones Técnicas del Proyecto';
+    const documentTitle = templateSettings.title || `Especificaciones Técnicas - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('professional');
+    const drawingLabel = templateSettings.drawingView === 'planta' ? 'Vista Planta' : 'Plano CAD';
+    const formatQuantity = (quantity: number | string | undefined, unit?: string) => {
+      const qty = Number(quantity || 0);
+      if (!qty || Number.isNaN(qty)) return '';
+      const normalized = (unit || '').toLowerCase();
+      const unitLabel = normalized.includes('bolsa')
+        ? qty === 1 ? 'bolsa' : 'bolsas'
+        : normalized.includes('malla')
+          ? qty === 1 ? 'malla' : 'mallas'
+          : normalized || 'unidades';
+      return `${qty} ${unitLabel}`;
+    };
+    const shouldInclude = (quantity: number | string | undefined) => {
+      const qty = Number(quantity || 0);
+      return !!qty && !Number.isNaN(qty);
+    };
 
-    const html = `
+    return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Especificaciones Técnicas - ${project.name}</title>
+  <title>${documentTitle}</title>
   <style>
-    body { font-family: 'Courier New', monospace; margin: 20px; font-size: 12px; }
-    .header { border: 2px solid #000; padding: 15px; margin-bottom: 20px; }
-    h1 { margin: 0; font-size: 20px; }
-    h2 { background: #000; color: #fff; padding: 8px; font-size: 14px; margin-top: 20px; }
-    h3 { border-bottom: 1px solid #000; padding-bottom: 5px; margin-top: 15px; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-    th { background: #e0e0e0; font-weight: bold; }
-    .spec { margin: 10px 0; padding: 10px; background: #f9f9f9; border-left: 4px solid #000; }
-    .warning { background: #fff3cd; border-left-color: #ff6b00; padding: 10px; margin: 10px 0; }
-    .note { font-size: 10px; font-style: italic; color: #666; }
+    ${getCommonStyles()}
+    .spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .spec-item { padding: 15px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; }
+    .spec-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 500; }
+    .spec-value { font-size: 16px; font-weight: 600; color: #1f2937; margin-top: 5px; }
+    .materials-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .materials-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 13px; }
+    .materials-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    .materials-table tr:hover { background: #f9fafb; }
+    .cad-wrap { margin-top: 24px; padding: 16px; border: 1px solid #e5e7eb; background: #f9fafb; text-align: center; }
+    .cad-wrap img { max-width: 100%; height: auto; display: inline-block; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>ESPECIFICACIONES TÉCNICAS DE CONSTRUCCIÓN</h1>
-    <p><strong>Proyecto:</strong> ${project.name}</p>
-    <p><strong>Cliente:</strong> ${project.clientName}</p>
-    <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-AR')}</p>
-    <p><strong>Código Proyecto:</strong> ${project.id.substring(0, 8).toUpperCase()}</p>
-  </div>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
 
-  <h2>1. EXCAVACIÓN Y PREPARACIÓN</h2>
-  <div class="spec">
-    <strong>Dimensiones de Excavación:</strong><br>
-    Largo: ${project.excavationLength.toFixed(2)}m<br>
-    Ancho: ${project.excavationWidth.toFixed(2)}m<br>
-    Profundidad: ${project.excavationDepth.toFixed(2)}m<br>
-    Volumen estimado de tierra: ${(project.excavationLength * project.excavationWidth * project.excavationDepth).toFixed(2)} m³
-  </div>
-  <div class="warning">
-    ⚠️ IMPORTANTE: Verificar presencia de napas freáticas y servicios subterráneos antes de excavar.
-  </div>
+    <div class="content">
+      <div class="section">
+        <h2>Datos Técnicos de la Piscina</h2>
+        <div class="spec-grid">
+          <div class="spec-item"><div class="spec-label">Largo</div><div class="spec-value">${project.poolPreset?.length || 0} m</div></div>
+          <div class="spec-item"><div class="spec-label">Ancho</div><div class="spec-value">${project.poolPreset?.width || 0} m</div></div>
+          <div class="spec-item"><div class="spec-label">Profundidad</div><div class="spec-value">${project.poolPreset?.depth || 0} m</div></div>
+          <div class="spec-item"><div class="spec-label">Volumen</div><div class="spec-value">${project.volume.toFixed(2)} m³</div></div>
+          <div class="spec-item"><div class="spec-label">Capacidad</div><div class="spec-value">${(project.volume * 1000).toFixed(0)} litros</div></div>
+          <div class="spec-item"><div class="spec-label">Área Espejo</div><div class="spec-value">${project.waterMirrorArea.toFixed(2)} m²</div></div>
+          <div class="spec-item"><div class="spec-label">Forma</div><div class="spec-value">${project.poolPreset?.shape || 'RECTANGULAR'}</div></div>
+          <div class="spec-item"><div class="spec-label">Skimmers</div><div class="spec-value">${project.poolPreset?.skimmerCount || 0}</div></div>
+          <div class="spec-item"><div class="spec-label">Retornos</div><div class="spec-value">${project.poolPreset?.returnsCount || 0}</div></div>
+        </div>
+      </div>
 
-  ${materials && Object.keys(materials).length > 0 ? `
-  <h2>2. CAMA DE APOYO INTERNA</h2>
-  <table>
-    <tr><th>Material</th><th>Cantidad</th><th>Especificación</th></tr>
-    ${materials.geomembrane ? `<tr><td>Geomembrana</td><td>${materials.geomembrane.quantity} ${materials.geomembrane.unit}</td><td>Espesor mínimo 200 micrones</td></tr>` : ''}
-    ${materials.electroweldedMesh ? `<tr><td>Malla Electrosoldada</td><td>${materials.electroweldedMesh.quantity} ${materials.electroweldedMesh.unit}</td><td>Q188 o similar, solape 10cm</td></tr>` : ''}
-    ${materials.sandForBed ? `<tr><td>Arena Gruesa</td><td>${materials.sandForBed.quantity} ${materials.sandForBed.unit}</td><td>Cernida, sin arcilla</td></tr>` : ''}
-    ${materials.cementBags ? `<tr><td>Cemento</td><td>${materials.cementBags.quantity} ${materials.cementBags.unit}</td><td>Portland CPC40</td></tr>` : ''}
-  </table>
-  <div class="note">Nota: Compactar cama en capas de 5cm, humedad óptima 12-15%</div>
+      <div class="section">
+        <h2>Especificaciones de Materiales</h2>
+        <table class="materials-table">
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th>Cantidad</th>
+              <th>Unidad</th>
+              <th>Aplicación</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${materials?.cement && shouldInclude(materials.cement.quantity) ? `<tr><td>Cemento Portland</td><td>${formatQuantity(materials.cement.quantity, materials.cement.unit)}</td><td>${materials.cement.unit}</td><td>Hormigón base vereda</td></tr>` : ''}
+            ${materials?.sand && shouldInclude(materials.sand.quantity) ? `<tr><td>Arena gruesa</td><td>${formatQuantity(materials.sand.quantity, materials.sand.unit)}</td><td>${materials.sand.unit}</td><td>Mezcla hormigón</td></tr>` : ''}
+            ${materials?.gravel && shouldInclude(materials.gravel.quantity) ? `<tr><td>Grava/Piedra</td><td>${formatQuantity(materials.gravel.quantity, materials.gravel.unit)}</td><td>${materials.gravel.unit}</td><td>Agregado grueso</td></tr>` : ''}
+            ${materials?.adhesive && shouldInclude(materials.adhesive.quantity) ? `<tr><td>Adhesivo para losetas</td><td>${formatQuantity(materials.adhesive.quantity, materials.adhesive.unit)}</td><td>${materials.adhesive.unit}</td><td>Pegado de vereda</td></tr>` : ''}
+            ${materials?.wireMesh && shouldInclude(materials.wireMesh.quantity) ? `<tr><td>Malla de alambre</td><td>${formatQuantity(materials.wireMesh.quantity, materials.wireMesh.unit)}</td><td>${materials.wireMesh.unit}</td><td>Refuerzo estructural</td></tr>` : ''}
+            ${materials?.waterproofing && shouldInclude(materials.waterproofing.quantity) ? `<tr><td>Impermeabilizante</td><td>${formatQuantity(materials.waterproofing.quantity, materials.waterproofing.unit)}</td><td>${materials.waterproofing.unit}</td><td>Protección vereda</td></tr>` : ''}
+          </tbody>
+        </table>
+      </div>
 
-  <h2>3. SOLADO DE VEREDA</h2>
-  <div class="spec">
-    Área total de vereda: ${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²<br>
-    Espesor de base: ${materials.wireMesh ? '10cm' : '8cm'} de hormigón H17
-  </div>
-  <table>
-    <tr><th>Material</th><th>Cantidad</th><th>Uso</th></tr>
-    ${materials.cement ? `<tr><td>Cemento</td><td>${materials.cement.quantity} ${materials.cement.unit}</td><td>Hormigón base</td></tr>` : ''}
-    ${materials.sand ? `<tr><td>Arena</td><td>${materials.sand.quantity} ${materials.sand.unit}</td><td>Mezcla</td></tr>` : ''}
-    ${materials.gravel ? `<tr><td>Piedra/Canto Rodado</td><td>${materials.gravel.quantity} ${materials.gravel.unit}</td><td>Hormigón</td></tr>` : ''}
-    ${materials.wireMesh ? `<tr><td>Malla de Acero</td><td>${materials.wireMesh.quantity} ${materials.wireMesh.unit}</td><td>Armadura</td></tr>` : ''}
-    ${materials.adhesive ? `<tr><td>Adhesivo Cerámico</td><td>${materials.adhesive.quantity} ${materials.adhesive.unit}</td><td>Pegado losetas</td></tr>` : ''}
-    ${materials.whiteCement ? `<tr><td>Cemento Blanco</td><td>${materials.whiteCement.quantity} ${materials.whiteCement.unit}</td><td>Pastina</td></tr>` : ''}
-    ${materials.marmolina ? `<tr><td>Marmolina</td><td>${materials.marmolina.quantity} ${materials.marmolina.unit}</td><td>Pastina</td></tr>` : ''}
-  </table>
-  ` : ''}
+      ${equipmentRecommendation ? `
+      <div class="section">
+        <h2>Equipamiento Recomendado</h2>
+        <div class="spec-grid">
+          <div class="spec-item">
+            <div class="spec-label">Bomba</div>
+            <div class="spec-value">${equipmentRecommendation.pump.name}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">${equipmentRecommendation.pump.power} HP - ${equipmentRecommendation.pump.flowRate} m³/h</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Filtro</div>
+            <div class="spec-value">${equipmentRecommendation.filter.name}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">${equipmentRecommendation.filter.capacity} m³/h</div>
+          </div>
+          ${equipmentRecommendation.heater ? `
+          <div class="spec-item">
+            <div class="spec-label">Calefacción</div>
+            <div class="spec-value">${equipmentRecommendation.heater.name}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">${equipmentRecommendation.heater.power} kW</div>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
 
-  ${plumbingConfig && plumbingConfig.selectedItems ? `
-  <h2>4. INSTALACIÓN HIDRÁULICA</h2>
-  <div class="spec">
-    <strong>Configuración del Sistema:</strong><br>
-    Distancia a cabecera: ${plumbingConfig.distanceToEquipment || 'No especificada'} metros<br>
-    Retornos: ${project.poolPreset?.returnsCount || 0}<br>
-    Skimmers: ${project.poolPreset?.skimmerCount || 0}<br>
-    Desagüe de fondo: ${project.poolPreset?.hasBottomDrain ? 'SÍ' : 'NO'}<br>
-    Toma de limpiafondos: ${project.poolPreset?.hasVacuumIntake ? 'SÍ' : 'NO'}
-  </div>
-  <table>
-    <tr><th>Item</th><th>Diámetro</th><th>Cantidad</th><th>Observaciones</th></tr>
-    ${plumbingConfig.selectedItems.map((item: any) => `
-      <tr>
-        <td>${item.itemName}</td>
-        <td>${item.diameter || '-'}</td>
-        <td>${item.quantity}</td>
-        <td>Tipo ${item.type || 'PVC'}</td>
-      </tr>
-    `).join('')}
-  </table>
-  <div class="warning">
-    ⚠️ PRUEBA DE PRESIÓN: Realizar prueba hidráulica a 1.5 bar por 24hs antes de enterrar cañerías
-  </div>
-  ` : ''}
+      ${plumbingConfig?.selectedItems?.length > 0 ? `
+      <div class="section">
+        <h2>Instalación Hidráulica</h2>
+        <table class="materials-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th>Especificación</th></tr>
+          </thead>
+          <tbody>
+            ${plumbingConfig.selectedItems.map((item: any) =>
+              `<tr><td>${item.name}</td><td>${item.quantity}</td><td>${item.diameter || item.specification || '-'}</td></tr>`
+            ).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
 
-  ${electricalConfig ? `
-  <h2>5. INSTALACIÓN ELÉCTRICA</h2>
-  <div class="spec">
-    <strong>Características del Sistema:</strong><br>
-    Potencia Total: ${electricalConfig.totalWatts || 0}W (${((electricalConfig.totalWatts || 0) / 220).toFixed(1)}A)<br>
-    Distancia al tablero: 15m<br>
-    Térmica recomendada: ${electricalConfig.recommendedBreaker || 16}A<br>
-    Disyuntor diferencial: ${electricalConfig.recommendedRCD || 16}A 30mA<br>
-    Sección de cable: ${electricalConfig.cableSection || '2.5mm²'}
-  </div>
-  ${equipmentRecommendation ? `
-  <h3>Equipos Obligatorios</h3>
-  <table>
-    <tr><th>Equipo</th><th>Modelo</th><th>Potencia</th><th>Especificación</th></tr>
-    <tr>
-      <td>Bomba de Filtrado</td>
-      <td>${equipmentRecommendation.pump.name}</td>
-      <td>${equipmentRecommendation.pump.consumption || 0}W</td>
-      <td>${equipmentRecommendation.pump.power || 0} HP - ${equipmentRecommendation.pump.flowRate || 0} m³/h</td>
-    </tr>
-    <tr>
-      <td>Filtro de Arena</td>
-      <td>${equipmentRecommendation.filter.name}</td>
-      <td>-</td>
-      <td>Ø${equipmentRecommendation.filter.filterDiameter || 0}mm - ${equipmentRecommendation.filter.sandRequired || 0}kg arena</td>
-    </tr>
-  </table>
-  ` : ''}
-  ${electricalConfig.consumptionBreakdown && electricalConfig.consumptionBreakdown.length > 0 ? `
-  <h3>Desglose de Consumo Eléctrico</h3>
-  <table>
-    <tr><th>Equipo</th><th>Potencia Unit.</th><th>Cantidad</th><th>Total</th></tr>
-    ${electricalConfig.consumptionBreakdown.map((item: any) => `
-      <tr>
-        <td>${item.item}</td>
-        <td>${item.watts}W</td>
-        <td>${item.quantity}</td>
-        <td>${item.totalWatts}W</td>
-      </tr>
-    `).join('')}
-    <tr style="background: #f0f0f0; font-weight: bold;">
-      <td colspan="3">TOTAL</td>
-      <td>${electricalConfig.totalWatts}W</td>
-    </tr>
-  </table>
-  ` : ''}
-  <div class="warning">
-    ⚠️ SEGURIDAD: Todas las instalaciones eléctricas deben cumplir con AEA 90364. Instalador matriculado obligatorio.
-  </div>
-  ` : ''}
+      ${drawingImageDataUrl ? `
+      <div class="section">
+        <h2>${drawingLabel}</h2>
+        <div class="cad-wrap">
+          <img src="${drawingImageDataUrl}" alt="${drawingLabel}" />
+        </div>
+      </div>
+      ` : ''}
 
-  ${(() => {
-    const rolesSummary = getRolesCostSummary();
-    const hasRoles = Object.keys(rolesSummary).length > 0;
-
-    if (!hasRoles) return '';
-
-    const totalRolesHours = Object.values(rolesSummary).reduce((sum, r) => sum + r.hours, 0);
-    const totalRolesCost = Object.values(rolesSummary).reduce((sum, r) => sum + r.cost, 0);
-
-    return `
-  <h2>6. MANO DE OBRA REQUERIDA</h2>
-  <div class="spec">
-    <strong>Resumen General:</strong><br>
-    Horas Totales Estimadas: ${totalRolesHours.toFixed(1)} hs<br>
-    Costo Total Mano de Obra: $${totalRolesCost.toLocaleString('es-AR')}<br>
-    Roles Involucrados: ${Object.keys(rolesSummary).length}
-  </div>
-  <table>
-    <tr><th>Rol/Oficio</th><th>Tareas Asignadas</th><th>Horas Est.</th><th>Costo</th></tr>
-    ${Object.entries(rolesSummary).map(([_, summary]: [string, any]) => `
-      <tr>
-        <td>${summary.roleName}</td>
-        <td>${summary.tasksCount}</td>
-        <td>${summary.hours.toFixed(1)} hs</td>
-        <td>$${summary.cost.toLocaleString('es-AR')}</td>
-      </tr>
-    `).join('')}
-    <tr style="background: #f0f0f0; font-weight: bold;">
-      <td>TOTAL</td>
-      <td>${Object.values(rolesSummary).reduce((sum: number, r: any) => sum + r.tasksCount, 0)}</td>
-      <td>${totalRolesHours.toFixed(1)} hs</td>
-      <td>$${totalRolesCost.toLocaleString('es-AR')}</td>
-    </tr>
-  </table>
-  <div class="note">Nota: Las horas son estimadas y pueden variar según condiciones del terreno y experiencia del equipo</div>
-    `;
-  })()}
-
-  <h2>${(() => {
-    const rolesSummary = getRolesCostSummary();
-    return Object.keys(rolesSummary).length > 0 ? '7' : '6';
-  })()}. SECUENCIA DE TRABAJO RECOMENDADA</h2>
-  <ol style="line-height: 1.8;">
-    <li>Excavación y nivelación del terreno</li>
-    <li>Instalación de cañerías principales (antes de colocar piscina)</li>
-    <li>Preparación de cama de apoyo con geomembrana</li>
-    <li>Colocación de piscina de fibra</li>
-    <li>Relleno perimetral gradual (compactar por capas)</li>
-    <li>Conexiones hidráulicas finales</li>
-    <li>Ejecución de solado de vereda</li>
-    <li>Instalación eléctrica</li>
-    <li>Colocación de accesorios (skimmer, retornos, luces)</li>
-    <li>Pruebas del sistema</li>
-    <li>Llenado y puesta en marcha</li>
-  </ol>
-
-  <h2>7. NORMATIVAS APLICABLES</h2>
-  <ul>
-    <li>Reglamento AEA 90364 (Instalaciones Eléctricas)</li>
-    <li>Norma IRAM 2178 (Cables subterráneos)</li>
-    <li>Código de Edificación local</li>
-    <li>Normas IRAM para cañerías (IRAM 13480)</li>
-  </ul>
-
-  <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 10px; text-align: center;">
-    <p class="note">Documento técnico generado por Pool Calculator - ${new Date().toLocaleDateString('es-AR')}</p>
-    <p class="note">Este documento debe ser validado por profesional responsable de obra</p>
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Especificaciones Técnicas</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+      </div>
+    </div>
   </div>
 </body>
 </html>`;
-    return html;
   };
 
-  const generateMaterialsList = () => {
+  const generateMaterialsList = (templateSettings: ExportTemplateSettings = getTemplateSettings('materials')) => {
     const materials = project.materials as any;
-    let csv = 'Categoría,Material,Cantidad,Unidad,Uso,Observaciones\n';
-
-    if (materials) {
-      // Materiales de vereda
-      if (materials.cement) csv += `Vereda,Cemento Portland,${materials.cement.quantity},${materials.cement.unit},Hormigón base,CPC40\n`;
-      if (materials.sand) csv += `Vereda,Arena gruesa,${materials.sand.quantity},${materials.sand.unit},Mezcla hormigón,Cernida\n`;
-      if (materials.gravel) csv += `Vereda,Piedra/Canto rodado,${materials.gravel.quantity},${materials.gravel.unit},Hormigón,6-20mm\n`;
-      if (materials.wireMesh) csv += `Vereda,Malla metálica,${materials.wireMesh.quantity},${materials.wireMesh.unit},Armadura,Q188 o similar\n`;
-      if (materials.adhesive) csv += `Vereda,Adhesivo cerámico,${materials.adhesive.quantity},${materials.adhesive.unit},Pegado losetas,Exterior\n`;
-      if (materials.whiteCement) csv += `Vereda,Cemento blanco,${materials.whiteCement.quantity},${materials.whiteCement.unit},Pastina,\n`;
-      if (materials.marmolina) csv += `Vereda,Marmolina,${materials.marmolina.quantity},${materials.marmolina.unit},Pastina,\n`;
-      if (materials.waterproofing) csv += `Vereda,Impermeabilizante,${materials.waterproofing.quantity},${materials.waterproofing.unit},Protección,2 manos\n`;
-
-      // Materiales de cama
-      if (materials.geomembrane) csv += `Cama,Geomembrana,${materials.geomembrane.quantity},${materials.geomembrane.unit},Base,200 micrones mín\n`;
-      if (materials.electroweldedMesh) csv += `Cama,Malla electrosoldada,${materials.electroweldedMesh.quantity},${materials.electroweldedMesh.unit},Refuerzo,Q188\n`;
-      if (materials.sandForBed) csv += `Cama,Arena gruesa,${materials.sandForBed.quantity},${materials.sandForBed.unit},Colchón,Sin arcilla\n`;
-      if (materials.cementBags) csv += `Cama,Cemento,${materials.cementBags.quantity},${materials.cementBags.unit},Capa final,Bolsas 50kg\n`;
-      if (materials.drainStone) csv += `Cama,Piedra para drenaje,${materials.drainStone.quantity},${materials.drainStone.unit},Zanja,\n`;
-    }
-
-    // Plomería
+    const { additionals } = calculateCosts();
     const plumbingConfig = project.plumbingConfig as any;
-    if (plumbingConfig && plumbingConfig.selectedItems) {
-      plumbingConfig.selectedItems.forEach((item: any) => {
-        csv += `Plomería,${item.itemName},${item.quantity},unidades,${item.category || 'Instalación'},Ø${item.diameter || '-'}\n`;
-      });
-    }
+    const taskMaterials = getTaskMaterials();
+    const hasStructuredMaterials = materials && Object.keys(materials).length > 0;
+    const formatMeshSheets = (quantity: number, unit: string, sheetAreaM2: number, sheetLabel: string) => {
+      if (!quantity || !unit) return '';
+      const normalizedUnit = unit.toLowerCase();
+      if (!normalizedUnit.includes('m²') && !normalizedUnit.includes('m2')) return '';
+      const sheets = Math.ceil(quantity / sheetAreaM2);
+      return ` (≈ ${sheets} mallas de ${sheetLabel})`;
+    };
+    const hasElectroweldedMesh = materials?.electroweldedMesh?.quantity > 0;
 
-    // Eléctricos
-    const electricalConfig = project.electricalConfig as any;
-    if (electricalConfig && electricalConfig.items) {
-      electricalConfig.items.forEach((item: any) => {
-        csv += `Eléctrico,${item.name},${item.quantity},unidades,${item.type},${item.watts}W ${item.voltage}V\n`;
-      });
-    }
+    const headerSubtitle = templateSettings.subtitle || 'Lista Completa de Materiales';
+    const documentTitle = templateSettings.title || `Lista de Materiales - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('materials');
 
-    return csv;
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    ${getCommonStyles()}
+    .category-section { margin: 30px 0; }
+    .category-title { background: #2563eb; color: white; padding: 12px 20px; font-size: 18px; font-weight: 600; margin-bottom: 15px; border-radius: 6px; }
+    .material-item { display: flex; justify-content: space-between; padding: 12px 20px; background: #f9fafb; border-left: 4px solid #3b82f6; margin-bottom: 8px; align-items: center; }
+    .material-name { font-weight: 600; color: #1f2937; flex: 1; }
+    .material-qty { font-size: 18px; font-weight: 700; color: #2563eb; min-width: 120px; text-align: right; }
+    .content-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+
+    <div class="content">
+      <div class="content-grid">
+        <div>
+          <div class="category-section">
+            <div class="category-title">Materiales de Vereda</div>
+            ${materials?.cement ? `<div class="material-item"><span class="material-name">Cemento Portland</span><span class="material-qty">${materials.cement.quantity} ${materials.cement.unit}</span></div>` : ''}
+            ${materials?.sand ? `<div class="material-item"><span class="material-name">Arena Gruesa</span><span class="material-qty">${materials.sand.quantity} ${materials.sand.unit}</span></div>` : ''}
+            ${materials?.gravel ? `<div class="material-item"><span class="material-name">Piedra/Grava</span><span class="material-qty">${materials.gravel.quantity} ${materials.gravel.unit}</span></div>` : ''}
+            ${materials?.adhesive ? `<div class="material-item"><span class="material-name">Adhesivo para Losetas</span><span class="material-qty">${materials.adhesive.quantity} ${materials.adhesive.unit}</span></div>` : ''}
+            ${materials?.whiteCement ? `<div class="material-item"><span class="material-name">Cemento Blanco</span><span class="material-qty">${materials.whiteCement.quantity} ${materials.whiteCement.unit}</span></div>` : ''}
+            ${materials?.marmolina ? `<div class="material-item"><span class="material-name">Marmolina</span><span class="material-qty">${materials.marmolina.quantity} ${materials.marmolina.unit}</span></div>` : ''}
+          </div>
+
+          ${!hasStructuredMaterials && taskMaterials.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Materiales del plan de tareas</div>
+            ${taskMaterials.map((material) =>
+              `<div class="material-item"><span class="material-name">${material.name}</span><span class="material-qty">${material.quantity} ${material.unit}</span></div>`
+            ).join('')}
+          </div>
+          ` : ''}
+
+          ${(project.tileQuantities as any)?.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Losetas y Revestimientos</div>
+            ${(project.tileQuantities as any[]).map(tile =>
+              `<div class="material-item"><span class="material-name">${tile.tileName}</span><span class="material-qty">${tile.quantity} ${tile.unit}</span></div>`
+            ).join('')}
+          </div>
+          ` : ''}
+        </div>
+
+        <div>
+          ${plumbingConfig?.selectedItems?.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Instalación Hidráulica</div>
+            ${plumbingConfig.selectedItems.map((item: any) =>
+              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantity} ${item.unit || 'ud'}</span></div>`
+            ).join('')}
+          </div>
+          ` : ''}
+
+          ${materials?.wireMesh || materials?.waterproofing ? `
+          <div class="category-section">
+            <div class="category-title">Materiales Complementarios</div>
+            ${materials?.wireMesh && !hasElectroweldedMesh ? `<div class="material-item"><span class="material-name">Malla de Alambre</span><span class="material-qty">${materials.wireMesh.quantity} ${materials.wireMesh.unit}${formatMeshSheets(materials.wireMesh.quantity, materials.wireMesh.unit, 6, '2x3m')}</span></div>` : ''}
+            ${materials?.waterproofing ? `<div class="material-item"><span class="material-name">Impermeabilizante</span><span class="material-qty">${materials.waterproofing.quantity} ${materials.waterproofing.unit}</span></div>` : ''}
+          </div>
+          ` : ''}
+
+          ${materials?.geomembrane || materials?.electroweldedMesh || materials?.sandForBed || materials?.cementBags || materials?.drainStone ? `
+          <div class="category-section">
+            <div class="category-title">Cama Interna</div>
+            ${materials?.geomembrane ? `<div class="material-item"><span class="material-name">Geomembrana</span><span class="material-qty">${materials.geomembrane.quantity} ${materials.geomembrane.unit}</span></div>` : ''}
+            ${materials?.electroweldedMesh ? `<div class="material-item"><span class="material-name">Malla Electrosoldada</span><span class="material-qty">${materials.electroweldedMesh.quantity} ${materials.electroweldedMesh.unit}${formatMeshSheets(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, 12, '2x6m')}</span></div>` : ''}
+            ${materials?.sandForBed ? `<div class="material-item"><span class="material-name">Arena para Cama</span><span class="material-qty">${materials.sandForBed.quantity} ${materials.sandForBed.unit}</span></div>` : ''}
+            ${materials?.cementBags ? `<div class="material-item"><span class="material-name">Cemento para Cama</span><span class="material-qty">${materials.cementBags.quantity} ${materials.cementBags.unit}</span></div>` : ''}
+            ${materials?.drainStone ? `<div class="material-item"><span class="material-name">Piedra de Drenaje</span><span class="material-qty">${materials.drainStone.quantity} ${materials.drainStone.unit}</span></div>` : ''}
+          </div>
+          ` : ''}
+
+          ${additionals?.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Adicionales</div>
+            ${additionals.map((add: any) => {
+              const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name || 'Item adicional';
+              return `<div class="material-item"><span class="material-name">${name}</span><span class="material-qty">${add.newQuantity} ${add.customUnit || 'ud'}</span></div>`;
+            }).join('')}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Lista de Materiales</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
   };
+
+  const generateDetailedBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('budget')) => {
+    const materials = project.materials as any;
+    const { additionals, additionalsCosts, plumbingCosts, totalMaterialCost, totalLaborCost, grandTotal } = resolveCostOverrides(templateSettings);
+    const plumbingConfig = project.plumbingConfig as any;
+    const rolesSummary = getRolesCostSummary();
+    const headerSubtitle = templateSettings.subtitle || 'Presupuesto Detallado con Costos Unitarios';
+    const documentTitle = templateSettings.title || `Presupuesto Detallado - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('budget');
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    ${getCommonStyles()}
+    .budget-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .budget-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 13px; }
+    .budget-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    .budget-table tr:hover { background: #f9fafb; }
+    .budget-table .subtotal-row { background: #eff6ff; font-weight: 600; }
+    .budget-table .total-row { background: #2563eb; color: white; font-weight: 700; font-size: 16px; }
+    .text-right { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <h2>Materiales Base - Vereda y Estructurales</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th>Unidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            ${materials?.cement ? `<tr><td>Cemento Portland</td><td>${materials.cement.quantity}</td><td>${materials.cement.unit}</td><td class="text-right">$ ${(materials.cement.cost / materials.cement.quantity).toFixed(2)}</td><td class="text-right">$ ${materials.cement.cost.toLocaleString('es-AR')}</td></tr>` : ''}
+            ${materials?.sand ? `<tr><td>Arena Gruesa</td><td>${materials.sand.quantity}</td><td>${materials.sand.unit}</td><td class="text-right">$ ${(parseFloat(materials.sand.cost) / parseFloat(materials.sand.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.sand.cost).toLocaleString('es-AR')}</td></tr>` : ''}
+            ${materials?.gravel ? `<tr><td>Piedra/Grava</td><td>${materials.gravel.quantity}</td><td>${materials.gravel.unit}</td><td class="text-right">$ ${(parseFloat(materials.gravel.cost) / parseFloat(materials.gravel.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.gravel.cost).toLocaleString('es-AR')}</td></tr>` : ''}
+            ${materials?.adhesive ? `<tr><td>Adhesivo</td><td>${materials.adhesive.quantity}</td><td>${materials.adhesive.unit}</td><td class="text-right">$ ${(materials.adhesive.cost / materials.adhesive.quantity).toFixed(2)}</td><td class="text-right">$ ${materials.adhesive.cost.toLocaleString('es-AR')}</td></tr>` : ''}
+            <tr class="subtotal-row"><td colspan="4">Subtotal Materiales Base</td><td class="text-right">$ ${project.materialCost.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      ${plumbingConfig?.selectedItems?.length > 0 ? `
+      <div class="section">
+        <h2>Instalación Hidráulica</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            ${plumbingConfig.selectedItems.map((item: any) =>
+              `<tr><td>${item.name}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
+            ).join('')}
+            <tr class="subtotal-row"><td colspan="3">Subtotal Plomería</td><td class="text-right">$ ${plumbingCosts.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${additionals?.length > 0 ? `
+      <div class="section">
+        <h2>Items Adicionales</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            ${additionals.map((add: any) => {
+              const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name;
+              const price = add.customPricePerUnit || add.accessory?.pricePerUnit || add.equipment?.pricePerUnit || add.material?.pricePerUnit || 0;
+              return `<tr><td>${name}</td><td>${add.newQuantity}</td><td class="text-right">$ ${price.toLocaleString('es-AR')}</td><td class="text-right">$ ${(add.newQuantity * price).toLocaleString('es-AR')}</td></tr>`;
+            }).join('')}
+            <tr class="subtotal-row"><td colspan="3">Subtotal Adicionales</td><td class="text-right">$ ${additionalsCosts.materialCost.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      <div class="section">
+        <h2>Mano de Obra</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Rol</th><th>Tareas</th><th>Horas</th><th class="text-right">Costo</th></tr>
+          </thead>
+          <tbody>
+            ${Object.values(rolesSummary).map((role: any) =>
+              `<tr><td>${role.roleName}</td><td>${role.tasksCount}</td><td>${role.hours.toFixed(1)} hs</td><td class="text-right">$ ${role.cost.toLocaleString('es-AR')}</td></tr>`
+            ).join('')}
+            <tr class="subtotal-row"><td colspan="3">Total Mano de Obra</td><td class="text-right">$ ${totalLaborCost.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <table class="budget-table">
+          <tbody>
+            <tr class="subtotal-row"><td colspan="4">TOTAL MATERIALES</td><td class="text-right">$ ${totalMaterialCost.toLocaleString('es-AR')}</td></tr>
+            <tr class="subtotal-row"><td colspan="4">TOTAL MANO DE OBRA</td><td class="text-right">$ ${totalLaborCost.toLocaleString('es-AR')}</td></tr>
+            <tr class="total-row"><td colspan="4">INVERSIÓN TOTAL DEL PROYECTO</td><td class="text-right">$ ${grandTotal.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Presupuesto Detallado</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  const generateCompleteReport = (templateSettings: ExportTemplateSettings = getTemplateSettings('complete')) => {
+    const { grandTotal } = resolveCostOverrides(templateSettings);
+    const headerSubtitle = templateSettings.subtitle || 'Reporte Completo del Proyecto';
+    const documentTitle = templateSettings.title || `Reporte Completo - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('complete');
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    ${getCommonStyles()}
+    .timeline-item { padding: 15px 20px; background: #eff6ff; border-left: 4px solid #3b82f6; margin: 10px 0; }
+    .timeline-date { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .timeline-content { font-size: 14px; color: #1f2937; margin-top: 5px; }
+    .highlight-box { background: #dbeafe; border: 2px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+
+    <div class="content">
+      <div class="highlight-box">
+        <h3 style="color: #1e40af; margin: 0 0 10px 0; font-size: 18px;">Resumen Ejecutivo</h3>
+        <p style="font-size: 14px; line-height: 1.6; margin: 0;">
+          Proyecto <strong>${project.name}</strong> para <strong>${project.clientName}</strong>.
+          Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${project.poolPreset?.depth}m
+          con capacidad de ${(project.volume * 1000).toFixed(0)} litros.
+          Inversión total: <strong style="color: #2563eb; font-size: 18px;">$${grandTotal.toLocaleString('es-AR')}</strong>
+        </p>
+      </div>
+
+      ${generateClientBudget(getTemplateSettings('client')).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
+
+      ${projectUpdates.length > 0 ? `
+      <div class="section">
+        <h2>Historial del Proyecto</h2>
+        ${projectUpdates.slice(0, 10).map(update => `
+          <div class="timeline-item">
+            <div class="timeline-date">${new Date(update.createdAt).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+            <div class="timeline-content"><strong>${update.title}</strong> - ${update.description}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Reporte Completo</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  const generateOverview = (templateSettings: ExportTemplateSettings = getTemplateSettings('overview')) => {
+    const sidewalkAreaM2 = calculatedSidewalkArea || project.sidewalkArea || 0;
+    const headerSubtitle = templateSettings.subtitle || 'Vista General del Proyecto';
+    const documentTitle = templateSettings.title || `Vista General - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('overview');
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #fafafa; }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto;
+      background: white;
+      padding: 15mm;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 20px;
+    }
+    .logo-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .company-logo {
+      width: 120px;
+      height: 50px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .doc-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #374151;
+      margin-top: 5px;
+    }
+    .header-info {
+      text-align: right;
+    }
+    .project-id {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .doc-date {
+      font-size: 10px;
+      color: #9ca3af;
+    }
+
+    /* PROJECT TITLE */
+    .project-header {
+      background: #f9fafb;
+      padding: 20px 25px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 20px;
+    }
+    .project-name {
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+    .project-meta {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* MAIN GRID */
+    .content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    /* METRICS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .metric-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 18px;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #60a5fa;
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+    .metric-label {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* CONTENT GRID */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      flex: 1;
+    }
+
+    .info-panel {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .info-list {
+      flex: 1;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .info-item:last-child { border-bottom: none; }
+    .info-label {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .info-value {
+      font-size: 12px;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    /* EQUIPMENT */
+    .equipment-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .equipment-item {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+    }
+    .equipment-label {
+      font-size: 10px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+    .equipment-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 2px;
+    }
+    .equipment-spec {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    /* ACCESSORIES */
+    .accessories-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    .accessory-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+      text-align: center;
+    }
+    .accessory-count {
+      font-size: 24px;
+      font-weight: 600;
+      color: #60a5fa;
+      margin-bottom: 4px;
+    }
+    .accessory-label {
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* FOOTER */
+    .footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .footer-text {
+      font-size: 10px;
+      color: #9ca3af;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="logo-section">
+        <div class="company-logo">
+          ${
+            logoDataUrl
+              ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:46px;width:auto;display:block;"/>`
+              : 'LOGO AQUÍ'
+          }
+        </div>
+        <div class="doc-title">${headerSubtitle}</div>
+      </div>
+      <div class="header-info">
+        <div class="project-id">Proyecto: ${project.id.substring(0, 8).toUpperCase()}</div>
+        <div class="doc-date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      </div>
+    </div>
+
+    <!-- PROJECT INFO -->
+    <div class="project-header">
+      <div class="project-name">${project.name}</div>
+      <div class="project-meta">
+        <strong>Cliente:</strong> ${project.clientName}
+        ${project.location ? ` | <strong>Ubicación:</strong> ${project.location}` : ''}
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-wrapper">
+
+      <!-- METRICS -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-value">${project.poolPreset?.length || 0} × ${project.poolPreset?.width || 0}</div>
+          <div class="metric-label">Dimensiones (m)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${project.poolPreset?.depth || 0}</div>
+          <div class="metric-label">Profundidad (m)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${(project.volume * 1000).toFixed(0)}</div>
+          <div class="metric-label">Capacidad (L)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${sidewalkAreaM2.toFixed(1)}</div>
+          <div class="metric-label">Vereda (m²)</div>
+        </div>
+      </div>
+
+      <!-- TWO COLUMN GRID -->
+      <div class="content-grid">
+
+        <!-- LEFT: SPECS -->
+        <div class="info-panel">
+          <div class="panel-title">Especificaciones Técnicas</div>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Modelo</span>
+              <span class="info-value">${project.poolPreset?.name || 'N/A'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Forma</span>
+              <span class="info-value">${project.poolPreset?.shape || 'RECTANGULAR'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Volumen</span>
+              <span class="info-value">${project.volume.toFixed(2)} m³</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Espejo de Agua</span>
+              <span class="info-value">${project.waterMirrorArea.toFixed(2)} m²</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Estado</span>
+              <span class="info-value">${project.status || 'EN PLANIFICACIÓN'}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: EQUIPMENT -->
+        <div class="info-panel">
+          <div class="panel-title">Equipamiento del Sistema</div>
+          ${equipmentRecommendation ? `
+          <div class="equipment-grid">
+            <div class="equipment-item">
+              <div class="equipment-label">Bomba</div>
+              <div class="equipment-name">${equipmentRecommendation.pump.name}</div>
+              <div class="equipment-spec">${equipmentRecommendation.pump.power} HP | ${equipmentRecommendation.pump.flowRate} m³/h</div>
+            </div>
+            <div class="equipment-item">
+              <div class="equipment-label">Filtro</div>
+              <div class="equipment-name">${equipmentRecommendation.filter.name}</div>
+              <div class="equipment-spec">${equipmentRecommendation.filter.capacity} m³/h</div>
+            </div>
+            ${equipmentRecommendation.heater ? `
+            <div class="equipment-item">
+              <div class="equipment-label">Calefacción</div>
+              <div class="equipment-name">${equipmentRecommendation.heater.name}</div>
+              <div class="equipment-spec">${equipmentRecommendation.heater.power} kW</div>
+            </div>
+            ` : ''}
+          </div>
+          ` : '<div class="equipment-spec" style="color: #9ca3af; text-align: center; padding: 20px;">No hay equipamiento seleccionado</div>'}
+        </div>
+
+      </div>
+
+      <!-- ACCESSORIES -->
+      <div class="info-panel">
+        <div class="panel-title">Accesorios e Instalaciones</div>
+        <div class="accessories-grid">
+          <div class="accessory-box">
+            <div class="accessory-count">${project.poolPreset?.returnsCount || 0}</div>
+            <div class="accessory-label">Retornos</div>
+          </div>
+          <div class="accessory-box">
+            <div class="accessory-count">${project.poolPreset?.skimmerCount || 0}</div>
+            <div class="accessory-label">Skimmers</div>
+          </div>
+          ${project.poolPreset?.hasLighting ? `
+          <div class="accessory-box">
+            <div class="accessory-count">${project.poolPreset.lightingCount}</div>
+            <div class="accessory-label">Luces LED</div>
+          </div>
+          ` : ''}
+          ${project.poolPreset?.hasBottomDrain ? `
+          <div class="accessory-box">
+            <div class="accessory-count">1</div>
+            <div class="accessory-label">Desagüe Fondo</div>
+          </div>
+          ` : ''}
+          ${project.poolPreset?.hasVacuumIntake ? `
+          <div class="accessory-box">
+            <div class="accessory-count">1</div>
+            <div class="accessory-label">Limpiafondos</div>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="footer-text">Pool Installer | Sistema de Gestión de Proyectos</div>
+    </div>
+
+  </div>
+</body>
+</html>`;
+  };
+
+  // Helper function to get common styles
+  const getCommonStyles = () => `
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; background: #f9fafb; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { background: #2563eb; color: white; padding: 30px 40px; text-align: center; }
+    .logo { font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+    .subtitle { font-size: 16px; opacity: 0.9; }
+    .date { font-size: 13px; opacity: 0.7; margin-top: 10px; }
+    .content { padding: 30px 40px; }
+    .section { margin: 30px 0; page-break-inside: avoid; }
+    .section h2 { color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; font-size: 20px; font-weight: 600; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+    .info-item { padding: 15px; background: #eff6ff; border-left: 3px solid #3b82f6; }
+    .info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-weight: 500; }
+    .info-value { font-size: 15px; font-weight: 600; color: #1f2937; }
+    .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280; }
+    @media print { body { background: white; padding: 0; } .container { box-shadow: none; } }
+  `;
 
   const generateWhatsAppMessage = (template: ExportTemplate, sections = selectedSections): string => {
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
-    const electricalConfig = project.electricalConfig as any;
     const additionals = (project as any).additionals || [];
+    const tasksLaborCost = getTasksLaborCost();
+    const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
 
-    // Calcular costos actualizados
     const additionalsCosts = additionals.reduce((acc: any, additional: any) => {
       const quantity = additional.newQuantity || 0;
       let materialCost = 0;
@@ -868,186 +1637,70 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ? plumbingConfig.selectedItems.reduce((sum: number, item: any) => sum + (item.quantity * item.pricePerUnit), 0)
       : 0;
 
+    const electricalConfig = project.electricalConfig as any;
     const electricalCosts = electricalConfig?.items
       ? electricalConfig.items.reduce((sum: number, item: any) => sum + (item.pricePerUnit ? item.pricePerUnit * item.quantity : 0), 0)
       : 0;
 
     const totalMaterialCost = project.materialCost + additionalsCosts.materialCost + plumbingCosts + electricalCosts;
-    const totalLaborCost = project.laborCost + additionalsCosts.laborCost;
+    const totalLaborCost = baseLaborCost + additionalsCosts.laborCost;
     const grandTotal = totalMaterialCost + totalLaborCost;
 
-    // Calcular caños automáticamente
-    const pipeCalculation = plumbingConfig?.distanceToEquipment
-      ? plumbingCalculationService.calculateFromProject(project, plumbingConfig.distanceToEquipment)
-      : null;
+    let message = '';
 
-    if (template === 'client') {
-      let message = '';
-
-      // Header
-      if (sections.header) {
-        message += `*PRESUPUESTO - CONSTRUCCION DE PISCINA*
-
-*Proyecto:* ${project.name}
-*Cliente:* ${project.clientName}
-*Ubicacion:* ${project.location || 'A definir'}`;
-      }
-
-      // Características
-      if (sections.characteristics) {
-        message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*
-- Modelo: ${project.poolPreset?.name || 'N/A'}
-- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${project.poolPreset?.depth || 0}m
-- Volumen: ${project.volume.toFixed(2)} m³ (${(project.volume * 1000).toFixed(0)} litros)
-- Forma: ${project.poolPreset?.shape || 'N/A'}`;
-      }
-
-      // Incluye
-      if (sections.includes) {
-        message += `${message ? '\n\n' : ''}*INCLUYE:*
-- Excavacion y preparacion del terreno
-- Instalacion de piscina de fibra de vidrio
-- Sistema de filtracion completo
-${equipmentRecommendation ? `- Bomba ${equipmentRecommendation.pump.name} (${equipmentRecommendation.pump.power}HP)\n` : ''}- Instalacion hidraulica (${project.poolPreset?.returnsCount || 0} retornos, ${project.poolPreset?.skimmerCount || 0} skimmers)
-${project.poolPreset?.hasLighting ? `- Iluminacion LED (${project.poolPreset.lightingCount} unidades)\n` : ''}- Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)
-- Materiales de construccion`;
-
-        // Agregar info de caños si está disponible
-        if (pipeCalculation) {
-          message += `\n\n*INSTALACION HIDRAULICA CALCULADA:*
-- Total de canos requeridos: ${pipeCalculation.summary.totalMeters}m
-- Distancia maxima al equipo: ${pipeCalculation.summary.maxDistance}m`;
-
-          pipeCalculation.pipeRequirements.forEach(req => {
-            message += `\n- ${req.lineType}: ${req.totalMeters}m (${req.diameter})`;
-          });
-        }
-      }
-
-      // Adicionales
-      if (sections.additionals && additionals && additionals.length > 0) {
-        message += `${message ? '\n\n' : ''}*ADICIONALES INCLUIDOS:*\n`;
-        additionals.forEach((add: any) => {
-          const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name || 'Item adicional';
-          message += `- ${name} (${add.newQuantity} ${add.customUnit || 'unidades'})\n`;
-        });
-      }
-
-      // Costos
-      if (sections.costs) {
-        message += `${message ? '\n\n' : ''}*INVERSION TOTAL*`;
-
-        // Desglose detallado
-        message += `\n- Materiales base: $${project.materialCost.toLocaleString('es-AR')}`;
-
-        if (plumbingCosts > 0) {
-          message += `\n- Plomeria: $${plumbingCosts.toLocaleString('es-AR')}`;
-        }
-
-        if (electricalCosts > 0) {
-          message += `\n- Instalacion electrica: $${electricalCosts.toLocaleString('es-AR')}`;
-        }
-
-        if (additionalsCosts.materialCost > 0) {
-          message += `\n- Adicionales: $${additionalsCosts.materialCost.toLocaleString('es-AR')}`;
-        }
-
-        message += `\n- Total materiales: $${totalMaterialCost.toLocaleString('es-AR')}`;
-
-        message += `\n\n- Mano de obra base: $${project.laborCost.toLocaleString('es-AR')}`;
-
-        if (additionalsCosts.laborCost > 0) {
-          message += `\n- M.O. adicionales: $${additionalsCosts.laborCost.toLocaleString('es-AR')}`;
-        }
-
-        message += `\n- Total mano de obra: $${totalLaborCost.toLocaleString('es-AR')}`;
-
-        message += `\n\n*TOTAL PROYECTO: $${grandTotal.toLocaleString('es-AR')}*`;
-      }
-
-      // Condiciones
-      if (sections.conditions) {
-        message += `${message ? '\n\n' : ''}*CONDICIONES:*
-- Valido por 30 dias
-- Plazo: 15-20 dias habiles
-- Pago: 50% inicio, 50% finalizacion
-- Garantia: 1 año mano de obra`;
-      }
-
-      message += `\n\n_Generado por Pool Calculator - ${new Date().toLocaleDateString('es-AR')}_`;
-
-      return message;
-    } else if (template === 'materials') {
-      let msg = `*LISTA DE MATERIALES - ${project.name.toUpperCase()}*\n\n`;
-
-      if (materials) {
-        msg += `*MATERIALES DE VEREDA*\n`;
-        if (materials.cement) msg += `- Cemento: ${materials.cement.quantity} ${materials.cement.unit}\n`;
-        if (materials.sand) msg += `- Arena: ${materials.sand.quantity} ${materials.sand.unit}\n`;
-        if (materials.gravel) msg += `- Piedra: ${materials.gravel.quantity} ${materials.gravel.unit}\n`;
-        if (materials.adhesive) msg += `- Adhesivo: ${materials.adhesive.quantity} ${materials.adhesive.unit}\n`;
-
-        msg += `\n*CAMA INTERNA*\n`;
-        if (materials.geomembrane) msg += `- Geomembrana: ${materials.geomembrane.quantity} ${materials.geomembrane.unit}\n`;
-        if (materials.electroweldedMesh) msg += `- Malla electrosoldada: ${materials.electroweldedMesh.quantity} ${materials.electroweldedMesh.unit}\n`;
-        if (materials.sandForBed) msg += `- Arena: ${materials.sandForBed.quantity} ${materials.sandForBed.unit}\n`;
-      }
-
-      if (plumbingConfig && plumbingConfig.selectedItems && plumbingConfig.selectedItems.length > 0) {
-        msg += `\n*PLOMERÍA*\n`;
-        plumbingConfig.selectedItems.slice(0, 5).forEach((item: any) => {
-          msg += `- ${item.itemName}: ${item.quantity} un.\n`;
-        });
-        if (plumbingConfig.selectedItems.length > 5) {
-          msg += `- ... y ${plumbingConfig.selectedItems.length - 5} items más\n`;
-        }
-      }
-
-      if (calculatedElectricalSpecs || (electricalConfig && electricalConfig.items)) {
-        const specs = calculatedElectricalSpecs || electricalConfig;
-        msg += `\n*ELÉCTRICOS*\n`;
-
-        if (equipmentRecommendation) {
-          msg += `- Bomba ${equipmentRecommendation.pump.name}: ${equipmentRecommendation.pump.consumption}W\n`;
-          msg += `- Filtro ${equipmentRecommendation.filter.name}\n`;
-        }
-
-        if (specs.consumptionBreakdown) {
-          specs.consumptionBreakdown.forEach((item: any) => {
-            msg += `- ${item.item}: ${item.quantity} un. (${item.totalWatts}W)\n`;
-          });
-        } else if (electricalConfig && electricalConfig.items) {
-          electricalConfig.items.forEach((item: any) => {
-            msg += `- ${item.name}: ${item.quantity} un. (${item.watts}W)\n`;
-          });
-        }
-
-        msg += `\n*Especificaciones Eléctricas:*\n`;
-        msg += `- Potencia Total: ${specs.totalWatts || 0}W (${((specs.totalWatts || 0) / 220).toFixed(1)}A)\n`;
-        msg += `- Termica: ${specs.recommendedBreaker || 16}A\n`;
-        msg += `- Diferencial: ${specs.recommendedRCD || 16}A 30mA\n`;
-        msg += `- Cable: ${specs.cableSection || '2.5mm²'}\n`;
-      }
-
-      msg += `\n_Lista completa disponible en formato CSV_`;
-      return msg;
-    } else if (template === 'budget') {
-      return `*PRESUPUESTO DETALLADO*
-
-*${project.name}*
-Cliente: ${project.clientName}
-
-*COSTOS*
-- Materiales y equipamiento: $${project.materialCost.toLocaleString('es-AR')}
-- Mano de obra: $${project.laborCost.toLocaleString('es-AR')}
-
-*TOTAL: $${project.totalCost.toLocaleString('es-AR')}*
-
-_Para más detalles, solicite el documento completo_`;
+    if (sections.header) {
+      message += `*PRESUPUESTO - CONSTRUCCION DE PISCINA*\n\n*Proyecto:* ${project.name}\n*Cliente:* ${project.clientName}\n*Ubicacion:* ${project.location || 'A definir'}`;
     }
 
-    // Default para otros templates
-    return `*${project.name.toUpperCase()}*\n\nCliente: ${project.clientName}\nTotal: $${project.totalCost.toLocaleString('es-AR')}\n\nPara más información, solicite el documento completo.`;
+    if (sections.characteristics) {
+      message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*\n- Modelo: ${project.poolPreset?.name || 'N/A'}\n- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${project.poolPreset?.depth || 0}m\n- Volumen: ${project.volume.toFixed(2)} m³ (${(project.volume * 1000).toFixed(0)} litros)\n- Forma: ${project.poolPreset?.shape || 'N/A'}`;
+    }
+
+    if (sections.includes) {
+      message += `${message ? '\n\n' : ''}*INCLUYE:*\n- Excavacion y preparacion del terreno\n- Instalacion de piscina de fibra de vidrio\n- Sistema de filtracion completo\n${equipmentRecommendation ? `- Bomba ${equipmentRecommendation.pump.name} (${equipmentRecommendation.pump.power}HP)\n` : ''}- Instalacion hidraulica (${project.poolPreset?.returnsCount || 0} retornos, ${project.poolPreset?.skimmerCount || 0} skimmers)\n${project.poolPreset?.hasLighting ? `- Iluminacion LED (${project.poolPreset.lightingCount} unidades)\n` : ''}- Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)\n- Materiales de construccion`;
+    }
+
+    if (sections.additionals && additionals && additionals.length > 0) {
+      message += `${message ? '\n\n' : ''}*ADICIONALES INCLUIDOS:*\n`;
+      additionals.forEach((add: any) => {
+        const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name || 'Item adicional';
+        message += `- ${name} (${add.newQuantity} ${add.customUnit || 'unidades'})\n`;
+      });
+    }
+
+    if (sections.costs) {
+      message += `${message ? '\n\n' : ''}*INVERSION TOTAL*\n- Materiales base: $${project.materialCost.toLocaleString('es-AR')}`;
+
+      if (plumbingCosts > 0) {
+        message += `\n- Plomeria: $${plumbingCosts.toLocaleString('es-AR')}`;
+      }
+
+      if (electricalCosts > 0) {
+        message += `\n- Electrica: $${electricalCosts.toLocaleString('es-AR')}`;
+      }
+
+      if (additionalsCosts.materialCost > 0) {
+        message += `\n- Adicionales: $${additionalsCosts.materialCost.toLocaleString('es-AR')}`;
+      }
+
+      message += `\n- Total materiales: $${totalMaterialCost.toLocaleString('es-AR')}`;
+      message += `\n\n- Mano de obra base: $${baseLaborCost.toLocaleString('es-AR')}`;
+
+      if (additionalsCosts.laborCost > 0) {
+        message += `\n- M.O. adicionales: $${additionalsCosts.laborCost.toLocaleString('es-AR')}`;
+      }
+
+      message += `\n- Total mano de obra: $${totalLaborCost.toLocaleString('es-AR')}`;
+      message += `\n\n*TOTAL PROYECTO: $${grandTotal.toLocaleString('es-AR')}*`;
+    }
+
+    if (sections.conditions) {
+      message += `${message ? '\n\n' : ''}*CONDICIONES:*\n- Valido por 30 dias\n- Plazo: 15-20 dias habiles\n- Pago: 50% inicio, 50% finalizacion\n- Garantia: 1 año mano de obra`;
+    }
+
+    message += `\n\n_Generado por Pool Installer - ${new Date().toLocaleDateString('es-AR')}_`;
+
+    return message;
   };
 
   const handleWhatsAppShare = () => {
@@ -1057,24 +1710,56 @@ _Para más detalles, solicite el documento completo_`;
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleExport = (format: 'html' | 'csv', template: ExportTemplate) => {
-    let content = '';
-    let filename = '';
-    let mimeType = '';
-
-    if (format === 'html') {
-      if (template === 'client') {
-        content = generateClientBudget();
-      } else if (template === 'professional') {
-        content = generateProfessionalSpec();
-      }
-      filename = `${template}-${project.name.replace(/\s+/g, '-').toLowerCase()}.html`;
-      mimeType = 'text/html';
-    } else if (format === 'csv') {
-      content = generateMaterialsList();
-      filename = `materiales-${project.name.replace(/\s+/g, '-').toLowerCase()}.csv`;
-      mimeType = 'text/csv;charset=utf-8;';
+  const getContentForTemplate = (
+    template: ExportTemplate,
+    settings: ExportSettings = exportSettings,
+    extras: { cadImageDataUrl?: string } = {}
+  ): string => {
+    const templateSettings = getTemplateSettings(template, settings);
+    switch (template) {
+      case 'client':
+        return generateClientBudget(templateSettings);
+      case 'professional':
+        return generateTechnicalSpec(templateSettings, extras.cadImageDataUrl);
+      case 'materials':
+        return generateMaterialsList(templateSettings);
+      case 'budget':
+        return generateDetailedBudget(templateSettings);
+      case 'complete':
+        return generateCompleteReport(templateSettings);
+      case 'overview':
+        return generateOverview(templateSettings);
+      default:
+        return generateClientBudget(templateSettings);
     }
+  };
+
+  const handleExport = async (format: 'html', template: ExportTemplate) => {
+    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+    let cadImageDataUrl = '';
+    if (template === 'professional') {
+      const templateSettings = getTemplateSettings('professional', exportSettings);
+      const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
+      if (canvasRef.current) {
+        await nextFrame();
+        try {
+          cadImageDataUrl = canvasRef.current.toDataURL('image/png');
+        } catch (error) {
+          console.warn('No se pudo capturar el plano CAD:', error);
+        }
+      }
+    }
+    if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
+      await nextFrame();
+      try {
+        cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
+      } catch (error) {
+        console.warn('No se pudo capturar el plano CAD:', error);
+      }
+    }
+    const content = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
+    const filename = `${template}-${project.name.replace(/\s+/g, '-').toLowerCase()}.html`;
+    const mimeType = 'text/html';
 
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -1087,8 +1772,30 @@ _Para más detalles, solicite el documento completo_`;
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = (template: ExportTemplate) => {
-    const html = template === 'client' ? generateClientBudget() : generateProfessionalSpec();
+  const handlePrint = async (template: ExportTemplate) => {
+    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+    let cadImageDataUrl = '';
+    if (template === 'professional') {
+      const templateSettings = getTemplateSettings('professional', exportSettings);
+      const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
+      if (canvasRef.current) {
+        await nextFrame();
+        try {
+          cadImageDataUrl = canvasRef.current.toDataURL('image/png');
+        } catch (error) {
+          console.warn('No se pudo capturar el plano CAD:', error);
+        }
+      }
+    }
+    if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
+      await nextFrame();
+      try {
+        cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
+      } catch (error) {
+        console.warn('No se pudo capturar el plano CAD:', error);
+      }
+    }
+    const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(html);
@@ -1100,499 +1807,838 @@ _Para más detalles, solicite el documento completo_`;
   };
 
   const handleExportPDF = async (template: ExportTemplate) => {
+    // Export PDF robusto (A4) con paginado correcto y mejor calidad
+    const mmToPx = (mm: number, dpi = 96) => Math.round((mm / 25.4) * dpi);
+    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+
+    const waitForImages = async (root: HTMLElement) => {
+      const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            const done = () => resolve();
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+          });
+        })
+      );
+    };
+
+    const extractBodyAndStyles = (fullHtml: string) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fullHtml, 'text/html');
+      const styleText = Array.from(doc.querySelectorAll('style'))
+        .map((s) => s.textContent || '')
+        .join('\n');
+
+      // Importante: evitamos traer <html>/<body> porque html2canvas se comporta mejor con un wrapper.
+      const bodyHtml = doc.body ? doc.body.innerHTML : fullHtml;
+      return { styleText, bodyHtml, title: doc.title || '' };
+    };
+
+    let wrapper: HTMLDivElement | null = null;
+
     try {
-      // Generar QR code con link al proyecto (simulado por ahora)
+      // 1) QR
       const projectUrl = `${window.location.origin}/projects/${project.id}`;
       const qrDataUrl = await QRCode.toDataURL(projectUrl, {
-        width: 200,
+        width: 220,
         margin: 1,
-        color: {
-          dark: '#1e40af',
-          light: '#ffffff'
+        color: { dark: '#2563eb', light: '#ffffff' },
+      });
+
+      // 2) Captura de visualización (alta resolución)
+      let poolImageDataUrl = '';
+      if ((template === 'complete' || template === 'overview') && poolCanvasRef.current) {
+        // dar un par de frames por si el canvas se está pintando
+        await nextFrame();
+        await nextFrame();
+        try {
+          poolImageDataUrl = poolCanvasRef.current.toDataURL('image/png');
+        } catch (e) {
+          console.warn('No se pudo capturar el canvas de pileta para el PDF:', e);
         }
-      });
-
-      // Crear contenedor temporal para renderizar
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.width = '210mm'; // A4 width
-      container.style.background = 'white';
-      container.style.padding = '20mm';
-
-      const html = template === 'client' ? generateClientBudget() : generateProfessionalSpec();
-
-      // Agregar QR code al final del documento
-      const htmlWithQR = html.replace(
-        '</body>',
-        `
-        <div style="position: fixed; bottom: 20mm; right: 20mm; text-align: center;">
-          <img src="${qrDataUrl}" style="width: 80px; height: 80px; border: 2px solid #2563eb; border-radius: 8px;" />
-          <p style="font-size: 8px; color: #64748b; margin-top: 5px;">Escanea para ver online</p>
-        </div>
-        </body>
-        `
-      );
-
-      container.innerHTML = htmlWithQR;
-      document.body.appendChild(container);
-
-      // Generar canvas del contenido
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      // Crear PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-
-      // Si el contenido es muy largo, agregar páginas adicionales
-      let heightLeft = imgHeight * ratio - pdfHeight;
-      let position = 0;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight * ratio;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', imgX, position, imgWidth * ratio, imgHeight * ratio);
-        heightLeft -= pdfHeight;
       }
 
-      // Guardar PDF
-      const filename = `${template}-${project.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-      pdf.save(filename);
+      // 3) Construimos wrapper A4 en px (evita “mm” inconsistentes en html2canvas)
+      const A4_W = mmToPx(210);
+      const A4_PADDING = 48;
 
-      // Limpiar
-      document.body.removeChild(container);
+      let cadImageDataUrl = '';
+      if (template === 'professional') {
+        const templateSettings = getTemplateSettings('professional', exportSettings);
+        const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
+        if (canvasRef.current) {
+          await nextFrame();
+          await nextFrame();
+          try {
+            cadImageDataUrl = canvasRef.current.toDataURL('image/png');
+          } catch (error) {
+            console.warn('No se pudo capturar el plano CAD:', error);
+          }
+        }
+      }
+      if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
+        await nextFrame();
+        await nextFrame();
+        try {
+          cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
+        } catch (error) {
+          console.warn('No se pudo capturar el plano CAD:', error);
+        }
+      }
+
+      const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
+      const { styleText, bodyHtml } = extractBodyAndStyles(html);
+
+      wrapper = document.createElement('div');
+      wrapper.setAttribute('data-export-root', '1');
+      wrapper.style.position = 'fixed';
+      wrapper.style.left = '0';
+      wrapper.style.top = '0';
+      wrapper.style.transform = 'translateX(-250vw)';
+      wrapper.style.width = `${A4_W}px`;
+      wrapper.style.padding = `${A4_PADDING}px`;
+      wrapper.style.background = '#ffffff';
+      wrapper.style.color = '#111827';
+      wrapper.style.zIndex = '2147483647';
+      wrapper.style.pointerEvents = 'none';
+
+      // Estilos “print-friendly”
+      const fixCss = `
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { background: #ffffff !important; padding: 0 !important; }
+        .container { max-width: none !important; width: 100% !important; box-shadow: none !important; margin: 0 !important; }
+        img { max-width: 100% !important; height: auto !important; }
+        a { color: inherit !important; text-decoration: none !important; }
+      `;
+
+      // 4) Body + extras (en flujo, no fixed; fija “footer” de forma estable)
+      wrapper.innerHTML = `
+        <style>${styleText}\n${fixCss}</style>
+        ${bodyHtml}
+        ${poolImageDataUrl ? `
+          <div style="margin-top: 28px; page-break-before: always;">
+            <h2 style="color:#1e40af; border-bottom: 2px solid #93c5fd; padding-bottom: 10px; margin-bottom: 16px;">
+              Visualización del Proyecto
+            </h2>
+            <div style="text-align:center; padding:16px; background:#eff6ff; border:1px solid #bfdbfe;">
+              <img src="${poolImageDataUrl}" style="max-width:100%; height:auto; display:inline-block;" />
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      document.body.appendChild(wrapper);
+
+      // 5) Esperar recursos (fonts + imágenes) para que no salgan “cortados” o sin cargar
+      // fonts
+      // @ts-ignore
+      if (document.fonts?.ready) {
+        // @ts-ignore
+        await document.fonts.ready;
+      }
+      await waitForImages(wrapper);
+      await nextFrame();
+
+      // 6) Render a canvas (más nítido)
+      const scale = Math.min(3, Math.max(2, (window.devicePixelRatio || 1)));
+      const canvas = await html2canvas(wrapper, {
+        scale,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // evita crop raro cuando hay scroll
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: wrapper.scrollWidth,
+        windowHeight: wrapper.scrollHeight,
+      });
+
+      // 7) Generación PDF SIN “calamidad”:
+      // - Renderizamos a canvas una sola vez
+      // - Cortamos el canvas por páginas (slices)
+      // - Respetamos márgenes + header/footer
+      // - Header/Footer no se deforman y no dependen de html2canvas
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+
+      const marginMm = 10;
+      const headerMm = 12;
+      const footerMm = 12;
+      const contentW = pdfW - marginMm * 2;
+      const contentH = pdfH - marginMm * 2 - headerMm - footerMm;
+
+      // Relación mm->px para saber cuánto cortar del canvas por página.
+      const pxPerMm = canvas.width / contentW;
+      const pageSlicePx = Math.floor(contentH * pxPerMm);
+      const totalPages = Math.max(1, Math.ceil(canvas.height / pageSlicePx));
+
+      const drawHeaderFooter = (page: number) => {
+        // Header
+        const yTop = marginMm;
+        const lineY = yTop + headerMm;
+
+        const logoDataUrl = getLogoForTemplate(template);
+        if (logoDataUrl) {
+          try {
+            // logo chico, ya pre-rasterizado
+            pdf.addImage(logoDataUrl, 'PNG', marginMm, yTop + 1, 18, 18, undefined, 'FAST');
+          } catch {
+            // si fallara el addImage (data corrupta), no bloqueamos el export
+          }
+        }
+
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        const title = `${project.name || 'Proyecto'} · ${getTemplateName(template)}`;
+        pdf.text(title, pdfW / 2, yTop + 8, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.4);
+        pdf.line(marginMm, lineY, pdfW - marginMm, lineY);
+
+        // Footer
+        const footerY = pdfH - marginMm;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(marginMm, footerY - footerMm, pdfW - marginMm, footerY - footerMm);
+
+        pdf.setFontSize(9);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(`Página ${page} de ${totalPages}`, pdfW - marginMm, footerY - 4, { align: 'right' });
+
+        // QR solo en la última página (evita repetir y agrandar el PDF)
+        if (qrDataUrl && page === totalPages) {
+          try {
+            const qrSize = 18;
+            pdf.addImage(qrDataUrl, 'PNG', pdfW - marginMm - qrSize, footerY - footerMm + 1, qrSize, qrSize, undefined, 'FAST');
+            pdf.setFontSize(8);
+            pdf.text('Escaneá para ver el proyecto', pdfW - marginMm - qrSize - 2, footerY - 4, { align: 'right' });
+          } catch {
+            // noop
+          }
+        }
+      };
+
+      // Cortamos y agregamos cada página como imagen independiente (sin posiciones negativas)
+      let yPx = 0;
+      for (let page = 1; page <= totalPages; page++) {
+        const sliceH = Math.min(pageSlicePx, canvas.height - yPx);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceH;
+        const pctx = pageCanvas.getContext('2d');
+        if (!pctx) break;
+        pctx.fillStyle = '#ffffff';
+        pctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+        // JPEG para slices grandes reduce mucho el peso
+        const sliceMega = (pageCanvas.width * pageCanvas.height) / 1_000_000;
+        const useJpeg = sliceMega > 10;
+        const imgData = useJpeg ? pageCanvas.toDataURL('image/jpeg', 0.92) : pageCanvas.toDataURL('image/png');
+
+        if (page > 1) pdf.addPage();
+        drawHeaderFooter(page);
+
+        const drawH = (sliceH / canvas.width) * contentW;
+        pdf.addImage(
+          imgData,
+          useJpeg ? 'JPEG' : 'PNG',
+          marginMm,
+          marginMm + headerMm,
+          contentW,
+          drawH,
+          undefined,
+          'FAST'
+        );
+
+        yPx += sliceH;
+      }
+
+      const filename = `${template}-${(project.name || 'proyecto').replace(/\s+/g, '-').toLowerCase()}.pdf`;
+      pdf.save(filename);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Hubo un error al generar el PDF. Por favor intenta nuevamente.');
+    } finally {
+      if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
     }
   };
+
 
   const handleExportToExcel = async () => {
     setExportingToExcel(true);
     try {
       await projectService.exportToExcel(project.id, excelSections);
-      alert('✅ Archivo Excel descargado exitosamente!');
+      alert('Archivo Excel descargado exitosamente');
       setShowExcelDialog(false);
     } catch (error: any) {
       console.error('Error al exportar a Excel:', error);
       const errorMessage = error.response?.data?.details || error.message || 'Error desconocido';
-      alert('❌ Error al exportar a Excel:\n\n' + errorMessage);
+      alert('Error al exportar a Excel: ' + errorMessage);
     } finally {
       setExportingToExcel(false);
     }
   };
 
+  const updateDraftTemplate = (updates: Partial<ExportTemplateSettings>) => {
+    setDraftSettings((prev) => {
+      const prevTemplate = prev.templates?.[selectedTemplate] || {};
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          [selectedTemplate]: {
+            ...prevTemplate,
+            ...updates,
+          },
+        },
+      };
+    });
+  };
+
+  const updateDraftValues = (updates: Partial<NonNullable<ExportTemplateSettings['values']>>) => {
+    setDraftSettings((prev) => {
+      const prevTemplate = prev.templates?.[selectedTemplate] || {};
+      const prevValues = prevTemplate.values || {};
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          [selectedTemplate]: {
+            ...prevTemplate,
+            values: {
+              ...prevValues,
+              ...updates,
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const updateDraftSection = (sectionKey: string, enabled: boolean) => {
+    setDraftSettings((prev) => {
+      const prevTemplate = prev.templates?.[selectedTemplate] || {};
+      const prevSections = prevTemplate.sections || {};
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          [selectedTemplate]: {
+            ...prevTemplate,
+            sections: {
+              ...prevSections,
+              [sectionKey]: enabled,
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const handleSaveExportSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await projectService.update(project.id, { exportSettings: draftSettings });
+      setExportSettings(draftSettings);
+      setIsEditorOpen(false);
+    } catch (error) {
+      console.error('Error al guardar configuración de exportación:', error);
+      alert('No se pudo guardar la configuración del documento');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const selectedTemplateData = templates.find((template) => template.id === selectedTemplate) || templates[0];
+  const activeDraftTemplate = draftSettings.templates?.[selectedTemplate] || {};
+  const draftSections = selectedTemplate === 'client'
+    ? (activeDraftTemplate.sections || selectedSections)
+    : undefined;
+  const draftPreviewHtml = getContentForTemplate(selectedTemplate, draftSettings);
+  const computedCosts = calculateCosts();
+  const defaultConditionsText = getConditionsList().join('\n');
+  const templatePreviewHighlights: Record<ExportTemplate, string[]> = {
+    client: ['Resumen de costos', 'Datos clave del cliente', 'Condiciones comerciales'],
+    professional: ['Especificaciones técnicas', 'Normativas y medidas', 'Secuencia de obra'],
+    materials: ['Listado por categorías', 'Unidades y cantidades', 'Notas de obra'],
+    budget: ['Costos unitarios', 'Subtotales', 'Materiales vs mano de obra'],
+    complete: ['Todo en un solo documento', 'Técnico + presupuesto', 'Anexos y notas'],
+    overview: ['Resumen ejecutivo', 'Datos generales', 'Indicadores clave'],
+  };
+
   return (
     <div className="space-y-6">
-      <Card>
-        <h3 className="text-lg font-semibold mb-2">Selecciona el tipo de documento</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Elegí el formato que mejor se adapte a tus necesidades
-        </p>
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <PoolVisualizationCanvas
+          ref={poolCanvasRef}
+          project={project}
+          tileConfig={project.tileCalculation}
+          width={1600}
+          height={1000}
+          showMeasurements={true}
+        />
+        <PoolVisualizationCanvas
+          ref={cadCanvasRef}
+          project={project}
+          tileConfig={project.tileCalculation}
+          width={1600}
+          height={1000}
+          showMeasurements={true}
+          viewMode="cad"
+        />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((template) => {
-            const Icon = template.icon;
-            const isSelected = selectedTemplate === template.id;
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/10 p-3 rounded-2xl border border-white/15">
+                <FileDown size={30} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight">Exportación de Documentos</h2>
+                <p className="text-slate-300 mt-1">Genere documentos profesionales para su proyecto.</p>
+              </div>
+            </div>
+            <div className="text-sm text-slate-300">
+              Plantilla activa: <span className="font-semibold text-white">{selectedTemplateData.name}</span>
+            </div>
+          </div>
+        </div>
 
-            return (
-              <div
-                key={template.id}
-                onClick={() => setSelectedTemplate(template.id)}
-                className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                  isSelected
-                    ? `border-${template.color}-500 bg-${template.color}-50`
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon className={`text-${template.color}-600 mt-1`} size={24} />
-                  <div className="flex-1">
-                    <h4 className="font-medium mb-1">{template.name}</h4>
-                    <p className="text-xs text-gray-600">{template.description}</p>
+        <div className="p-6 lg:p-8 bg-slate-50">
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900">Plantillas disponibles</h3>
+                <span className="text-xs text-slate-500">Seleccione una plantilla para previsualizar.</span>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {templates.map((template) => {
+                  const Icon = template.icon;
+                  const isSelected = selectedTemplate === template.id;
+
+                  return (
+                    <button
+                      key={template.id}
+                      onClick={() => setSelectedTemplate(template.id)}
+                      className={`text-left p-4 rounded-2xl border transition-all shadow-sm ${
+                        isSelected
+                          ? 'bg-white border-slate-900 text-slate-900 shadow-lg'
+                          : 'bg-white/70 border-transparent hover:border-slate-200 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                          <Icon size={20} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{template.name}</p>
+                          <p className="text-xs text-slate-500 mt-1">{template.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-slate-900 text-white">
+                    <selectedTemplateData.icon size={24} />
                   </div>
-                  {isSelected && (
-                    <div className={`w-3 h-3 rounded-full bg-${template.color}-500`} />
+                  <div>
+                    <h4 className="text-xl font-semibold text-slate-900">{selectedTemplateData.name}</h4>
+                    <p className="text-slate-600 mt-2">{selectedTemplateData.description}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-900">Vista previa real</h4>
+                  <button
+                    onClick={() => {
+                      setDraftSettings(JSON.parse(JSON.stringify(exportSettings || { templates: {} })));
+                      setIsEditorOpen(true);
+                    }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Editar en pantalla completa
+                  </button>
+                </div>
+
+                <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                  <iframe
+                    title="preview"
+                    srcDoc={getContentForTemplate(selectedTemplate)}
+                    className="w-full h-64"
+                    sandbox=""
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(templatePreviewHighlights[selectedTemplateData.id] || []).map((item) => (
+                    <span
+                      key={item}
+                      className="text-xs text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-3 py-1"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-fit space-y-4">
+              <div>
+                <h4 className="text-lg font-semibold text-slate-900">Acciones rápidas</h4>
+                <p className="text-xs text-slate-500">Exportá, imprimí o compartí la plantilla seleccionada.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleExportPDF(selectedTemplate)}
+                  className="flex flex-col items-center gap-2 p-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors shadow-sm"
+                >
+                  <FileDown size={20} />
+                  <span className="font-semibold text-xs">PDF</span>
+                </button>
+
+                <button
+                  onClick={() => handleExport('html', selectedTemplate)}
+                  className="flex flex-col items-center gap-2 p-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors shadow-sm"
+                >
+                  <Download size={20} />
+                  <span className="font-semibold text-xs">HTML</span>
+                </button>
+
+                <button
+                  onClick={() => handlePrint(selectedTemplate)}
+                  className="flex flex-col items-center gap-2 p-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors shadow-sm"
+                >
+                  <Printer size={20} />
+                  <span className="font-semibold text-xs">Imprimir</span>
+                </button>
+
+                <button
+                  onClick={handleWhatsAppShare}
+                  className="flex flex-col items-center gap-2 p-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-sm"
+                >
+                  <MessageCircle size={20} />
+                  <span className="font-semibold text-xs">WhatsApp</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowExcelDialog(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm text-sm font-semibold"
+              >
+                <FileSpreadsheet size={18} />
+                Excel Técnico
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col bg-white">
+            <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Editor de documentos</h3>
+                <p className="text-sm text-slate-500">Plantilla activa: {selectedTemplateData.name}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsEditorOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={handleSaveExportSettings}
+                  className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                  disabled={savingSettings}
+                >
+                  {savingSettings ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="bg-slate-100 p-4 overflow-auto">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[70vh]">
+                  <iframe
+                    title="preview-editor"
+                    srcDoc={draftPreviewHtml}
+                    className="w-full h-full min-h-[70vh]"
+                    sandbox=""
+                  />
+                </div>
+              </div>
+
+              <div className="border-l border-slate-200 p-5 overflow-auto">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-900 mb-3">Textos del documento</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Título del documento</label>
+                        <input
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          value={activeDraftTemplate.title || ''}
+                          onChange={(event) => updateDraftTemplate({ title: event.target.value })}
+                          placeholder={`${selectedTemplateData.name} - ${project.name}`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Subtítulo de portada</label>
+                        <input
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          value={activeDraftTemplate.subtitle || ''}
+                          onChange={(event) => updateDraftTemplate({ subtitle: event.target.value })}
+                          placeholder={selectedTemplateData.description}
+                        />
+                      </div>
+                      {selectedTemplate === 'client' && (
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-1">Condiciones comerciales</label>
+                          <textarea
+                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm min-h-[140px]"
+                            value={activeDraftTemplate.conditions || ''}
+                            onChange={(event) => updateDraftTemplate({ conditions: event.target.value })}
+                            placeholder={defaultConditionsText}
+                          />
+                          <p className="text-[11px] text-slate-400 mt-1">Una condición por línea.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-900 mb-3">Valores y costos</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Materiales</label>
+                        <input
+                          type="number"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          value={activeDraftTemplate.values?.materialCost ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
+                          }}
+                          placeholder={computedCosts.totalMaterialCost.toFixed(2)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Mano de obra</label>
+                        <input
+                          type="number"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          value={activeDraftTemplate.values?.laborCost ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateDraftValues({ laborCost: value === '' ? undefined : Number(value) });
+                          }}
+                          placeholder={computedCosts.totalLaborCost.toFixed(2)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Total</label>
+                        <input
+                          type="number"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          value={activeDraftTemplate.values?.totalCost ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateDraftValues({ totalCost: value === '' ? undefined : Number(value) });
+                          }}
+                          placeholder={computedCosts.grandTotal.toFixed(2)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedTemplate === 'client' && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 mb-3">Secciones visibles</h4>
+                      <div className="space-y-2 text-sm text-slate-600">
+                        {[
+                          { key: 'header', label: 'Información del cliente' },
+                          { key: 'includes', label: 'Alcance del proyecto' },
+                          { key: 'costs', label: 'Detalle de costos' },
+                          { key: 'conditions', label: 'Condiciones comerciales' },
+                        ].map((item) => (
+                          <label key={item.key} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!!draftSections?.[item.key]}
+                              onChange={(event) => updateDraftSection(item.key, event.target.checked)}
+                              className="h-4 w-4"
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTemplate === 'professional' && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900 mb-3">Plano incluido</h4>
+                      <div className="space-y-2 text-sm text-slate-600">
+                        <label className="block text-xs text-slate-500 mb-1">Vista del dibujo</label>
+                        <select
+                          value={activeDraftTemplate.drawingView || 'cad'}
+                          onChange={(event) => updateDraftTemplate({ drawingView: event.target.value as 'cad' | 'planta' })}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        >
+                          <option value="cad">Plano CAD</option>
+                          <option value="planta">Vista Planta</option>
+                        </select>
+                        <p className="text-[11px] text-slate-400">Se mostrará en la exportación de Especificaciones Técnicas.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Acciones de Exportación</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Button
-            onClick={() => handleExportPDF(selectedTemplate)}
-            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-          >
-            <FileDown size={20} />
-            Descargar PDF
-          </Button>
-
-          <Button
-            onClick={() => handleExport('html', selectedTemplate)}
-            variant="secondary"
-            className="flex items-center justify-center gap-2"
-          >
-            <Download size={20} />
-            Descargar HTML
-          </Button>
-
-          <Button
-            onClick={() => handlePrint(selectedTemplate)}
-            variant="secondary"
-            className="flex items-center justify-center gap-2"
-          >
-            <Printer size={20} />
-            Imprimir
-          </Button>
-
-          <Button
-            onClick={handleWhatsAppShare}
-            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-          >
-            <MessageCircle size={20} />
-            WhatsApp
-          </Button>
-
-          <Button
-            onClick={() => setShowExcelDialog(true)}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <FileSpreadsheet size={20} />
-            Excel ACQUAM
-          </Button>
-
-          {selectedTemplate === 'materials' && (
-            <Button
-              onClick={() => handleExport('csv', selectedTemplate)}
-              variant="secondary"
-              className="flex items-center justify-center gap-2"
-            >
-              <FileSpreadsheet size={20} />
-              CSV
-            </Button>
-          )}
-        </div>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">¿Qué incluye este documento?</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            {selectedTemplate === 'client' && (
-              <>
-                <li>✓ Resumen del proyecto y características</li>
-                <li>✓ Precio total sin detalles técnicos</li>
-                <li>✓ Condiciones de pago y garantía</li>
-                <li>✓ Presentación profesional para el cliente</li>
-              </>
-            )}
-            {selectedTemplate === 'professional' && (
-              <>
-                <li>✓ Planos y medidas de excavación</li>
-                <li>✓ Especificaciones técnicas detalladas</li>
-                <li>✓ Lista de materiales con cantidades exactas</li>
-                <li>✓ Secuencia de trabajo recomendada</li>
-                <li>✓ Normativas y regulaciones aplicables</li>
-              </>
-            )}
-            {selectedTemplate === 'materials' && (
-              <>
-                <li>✓ Lista completa de materiales</li>
-                <li>✓ Cantidades exactas y unidades</li>
-                <li>✓ Categorización por tipo</li>
-                <li>✓ Formato CSV para Excel/Sheets</li>
-              </>
-            )}
-          </ul>
-        </div>
-      </Card>
-
-      {/* Vista previa interactiva del mensaje de WhatsApp */}
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Personalizar Mensaje de WhatsApp</h3>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Panel de selección de secciones */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Selecciona las secciones a incluir:</h4>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSections.header}
-                  onChange={(e) => setSelectedSections({ ...selectedSections, header: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <div>
-                  <p className="font-medium text-sm">Encabezado</p>
-                  <p className="text-xs text-gray-500">Título, nombre del proyecto y cliente</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSections.characteristics}
-                  onChange={(e) => setSelectedSections({ ...selectedSections, characteristics: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <div>
-                  <p className="font-medium text-sm">Características de la Piscina</p>
-                  <p className="text-xs text-gray-500">Modelo, dimensiones, volumen y forma</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSections.includes}
-                  onChange={(e) => setSelectedSections({ ...selectedSections, includes: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <div>
-                  <p className="font-medium text-sm">Incluye</p>
-                  <p className="text-xs text-gray-500">Lista de servicios y trabajos incluidos</p>
-                </div>
-              </label>
-
-              {((project as any).additionals || []).length > 0 && (
-                <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedSections.additionals}
-                    onChange={(e) => setSelectedSections({ ...selectedSections, additionals: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                  <div>
-                    <p className="font-medium text-sm">Adicionales</p>
-                    <p className="text-xs text-gray-500">Items adicionales agregados al proyecto</p>
-                  </div>
-                </label>
-              )}
-
-              <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSections.costs}
-                  onChange={(e) => setSelectedSections({ ...selectedSections, costs: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <div>
-                  <p className="font-medium text-sm">Inversión Total</p>
-                  <p className="text-xs text-gray-500">Desglose de costos y total</p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedSections.conditions}
-                  onChange={(e) => setSelectedSections({ ...selectedSections, conditions: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <div>
-                  <p className="font-medium text-sm">Condiciones</p>
-                  <p className="text-xs text-gray-500">Validez, plazo, forma de pago y garantía</p>
-                </div>
-              </label>
-
-              <div className="flex gap-2 pt-3">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setSelectedSections({
-                    header: true,
-                    characteristics: true,
-                    includes: true,
-                    additionals: true,
-                    costs: true,
-                    conditions: true,
-                  })}
-                  className="flex-1"
-                >
-                  Seleccionar Todo
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setSelectedSections({
-                    header: false,
-                    characteristics: false,
-                    includes: false,
-                    additionals: false,
-                    costs: false,
-                    conditions: false,
-                  })}
-                  className="flex-1"
-                >
-                  Limpiar
-                </Button>
-              </div>
             </div>
           </div>
-
-          {/* Vista previa */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Vista Previa:</h4>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-[600px] overflow-y-auto">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800">
-                  {generateWhatsAppMessage(selectedTemplate, selectedSections)}
-                </pre>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">
-              Esta es una vista previa del mensaje que se enviará. El formato puede variar según el cliente de WhatsApp.
-            </p>
-          </div>
         </div>
-      </Card>
+      )}
 
-      {/* Modal de Exportación a Excel */}
       {showExcelDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 rounded-t-xl">
-              <h3 className="text-xl font-semibold text-gray-900">Configurar Exportación a Excel</h3>
-              <p className="text-sm text-gray-600 mt-2">
-                Seleccioná las secciones que querés incluir en el documento técnico
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-emerald-600 text-white p-6 rounded-t-lg">
+              <h3 className="text-xl font-bold">Configurar Exportación a Excel</h3>
+              <p className="text-sm text-emerald-100 mt-2">
+                Seleccione las secciones que desea incluir en el documento técnico
               </p>
             </div>
 
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.excavation}
                     onChange={(e) => setExcelSections({ ...excelSections, excavation: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Excavación y Preparación</p>
-                    <p className="text-xs text-gray-500 mt-1">Dimensiones, volumen de tierra, advertencias</p>
+                    <p className="font-semibold text-gray-900">Excavación y Preparación</p>
+                    <p className="text-xs text-gray-600 mt-1">Dimensiones, volumen de tierra, advertencias</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.supportBed}
                     onChange={(e) => setExcelSections({ ...excelSections, supportBed: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Cama de Apoyo Interna</p>
-                    <p className="text-xs text-gray-500 mt-1">Geomembrana, malla, arena, cemento</p>
+                    <p className="font-semibold text-gray-900">Cama de Apoyo Interna</p>
+                    <p className="text-xs text-gray-600 mt-1">Geomembrana, malla, arena, cemento</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.sidewalk}
                     onChange={(e) => setExcelSections({ ...excelSections, sidewalk: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Solado de Vereda</p>
-                    <p className="text-xs text-gray-500 mt-1">Materiales, área total, especificaciones</p>
+                    <p className="font-semibold text-gray-900">Solado de Vereda</p>
+                    <p className="text-xs text-gray-600 mt-1">Materiales, área total, especificaciones</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.plumbing}
                     onChange={(e) => setExcelSections({ ...excelSections, plumbing: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Instalación Hidráulica</p>
-                    <p className="text-xs text-gray-500 mt-1">Cañerías, accesorios, configuración del sistema</p>
+                    <p className="font-semibold text-gray-900">Instalación Hidráulica</p>
+                    <p className="text-xs text-gray-600 mt-1">Cañerías, accesorios, configuración del sistema</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.electrical}
                     onChange={(e) => setExcelSections({ ...excelSections, electrical: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Instalación Eléctrica</p>
-                    <p className="text-xs text-gray-500 mt-1">Bomba, filtro, luces, consumo, especificaciones</p>
+                    <p className="font-semibold text-gray-900">Instalación Eléctrica</p>
+                    <p className="text-xs text-gray-600 mt-1">Bomba, filtro, luces, consumo, especificaciones</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.labor}
                     onChange={(e) => setExcelSections({ ...excelSections, labor: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Mano de Obra</p>
-                    <p className="text-xs text-gray-500 mt-1">Roles, tareas, horas estimadas, costos</p>
+                    <p className="font-semibold text-gray-900">Mano de Obra</p>
+                    <p className="text-xs text-gray-600 mt-1">Roles, tareas, horas estimadas, costos</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.sequence}
                     onChange={(e) => setExcelSections({ ...excelSections, sequence: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Secuencia de Trabajo</p>
-                    <p className="text-xs text-gray-500 mt-1">Orden recomendado de construcción</p>
+                    <p className="font-semibold text-gray-900">Secuencia de Trabajo</p>
+                    <p className="text-xs text-gray-600 mt-1">Orden recomendado de construcción</p>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200 hover:border-emerald-300">
+                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
                   <input
                     type="checkbox"
                     checked={excelSections.standards}
                     onChange={(e) => setExcelSections({ ...excelSections, standards: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 rounded mt-0.5"
+                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Normativas Aplicables</p>
-                    <p className="text-xs text-gray-500 mt-1">AEA 90364, IRAM, códigos</p>
+                    <p className="font-semibold text-gray-900">Normativas Aplicables</p>
+                    <p className="text-xs text-gray-600 mt-1">AEA 90364, IRAM, códigos</p>
                   </div>
                 </label>
               </div>
 
               <div className="flex gap-2 pt-4 border-t border-gray-200">
                 <Button
-                  size="sm"
-                  variant="secondary"
                   onClick={() => setExcelSections({
                     excavation: true,
                     supportBed: true,
@@ -1603,13 +2649,12 @@ _Para más detalles, solicite el documento completo_`;
                     sequence: true,
                     standards: true,
                   })}
+                  variant="secondary"
                   className="flex-1"
                 >
                   Seleccionar Todo
                 </Button>
                 <Button
-                  size="sm"
-                  variant="secondary"
                   onClick={() => setExcelSections({
                     excavation: false,
                     supportBed: false,
@@ -1620,6 +2665,7 @@ _Para más detalles, solicite el documento completo_`;
                     sequence: false,
                     standards: false,
                   })}
+                  variant="secondary"
                   className="flex-1"
                 >
                   Limpiar
@@ -1627,7 +2673,7 @@ _Para más detalles, solicite el documento completo_`;
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 rounded-b-xl flex gap-3">
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex gap-3">
               <Button
                 onClick={() => setShowExcelDialog(false)}
                 variant="secondary"
@@ -1639,7 +2685,7 @@ _Para más detalles, solicite el documento completo_`;
               <Button
                 onClick={handleExportToExcel}
                 disabled={exportingToExcel}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {exportingToExcel ? 'Exportando...' : 'Exportar a Excel'}
               </Button>

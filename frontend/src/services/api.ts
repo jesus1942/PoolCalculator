@@ -8,6 +8,9 @@ const API_URL = import.meta.env.VITE_API_URL || (
     : '/api'
 );
 
+// URL base del backend (sin /api) para imágenes y recursos estáticos
+export const API_BASE_URL = API_URL.replace('/api', '');
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -27,9 +30,27 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Solo redirigir al login si es un error de autenticación en rutas críticas
+      // NO redirigir si es un error de recurso no encontrado o permisos específicos
+      const url = error.config?.url || '';
+
+      // Lista de rutas que NO deben causar redirect automático
+      const noRedirectRoutes = [
+        '/professional-calculations',
+        '/products/',
+        '/agenda',
+        '/crews',
+        '/users',
+        '/weather'
+      ];
+
+      const shouldRedirect = !noRedirectRoutes.some(route => url.includes(route));
+
+      if (shouldRedirect) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

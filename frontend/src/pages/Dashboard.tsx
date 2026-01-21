@@ -1,19 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
 import { weatherService, WeatherData, HourlyWeatherData, getWeatherDescription, getWeatherEmoji, isGoodWorkingWeather, isNightTime } from '@/services/weatherService';
+import { agendaService } from '@/services/agendaService';
+import { agendaChecklistService } from '@/services/agendaChecklistService';
+import { useReminders } from '@/context/RemindersContext';
 import { Project, PoolPreset } from '@/types';
-import { Droplets, Layers, FolderOpen, Waves, TrendingUp, Clock, CheckCircle2, ChevronRight, ChevronDown, BarChart3, Activity, Wind, Umbrella, Calendar, AlertTriangle } from 'lucide-react';
+import { Droplets, Layers, FolderOpen, Waves, TrendingUp, Clock, CheckCircle2, ChevronRight, ChevronDown, BarChart3, Activity, Wind, Umbrella, Calendar, AlertTriangle, ListTodo, Circle, Plus, Trash2, Bell, Sparkles } from 'lucide-react';
 import FlipCard from '@/components/ui/FlipCard';
 import { PoolFitWizard } from '@/components/PoolFitWizard';
+import { ProjectsChart } from '@/components/dashboard/ProjectsChart';
+import { TrendCharts } from '@/components/dashboard/TrendCharts';
+import { ActivityTimeline } from '@/components/dashboard/ActivityTimeline';
+import { QuickActions } from '@/components/dashboard/QuickActions';
+import { Notifications } from '@/components/dashboard/Notifications';
+import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { reminders, snooze, dismiss } = useReminders();
   const [projects, setProjects] = useState<Project[]>([]);
   const [presets, setPresets] = useState<PoolPreset[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [hourlyWeather, setHourlyWeather] = useState<HourlyWeatherData[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<any[]>([]);
+  const [todayEvents, setTodayEvents] = useState<any[]>([]);
+  const [checklistByEvent, setChecklistByEvent] = useState<Record<string, any[]>>({});
+  const [newChecklistText, setNewChecklistText] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [expandedPreset, setExpandedPreset] = useState<string | null>(null);
@@ -33,20 +47,123 @@ export const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [projectsData, presetsData, weatherData, hourlyWeatherData] = await Promise.all([
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      end.setHours(23, 59, 59, 999);
+
+      const results = await Promise.allSettled([
         projectService.getAll(),
         poolPresetService.getAll(),
         weatherService.getWeather(), // Buenos Aires por defecto
         weatherService.getHourlyWeather(), // Clima por hora
+        agendaService.list({
+          start: start.toISOString(),
+          end: end.toISOString(),
+        }),
       ]);
-      setProjects(projectsData);
-      setPresets(presetsData);
-      setWeather(weatherData);
-      setHourlyWeather(hourlyWeatherData);
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
+
+      const [projectsResult, presetsResult, weatherResult, hourlyResult, agendaResult] = results;
+
+      if (projectsResult.status === 'fulfilled') {
+        setProjects(projectsResult.value);
+      } else {
+        console.error('Error al cargar proyectos:', projectsResult.reason);
+      }
+
+      if (presetsResult.status === 'fulfilled') {
+        setPresets(presetsResult.value);
+      } else {
+        console.error('Error al cargar presets:', presetsResult.reason);
+      }
+
+      if (weatherResult.status === 'fulfilled') {
+        setWeather(weatherResult.value);
+      } else {
+        console.error('Error al cargar clima:', weatherResult.reason);
+        setWeather(null);
+      }
+
+      if (hourlyResult.status === 'fulfilled') {
+        setHourlyWeather(hourlyResult.value);
+      } else {
+        console.error('Error al cargar clima por hora:', hourlyResult.reason);
+        setHourlyWeather([]);
+      }
+
+      if (agendaResult.status === 'fulfilled') {
+        setAgendaEvents(agendaResult.value);
+        const todayKey = start.toISOString().slice(0, 10);
+        const todays = agendaResult.value.filter((event: any) =>
+          new Date(event.startAt).toISOString().slice(0, 10) === todayKey
+        );
+        setTodayEvents(todays);
+      } else {
+        console.error('Error al cargar agenda:', agendaResult.reason);
+        setAgendaEvents([]);
+        setTodayEvents([]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadChecklist = async () => {
+      const map: Record<string, any[]> = {};
+      await Promise.allSettled(
+        todayEvents.map(async (event) => {
+          const items = await agendaChecklistService.list(event.id);
+          map[event.id] = items;
+        })
+      );
+      setChecklistByEvent(map);
+    };
+
+    if (todayEvents.length > 0) {
+      loadChecklist();
+    } else {
+      setChecklistByEvent({});
+    }
+  }, [todayEvents]);
+
+  const toggleChecklistItem = async (eventId: string, item: any) => {
+    try {
+      const updated = await agendaChecklistService.update(eventId, item.id, { done: !item.done });
+      setChecklistByEvent((prev) => ({
+        ...prev,
+        [eventId]: (prev[eventId] || []).map((i) => (i.id === updated.id ? updated : i)),
+      }));
+    } catch (error) {
+      console.error('Error al actualizar checklist:', error);
+    }
+  };
+
+  const addChecklistItem = async (eventId: string) => {
+    const label = (newChecklistText[eventId] || '').trim();
+    if (!label) return;
+    try {
+      const item = await agendaChecklistService.add(eventId, label);
+      setChecklistByEvent((prev) => ({
+        ...prev,
+        [eventId]: [...(prev[eventId] || []), item],
+      }));
+      setNewChecklistText((prev) => ({ ...prev, [eventId]: '' }));
+    } catch (error) {
+      console.error('Error al agregar checklist:', error);
+    }
+  };
+
+  const removeChecklistItem = async (eventId: string, itemId: string) => {
+    try {
+      await agendaChecklistService.remove(eventId, itemId);
+      setChecklistByEvent((prev) => ({
+        ...prev,
+        [eventId]: (prev[eventId] || []).filter((i) => i.id !== itemId),
+      }));
+    } catch (error) {
+      console.error('Error al eliminar checklist:', error);
     }
   };
 
@@ -90,6 +207,28 @@ export const Dashboard: React.FC = () => {
     ? (projects.filter(p => p.status === 'IN_PROGRESS').length / projects.length) * 100
     : 0;
 
+  const agendaByDay = useMemo(() => {
+    const map = new Map<string, any[]>();
+    agendaEvents.forEach((event) => {
+      const dateKey = new Date(event.startAt).toISOString().slice(0, 10);
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)?.push(event);
+    });
+    return map;
+  }, [agendaEvents]);
+
+  const upcomingDays = useMemo(() => {
+    const days: Date[] = [];
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, []);
+
   // Días buenos para trabajar en los próximos 7 días
   const workableDays = weather?.daily.filter(day =>
     isGoodWorkingWeather(day.weatherCode, day.windSpeed, day.precipitation)
@@ -106,6 +245,31 @@ export const Dashboard: React.FC = () => {
     return hourlyWeather.filter(hour => hour.time.startsWith(date));
   };
 
+  const today = new Date();
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const newYearInfo = useMemo(() => {
+    const now = new Date();
+    const isJan1 = now.getMonth() === 0 && now.getDate() === 1;
+    const showEfemerides = now.getMonth() === 11 || now.getMonth() === 0;
+    const nextYear = new Date(now.getFullYear() + 1, 0, 1);
+    const diffMs = nextYear.getTime() - now.getTime();
+    const daysUntil = isJan1 ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return {
+      isJan1,
+      showEfemerides,
+      daysUntil,
+      year: now.getFullYear(),
+    };
+  }, []);
+  const newYearEfemerides = useMemo(
+    () => [
+      { year: '46 a.C.', text: 'Julio César instaura el calendario juliano y fija el 1 de enero como inicio del año civil.' },
+      { year: '1582', text: 'Se promulga el calendario gregoriano, base del calendario moderno.' },
+      { year: '1970', text: 'Comienza la época Unix: 1 de enero de 1970 a las 00:00 UTC.' },
+    ],
+    []
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -120,9 +284,6 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  const today = new Date();
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
   return (
     <div className="bg-black">
       {/* Gradiente de fondo sutil */}
@@ -132,23 +293,76 @@ export const Dashboard: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-screen">
         {/* Header Minimalista */}
         <div className="mb-12">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                <Droplets className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
+                <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                  <Droplets className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-5xl font-extralight text-white tracking-tight">
+                  Hola, <span className="font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">{user?.name}</span>
+                </h1>
+                <p className="text-zinc-500 mt-2 font-light tracking-wide">
+                  {today.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
               </div>
             </div>
-            <div>
-              <h1 className="text-5xl font-extralight text-white tracking-tight">
-                Hola, <span className="font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">{user?.name}</span>
-              </h1>
-              <p className="text-zinc-500 mt-2 font-light tracking-wide">
-                {today.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+
+            {/* Notifications */}
+            <div className="flex-shrink-0">
+              <Notifications projects={projects} weather={weather} />
             </div>
           </div>
         </div>
+
+        {/* Efemérides de Año Nuevo */}
+        {newYearInfo.showEfemerides && (
+          <div className="mb-8 group relative">
+            <div className="absolute -inset-0.5 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
+
+            <div className="relative rounded-3xl bg-zinc-950/90 backdrop-blur-2xl border border-zinc-800/50 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
+
+              <div className="relative p-6 md:p-8">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl blur-md opacity-50"></div>
+                      <div className="relative p-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl shadow-orange-500/50">
+                        <Sparkles className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-light text-white tracking-wide">Efemérides de Año Nuevo</h2>
+                      <p className="text-zinc-500 text-sm font-light">Historia breve del 1 de enero</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200 font-light">
+                    {newYearInfo.isJan1
+                      ? `Feliz Año Nuevo ${newYearInfo.year}`
+                      : `Faltan ${newYearInfo.daysUntil} días para Año Nuevo`}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {newYearEfemerides.map((item) => (
+                    <div
+                      key={item.year}
+                      className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-4"
+                    >
+                      <div className="text-xs text-amber-300 font-light mb-2">{item.year}</div>
+                      <div className="text-sm text-zinc-200 font-light leading-relaxed">{item.text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Clima y Stats Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -173,7 +387,7 @@ export const Dashboard: React.FC = () => {
                       <span className="ml-auto text-xs text-zinc-500 font-light">Click para ver por hora</span>
                     </div>
 
-                    {weather && (
+                    {weather ? (
                       <>
                         <div className="flex items-start justify-between mb-8">
                           <div>
@@ -197,7 +411,13 @@ export const Dashboard: React.FC = () => {
                                 <Wind className="h-4 w-4" />
                                 Viento
                               </div>
-                              <div className="text-white text-xl font-light">{weather.current.windSpeed} <span className="text-sm text-zinc-500">km/h</span></div>
+                              <div className="text-white text-xl font-light">
+                                {weather.current.windSpeed}
+                                <span className="text-sm text-zinc-500"> km/h</span>
+                                {weather.current.windGust !== null && (
+                                  <span className="ml-2 text-xs text-amber-300">ráf. {weather.current.windGust} km/h</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="relative group/card">
@@ -224,14 +444,18 @@ export const Dashboard: React.FC = () => {
                                 <AlertTriangle className="h-5 w-5 text-red-400" />
                               </div>
                             )}
-                            <span className={`font-light text-sm ${isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? 'text-emerald-300' : 'text-red-300'}`}>
-                              {isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0)
-                                ? 'Buenas condiciones para trabajar'
-                                : 'Condiciones adversas'}
-                            </span>
+                      <span className={`font-light text-sm ${isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? 'text-emerald-300' : 'text-red-300'}`}>
+                        {isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0)
+                          ? 'Buenas condiciones para trabajar'
+                          : 'Condiciones adversas'}
+                      </span>
                           </div>
                         </div>
                       </>
+                    ) : (
+                      <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+                        No se pudo cargar el clima. Reintentá más tarde.
+                      </div>
                     )}
                   </div>
                 </div>
@@ -462,6 +686,320 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <QuickActions />
+        </div>
+
+        {/* Hoy - La Agenda del instalador + checklist */}
+        <div className="mb-8 group relative">
+          <div className="absolute -inset-0.5 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
+
+          <div className="relative rounded-3xl bg-zinc-950/90 backdrop-blur-2xl border border-zinc-800/50 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
+
+            <div className="relative p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl blur-md opacity-50"></div>
+                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 shadow-xl shadow-emerald-500/50">
+                      <ListTodo className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-light text-white tracking-wide">Hoy</h2>
+                    <p className="text-zinc-500 text-sm font-light">La Agenda del instalador y checklist</p>
+                  </div>
+                </div>
+                <Link
+                  to="/agenda"
+                  className="text-sm text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 px-4 py-2 rounded-xl transition-all"
+                >
+                  Ir a agenda
+                </Link>
+              </div>
+
+              {reminders.length > 0 && (
+                <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <div className="flex items-center gap-2 text-xs text-emerald-200 mb-3">
+                    <Bell className="h-4 w-4" />
+                    Recordatorios activos (12h antes)
+                  </div>
+                  <div className="space-y-3">
+                    {reminders.slice(0, 3).map((reminder) => {
+                      const startAt = new Date(reminder.event.startAt);
+                      const startLabel = startAt.toLocaleString('es-AR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+                      return (
+                        <div key={reminder.id} className="rounded-xl border border-emerald-500/20 bg-zinc-950/60 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm text-white font-light">{reminder.event.title}</div>
+                              <div className="text-xs text-zinc-400 mt-1">{startLabel}</div>
+                              {reminder.event.project?.name && (
+                                <div className="text-xs text-zinc-500 mt-1">Proyecto: {reminder.event.project.name}</div>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => snooze(reminder.id, 60)}
+                                className="px-2.5 py-1 text-[11px] rounded-full border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors"
+                              >
+                                Posponer 1h
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => snooze(reminder.id, 180)}
+                                className="px-2.5 py-1 text-[11px] rounded-full border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors"
+                              >
+                                Posponer 3h
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => snooze(reminder.id, 720)}
+                                className="px-2.5 py-1 text-[11px] rounded-full border border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 transition-colors"
+                              >
+                                Posponer 12h
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => dismiss(reminder.id)}
+                                className="px-2.5 py-1 text-[11px] rounded-full border border-red-500/30 text-red-200 hover:bg-red-500/10 transition-colors"
+                              >
+                                Descartar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {todayEvents.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 text-sm text-zinc-400">
+                  No hay eventos para hoy. Podés crear uno desde la agenda.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {todayEvents.map((event) => {
+                    const startTime = new Date(event.startAt);
+                    const endTime = new Date(event.endAt);
+                    const timeRange = `${startTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+                    const assignees = [
+                      ...(event.assignees || []).map((a: any) => a.user?.name || a.user?.email).filter(Boolean),
+                      ...((event.crew?.members || []).map((m: any) => m.user?.name || m.user?.email).filter(Boolean)),
+                    ];
+                    const uniqueAssignees = Array.from(new Set(assignees));
+                    const checklistItems = checklistByEvent[event.id] || [];
+
+                    return (
+                      <div key={event.id} className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-sm text-white font-light">{event.title}</div>
+                            <div className="text-xs text-zinc-500 mt-1">{timeRange}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-full border"
+                              style={{
+                                borderColor: `${event.statusColor || '#94a3b8'}55`,
+                                color: event.statusColor || '#94a3b8',
+                              }}
+                            >
+                              {event.status}
+                            </span>
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-full border"
+                              style={{
+                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                                color: event.typeColor || '#0ea5e9',
+                              }}
+                            >
+                              {event.type}
+                            </span>
+                          </div>
+                        </div>
+
+                        {(event.project?.name || event.location || uniqueAssignees.length > 0) && (
+                          <div className="mt-3 space-y-1 text-xs text-zinc-400">
+                            {event.project?.name && <div>Proyecto: {event.project.name}</div>}
+                            {event.location && <div>Ubicación: {event.location}</div>}
+                            {uniqueAssignees.length > 0 && (
+                              <div>Asignados: {uniqueAssignees.slice(0, 3).join(', ')}{uniqueAssignees.length > 3 ? '…' : ''}</div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-4 border-t border-zinc-800/60 pt-4">
+                          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-3">
+                            <ListTodo className="h-4 w-4" />
+                            Checklist (recordatorios in-app)
+                          </div>
+
+                          {checklistItems.length === 0 ? (
+                            <div className="text-xs text-zinc-500">Sin ítems todavía.</div>
+                          ) : (
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
+                              {checklistItems.map((item: any) => (
+                                <div key={item.id} className="flex items-center gap-3 text-xs text-zinc-300">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleChecklistItem(event.id, item)}
+                                    className="text-zinc-500 hover:text-emerald-300 transition-colors"
+                                  >
+                                    {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4" />}
+                                  </button>
+                                  <span className={item.done ? 'line-through text-zinc-500' : ''}>{item.label}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeChecklistItem(event.id, item.id)}
+                                    className="ml-auto text-zinc-600 hover:text-red-300 transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="mt-3 flex items-center gap-2">
+                            <input
+                              value={newChecklistText[event.id] || ''}
+                              onChange={(e) => setNewChecklistText((prev) => ({ ...prev, [event.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addChecklistItem(event.id);
+                                }
+                              }}
+                              placeholder="Agregar item..."
+                              className="flex-1 bg-zinc-950/60 border border-zinc-800/60 rounded-lg px-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => addChecklistItem(event.id)}
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/40 text-emerald-200 text-xs hover:bg-emerald-500/10 transition-colors"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Agregar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* La Agenda próximos 7 días */}
+        <div className="mb-8 group relative">
+          <div className="absolute -inset-0.5 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
+
+          <div className="relative rounded-3xl bg-zinc-950/90 backdrop-blur-2xl border border-zinc-800/50 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
+
+            <div className="relative p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-md opacity-50"></div>
+                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 shadow-xl shadow-cyan-500/50">
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-light text-white tracking-wide">La Agenda próximos 7 días</h2>
+                    <p className="text-zinc-500 text-sm font-light">Eventos y visitas planificadas</p>
+                  </div>
+                </div>
+                <Link
+                  to="/agenda"
+                  className="text-sm text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 px-4 py-2 rounded-xl transition-all"
+                >
+                  Ver agenda completa
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingDays.map((day) => {
+                  const dateKey = day.toISOString().slice(0, 10);
+                  const dayEvents = agendaByDay.get(dateKey) || [];
+                  return (
+                    <div key={dateKey} className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm text-white font-light">
+                          {day.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                        </div>
+                        <span className="text-xs text-zinc-500">{dayEvents.length} eventos</span>
+                      </div>
+                      {dayEvents.length === 0 ? (
+                        <div className="text-xs text-zinc-500">Sin eventos</div>
+                      ) : (
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
+                          {dayEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className="rounded-lg border px-3 py-2 text-xs text-zinc-200"
+                              style={{
+                                backgroundColor: `${event.typeColor || '#0ea5e9'}1a`,
+                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-light">{event.title}</span>
+                                <span className="text-[11px] text-zinc-400">
+                                  {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span
+                                  className="text-[10px] px-2 py-0.5 rounded-full border"
+                                  style={{
+                                    borderColor: `${event.statusColor || '#22c55e'}55`,
+                                    color: event.statusColor || '#22c55e',
+                                  }}
+                                >
+                                  {event.status}
+                                </span>
+                                {event.project?.name && (
+                                  <span className="text-[10px] text-zinc-500">{event.project.name}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gráficos de Proyectos */}
+        <div className="mb-8">
+          <ProjectsChart projects={projects} />
+        </div>
+
+        {/* Gráficos de Tendencias */}
+        <div className="mb-8">
+          <TrendCharts projects={projects} />
+        </div>
+
         {/* Métricas de Progreso - Estilo Strudel */}
         <div className="mb-8 group relative">
           <div className="absolute -inset-0.5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
@@ -522,6 +1060,11 @@ export const Dashboard: React.FC = () => {
         {/* Asistente Inteligente */}
         <div className="mb-8">
           <PoolFitWizard />
+        </div>
+
+        {/* Activity Timeline */}
+        <div className="mb-8">
+          <ActivityTimeline projects={projects} presets={presets} />
         </div>
 
         {/* Proyectos y Modelos - Estilo Strudel */}

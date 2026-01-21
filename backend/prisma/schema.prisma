@@ -13,6 +13,8 @@ model User {
   password  String?  // Nullable para usuarios de OAuth
   name      String
   role      Role     @default(USER)
+  currentOrgId String?
+  currentOrg   Organization? @relation("OrgCurrent", fields: [currentOrgId], references: [id])
 
   // OAuth fields
   googleId  String?  @unique
@@ -27,6 +29,15 @@ model User {
   calculationSettings CalculationSettings?
   professionRoles     ProfessionRole[]
   passwordResetTokens PasswordResetToken[]
+  crewsOwned          Crew[]
+  crewMemberships     CrewMember[]
+  agendaEvents        AgendaEvent[]
+  agendaAssignments   AgendaAssignment[]
+  agendaReminders     AgendaReminder[]
+  systemLogs          SystemLog[]
+  agendaMessages      AgendaMessage[]
+  organizationMemberships OrganizationMember[]
+  organizationsOwned       Organization[] @relation("OrgOwner")
 }
 
 enum AuthProvider {
@@ -50,8 +61,266 @@ model PasswordResetToken {
 enum Role {
   SUPERADMIN  // Acceso total, gestiona otros admins
   ADMIN       // Gestiona su organización/cuenta
+  INSTALLER   // Instalador (solo reporta avances)
   USER        // Usuario estándar
   VIEWER      // Solo lectura (para SaaS)
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String?  @unique
+  ownerId     String?
+  owner       User?    @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  currentUsers User[]  @relation("OrgCurrent")
+  members     OrganizationMember[]
+  projects    Project[]
+  agendaEvents AgendaEvent[]
+  crews       Crew[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Crew {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  members     CrewMember[]
+  events      AgendaEvent[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([ownerId, name])
+}
+
+model CrewMember {
+  id        String   @id @default(uuid())
+  crewId    String
+  userId    String
+  role      CrewRole @default(MEMBER)
+
+  crew      Crew     @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([crewId, userId])
+}
+
+enum CrewRole {
+  LEAD
+  MEMBER
+}
+
+model AgendaEvent {
+  id               String              @id @default(uuid())
+  title            String
+  type             AgendaEventType
+  status           AgendaEventStatus   @default(PLANNED)
+  priority         AgendaEventPriority @default(NORMAL)
+  typeColor        String              @default("#0ea5e9")
+  statusColor      String              @default("#22c55e")
+  startAt          DateTime
+  endAt            DateTime
+  allDay           Boolean             @default(false)
+  location         String?
+  notesInternal    String?
+  notesInstaller   String?
+  assigneesCanEdit Boolean             @default(true)
+  lockedByAdmin    Boolean             @default(false)
+
+  ownerId          String
+  owner            User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  projectId        String?
+  project          Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  crewId           String?
+  crew             Crew?               @relation(fields: [crewId], references: [id], onDelete: SetNull)
+
+  assignees        AgendaAssignment[]
+  checklist        AgendaChecklistItem[]
+  reminders        AgendaReminder[]
+  messages         AgendaMessage[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([ownerId, startAt])
+  @@index([projectId])
+  @@index([crewId])
+}
+
+model AgendaChecklistItem {
+  id        String   @id @default(uuid())
+  eventId   String
+  label     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event     AgendaEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+model AgendaAssignment {
+  id        String            @id @default(uuid())
+  eventId   String
+  userId    String
+  role      AgendaAssigneeRole @default(INSTALLER)
+
+  event     AgendaEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+enum AgendaEventType {
+  VISIT
+  INSTALLATION
+  MAINTENANCE
+  INSPECTION
+  DELIVERY
+  OTHER
+}
+
+enum AgendaEventStatus {
+  PLANNED
+  CONFIRMED
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum AgendaEventPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AgendaAssigneeRole {
+  INSTALLER
+  MANAGER
+  VIEWER
+}
+
+model AgendaReminder {
+  id           String               @id @default(uuid())
+  eventId      String
+  userId       String
+  remindAt     DateTime
+  status       AgendaReminderStatus @default(PENDING)
+  snoozedUntil DateTime?
+  emailSentAt  DateTime?
+
+  event        AgendaEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId, remindAt])
+  @@index([eventId])
+  @@index([emailSentAt, remindAt])
+}
+
+enum AgendaReminderStatus {
+  PENDING
+  SNOOZED
+  DISMISSED
+}
+
+enum SystemLogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+enum SystemLogCategory {
+  AGENDA_NOTIFY
+  AGENDA_REMINDER
+  SYSTEM
+}
+
+model SystemLog {
+  id        String           @id @default(uuid())
+  level     SystemLogLevel
+  category  SystemLogCategory
+  message   String
+  meta      Json?
+  userId    String?
+  eventId   String?
+  createdAt DateTime         @default(now())
+
+  user      User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([level, createdAt])
+  @@index([category, createdAt])
+}
+
+model AgendaMessage {
+  id         String                @id @default(uuid())
+  eventId    String
+  userId     String
+  body       String
+  images     Json                  @default("[]")
+  visibility AgendaMessageVisibility @default(ALL)
+
+  event      AgendaEvent           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([userId])
+}
+
+enum AgendaMessageVisibility {
+  ALL
+  ADMIN_ONLY
 }
 
 model ProfessionRole {
@@ -60,6 +329,9 @@ model ProfessionRole {
   description String?
   hourlyRate  Float?
   dailyRate   Float?
+  billingType ProfessionBillingType @default(HOUR)
+  ratePerUnit Float?
+  bocaRates   Json?
   
   userId      String
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -68,6 +340,14 @@ model ProfessionRole {
   updatedAt   DateTime @updatedAt
   
   @@unique([userId, name])
+}
+
+enum ProfessionBillingType {
+  HOUR
+  DAY
+  M2
+  ML
+  BOCA
 }
 
 model PlumbingItem {
@@ -81,7 +361,10 @@ model PlumbingItem {
   pricePerUnit Float
   brand        String?
   description  String?
-  
+  imageUrl    String?              // URL de la imagen principal
+  additionalImages String[] @default([])  // URLs de imágenes adicionales
+  catalogPage String?              // Página del catálogo de donde viene
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -121,10 +404,16 @@ model CalculationSettings {
   waterproofingKgPerM2     Float @default(0.0)
   waterproofingCoats       Int   @default(2)
 
+  // Proporción de pastina (junta entre losetas)
+  // Por defecto: 1 parte cemento blanco : 4 partes marmolina
+  groutWhiteCementParts    Float @default(1.0)
+  groutMarmolinaParts      Float @default(4.0)
+
   // Cama interna de la piscina
   bedThicknessCm           Float @default(10.0)
-  bedCementBagsPerM3       Float @default(5.0)
+  bedCementBagsPerM3       Float @default(4.0)   // 4 bolsas por m³ de arena (1 bolsa : 0.25 m³)
   bedCementBagWeight       Float @default(50.0)
+  bedSandM3PerCementBag    Float @default(0.25)  // 0.25 m³ de arena por bolsa de cemento
   drainTrenchWidthCm       Float @default(15.0)
   drainTrenchDepthCm       Float @default(15.0)
   geomembraneM2PerM2       Float @default(1.0)
@@ -141,6 +430,7 @@ model PoolPreset {
   imageUrl    String?
   additionalImages String[] @default([])
   backDescription  String?
+  vendor      String?
 
   length      Float
   width       Float
@@ -206,6 +496,9 @@ model TilePreset {
   pricePerUnit Float
   brand       String?
   description String?
+  imageUrl    String?              // URL de la imagen principal
+  additionalImages String[] @default([])  // URLs de imágenes adicionales
+  catalogPage String?              // Página del catálogo de donde viene
 
   hasCorner          Boolean @default(false)
   cornerPricePerUnit Float?
@@ -221,6 +514,11 @@ enum TileType {
   LOMO_BALLENA
   L_FINISH
   PERIMETER
+  ROMANA
+  VENECIANA
+  TROPICAL
+  CLASICA
+  MODERNA
   OTHER
 }
 
@@ -231,10 +529,13 @@ model AccessoryPreset {
   unit        String
   pricePerUnit Float
   description String?
-  
+  imageUrl    String?              // URL de la imagen principal
+  additionalImages String[] @default([])  // URLs de imágenes adicionales
+  catalogPage String?              // Página del catálogo de donde viene
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   projectAdditionals ProjectAdditional[]
 }
 
@@ -261,6 +562,10 @@ model EquipmentPreset {
   voltage     Int?           // Voltaje (220V, 380V, 12V)
   pricePerUnit Float
   description String?
+  imageUrl    String?              // URL de la imagen principal
+  additionalImages String[] @default([])  // URLs de imágenes adicionales
+  catalogPage String?              // Página del catálogo de donde viene
+  datasheet   String?              // URL de la ficha técnica PDF
 
   // Campos para lógica de selección automática
   minPoolVolume Float?       // Volumen mínimo de piscina en litros
@@ -317,6 +622,9 @@ model ConstructionMaterialPreset {
   pricePerUnit Float
   brand       String?
   description String?
+  imageUrl    String?              // URL de la imagen principal
+  additionalImages String[] @default([])  // URLs de imágenes adicionales
+  catalogPage String?              // Página del catálogo de donde viene
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -367,6 +675,10 @@ model Project {
 
   materials       Json
   tasks           Json
+  exportSettings  Json     @default("{}")
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   laborCost       Float    @default(0)
   materialCost    Float    @default(0)
@@ -383,6 +695,7 @@ model Project {
   projectAdditionals ProjectAdditional[]
   projectUpdates     ProjectUpdate[]
   projectShare       ProjectShare?
+  agendaEvents       AgendaEvent[]
 }
 
 enum ProjectStatus {
@@ -504,4 +817,77 @@ model ProjectShare {
 
   @@index([shareToken])
   @@index([clientUsername])
+}
+
+model ContactForm {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String   @db.Text
+
+  status    ContactStatus @default(PENDING)
+  notes     String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QuoteRequest {
+  id              String   @id @default(uuid())
+  name            String
+  email           String
+  phone           String
+  location        String
+  spaceLength     Float?
+  spaceWidth      Float?
+  selectedPoolId  String?
+  additionalInfo  String?  @db.Text
+  budget          String?
+  timeframe       String?
+
+  status          ContactStatus @default(PENDING)
+  notes           String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CalculatorInquiry {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  message      String?  @db.Text
+  poolId       String?
+  poolName     String?
+  spaceLength  Float?
+  spaceWidth   Float?
+
+  status       ContactStatus @default(PENDING)
+  notes        String?  @db.Text
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ContactStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  REJECTED
+  ARCHIVED
 }

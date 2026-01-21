@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test de Imágenes Akesse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border: 2px solid #ddd;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Carga de Imágenes</h1>
+
+    <div class="test-card">
+        <h2>Test 1: Imagen directa de Akesse</h2>
+        <p>URL: https://f.fcdn.app/imgs/906c56/akesse.com.uy/akesuy/97c5/original/catalogo/PT.CELESTE.PAOLA_PT.CELESTE.PAOLA_1/460x460/piscina-de-fibra-rectangular-9-00-x-3-70-x-1-45-mts-piscina-de-fibra-rectangular-9-00-x-3-70-x-1-45-mts.jpg</p>
+        <img
+            class="test-image"
+            src="https://f.fcdn.app/imgs/906c56/akesse.com.uy/akesuy/97c5/original/catalogo/PT.CELESTE.PAOLA_PT.CELESTE.PAOLA_1/460x460/piscina-de-fibra-rectangular-9-00-x-3-70-x-1-45-mts-piscina-de-fibra-rectangular-9-00-x-3-70-x-1-45-mts.jpg"
+            alt="Piscina Paola"
+            onload="document.getElementById('status1').innerHTML = '✅ Imagen cargada correctamente'; document.getElementById('status1').className = 'status success';"
+            onerror="document.getElementById('status1').innerHTML = '❌ Error al cargar la imagen. Posible problema de CORS o URL inválida'; document.getElementById('status1').className = 'status error';"
+        >
+        <div id="status1" class="status">⏳ Cargando...</div>
+    </div>
+
+    <div class="test-card">
+        <h2>Test 2: Otra imagen de Akesse</h2>
+        <p>URL: https://f.fcdn.app/imgs/33c736/akesse.com.uy/akesuy/8a48/original/catalogo/PT.CELESTE.FLAVIA_PT.CELESTE.FLAVIA_1/460x460/piscina-de-fibra-rectangular-8-00-x-3-40-x-1-45-mts-piscina-de-fibra-rectangular-8-00-x-3-40-x-1-45-mts.jpg</p>
+        <img
+            class="test-image"
+            src="https://f.fcdn.app/imgs/33c736/akesse.com.uy/akesuy/8a48/original/catalogo/PT.CELESTE.FLAVIA_PT.CELESTE.FLAVIA_1/460x460/piscina-de-fibra-rectangular-8-00-x-3-40-x-1-45-mts-piscina-de-fibra-rectangular-8-00-x-3-40-x-1-45-mts.jpg"
+            alt="Piscina Flavia"
+            onload="document.getElementById('status2').innerHTML = '✅ Imagen cargada correctamente'; document.getElementById('status2').className = 'status success';"
+            onerror="document.getElementById('status2').innerHTML = '❌ Error al cargar la imagen. Posible problema de CORS o URL inválida'; document.getElementById('status2').className = 'status error';"
+        >
+        <div id="status2" class="status">⏳ Cargando...</div>
+    </div>
+
+    <div class="test-card">
+        <h2>📋 Instrucciones</h2>
+        <p>1. Si ambas imágenes se ven correctamente arriba, el problema NO es CORS ni las URLs</p>
+        <p>2. Si las imágenes NO se ven, abre la consola del navegador (F12) y revisa los errores</p>
+        <p>3. Copia cualquier error que veas y pégalo en el chat</p>
+    </div>
+
+    <script>
+        console.log('🧪 Test de imágenes iniciado');
+        console.log('Si ves errores de CORS aquí abajo, ese es el problema');
+    </script>
+</body>
+</html>

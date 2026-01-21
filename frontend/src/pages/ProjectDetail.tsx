@@ -7,21 +7,32 @@ import { PlumbingEditor } from '@/components/PlumbingEditor';
 import { RolesManager } from '@/components/RolesManager';
 import { TasksManager } from '@/components/TasksManager';
 import { AdditionalsManager } from '@/components/AdditionalsManager';
+import { PoolSystemsRecommendations } from '@/components/PoolSystemsRecommendations';
 import { EnhancedExportManager } from '@/components/EnhancedExportManager';
 import { ElectricalEditor } from '@/components/ElectricalEditor';
+import { EquipmentSelector } from '@/components/EquipmentSelector';
 import { ProjectStatus } from '@/components/ProjectStatus';
 import { ImprovedOverview } from '@/components/ImprovedOverview';
+import { HydraulicAnalysisPanel } from '@/components/HydraulicAnalysisPanel';
+import { ElectricalAnalysisPanel } from '@/components/ElectricalAnalysisPanel';
 import { projectService } from '@/services/projectService';
 import { Project } from '@/types';
 import { plumbingCalculationService } from '@/services/plumbingCalculationService';
-import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity } from 'lucide-react';
+import {
+  generateElectricalConfigFromPreset,
+  generateElectricalConfigFromPresetWithAdditionals,
+  generatePlumbingConfigFromPreset,
+  generatePlumbingConfigFromPresetWithAdditionals,
+  generateTileConfigFromPreset
+} from '@/utils/presetAutoConfig';
+import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity, Cpu } from 'lucide-react';
 
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'status' | 'tiles' | 'plumbing' | 'electrical' | 'tasks' | 'roles' | 'additionals' | 'export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'status' | 'tiles' | 'plumbing' | 'electrical' | 'tasks' | 'roles' | 'systems' | 'additionals' | 'export' | 'hydraulic_pro' | 'electrical_pro'>('overview');
 
   useEffect(() => {
     if (id) {
@@ -42,6 +53,56 @@ export const ProjectDetail: React.FC = () => {
       } catch (error) {
         console.log('No se pudieron cargar los adicionales:', error);
         (data as any).additionals = [];
+      }
+
+      // Auto-configurar pestañas si hay poolPreset y las configuraciones están vacías
+      if (data.poolPreset && id) {
+        let needsUpdate = false;
+        const updates: any = {};
+
+        // Obtener adicionales si existen
+        const additionals = (data as any).additionals || [];
+
+        // Auto-configurar eléctrica si está vacía
+        if (!data.electricalConfig || Object.keys(data.electricalConfig).length === 0) {
+          updates.electricalConfig = generateElectricalConfigFromPresetWithAdditionals(
+            data.poolPreset,
+            additionals
+          );
+          needsUpdate = true;
+          console.log('[Auto-config] Configuración eléctrica generada desde modelo', data.poolPreset.name, 'con', additionals.length, 'adicionales');
+        }
+
+        // Auto-configurar hidráulica si está vacía
+        if (!data.plumbingConfig || Object.keys(data.plumbingConfig).length === 0) {
+          updates.plumbingConfig = generatePlumbingConfigFromPresetWithAdditionals(
+            data.poolPreset,
+            additionals
+          );
+          needsUpdate = true;
+          console.log('[Auto-config] Configuración hidráulica generada desde modelo', data.poolPreset.name, 'con', additionals.length, 'adicionales');
+        }
+
+        // Auto-configurar losetas si está vacía
+        if (!data.tileCalculation || Object.keys(data.tileCalculation).length === 0) {
+          updates.tileCalculation = generateTileConfigFromPreset(data.poolPreset);
+          needsUpdate = true;
+          console.log('[Auto-config] Configuración de losetas generada desde modelo', data.poolPreset.name);
+        }
+
+        // Guardar actualizaciones si es necesario
+        if (needsUpdate) {
+          try {
+            await projectService.update(id, updates);
+            // Recargar para obtener datos actualizados
+            const updatedData = await projectService.getById(id);
+            setProject(updatedData);
+            console.log('[Auto-config] Configuraciones guardadas automáticamente');
+            return; // Salir early para usar los datos actualizados
+          } catch (error) {
+            console.error('Error al guardar configuraciones automáticas:', error);
+          }
+        }
       }
 
       setProject(data);
@@ -105,10 +166,10 @@ export const ProjectDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950/50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-700 text-lg font-medium">Cargando proyecto...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-cyan-300 mx-auto mb-4"></div>
+          <p className="text-zinc-300 text-lg font-medium">Cargando proyecto...</p>
         </div>
       </div>
     );
@@ -116,17 +177,17 @@ export const ProjectDetail: React.FC = () => {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm max-w-md w-full">
+      <div className="min-h-screen bg-zinc-950/50 flex items-center justify-center p-4">
+        <div className="bg-white/10 rounded-lg border border-white/15 shadow-2xl max-w-md w-full">
           <div className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-              <FileText className="h-8 w-8 text-gray-400" />
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+              <FileText className="h-8 w-8 text-zinc-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Proyecto no encontrado</h3>
-            <p className="text-gray-600 mb-6">El proyecto que buscas no existe o fue eliminado.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Proyecto no encontrado</h3>
+            <p className="text-zinc-400 mb-6">El proyecto que buscas no existe o fue eliminado.</p>
             <Button
               onClick={() => navigate('/projects')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors duration-200"
+              className="bg-cyan-400 hover:bg-cyan-300 text-zinc-950 font-semibold px-6 py-2 rounded-lg transition-colors duration-200"
             >
               Volver a Proyectos
             </Button>
@@ -142,36 +203,39 @@ export const ProjectDetail: React.FC = () => {
     { id: 'tiles', label: 'Losetas', icon: Edit },
     { id: 'plumbing', label: 'Hidráulica', icon: Hammer },
     { id: 'electrical', label: 'Eléctrica', icon: Zap },
+    { id: 'hydraulic_pro', label: 'Análisis Hidráulico', icon: Activity },
+    { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: Zap },
     { id: 'tasks', label: 'Tareas', icon: Hammer },
     { id: 'roles', label: 'Roles', icon: Users },
+    { id: 'systems', label: 'Sistemas', icon: Cpu },
     { id: 'additionals', label: 'Adicionales', icon: Package },
     { id: 'export', label: 'Exportar', icon: FileSpreadsheet },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="project-surface min-h-screen bg-zinc-950/50">
       {/* Header Sticky */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-50 bg-zinc-950/80 border-b border-white/10 shadow-2xl backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Header Superior */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/projects')}
-                className="group p-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+                className="group p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+                <ArrowLeft className="h-5 w-5 text-zinc-300 group-hover:text-white transition-colors" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">{project.name}</h1>
-                <p className="text-sm text-gray-600 font-medium">Cliente: {project.clientName}</p>
+                <h1 className="text-2xl font-bold text-white mb-1">{project.name}</h1>
+                <p className="text-sm text-zinc-400 font-medium">Cliente: {project.clientName}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <span className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 ${
-                project.status === 'COMPLETED' ? 'bg-green-100 text-green-800 border border-green-200' :
-                project.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                'bg-gray-100 text-gray-800 border border-gray-200'
+                project.status === 'COMPLETED' ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/30' :
+                project.status === 'IN_PROGRESS' ? 'bg-amber-500/15 text-amber-200 border border-amber-400/30' :
+                'bg-white/10 text-zinc-200 border border-white/20'
               }`}>
                 {project.status === 'COMPLETED' ? 'Completado' :
                  project.status === 'IN_PROGRESS' ? 'En Progreso' : 'Borrador'}
@@ -189,8 +253,8 @@ export const ProjectDetail: React.FC = () => {
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                       activeTab === tab.id
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900 border border-gray-200 hover:border-gray-300'
+                        ? 'bg-cyan-400 text-zinc-950 shadow-sm'
+                        : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border border-white/10'
                     }`}
                   >
                     <tab.icon className="h-4 w-4" />
@@ -198,7 +262,7 @@ export const ProjectDetail: React.FC = () => {
 
                     {/* Indicador activo */}
                     {activeTab === tab.id && (
-                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-cyan-400 rounded-full"></div>
                     )}
                   </button>
                 ))}
@@ -214,9 +278,20 @@ export const ProjectDetail: React.FC = () => {
         {activeTab === 'status' && <ProjectStatus project={project} />}
         {activeTab === 'tiles' && <TileEditor project={project} onSave={handleSaveTileConfig} />}
         {activeTab === 'plumbing' && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} />}
-        {activeTab === 'electrical' && <ElectricalEditor project={project} onSave={handleSaveElectricalConfig} />}
+        {activeTab === 'electrical' && id && (
+          <div className="space-y-6">
+            <EquipmentSelector
+              projectId={id}
+              selectedEquipment={(project as any).additionals || []}
+              onUpdate={loadProject}
+            />
+          </div>
+        )}
+        {activeTab === 'hydraulic_pro' && id && <HydraulicAnalysisPanel projectId={id} />}
+        {activeTab === 'electrical_pro' && id && <ElectricalAnalysisPanel projectId={id} />}
         {activeTab === 'tasks' && <TasksManager project={project} onSave={handleSaveTasks} />}
         {activeTab === 'roles' && <RolesManager />}
+        {activeTab === 'systems' && <PoolSystemsRecommendations project={project} />}
         {activeTab === 'additionals' && <AdditionalsManager project={project} />}
         {activeTab === 'export' && <EnhancedExportManager project={project} />}
       </div>
@@ -296,10 +371,20 @@ const ImprovedOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
 const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
   const materials = project.materials as any;
   const hasMaterials = materials && Object.keys(materials).length > 0;
+  const electroweldedMeshSheetM2 = 12;
+  const wireMeshSheetM2 = 6;
+  const getMeshSheetLabel = (quantity: number, unit: string, sheetAreaM2: number, sheetLabel: string) => {
+    if (!quantity || !unit) return '';
+    const normalizedUnit = unit.toLowerCase();
+    if (!normalizedUnit.includes('m²') && !normalizedUnit.includes('m2')) return '';
+    const sheets = Math.ceil(quantity / sheetAreaM2);
+    return `≈ ${sheets} mallas de ${sheetLabel}`;
+  };
   const plumbingConfig = project.plumbingConfig as any;
   const hasPlumbing = plumbingConfig && plumbingConfig.selectedItems && plumbingConfig.selectedItems.length > 0;
   const electricalConfig = project.electricalConfig as any;
   const hasElectrical = electricalConfig && electricalConfig.items && electricalConfig.items.length > 0;
+  const hasElectroweldedMesh = materials?.electroweldedMesh?.quantity > 0;
   const tasks = project.tasks as any;
   const hasTasks = tasks && Object.keys(tasks).length > 0;
   const additionals = (project as any).additionals || [];
@@ -610,10 +695,13 @@ const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
                   <p className="font-semibold text-lg">{materials.marmolina.quantity} {materials.marmolina.unit}</p>
                 </div>
               )}
-              {materials.wireMesh && materials.wireMesh.quantity > 0 && (
+              {materials.wireMesh && materials.wireMesh.quantity > 0 && !hasElectroweldedMesh && (
                 <div className="bg-gray-50 p-3 rounded">
                   <p className="text-sm text-gray-600">Malla Metálica</p>
                   <p className="font-semibold text-lg">{materials.wireMesh.quantity} {materials.wireMesh.unit}</p>
+                  {getMeshSheetLabel(materials.wireMesh.quantity, materials.wireMesh.unit, wireMeshSheetM2, '2x3m') && (
+                    <p className="text-xs text-gray-500">{getMeshSheetLabel(materials.wireMesh.quantity, materials.wireMesh.unit, wireMeshSheetM2, '2x3m')}</p>
+                  )}
                 </div>
               )}
               {materials.waterproofing && materials.waterproofing.quantity > 0 && (
@@ -639,6 +727,9 @@ const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
                 <div className="bg-green-50 p-3 rounded">
                   <p className="text-sm text-green-600">Malla Electrosoldada</p>
                   <p className="font-semibold text-lg">{materials.electroweldedMesh.quantity} {materials.electroweldedMesh.unit}</p>
+                  {getMeshSheetLabel(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, electroweldedMeshSheetM2, '2x6m') && (
+                    <p className="text-xs text-green-600">{getMeshSheetLabel(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, electroweldedMeshSheetM2, '2x6m')}</p>
+                  )}
                 </div>
               )}
               {materials.sandForBed && parseFloat(materials.sandForBed.quantity) > 0 && (
@@ -1066,5 +1157,3 @@ const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
     </div>
   );
 };
-
-

@@ -85,6 +85,16 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
 
   const materials = project.materials as any;
   const hasMaterials = materials && Object.keys(materials).length > 0;
+  const hasElectroweldedMesh = materials?.electroweldedMesh?.quantity > 0;
+  const electroweldedMeshSheetM2 = 12;
+  const wireMeshSheetM2 = 6;
+  const getMeshSheetLabel = (quantity: number, unit: string, sheetAreaM2: number, sheetLabel: string) => {
+    if (!quantity || !unit) return '';
+    const normalizedUnit = unit.toLowerCase();
+    if (!normalizedUnit.includes('m²') && !normalizedUnit.includes('m2')) return '';
+    const sheets = Math.ceil(quantity / sheetAreaM2);
+    return `≈ ${sheets} mallas de ${sheetLabel}`;
+  };
   const plumbingConfig = project.plumbingConfig as any;
   const hasPlumbing = plumbingConfig && plumbingConfig.selectedItems && plumbingConfig.selectedItems.length > 0;
   const electricalConfig = project.electricalConfig as any;
@@ -124,17 +134,23 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
     };
   }, { materialCost: 0, laborCost: 0 });
 
+  const tasks = project.tasks as any || {};
+  const hasTasks = tasks && Object.keys(tasks).length > 0;
+
+  const computedTasksLabor = Object.values(tasks || {}).reduce((sum: number, categoryTasks: any) => {
+    if (!Array.isArray(categoryTasks)) return sum;
+    return sum + categoryTasks.reduce((inner: number, task: any) => inner + (task.laborCost || 0), 0);
+  }, 0);
+  const baseLaborCost = computedTasksLabor > 0 ? computedTasksLabor : (project.laborCost || 0);
+
   const totalMaterialCost = project.materialCost + additionalsCosts.materialCost + plumbingCosts + electricalCosts;
-  const totalLaborCost = project.laborCost + additionalsCosts.laborCost;
+  const totalLaborCost = baseLaborCost + additionalsCosts.laborCost;
   const grandTotal = totalMaterialCost + totalLaborCost;
 
   const totalRolesCost = Object.values(rolesCostSummary).reduce((sum, role) => sum + role.cost, 0);
   const totalRolesHours = Object.values(rolesCostSummary).reduce((sum, role) => sum + role.hours, 0);
 
   // Calcular estadísticas de tareas
-  const tasks = project.tasks as any || {};
-  const hasTasks = tasks && Object.keys(tasks).length > 0;
-
   const taskStats = React.useMemo(() => {
     let totalTasks = 0;
     let completedTasks = 0;
@@ -501,13 +517,13 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           </div>
           <div className="space-y-2">
             <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-sm text-gray-600">Base</span>
-              <span className="font-semibold">${project.laborCost.toLocaleString('es-AR')}</span>
+              <span className="text-sm text-gray-600">Base (tareas)</span>
+              <span className="font-semibold">${baseLaborCost.toLocaleString('es-AR')}</span>
             </div>
             {totalRolesCost > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Por Roles ({totalRolesHours.toFixed(0)}hs)</span>
-                <span className="font-semibold text-purple-700">${totalRolesCost.toLocaleString('es-AR')}</span>
+                <span className="text-sm text-gray-600">Detalle por Roles ({totalRolesHours.toFixed(0)}hs)</span>
+                <span className="font-semibold text-purple-700">${totalRolesCost.toLocaleString('es-AR')} <span className="text-xs text-gray-500">(incluido)</span></span>
               </div>
             )}
             {additionalsCosts.laborCost > 0 && (
@@ -591,7 +607,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
               </div>
 
               {/* Visualización de la Piscina */}
-              <div className="mb-4 bg-white border border-gray-200 rounded-lg p-6 flex items-center justify-center">
+              <div className="mb-4 bg-white/10 border border-white/15 rounded-lg p-6 flex items-center justify-center">
                 <div className="w-full max-w-4xl">
                   <PoolVisualizationCanvas
                     ref={canvasRef}
@@ -605,26 +621,26 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-3 rounded-lg mb-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-cyan-500/10 p-3 rounded-lg mb-3 border border-cyan-400/20">
+                <p className="text-sm text-cyan-100">
                   Área total de vereda: <strong>{project.sidewalkArea.toFixed(2)} m²</strong>
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {materials.tiles.map((tile: any, index: number) => (
-                  <div key={index} className="border-2 border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
+                  <div key={index} className="border border-white/15 bg-white/5 rounded-lg p-3 hover:border-cyan-400/40 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded mb-2 ${
                           tile.type === 'first_ring'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-blue-100 text-blue-800'
+                            ? 'bg-amber-500/20 text-amber-200'
+                            : 'bg-cyan-500/20 text-cyan-200'
                         }`}>
                           {tile.type === 'first_ring' ? 'PRIMER ANILLO' : 'FILAS ADICIONALES'}
                         </span>
-                        <p className="font-medium">{tile.tileName}</p>
+                        <p className="font-medium text-white">{tile.tileName}</p>
                       </div>
-                      <p className="text-xl font-bold text-blue-600">{tile.quantity} {tile.unit}</p>
+                      <p className="text-xl font-bold text-cyan-200">{tile.quantity} {tile.unit}</p>
                     </div>
                   </div>
                 ))}
@@ -635,51 +651,57 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           {/* Materiales de Vereda y Cama */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {materials.adhesive && materials.adhesive.quantity > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-1">Pegamento</p>
+              <div className="bg-white/8 p-3 rounded-lg border border-white/15">
+                <p className="text-xs text-zinc-400 mb-1">Pegamento</p>
                 <p className="font-bold text-lg">{materials.adhesive.quantity} {materials.adhesive.unit}</p>
               </div>
             )}
             {materials.cement && materials.cement.quantity > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-1">Cemento</p>
+              <div className="bg-white/8 p-3 rounded-lg border border-white/15">
+                <p className="text-xs text-zinc-400 mb-1">Cemento</p>
                 <p className="font-bold text-lg">{materials.cement.quantity} {materials.cement.unit}</p>
               </div>
             )}
             {materials.sand && parseFloat(materials.sand.quantity) > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-1">Arena</p>
+              <div className="bg-white/8 p-3 rounded-lg border border-white/15">
+                <p className="text-xs text-zinc-400 mb-1">Arena</p>
                 <p className="font-bold text-lg">{materials.sand.quantity} {materials.sand.unit}</p>
               </div>
             )}
             {materials.gravel && parseFloat(materials.gravel.quantity) > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-1">Piedra</p>
+              <div className="bg-white/8 p-3 rounded-lg border border-white/15">
+                <p className="text-xs text-zinc-400 mb-1">Piedra</p>
                 <p className="font-bold text-lg">{materials.gravel.quantity} {materials.gravel.unit}</p>
               </div>
             )}
             {materials.whiteCement && materials.whiteCement.quantity > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-1">Cemento Blanco</p>
+              <div className="bg-white/8 p-3 rounded-lg border border-white/15">
+                <p className="text-xs text-zinc-400 mb-1">Cemento Blanco</p>
                 <p className="font-bold text-lg">{materials.whiteCement.quantity} {materials.whiteCement.unit}</p>
               </div>
             )}
             {materials.geomembrane && materials.geomembrane.quantity > 0 && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
-                <p className="text-xs text-green-700 mb-1">Geomembrana</p>
+              <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-400/20">
+                <p className="text-xs text-emerald-200 mb-1">Geomembrana</p>
                 <p className="font-bold text-lg">{materials.geomembrane.quantity} {materials.geomembrane.unit}</p>
               </div>
             )}
             {materials.electroweldedMesh && materials.electroweldedMesh.quantity > 0 && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
-                <p className="text-xs text-green-700 mb-1">Malla Electrosoldada</p>
+              <div className="bg-emerald-500/10 p-3 rounded-lg border border-emerald-400/20">
+                <p className="text-xs text-emerald-200 mb-1">Malla Electrosoldada</p>
                 <p className="font-bold text-lg">{materials.electroweldedMesh.quantity} {materials.electroweldedMesh.unit}</p>
+                {getMeshSheetLabel(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, electroweldedMeshSheetM2, '2x6m') && (
+                  <p className="text-xs text-emerald-200">{getMeshSheetLabel(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, electroweldedMeshSheetM2, '2x6m')}</p>
+                )}
               </div>
             )}
-            {materials.wireMesh && materials.wireMesh.quantity > 0 && (
+            {materials.wireMesh && materials.wireMesh.quantity > 0 && !hasElectroweldedMesh && (
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
                 <p className="text-xs text-gray-600 mb-1">Malla Metálica</p>
                 <p className="font-bold text-lg">{materials.wireMesh.quantity} {materials.wireMesh.unit}</p>
+                {getMeshSheetLabel(materials.wireMesh.quantity, materials.wireMesh.unit, wireMeshSheetM2, '2x3m') && (
+                  <p className="text-xs text-gray-600">{getMeshSheetLabel(materials.wireMesh.quantity, materials.wireMesh.unit, wireMeshSheetM2, '2x3m')}</p>
+                )}
               </div>
             )}
           </div>
@@ -855,51 +877,51 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
       )}
 
       {/* CONTACTO DEL CLIENTE */}
-      <Card className="bg-gradient-to-br from-gray-50 to-white">
-        <h3 className="text-lg font-bold mb-4">Información de Contacto</h3>
+      <Card className="bg-white/10 border border-white/15">
+        <h3 className="text-lg font-bold mb-4 text-white">Información de Contacto</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {project.clientEmail && (
             <div>
-              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+              <p className="text-xs text-zinc-400 mb-1 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
                   <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
                 </svg>
                 Email
               </p>
-              <p className="font-medium text-sm">{project.clientEmail}</p>
+              <p className="font-medium text-sm text-white">{project.clientEmail}</p>
             </div>
           )}
           {project.clientPhone && (
             <div>
-              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+              <p className="text-xs text-zinc-400 mb-1 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
                 </svg>
                 Teléfono
               </p>
-              <p className="font-medium text-sm">{project.clientPhone}</p>
+              <p className="font-medium text-sm text-white">{project.clientPhone}</p>
             </div>
           )}
           {project.location && (
             <div>
-              <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+              <p className="text-xs text-zinc-400 mb-1 flex items-center gap-1">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
                 </svg>
                 Ubicación
               </p>
-              <p className="font-medium text-sm">{project.location}</p>
+              <p className="font-medium text-sm text-white">{project.location}</p>
             </div>
           )}
           <div>
-            <p className="text-xs text-gray-600 mb-1 flex items-center gap-1">
+            <p className="text-xs text-zinc-400 mb-1 flex items-center gap-1">
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
               </svg>
               Creado
             </p>
-            <p className="font-medium text-sm">{new Date(project.createdAt).toLocaleDateString('es-AR')}</p>
+            <p className="font-medium text-sm text-white">{new Date(project.createdAt).toLocaleDateString('es-AR')}</p>
           </div>
         </div>
       </Card>

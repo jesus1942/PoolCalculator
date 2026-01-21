@@ -25,6 +25,9 @@ interface TaskDetail {
   description: string;
   estimatedHours: number;
   laborCost: number;
+  quantity?: number;
+  unit?: string;
+  bocaType?: string;
   status: 'pending' | 'in_progress' | 'completed';
   assignedRole?: string;
   assignedRoleId?: string;
@@ -37,6 +40,9 @@ interface RoleRate {
   name: string;
   hourlyRate?: number;
   dailyRate?: number;
+  billingType?: 'HOUR' | 'DAY' | 'M2' | 'ML' | 'BOCA';
+  ratePerUnit?: number;
+  bocaRates?: any;
 }
 
 /**
@@ -50,7 +56,13 @@ export function generateDefaultTasks(
   roles: RoleRate[] = []
 ): Record<string, TaskDetail[]> {
   // Helper function to calculate labor cost
-  const calculateLaborCost = (hours: number, suggestedRoleType?: string): number => {
+  const calculateLaborCost = (
+    hours: number,
+    suggestedRoleType?: string,
+    quantity?: number,
+    unit?: string,
+    bocaType?: string
+  ): number => {
     if (!suggestedRoleType || roles.length === 0) return 0;
 
     // Buscar el rol por nombre (case-insensitive)
@@ -60,6 +72,20 @@ export function generateDefaultTasks(
     );
 
     if (!role) return 0;
+
+    const billingType = role.billingType || 'HOUR';
+    if (billingType === 'M2' || billingType === 'ML') {
+      if (!quantity || !role.ratePerUnit) return 0;
+      return quantity * role.ratePerUnit;
+    }
+    if (billingType === 'BOCA') {
+      if (!quantity || !bocaType || !role.bocaRates) return 0;
+      const rate = Array.isArray(role.bocaRates)
+        ? role.bocaRates.find((item: any) => item.label === bocaType)?.price
+        : 0;
+      if (!rate) return 0;
+      return quantity * rate;
+    }
 
     // Preferir hourlyRate, si no existe usar dailyRate / 8
     const hourlyRate = role.hourlyRate || (role.dailyRate ? role.dailyRate / 8 : 0);
@@ -224,7 +250,10 @@ export function generateDefaultTasks(
       name: `Instalación de ${poolPreset.lightingCount} luz(ces)`,
       description: `Instalación eléctrica de iluminación LED`,
       estimatedHours: lightingHours,
-      laborCost: calculateLaborCost(lightingHours, 'Electricista'),
+      quantity: poolPreset.lightingCount,
+      unit: 'boca',
+      bocaType: 'Luz',
+      laborCost: calculateLaborCost(lightingHours, 'Electricista', poolPreset.lightingCount, 'boca', 'Luz'),
       status: 'pending',
       category: 'electrical',
       suggestedRoleType: 'Electricista',
@@ -247,7 +276,10 @@ export function generateDefaultTasks(
     name: 'Conexión de tablero eléctrico',
     description: 'Instalación y configuración del tablero de comando',
     estimatedHours: 4,
-    laborCost: calculateLaborCost(4, 'Electricista'),
+    quantity: 1,
+    unit: 'boca',
+    bocaType: 'Tablero',
+    laborCost: calculateLaborCost(4, 'Electricista', 1, 'boca', 'Tablero'),
     status: 'pending',
     category: 'electrical',
     suggestedRoleType: 'Electricista',
@@ -277,7 +309,9 @@ export function generateDefaultTasks(
     name: 'Colocación de geomembrana',
     description: `Instalación de geomembrana en ${floorArea.toFixed(2)}m²`,
     estimatedHours: geomembraneHours,
-    laborCost: calculateLaborCost(geomembraneHours, 'Albañil'),
+    quantity: Number(floorArea.toFixed(2)),
+    unit: 'm2',
+    laborCost: calculateLaborCost(geomembraneHours, 'Albañil', floorArea, 'm2'),
     status: 'pending',
     category: 'floor',
     suggestedRoleType: 'Albañil',
@@ -288,7 +322,9 @@ export function generateDefaultTasks(
     name: 'Colocación de malla electrosoldada',
     description: 'Instalación de malla de refuerzo',
     estimatedHours: meshHours,
-    laborCost: calculateLaborCost(meshHours, 'Albañil'),
+    quantity: Number(floorArea.toFixed(2)),
+    unit: 'm2',
+    laborCost: calculateLaborCost(meshHours, 'Albañil', floorArea, 'm2'),
     status: 'pending',
     category: 'floor',
     suggestedRoleType: 'Albañil',
@@ -299,7 +335,9 @@ export function generateDefaultTasks(
     name: 'Preparación y colado de cama de arena-cemento',
     description: `Preparación de ${(floorArea * 0.1).toFixed(2)}m³ de mezcla y colado`,
     estimatedHours: floorHours,
-    laborCost: calculateLaborCost(floorHours, 'Albañil'),
+    quantity: Number(floorArea.toFixed(2)),
+    unit: 'm2',
+    laborCost: calculateLaborCost(floorHours, 'Albañil', floorArea, 'm2'),
     status: 'pending',
     category: 'floor',
     suggestedRoleType: 'Albañil',
@@ -325,7 +363,9 @@ export function generateDefaultTasks(
     name: 'Colocación de losetas perimetrales',
     description: `Colocación de losetas en ${perimeter.toFixed(2)}m de perímetro`,
     estimatedHours: tileHours,
-    laborCost: calculateLaborCost(tileHours, 'Colocador'),
+    quantity: Number(perimeter.toFixed(2)),
+    unit: 'ml',
+    laborCost: calculateLaborCost(tileHours, 'Colocador', perimeter, 'ml'),
     status: 'pending',
     category: 'tiles',
     suggestedRoleType: 'Colocador',

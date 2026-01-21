@@ -8,9 +8,8 @@ import { poolPresetService } from '@/services/poolPresetService';
 import { PoolPreset, PoolShape } from '@/types';
 import { Plus, Edit, Trash2, Upload, X, Waves, Layers, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import FlipCard from '@/components/ui/FlipCard';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const BASE_URL = API_URL.replace('/api', '');
+import { getImageUrl } from '@/utils/imageUtils';
+import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';
 
 // Componente de Card individual con FlipCard
 const PoolPresetCard: React.FC<{
@@ -21,7 +20,7 @@ const PoolPresetCard: React.FC<{
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Logo por defecto si no hay imágenes adicionales
-  const defaultBackImage = '/logo.png'; // Asegúrate de tener un logo en public/
+  const defaultBackImage = '/logo-isotipo.png';
   const additionalImages = preset.additionalImages && preset.additionalImages.length > 0
     ? preset.additionalImages
     : [defaultBackImage];
@@ -45,16 +44,17 @@ const PoolPresetCard: React.FC<{
         className="h-full"
         front={
           <div className="group relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 h-full">
-            {/* Imagen */}
+            {/* Imagen con zoom hover */}
             {preset.imageUrl && (
-              <div className="relative w-full h-48 overflow-hidden bg-gray-100">
-                <img
-                  src={`${BASE_URL}${preset.imageUrl}`}
+              <div className="relative w-full h-48 bg-gray-100">
+                <ImageHoverZoom
+                  src={getImageUrl(preset.imageUrl) || ''}
                   alt={preset.name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
                 />
                 {hasAdditionalContent && (
-                  <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg">
+                  <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg z-10 pointer-events-none">
                     Click para más
                   </div>
                 )}
@@ -158,10 +158,7 @@ const PoolPresetCard: React.FC<{
           <div className="relative w-full h-64 bg-gray-100">
             {additionalImages[currentImageIndex] && (
               <img
-                src={additionalImages[currentImageIndex].startsWith('/')
-                  ? `${BASE_URL}${additionalImages[currentImageIndex]}`
-                  : additionalImages[currentImageIndex]
-                }
+                src={getImageUrl(additionalImages[currentImageIndex]) || additionalImages[currentImageIndex]}
                 alt={`${preset.name} - Imagen ${currentImageIndex + 1}`}
                 className="w-full h-full object-contain"
               />
@@ -368,13 +365,13 @@ export const PoolModels: React.FC = () => {
       lightingType: preset.lightingType || '',
     });
     if (preset.imageUrl) {
-      setImagePreview(`${BASE_URL}${preset.imageUrl}`);
+      setImagePreview(getImageUrl(preset.imageUrl) || '');
     }
     if (preset.additionalImages && preset.additionalImages.length > 0) {
-      // Guardar las URLs existentes (sin el BASE_URL)
+      // Guardar las URLs existentes
       setExistingAdditionalImageUrls(preset.additionalImages);
-      // Mostrar previews con BASE_URL para renderizar
-      setAdditionalImagePreviews(preset.additionalImages.map(img => `${BASE_URL}${img}`));
+      // Mostrar previews con URL completa para renderizar
+      setAdditionalImagePreviews(preset.additionalImages.map(img => getImageUrl(img) || img));
     }
     setShowModal(true);
   };
@@ -588,10 +585,10 @@ export const PoolModels: React.FC = () => {
                         onClick={() => {
                           const previewToRemove = additionalImagePreviews[idx];
 
-                          // Si la preview empieza con BASE_URL, es una imagen existente
-                          if (previewToRemove.startsWith(BASE_URL)) {
-                            // Extraer la URL sin el BASE_URL
-                            const urlWithoutBase = previewToRemove.replace(BASE_URL, '');
+                          // Si la preview es una URL (no un blob), es una imagen existente
+                          if (previewToRemove.startsWith('http')) {
+                            // Encontrar la URL original en existingAdditionalImageUrls
+                            const urlWithoutBase = existingAdditionalImageUrls[idx];
                             // Eliminar de URLs existentes
                             setExistingAdditionalImageUrls(urls => urls.filter(url => url !== urlWithoutBase));
                           } else {

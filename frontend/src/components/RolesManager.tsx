@@ -12,6 +12,9 @@ interface ProfessionRole {
   description: string | null;
   hourlyRate: number | null;
   dailyRate: number | null;
+  billingType?: 'HOUR' | 'DAY' | 'M2' | 'ML' | 'BOCA';
+  ratePerUnit?: number | null;
+  bocaRates?: { label: string; price: number }[];
 }
 
 export const RolesManager: React.FC = () => {
@@ -24,6 +27,9 @@ export const RolesManager: React.FC = () => {
     description: '',
     hourlyRate: '',
     dailyRate: '',
+    billingType: 'HOUR',
+    ratePerUnit: '',
+    bocaRates: [] as { label: string; price: number }[],
   });
 
   useEffect(() => {
@@ -64,6 +70,9 @@ export const RolesManager: React.FC = () => {
       description: role.description || '',
       hourlyRate: role.hourlyRate?.toString() || '',
       dailyRate: role.dailyRate?.toString() || '',
+      billingType: role.billingType || 'HOUR',
+      ratePerUnit: role.ratePerUnit?.toString() || '',
+      bocaRates: role.bocaRates || [],
     });
     setShowModal(true);
   };
@@ -86,6 +95,9 @@ export const RolesManager: React.FC = () => {
       description: '',
       hourlyRate: '',
       dailyRate: '',
+      billingType: 'HOUR',
+      ratePerUnit: '',
+      bocaRates: [],
     });
   };
 
@@ -151,6 +163,24 @@ export const RolesManager: React.FC = () => {
                     )}
                   </div>
                 )}
+                {(role.billingType === 'M2' || role.billingType === 'ML') && role.ratePerUnit && (
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Tarifa por {role.billingType === 'M2' ? 'm²' : 'ml'}</span>
+                      <span className="font-medium">${role.ratePerUnit.toLocaleString('es-AR')}</span>
+                    </div>
+                  </div>
+                )}
+                {role.billingType === 'BOCA' && role.bocaRates && role.bocaRates.length > 0 && (
+                  <div className="border-t pt-3 space-y-1">
+                    {role.bocaRates.map((rate) => (
+                      <div key={rate.label} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{rate.label}</span>
+                        <span className="font-medium">${Number(rate.price).toLocaleString('es-AR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex space-x-2 pt-3 border-t">
                   <Button
@@ -201,24 +231,120 @@ export const RolesManager: React.FC = () => {
           />
 
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Tarifa por Hora (opcional)"
-              type="number"
-              step="0.01"
-              value={formData.hourlyRate}
-              onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-              placeholder="0.00"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de cobro</label>
+              <select
+                value={formData.billingType}
+                onChange={(e) => setFormData({ ...formData, billingType: e.target.value as any })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="HOUR">Por hora</option>
+                <option value="DAY">Por día</option>
+                <option value="M2">Por m²</option>
+                <option value="ML">Por metro lineal</option>
+                <option value="BOCA">Por boca (electricidad)</option>
+              </select>
+            </div>
+          </div>
 
+          {formData.billingType === 'HOUR' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Tarifa por Hora (opcional)"
+                type="number"
+                step="0.01"
+                value={formData.hourlyRate}
+                onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                placeholder="0.00"
+              />
+
+              <Input
+                label="Tarifa por Día (opcional)"
+                type="number"
+                step="0.01"
+                value={formData.dailyRate}
+                onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+          )}
+
+          {formData.billingType === 'DAY' && (
             <Input
-              label="Tarifa por Día (opcional)"
+              label="Tarifa por Día"
               type="number"
               step="0.01"
               value={formData.dailyRate}
               onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
               placeholder="0.00"
             />
-          </div>
+          )}
+
+          {(formData.billingType === 'M2' || formData.billingType === 'ML') && (
+            <Input
+              label={`Tarifa por ${formData.billingType === 'M2' ? 'm²' : 'metro lineal'}`}
+              type="number"
+              step="0.01"
+              value={formData.ratePerUnit}
+              onChange={(e) => setFormData({ ...formData, ratePerUnit: e.target.value })}
+              placeholder="0.00"
+            />
+          )}
+
+          {formData.billingType === 'BOCA' && (
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-gray-700">Tipos de boca y tarifas</div>
+              {formData.bocaRates.length === 0 && (
+                <div className="text-xs text-gray-500">Agregá al menos un tipo de boca.</div>
+              )}
+              {formData.bocaRates.map((rate, index) => (
+                <div key={`${rate.label}-${index}`} className="grid grid-cols-2 gap-2 items-center">
+                  <input
+                    value={rate.label}
+                    onChange={(e) => {
+                      const next = [...formData.bocaRates];
+                      next[index] = { ...next[index], label: e.target.value };
+                      setFormData({ ...formData, bocaRates: next });
+                    }}
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    placeholder="Ej: Luz LED, Toma exterior"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={rate.price}
+                      onChange={(e) => {
+                        const next = [...formData.bocaRates];
+                        next[index] = { ...next[index], price: Number(e.target.value) };
+                        setFormData({ ...formData, bocaRates: next });
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      placeholder="0.00"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      onClick={() => {
+                        const next = formData.bocaRates.filter((_, idx) => idx !== index);
+                        setFormData({ ...formData, bocaRates: next });
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setFormData({ ...formData, bocaRates: [...formData.bocaRates, { label: '', price: 0 }] })}
+              >
+                Agregar tipo de boca
+              </Button>
+            </div>
+          )}
 
           <div className="flex space-x-3 pt-4">
             <Button type="submit" className="flex-1">

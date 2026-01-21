@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Link2, Copy, Check, Settings, Eye, EyeOff, X } from 'lucide-react';
+import { Link2, Copy, Check, Settings, Eye, EyeOff, X, Download } from 'lucide-react';
 import api from '@/services/api';
 
 interface ShareTimelineModalProps {
@@ -107,6 +107,11 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
     return `${window.location.origin}/client-login?returnUrl=/timeline/${shareConfig.shareToken}`;
   };
 
+  const getExportUrl = () => {
+    if (!shareConfig?.shareToken) return '';
+    return `${window.location.origin}/api/public/timeline/${shareConfig.shareToken}/export`;
+  };
+
   const handleCopyLink = () => {
     const url = getShareUrl();
     navigator.clipboard.writeText(url).then(() => {
@@ -198,10 +203,19 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
               </Button>
             </div>
 
-            <div className="mt-3">
+            <div className="mt-3 space-y-2">
               <Button variant="secondary" onClick={handleUpdateShare} className="w-full" disabled={loading}>
                 <Settings size={18} className="mr-2" />
                 Actualizar Configuración
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => window.open(getExportUrl(), '_blank')}
+                className="w-full"
+                disabled={loading}
+              >
+                <Download size={18} className="mr-2" />
+                Exportar Timeline (CSV)
               </Button>
             </div>
           </div>

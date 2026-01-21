@@ -75,7 +75,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         await transporter.sendMail({
           from: process.env.SMTP_FROM || 'noreply@poolcalculator.com',
           to: user.email,
-          subject: 'Recuperación de Contraseña - Pool Calculator',
+          subject: 'Recuperación de Contraseña - Pool Installer',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #06b6d4;">Recuperación de Contraseña</h2>

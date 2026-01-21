@@ -1,36 +1,65 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/services/authService';
 
 export const AuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setAuthData } = useAuth();
   const token = searchParams.get('token');
   const error = searchParams.get('error');
 
   useEffect(() => {
+    console.log('[AUTH CALLBACK] Iniciando proceso de autenticación...');
+    console.log('[AUTH CALLBACK] Token recibido:', token ? 'SÍ' : 'NO');
+    console.log('[AUTH CALLBACK] Error recibido:', error);
+
     if (error) {
-      console.error('Error en autenticación:', error);
+      console.error('[AUTH CALLBACK] ❌ Error en autenticación:', error);
       navigate('/login?error=auth_failed');
       return;
     }
 
     if (token) {
-      // Guardar token
-      localStorage.setItem('token', token);
+      try {
+        console.log('[AUTH CALLBACK] Decodificando token...');
 
-      // Actualizar contexto de auth
-      if (setAuthData) {
-        setAuthData(token);
+        // Decodificar el token JWT para obtener los datos del usuario
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('[AUTH CALLBACK] Payload decodificado:', payload);
+
+        // Crear objeto de usuario
+        const user = {
+          id: payload.userId,
+          email: payload.email,
+          role: payload.role,
+          name: payload.name || payload.email.split('@')[0],
+        };
+
+        console.log('[AUTH CALLBACK] Usuario creado:', user);
+
+        // Guardar token y usuario usando authService
+        authService.setToken(token);
+        authService.setUser(user);
+
+        console.log('[AUTH CALLBACK] ✅ Token y usuario guardados en localStorage');
+        console.log('[AUTH CALLBACK] Verificando localStorage...');
+        console.log('[AUTH CALLBACK] Token en localStorage:', localStorage.getItem('token') ? 'SÍ' : 'NO');
+        console.log('[AUTH CALLBACK] User en localStorage:', localStorage.getItem('user') ? 'SÍ' : 'NO');
+
+        // Redirigir al dashboard con recarga completa para que AuthContext actualice
+        console.log('[AUTH CALLBACK] Redirigiendo a /dashboard...');
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 500);
+      } catch (err) {
+        console.error('[AUTH CALLBACK] ❌ Error al procesar token:', err);
+        navigate('/login?error=invalid_token');
       }
-
-      // Redirigir al dashboard
-      navigate('/dashboard');
     } else {
+      console.log('[AUTH CALLBACK] ❌ No hay token, redirigiendo a login');
       navigate('/login');
     }
-  }, [token, error, navigate, setAuthData]);
+  }, [token, error, navigate]);
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">

@@ -1,13 +1,11 @@
-import axios from 'axios';
-
-// Usando Open-Meteo (API gratuita sin necesidad de key)
-const WEATHER_API_BASE = 'https://api.open-meteo.com/v1';
+import api from './api';
 
 export interface WeatherData {
   current: {
     temperature: number;
     weatherCode: number;
     windSpeed: number;
+    windGust: number | null;
     humidity: number;
   };
   daily: {
@@ -17,7 +15,9 @@ export interface WeatherData {
     weatherCode: number;
     precipitation: number;
     windSpeed: number;
+    windGust: number | null;
   }[];
+  provider?: string;
 }
 
 export interface HourlyWeatherData {
@@ -25,6 +25,7 @@ export interface HourlyWeatherData {
   temperature: number;
   weatherCode: number;
   windSpeed: number;
+  windGust: number | null;
   humidity: number;
   precipitation: number;
 }
@@ -100,35 +101,11 @@ export const weatherService = {
   // Por defecto: Puerto Madryn, Chubut, Argentina
   async getWeather(latitude: number = -42.7692, longitude: number = -65.0385): Promise<WeatherData> {
     try {
-      const response = await axios.get(`${WEATHER_API_BASE}/forecast`, {
-        params: {
-          latitude,
-          longitude,
-          current: 'temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m',
-          daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max',
-          timezone: 'America/Argentina/Buenos_Aires',
-          forecast_days: 7,
-        },
+      const response = await api.get('/weather', {
+        params: { latitude, longitude },
       });
 
-      const data = response.data;
-
-      return {
-        current: {
-          temperature: Math.round(data.current.temperature_2m),
-          weatherCode: data.current.weather_code,
-          windSpeed: Math.round(data.current.wind_speed_10m),
-          humidity: Math.round(data.current.relative_humidity_2m),
-        },
-        daily: data.daily.time.map((date: string, index: number) => ({
-          date,
-          maxTemp: Math.round(data.daily.temperature_2m_max[index]),
-          minTemp: Math.round(data.daily.temperature_2m_min[index]),
-          weatherCode: data.daily.weather_code[index],
-          precipitation: data.daily.precipitation_sum[index],
-          windSpeed: Math.round(data.daily.wind_speed_10m_max[index]),
-        })),
-      };
+      return response.data;
     } catch (error) {
       console.error('Error fetching weather:', error);
       throw error;
@@ -138,26 +115,11 @@ export const weatherService = {
   // Obtener clima por hora (por defecto 7 días para poder ver el detalle de cada día)
   async getHourlyWeather(latitude: number = -42.7692, longitude: number = -65.0385, forecastDays: number = 7): Promise<HourlyWeatherData[]> {
     try {
-      const response = await axios.get(`${WEATHER_API_BASE}/forecast`, {
-        params: {
-          latitude,
-          longitude,
-          hourly: 'temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,precipitation',
-          timezone: 'America/Argentina/Buenos_Aires',
-          forecast_days: forecastDays,
-        },
+      const response = await api.get('/weather/hourly', {
+        params: { latitude, longitude, forecastDays },
       });
 
-      const data = response.data;
-
-      return data.hourly.time.map((time: string, index: number) => ({
-        time,
-        temperature: Math.round(data.hourly.temperature_2m[index]),
-        weatherCode: data.hourly.weather_code[index],
-        windSpeed: Math.round(data.hourly.wind_speed_10m[index]),
-        humidity: Math.round(data.hourly.relative_humidity_2m[index]),
-        precipitation: data.hourly.precipitation[index],
-      }));
+      return response.data;
     } catch (error) {
       console.error('Error fetching hourly weather:', error);
       throw error;

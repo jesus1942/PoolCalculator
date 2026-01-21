@@ -9,6 +9,7 @@ router.use(authenticate);
 
 // Obtener todas las actualizaciones de un proyecto
 router.get('/project/:projectId', projectUpdateController.getByProject);
+router.get('/project/:projectId/timeline', projectUpdateController.getTimeline);
 
 // Crear una nueva actualización
 router.post('/project/:projectId', projectUpdateController.create);

@@ -61,7 +61,7 @@ export const ClientLogin: React.FC = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Home size={48} className="text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Pool Calculator</h1>
+            <h1 className="text-4xl font-bold text-gray-900">Pool Installer</h1>
           </div>
           <p className="text-gray-600">Acceso al Timeline del Proyecto</p>
         </div>

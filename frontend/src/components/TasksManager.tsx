@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Project } from '@/types';
-import { Plus, Edit, Trash2, Clock, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, DollarSign, Users } from 'lucide-react';
 import api from '@/services/api';
 
 interface ProfessionRole {
@@ -13,6 +13,9 @@ interface ProfessionRole {
   description: string | null;
   hourlyRate: number | null;
   dailyRate: number | null;
+  billingType?: 'HOUR' | 'DAY' | 'M2' | 'ML' | 'BOCA';
+  ratePerUnit?: number | null;
+  bocaRates?: { label: string; price: number }[];
 }
 
 interface TaskDetail {
@@ -20,6 +23,9 @@ interface TaskDetail {
   name: string;
   description: string;
   estimatedHours?: number;
+  quantity?: number;
+  unit?: string;
+  bocaType?: string;
   laborCost?: number;
   status: 'pending' | 'in_progress' | 'completed';
   assignedRole?: string;
@@ -41,6 +47,9 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     name: '',
     description: '',
     estimatedHours: 0,
+    quantity: 0,
+    unit: '',
+    bocaType: '',
     laborCost: 0,
     status: 'pending' as 'pending' | 'in_progress' | 'completed',
     assignedRole: '',
@@ -53,6 +62,31 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     }
     loadRoles();
   }, [project]);
+
+  const calculateLaborCost = (
+    role: ProfessionRole | undefined,
+    hours: number,
+    quantity: number,
+    bocaType: string
+  ) => {
+    if (!role) return 0;
+    const billingType = role.billingType || 'HOUR';
+
+    if (billingType === 'M2' || billingType === 'ML') {
+      if (!role.ratePerUnit || quantity <= 0) return 0;
+      return quantity * role.ratePerUnit;
+    }
+
+    if (billingType === 'BOCA') {
+      if (!role.bocaRates || !bocaType || quantity <= 0) return 0;
+      const rate = role.bocaRates.find((item) => item.label === bocaType)?.price || 0;
+      return quantity * rate;
+    }
+
+    const hourlyRate = role.hourlyRate || (role.dailyRate ? role.dailyRate / 8 : 0);
+    if (!hourlyRate || hours <= 0) return 0;
+    return hours * hourlyRate;
+  };
 
   const loadRoles = async () => {
     try {
@@ -79,6 +113,9 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
       name: '',
       description: '',
       estimatedHours: 0,
+      quantity: 0,
+      unit: '',
+      bocaType: '',
       laborCost: 0,
       status: 'pending',
       assignedRole: '',
@@ -94,6 +131,9 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
       name: task.name,
       description: task.description,
       estimatedHours: task.estimatedHours || 0,
+      quantity: task.quantity || 0,
+      unit: task.unit || '',
+      bocaType: task.bocaType || '',
       laborCost: task.laborCost || 0,
       status: task.status,
       assignedRole: task.assignedRole || '',
@@ -102,28 +142,39 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     setShowModal(true);
   };
 
-  const handleDeleteTask = (category: string, taskId: string) => {
+  const handleDeleteTask = async (category: string, taskId: string) => {
     if (!confirm('¿Estás seguro de eliminar esta tarea?')) return;
 
+    const previousTasks = tasks;
     const updatedTasks = { ...tasks };
     updatedTasks[category] = (updatedTasks[category] || []).filter(t => t.id !== taskId);
     setTasks(updatedTasks);
+
+    try {
+      await onSave(updatedTasks);
+    } catch (error) {
+      console.error('Error al guardar tareas:', error);
+      setTasks(previousTasks);
+      alert('Error al eliminar la tarea');
+    }
   };
 
   const handleRoleChange = (roleId: string) => {
     const selectedRole = roles.find(r => r.id === roleId);
     if (selectedRole) {
-      // Calcular costo automáticamente si hay horas estimadas y tarifa por hora
-      let calculatedCost = formData.laborCost;
-      if (formData.estimatedHours > 0 && selectedRole.hourlyRate) {
-        calculatedCost = formData.estimatedHours * selectedRole.hourlyRate;
-      }
+      const calculatedCost = calculateLaborCost(
+        selectedRole,
+        formData.estimatedHours,
+        formData.quantity,
+        formData.bocaType
+      );
 
       setFormData({
         ...formData,
         assignedRoleId: roleId,
         assignedRole: selectedRole.name,
         laborCost: calculatedCost,
+        unit: selectedRole.billingType === 'M2' ? 'm2' : selectedRole.billingType === 'ML' ? 'ml' : selectedRole.billingType === 'BOCA' ? 'boca' : formData.unit,
       });
     } else {
       setFormData({
@@ -135,17 +186,47 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
   };
 
   const handleHoursChange = (hours: number) => {
-    // Recalcular costo si hay un rol asignado con tarifa
     const selectedRole = roles.find(r => r.id === formData.assignedRoleId);
-    let calculatedCost = formData.laborCost;
-
-    if (selectedRole && selectedRole.hourlyRate) {
-      calculatedCost = hours * selectedRole.hourlyRate;
-    }
+    const calculatedCost = calculateLaborCost(
+      selectedRole,
+      hours,
+      formData.quantity,
+      formData.bocaType
+    );
 
     setFormData({
       ...formData,
       estimatedHours: hours,
+      laborCost: calculatedCost,
+    });
+  };
+
+  const handleQuantityChange = (quantity: number) => {
+    const selectedRole = roles.find(r => r.id === formData.assignedRoleId);
+    const calculatedCost = calculateLaborCost(
+      selectedRole,
+      formData.estimatedHours,
+      quantity,
+      formData.bocaType
+    );
+    setFormData({
+      ...formData,
+      quantity,
+      laborCost: calculatedCost,
+    });
+  };
+
+  const handleBocaTypeChange = (bocaType: string) => {
+    const selectedRole = roles.find(r => r.id === formData.assignedRoleId);
+    const calculatedCost = calculateLaborCost(
+      selectedRole,
+      formData.estimatedHours,
+      formData.quantity,
+      bocaType
+    );
+    setFormData({
+      ...formData,
+      bocaType,
       laborCost: calculatedCost,
     });
   };
@@ -161,6 +242,9 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
       name: formData.name,
       description: formData.description,
       estimatedHours: formData.estimatedHours,
+      quantity: formData.quantity,
+      unit: formData.unit,
+      bocaType: formData.bocaType,
       laborCost: formData.laborCost,
       status: formData.status,
       assignedRole: formData.assignedRole,
@@ -215,6 +299,9 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     return { totalHours, totalCost };
   };
 
+  const selectedRole = roles.find(r => r.id === formData.assignedRoleId);
+  const selectedBillingType = selectedRole?.billingType || 'HOUR';
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -260,13 +347,31 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
                         <p className="text-sm text-gray-600 mb-2">{task.description}</p>
                         <div className="flex gap-4 text-xs text-gray-500">
                           {task.estimatedHours && (
-                            <span>⏱️ {task.estimatedHours} horas</span>
+                            <span className="flex items-center gap-1">
+                              <Clock size={12} />
+                              {task.estimatedHours} horas
+                            </span>
+                          )}
+                          {task.quantity && (
+                            <span className="flex items-center gap-1">
+                              <Users size={12} />
+                              {task.quantity} {task.unit || ''}
+                              {task.bocaType ? ` · ${task.bocaType}` : ''}
+                            </span>
                           )}
                           {task.laborCost && (
-                            <span>💰 ${task.laborCost.toLocaleString('es-AR')}</span>
+                            <span className="flex items-center gap-1">
+                              <DollarSign size={12} />
+                              ${task.laborCost.toLocaleString('es-AR')}
+                            </span>
                           )}
                           {task.assignedRole && (
-                            <span>👷 {task.assignedRole}</span>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                              </svg>
+                              {task.assignedRole}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -344,35 +449,106 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
                   {role.name}
                   {role.hourlyRate && ` - $${role.hourlyRate.toLocaleString('es-AR')}/hora`}
                   {role.dailyRate && !role.hourlyRate && ` - $${role.dailyRate.toLocaleString('es-AR')}/día`}
+                  {role.billingType === 'M2' && role.ratePerUnit && ` - $${role.ratePerUnit.toLocaleString('es-AR')}/m²`}
+                  {role.billingType === 'ML' && role.ratePerUnit && ` - $${role.ratePerUnit.toLocaleString('es-AR')}/ml`}
                 </option>
               ))}
             </select>
             {formData.assignedRoleId && (
               <p className="text-xs text-gray-500 mt-1">
-                El costo se calculará automáticamente según las horas y la tarifa del rol
+                El costo se calculará automáticamente según el tipo de cobro del rol
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Horas estimadas"
-              type="number"
-              value={formData.estimatedHours}
-              onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
-              min={0}
-              step={0.5}
-            />
+          {selectedBillingType === 'BOCA' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Tipo de boca</label>
+                <select
+                  value={formData.bocaType}
+                  onChange={(e) => handleBocaTypeChange(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="">Seleccionar</option>
+                  {(selectedRole?.bocaRates || []).map((rate) => (
+                    <option key={rate.label} value={rate.label}>
+                      {rate.label} - ${Number(rate.price).toLocaleString('es-AR')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Input
+                label="Cantidad de bocas"
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={1}
+              />
+            </div>
+          )}
 
-            <Input
-              label="Costo de mano de obra"
-              type="number"
-              value={formData.laborCost}
-              onChange={(e) => setFormData({ ...formData, laborCost: parseFloat(e.target.value) || 0 })}
-              min={0}
-              disabled={!!(formData.assignedRoleId && roles.find(r => r.id === formData.assignedRoleId)?.hourlyRate)}
-            />
-          </div>
+          {(selectedBillingType === 'M2' || selectedBillingType === 'ML') && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label={`Cantidad (${selectedBillingType === 'M2' ? 'm²' : 'ml'})`}
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => handleQuantityChange(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={0.1}
+              />
+              <Input
+                label="Unidad"
+                value={formData.unit || (selectedBillingType === 'M2' ? 'm2' : 'ml')}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              />
+            </div>
+          )}
+
+          {(selectedBillingType === 'HOUR' || selectedBillingType === 'DAY') && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Horas estimadas"
+                type="number"
+                value={formData.estimatedHours}
+                onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={0.5}
+              />
+
+              <Input
+                label="Costo de mano de obra"
+                type="number"
+                value={formData.laborCost}
+                onChange={(e) => setFormData({ ...formData, laborCost: parseFloat(e.target.value) || 0 })}
+                min={0}
+                disabled={!!(formData.assignedRoleId && (selectedRole?.hourlyRate || selectedRole?.dailyRate))}
+              />
+            </div>
+          )}
+
+          {(selectedBillingType === 'M2' || selectedBillingType === 'ML' || selectedBillingType === 'BOCA') && (
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Costo de mano de obra"
+                type="number"
+                value={formData.laborCost}
+                onChange={(e) => setFormData({ ...formData, laborCost: parseFloat(e.target.value) || 0 })}
+                min={0}
+                disabled={!!formData.assignedRoleId}
+              />
+              <Input
+                label="Horas estimadas (opcional)"
+                type="number"
+                value={formData.estimatedHours}
+                onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
+                min={0}
+                step={0.5}
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Estado</label>

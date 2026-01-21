@@ -9,10 +9,21 @@ pkill -f "tsx watch" 2>/dev/null
 
 sleep 2
 
-# Verificar PostgreSQL
+# Verificar PostgreSQL Docker
+echo "Verificando PostgreSQL Docker..."
 if ! docker ps | grep -q pool-calculator-db; then
-    echo "Iniciando PostgreSQL..."
-    docker start pool-calculator-db 2>/dev/null || echo "PostgreSQL ya está corriendo"
+    if docker ps -a | grep -q pool-calculator-db; then
+        echo "Iniciando contenedor pool-calculator-db..."
+        docker start pool-calculator-db
+        echo "✓ PostgreSQL iniciado en puerto 5433"
+        sleep 3
+    else
+        echo "ERROR: Contenedor pool-calculator-db no existe"
+        echo "Ejecutá: docker run --name pool-calculator-db -e POSTGRES_PASSWORD=password -e POSTGRES_USER=usuario -e POSTGRES_DB=poolcalculator -p 5433:5432 -d postgres:15"
+        exit 1
+    fi
+else
+    echo "✓ PostgreSQL ya está corriendo en puerto 5433"
 fi
 
 echo ""

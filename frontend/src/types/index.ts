@@ -2,7 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN' | 'INSTALLER';
+  currentOrgId?: string | null;
 }
 
 export interface AuthResponse {
@@ -32,6 +33,7 @@ export interface PoolPreset {
   imageUrl?: string;
   additionalImages?: string[];
   backDescription?: string;
+  vendor?: string;
   length: number;
   width: number;
   depth: number;
@@ -78,6 +80,9 @@ export interface TilePreset {
   pricePerUnit: number;
   brand?: string;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
   hasCorner: boolean;
   cornerPricePerUnit?: number;
   cornersPerTile?: number;
@@ -93,6 +98,9 @@ export interface AccessoryPreset {
   unit: string;
   pricePerUnit: number;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,6 +116,10 @@ export interface EquipmentPreset {
   voltage?: number;
   pricePerUnit: number;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
+  datasheet?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +133,9 @@ export interface ConstructionMaterialPreset {
   pricePerUnit: number;
   brand?: string;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,6 +185,7 @@ export interface Project {
     tiles?: TaskDetail;
     finishes?: TaskDetail;
   };
+  exportSettings?: any;
   laborCost: number;
   materialCost: number;
   totalCost: number;
@@ -205,4 +221,101 @@ export interface PlumbingItem {
   pricePerUnit: number;
   brand?: string;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
+}
+
+// Professional Calculations Types
+export interface PipeLoss {
+  type: string;
+  diameter: number;
+  length: number;
+  velocity: number;
+  loss: number;
+  isValid: boolean;
+  warning?: string;
+}
+
+export interface FittingLoss {
+  type: string;
+  diameter: number;
+  quantity: number;
+  kCoefficient: number;
+  loss: number;
+}
+
+export interface HydraulicAnalysis {
+  projectId: string;
+  flowRate: number;
+  staticLift: number;
+  distanceToEquipment: number;
+  suctionPipeLoss: PipeLoss;
+  returnPipeLoss: PipeLoss;
+  fittingLosses: FittingLoss[];
+  totalFrictionLoss: number;
+  totalSingularLoss: number;
+  tdh: number;
+  recommendedPump?: {
+    id: string;
+    name: string;
+    brand: string;
+    model: string;
+    power: number;
+    maxTdh: number;
+    flowRate: number;
+    imageUrl?: string;
+  };
+  warnings: string[];
+  errors: string[];
+}
+
+export interface CableSpecification {
+  phase: number;
+  crossSection: number;
+  maxCurrent: number;
+  voltageDrop: number;
+  voltageDropPercent: number;
+  isValid: boolean;
+  warning?: string;
+}
+
+export interface Protection {
+  type: 'BREAKER' | 'RCD';
+  rating: number;
+  poles: number;
+  breakingCapacity?: number;
+  leakageCurrent?: number;
+}
+
+export interface LoadDetail {
+  name: string;
+  type: string;
+  power: number;
+  voltage: number;
+  current: number;
+  powerFactor: number;
+}
+
+export interface OperatingCost {
+  dailyCost: number;
+  monthlyCost: number;
+  annualCost: number;
+  electricityCostPerKwh: number;
+}
+
+export interface ElectricalAnalysis {
+  projectId: string;
+  totalInstalledPower: number;
+  totalDemandPower: number;
+  totalCurrent: number;
+  voltage: number;
+  distanceToPanel: number;
+  cable: CableSpecification;
+  breaker: Protection;
+  rcd: Protection;
+  loads: LoadDetail[];
+  operatingCost: OperatingCost;
+  warnings: string[];
+  errors: string[];
 }

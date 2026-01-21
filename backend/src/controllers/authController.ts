@@ -3,6 +3,57 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
 import { generateToken } from '../config/jwt';
 
+const ensureCurrentOrganization = async (userId: string, name: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, currentOrgId: true },
+  });
+
+  if (user?.currentOrgId) {
+    const membership = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: user.currentOrgId,
+          userId,
+        },
+      },
+    });
+    if (!membership) {
+      await prisma.organizationMember.create({
+        data: {
+          organizationId: user.currentOrgId,
+          userId,
+          role: 'MEMBER',
+        },
+      });
+    }
+    return user.currentOrgId;
+  }
+
+  const org = await prisma.organization.create({
+    data: {
+      name: `Org de ${name}`,
+      slug: `org-${userId.slice(0, 8)}`,
+      ownerId: userId,
+    },
+  });
+
+  await prisma.organizationMember.create({
+    data: {
+      organizationId: org.id,
+      userId,
+      role: 'OWNER',
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { currentOrgId: org.id },
+  });
+
+  return org.id;
+};
+
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body;
@@ -14,16 +65,33 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const defaultOrg = await prisma.organization.findFirst({
+      where: { slug: 'domotics-iot' },
+      select: { id: true },
+    });
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         provider: 'EMAIL', // Marcar como usuario de email/password
+        currentOrgId: defaultOrg?.id || null,
       },
     });
 
-    const token = generateToken(user.id, user.email, user.role);
+    if (defaultOrg?.id) {
+      await prisma.organizationMember.create({
+        data: {
+          organizationId: defaultOrg.id,
+          userId: user.id,
+          role: 'MEMBER',
+        },
+      });
+    }
+
+    const orgId = await ensureCurrentOrganization(user.id, user.name);
+    const token = generateToken(user.id, user.email, user.role, orgId);
 
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
@@ -33,6 +101,7 @@ export const register = async (req: Request, res: Response) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        currentOrgId: orgId,
       },
     });
   } catch (error) {
@@ -76,7 +145,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const token = generateToken(user.id, user.email, user.role);
+    const orgId = await ensureCurrentOrganization(user.id, user.name);
+    const token = generateToken(user.id, user.email, user.role, orgId);
     console.log('✅ [AUTH] Login exitoso:', user.email, '| Rol:', user.role);
 
     res.json({
@@ -87,6 +157,7 @@ export const login = async (req: Request, res: Response) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        currentOrgId: orgId,
       },
     });
   } catch (error) {

@@ -5,11 +5,13 @@ import { authService } from '@/services/authService';
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (email: string, password: string, name: string) => Promise<User>;
   logout: () => void;
+  updateSession: (user: User, token: string) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isInstaller: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(response.user);
     authService.setToken(response.token);
     authService.setUser(response.user);
+    return response.user;
   };
 
   const register = async (email: string, password: string, name: string) => {
@@ -41,12 +44,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(response.user);
     authService.setToken(response.token);
     authService.setUser(response.user);
+    return response.user;
   };
 
   const logout = () => {
     authService.logout();
     setToken(null);
     setUser(null);
+  };
+
+  const updateSession = (nextUser: User, nextToken: string) => {
+    setToken(nextToken);
+    setUser(nextUser);
+    authService.setToken(nextToken);
+    authService.setUser(nextUser);
   };
 
   return (
@@ -57,8 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        updateSession,
         isAuthenticated: !!token,
-        isAdmin: user?.role === 'ADMIN',
+        isAdmin: user?.role === 'ADMIN' || user?.role === 'SUPERADMIN',
+        isInstaller: user?.role === 'INSTALLER',
       }}
     >
       {children}

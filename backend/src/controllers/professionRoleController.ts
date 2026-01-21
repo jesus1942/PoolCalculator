@@ -7,9 +7,13 @@ const parseFormData = (body: any) => {
   
   for (const key in body) {
     const value = body[key];
-    
-    if (['hourlyRate', 'dailyRate'].includes(key)) {
-      parsed[key] = value ? parseFloat(value) : null;
+
+    if (['hourlyRate', 'dailyRate', 'ratePerUnit'].includes(key)) {
+      parsed[key] = value !== undefined && value !== '' ? parseFloat(value) : null;
+    } else if (key === 'bocaRates') {
+      parsed[key] = value || [];
+    } else if (key === 'billingType') {
+      parsed[key] = value || 'HOUR';
     } else {
       parsed[key] = value || null;
     }

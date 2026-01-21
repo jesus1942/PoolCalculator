@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { poolPresetService } from '@/services/poolPresetService';
 import { PoolPreset, PoolShape } from '@/types';
-import { Plus, Edit, Trash2, Calculator } from 'lucide-react';
+import { Plus, Edit, Trash2, Calculator, Filter } from 'lucide-react';
+import { getImageUrl } from '@/utils/imageUtils';
+import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';
 
 export const PoolPresets: React.FC = () => {
   const [presets, setPresets] = useState<PoolPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPreset, setEditingPreset] = useState<PoolPreset | null>(null);
+  const [selectedVendor, setSelectedVendor] = useState<string>('all');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -37,6 +40,23 @@ export const PoolPresets: React.FC = () => {
   const loadPresets = async () => {
     try {
       const data = await poolPresetService.getAll();
+      console.log('📊 Presets cargados:', data.length);
+
+      // Debug: Ver cuántos tienen imageUrl
+      const withImages = data.filter(p => p.imageUrl);
+      console.log('🖼️  Presets con imageUrl:', withImages.length);
+
+      // Debug: Ver los primeros 3 con vendor
+      const withVendor = data.filter(p => p.vendor);
+      console.log('🏷️  Presets con vendor:', withVendor.length);
+      if (withVendor.length > 0) {
+        console.log('📋 Primer preset con vendor:', {
+          name: withVendor[0].name,
+          vendor: withVendor[0].vendor,
+          imageUrl: withVendor[0].imageUrl ? 'PRESENTE' : 'AUSENTE'
+        });
+      }
+
       setPresets(data);
     } catch (error) {
       console.error('Error al cargar presets:', error);
@@ -120,6 +140,25 @@ export const PoolPresets: React.FC = () => {
     { value: 'JACUZZI', label: 'Jacuzzi' },
   ];
 
+  // Obtener lista única de fabricantes
+  const vendors = useMemo(() => {
+    const vendorSet = new Set<string>();
+    presets.forEach(preset => {
+      if (preset.vendor) {
+        vendorSet.add(preset.vendor);
+      }
+    });
+    return Array.from(vendorSet).sort();
+  }, [presets]);
+
+  // Filtrar presets por fabricante seleccionado
+  const filteredPresets = useMemo(() => {
+    if (selectedVendor === 'all') {
+      return presets;
+    }
+    return presets.filter(preset => preset.vendor === selectedVendor);
+  }, [presets, selectedVendor]);
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -141,12 +180,63 @@ export const PoolPresets: React.FC = () => {
         </Button>
       </div>
 
+      {/* Filtro por fabricante */}
+      {vendors.length > 0 && (
+        <div className="mb-6 flex items-center gap-3">
+          <Filter size={20} className="text-gray-500" />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedVendor('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                selectedVendor === 'all'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Todos ({presets.length})
+            </button>
+            {vendors.map((vendor) => (
+              <button
+                key={vendor}
+                onClick={() => setSelectedVendor(vendor)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  selectedVendor === vendor
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {vendor} ({presets.filter(p => p.vendor === vendor).length})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {presets.map((preset) => (
+        {filteredPresets.map((preset) => (
           <Card key={preset.id} className="hover:shadow-lg transition-shadow">
             <div className="space-y-4">
+              {/* Imagen del modelo con zoom hover */}
+              {preset.imageUrl && (
+                <div className="w-full h-48 bg-gray-100 rounded-lg">
+                  <ImageHoverZoom
+                    src={getImageUrl(preset.imageUrl) || ''}
+                    alt={preset.name}
+                    className="w-full h-full object-cover rounded-lg"
+                    containerClassName="w-full h-full"
+                  />
+                </div>
+              )}
+
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{preset.name}</h3>
+                <div className="flex items-start justify-between">
+                  <h3 className="text-xl font-semibold text-gray-900">{preset.name}</h3>
+                  {preset.vendor && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                      {preset.vendor}
+                    </span>
+                  )}
+                </div>
                 {preset.description && (
                   <p className="text-sm text-gray-600 mt-1">{preset.description}</p>
                 )}

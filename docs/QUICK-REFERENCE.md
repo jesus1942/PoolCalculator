@@ -136,9 +136,9 @@ pool-calculator/
 │
 ├── .claude-context.json     # Contexto de Claude (NUEVO)
 ├── context-manager.py       # Script de contexto (NUEVO)
-├── CONTEXT-SYSTEM.md        # Docs del sistema de contexto (NUEVO)
+├── docs/CONTEXT-SYSTEM.md        # Docs del sistema de contexto (NUEVO)
 ├── control.sh               # Script de control principal
-├── NUEVAS_FUNCIONALIDADES.md
+├── docs/NUEVAS_FUNCIONALIDADES.md
 └── README.md (si existe)
 ```
 
@@ -252,8 +252,8 @@ python3 context-manager.py add "Descripción del cambio"
 
 ## 📞 Ayuda
 
-- **Documentación completa de funcionalidades**: `NUEVAS_FUNCIONALIDADES.md`
-- **Sistema de contexto**: `CONTEXT-SYSTEM.md`
+- **Documentación completa de funcionalidades**: `docs/NUEVAS_FUNCIONALIDADES.md`
+- **Sistema de contexto**: `docs/CONTEXT-SYSTEM.md`
 - **Estructura detallada**: `estructura_proyecto_20251007_203143.txt`
 
 ---
