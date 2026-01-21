@@ -78,5 +78,8 @@ backend/logs/
 *.seed
 *.pid.lock
 
+# Embedded Gradle distribution
+android-app/gradle-8.1.1/
+
 # Local repo not tracked
 PoolCalculatorRN/
