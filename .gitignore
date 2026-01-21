@@ -83,3 +83,7 @@ android-app/gradle-8.1.1/
 
 # Local repo not tracked
 PoolCalculatorRN/
+
+# Mobile apps no longer tracked
+android-app/
+mobile/
