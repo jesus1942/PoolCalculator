@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
-  base: '/PoolCalculator/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/PoolCalculator/' : '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -23,4 +23,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

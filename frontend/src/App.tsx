@@ -33,10 +33,12 @@ function HomeRedirect() {
 }
 
 function App() {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   return (
     <AuthProvider>
-      <Router basename="/PoolCalculator">
+      <Router basename={basePath}>
         <Routes>
+          {basePath === '' && <Route path="/PoolCalculator/*" element={<Navigate to="/" replace />} />}
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/landing" element={<Landing />} />
           <Route path="/login" element={<Login />} />
