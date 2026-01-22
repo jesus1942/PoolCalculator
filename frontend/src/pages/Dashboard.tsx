@@ -250,7 +250,7 @@ export const Dashboard: React.FC = () => {
   const newYearInfo = useMemo(() => {
     const now = new Date();
     const isJan1 = now.getMonth() === 0 && now.getDate() === 1;
-    const showEfemerides = now.getMonth() === 11 || now.getMonth() === 0;
+    const showEfemerides = false;
     const nextYear = new Date(now.getFullYear() + 1, 0, 1);
     const diffMs = nextYear.getTime() - now.getTime();
     const daysUntil = isJan1 ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
