@@ -35,7 +35,7 @@ function HomeRedirect() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/PoolCalculator">
         <Routes>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/landing" element={<Landing />} />
