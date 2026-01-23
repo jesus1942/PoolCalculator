@@ -10,6 +10,7 @@ import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 interface EnhancedExportManagerProps {
   project: Project;
@@ -78,8 +79,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // -------------------------------
   // Branding (logo) para exportación
   // -------------------------------
-  const DEFAULT_BRAND_LOGO_DARK_URL = '/domotics-logo-dark.png';
-  const DEFAULT_BRAND_LOGO_LIGHT_URL = '/domotics-logo-light.png';
+  const DEFAULT_BRAND_LOGO_DARK_URL = publicAssetUrl('domotics-logo-dark.png');
+  const DEFAULT_BRAND_LOGO_LIGHT_URL = publicAssetUrl('domotics-logo-light.png');
   const [brandLogoDarkDataUrl, setBrandLogoDarkDataUrl] = useState<string | null>(null);
   const [brandLogoLightDataUrl, setBrandLogoLightDataUrl] = useState<string | null>(null);
   const [brandLogoError, setBrandLogoError] = useState<string>('');

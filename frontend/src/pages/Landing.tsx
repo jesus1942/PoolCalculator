@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Waves, Calculator, DollarSign, FileText, Users, Zap, CheckCircle, ArrowRight, MessageSquare, Send, Menu, X, Star } from 'lucide-react';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 // Lazy load componentes pesados para mejorar rendimiento
 const ProjectsCarousel = lazy(() => import('@/components/landing/ProjectsCarousel').then(m => ({ default: m.ProjectsCarousel })));
@@ -131,7 +132,7 @@ export const Landing: React.FC = () => {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-4 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <div className="h-12 w-12 rounded-2xl bg-black border border-white/10 flex items-center justify-center">
-                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-7 w-auto" />
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-7 w-auto" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">Pool Installer</h1>
@@ -640,7 +641,7 @@ export const Landing: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-black border border-white/10 flex items-center justify-center">
-                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-6 w-auto" />
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-6 w-auto" />
               </div>
               <div>
                 <p className="text-white font-semibold">Pool Installer</p>

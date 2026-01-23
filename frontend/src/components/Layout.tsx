@@ -5,6 +5,7 @@ import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileTex
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { organizationService, OrganizationItem } from '@/services/organizationService';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 export const Layout: React.FC = () => {
   const { user, logout, updateSession } = useAuth();
@@ -84,7 +85,7 @@ export const Layout: React.FC = () => {
               title="Ir al inicio"
             >
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-white/10 shadow-md">
-                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-5 w-auto" />
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-5 w-auto" />
               </span>
               Pool Installer
             </button>

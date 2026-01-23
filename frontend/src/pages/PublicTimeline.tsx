@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import { Clock, AlertTriangle, CheckCircle, FileText, Eye, Package, Home, Calendar, MessageCircle, Download } from 'lucide-react';
 import { API_BASE_URL } from '@/services/api';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 interface ProjectUpdate {
   id: string;
@@ -193,7 +194,7 @@ export const PublicTimeline: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 text-cyan-300">
               <div className="h-9 w-9 rounded-xl bg-black border border-white/10 flex items-center justify-center">
-                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-5 w-auto" />
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-5 w-auto" />
               </div>
               <span className="font-semibold text-lg text-white">Pool Installer</span>
             </div>

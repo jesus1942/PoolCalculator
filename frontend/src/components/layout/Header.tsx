@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { LogOut, User, Settings, Layout, Waves, Menu, X, Database, Calendar } from 'lucide-react';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 export const Header: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -35,7 +36,7 @@ export const Header: React.FC = () => {
               <div className="relative">
                 <div className="absolute inset-0 rounded-2xl bg-white/10 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative h-10 w-10 rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
-                  <img src="/logo-isotipo.png" alt="Pool Installer" className="h-6 w-auto" />
+                  <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-6 w-auto" />
                 </div>
               </div>
               <span className="text-xl font-light text-white tracking-wide">

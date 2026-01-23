@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Upload, X, Waves, Layers, ChevronLeft, ChevronRight
 import FlipCard from '@/components/ui/FlipCard';
 import { getImageUrl } from '@/utils/imageUtils';
 import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 // Componente de Card individual con FlipCard
 const PoolPresetCard: React.FC<{
@@ -20,7 +21,7 @@ const PoolPresetCard: React.FC<{
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Logo por defecto si no hay imágenes adicionales
-  const defaultBackImage = '/logo-isotipo.png';
+  const defaultBackImage = publicAssetUrl('logo-isotipo.png');
   const additionalImages = preset.additionalImages && preset.additionalImages.length > 0
     ? preset.additionalImages
     : [defaultBackImage];

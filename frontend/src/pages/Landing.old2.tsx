@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Waves, Calculator, DollarSign, FileText, Users, Zap, CheckCircle, ArrowRight } from 'lucide-react';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 export const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="Domotics & IoT Solutions" className="h-12 w-auto" />
+              <img src={publicAssetUrl('logo.png')} alt="Domotics & IoT Solutions" className="h-12 w-auto" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Pool Installer</h1>
                 <p className="text-sm text-gray-600">by Domotics & IoT Solutions</p>
@@ -245,7 +246,7 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="Domotics & IoT Solutions" className="h-10 w-auto opacity-80" />
+              <img src={publicAssetUrl('logo.png')} alt="Domotics & IoT Solutions" className="h-10 w-auto opacity-80" />
               <div>
                 <p className="text-white font-semibold">Pool Installer</p>
                 <p className="text-sm">Sistema completo de cálculo de materiales</p>

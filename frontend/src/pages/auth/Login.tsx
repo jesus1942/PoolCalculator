@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 // Para OAuth necesitamos la URL base sin /api
 const BACKEND_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '');
@@ -57,7 +58,7 @@ export const Login: React.FC = () => {
           <div className="p-8">
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-black border border-black/80 flex items-center justify-center shadow-lg">
-                <img src="/logo-isotipo.png" alt="Pool Installer" className="h-9 w-auto" />
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-9 w-auto" />
               </div>
             </div>
 
