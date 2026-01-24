@@ -1,0 +1,14 @@
+[phases.install]
+cmds = [
+  "npm --prefix frontend ci",
+  "npm --prefix backend ci"
+]
+
+[phases.build]
+cmds = [
+  "npm --prefix frontend run build",
+  "npm --prefix backend run build"
+]
+
+[start]
+cmd = "node backend/dist/index.js"
