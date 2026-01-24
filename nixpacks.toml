@@ -12,3 +12,5 @@ cmds = [
 
 [start]
 cmd = "node backend/dist/index.js"
+[providers]
+node = "20"
