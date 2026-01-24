@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RemindersProvider } from '@/context/RemindersContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -34,9 +34,10 @@ function HomeRedirect() {
 
 function App() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const Router = import.meta.env.PROD ? HashRouter : BrowserRouter;
   return (
     <AuthProvider>
-      <Router basename={basePath}>
+      <Router basename={basePath || undefined}>
         <Routes>
           {basePath === '' && <Route path="/PoolCalculator/*" element={<Navigate to="/" replace />} />}
           <Route path="/" element={<HomeRedirect />} />
