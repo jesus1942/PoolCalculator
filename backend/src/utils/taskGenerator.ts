@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 interface PoolPreset {
   shape: string;
@@ -107,7 +107,7 @@ export function generateDefaultTasks(
   const excavationVolume = volume * 1.5; // Volumen con colchón
 
   tasks.excavation.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Replanteo y marcación del terreno',
     description: `Marcación de ${poolPreset.length}m x ${poolPreset.width}m con colchones laterales`,
     estimatedHours: 2,
@@ -120,7 +120,7 @@ export function generateDefaultTasks(
   // Calcular horas de excavación: ~0.8 horas por m³
   const excavationHours = Math.ceil(excavationVolume * 0.8);
   tasks.excavation.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Excavación de terreno',
     description: `Excavación de aproximadamente ${excavationVolume.toFixed(2)}m³ (incluye colchones)`,
     estimatedHours: excavationHours,
@@ -131,7 +131,7 @@ export function generateDefaultTasks(
   });
 
   tasks.excavation.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Nivelación y compactación del fondo',
     description: 'Preparación del terreno para colocación de piscina',
     estimatedHours: 4,
@@ -151,7 +151,7 @@ export function generateDefaultTasks(
     const skimmerHours = 2 * poolPreset.skimmerCount;
     hydraulicExtraHours += skimmerHours;
     tasks.hydraulic.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: `Instalación de ${poolPreset.skimmerCount} skimmer(s)`,
       description: 'Colocación y conexión de skimmers',
       estimatedHours: skimmerHours,
@@ -165,7 +165,7 @@ export function generateDefaultTasks(
   if (poolPreset.hasBottomDrain) {
     hydraulicExtraHours += 3;
     tasks.hydraulic.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: 'Instalación de desagüe de fondo',
       description: 'Colocación y conexión del desagüe principal',
       estimatedHours: 3,
@@ -180,7 +180,7 @@ export function generateDefaultTasks(
     const vacuumHours = 1.5 * poolPreset.vacuumIntakeCount;
     hydraulicExtraHours += vacuumHours;
     tasks.hydraulic.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: `Instalación de ${poolPreset.vacuumIntakeCount} toma(s) de barrefondo`,
       description: 'Colocación de tomas para barrefondo',
       estimatedHours: vacuumHours,
@@ -193,7 +193,7 @@ export function generateDefaultTasks(
 
   const returnsHours = 1.5 * poolPreset.returnsCount;
   tasks.hydraulic.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: `Instalación de ${poolPreset.returnsCount} retorno(s)`,
     description: 'Instalación de retornos de agua',
     estimatedHours: returnsHours,
@@ -207,7 +207,7 @@ export function generateDefaultTasks(
     const hydroJetsHours = 2 * poolPreset.hydroJetsCount;
     hydraulicExtraHours += hydroJetsHours;
     tasks.hydraulic.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: `Instalación de ${poolPreset.hydroJetsCount} hidrojet(s)`,
       description: 'Colocación y conexión de hidromasaje',
       estimatedHours: hydroJetsHours,
@@ -219,7 +219,7 @@ export function generateDefaultTasks(
   }
 
   tasks.hydraulic.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Tendido de cañerías principales',
     description: 'Instalación de cañerías de impulsión y succión',
     estimatedHours: hydraulicBaseHours,
@@ -230,7 +230,7 @@ export function generateDefaultTasks(
   });
 
   tasks.hydraulic.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Prueba hidráulica y detección de fugas',
     description: 'Prueba de presión de todo el sistema hidráulico',
     estimatedHours: 2,
@@ -246,7 +246,7 @@ export function generateDefaultTasks(
   if (poolPreset.hasLighting) {
     const lightingHours = 3 * poolPreset.lightingCount;
     tasks.electrical.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: `Instalación de ${poolPreset.lightingCount} luz(ces)`,
       description: `Instalación eléctrica de iluminación LED`,
       estimatedHours: lightingHours,
@@ -261,7 +261,7 @@ export function generateDefaultTasks(
   }
 
   tasks.electrical.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Tendido de cableado eléctrico',
     description: 'Instalación de cableado para bombas y equipamiento',
     estimatedHours: 6,
@@ -272,7 +272,7 @@ export function generateDefaultTasks(
   });
 
   tasks.electrical.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Conexión de tablero eléctrico',
     description: 'Instalación y configuración del tablero de comando',
     estimatedHours: 4,
@@ -286,7 +286,7 @@ export function generateDefaultTasks(
   });
 
   tasks.electrical.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Prueba eléctrica y puesta en marcha',
     description: 'Verificación de todo el sistema eléctrico',
     estimatedHours: 2,
@@ -305,7 +305,7 @@ export function generateDefaultTasks(
   const meshHours = Math.ceil(floorHours * 0.2);
 
   tasks.floor.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Colocación de geomembrana',
     description: `Instalación de geomembrana en ${floorArea.toFixed(2)}m²`,
     estimatedHours: geomembraneHours,
@@ -318,7 +318,7 @@ export function generateDefaultTasks(
   });
 
   tasks.floor.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Colocación de malla electrosoldada',
     description: 'Instalación de malla de refuerzo',
     estimatedHours: meshHours,
@@ -331,7 +331,7 @@ export function generateDefaultTasks(
   });
 
   tasks.floor.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Preparación y colado de cama de arena-cemento',
     description: `Preparación de ${(floorArea * 0.1).toFixed(2)}m³ de mezcla y colado`,
     estimatedHours: floorHours,
@@ -347,7 +347,7 @@ export function generateDefaultTasks(
   // COLOCACIÓN DE PISCINA Y LOSETAS
   // ========================
   tasks.tiles.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Colocación de piscina de fibra',
     description: `Posicionamiento y nivelación de piscina ${poolPreset.shape}`,
     estimatedHours: 8,
@@ -359,7 +359,7 @@ export function generateDefaultTasks(
 
   const tileHours = Math.ceil(perimeter * 0.8); // 0.8 horas por metro lineal
   tasks.tiles.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Colocación de losetas perimetrales',
     description: `Colocación de losetas en ${perimeter.toFixed(2)}m de perímetro`,
     estimatedHours: tileHours,
@@ -373,7 +373,7 @@ export function generateDefaultTasks(
 
   if (poolPreset.hasWetDeck) {
     tasks.tiles.push({
-      id: uuidv4(),
+      id: randomUUID(),
       name: 'Construcción de playa húmeda',
       description: 'Preparación y terminación de área de playa húmeda',
       estimatedHours: 12,
@@ -389,7 +389,7 @@ export function generateDefaultTasks(
   // ========================
   const groutingHours = Math.ceil(perimeter * 0.3);
   tasks.finishes.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Pastinado de juntas',
     description: 'Terminación de juntas entre losetas',
     estimatedHours: groutingHours,
@@ -400,7 +400,7 @@ export function generateDefaultTasks(
   });
 
   tasks.finishes.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Limpieza final de obra',
     description: 'Limpieza general del área de trabajo',
     estimatedHours: 4,
@@ -411,7 +411,7 @@ export function generateDefaultTasks(
   });
 
   tasks.finishes.push({
-    id: uuidv4(),
+    id: randomUUID(),
     name: 'Llenado inicial y balanceo químico',
     description: 'Primer llenado y ajuste de pH y cloro',
     estimatedHours: 2,
@@ -467,7 +467,7 @@ export function generateTaskFromAdditional(
   const finalHours = Math.max(1, Math.ceil(estimatedHours));
 
   return {
-    id: uuidv4(),
+    id: randomUUID(),
     name: `Instalación/Colocación: ${additionalName}`,
     description: `Tarea generada automáticamente por adicional: ${additionalName} (x${quantity})`,
     estimatedHours: finalHours,
