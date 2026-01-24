@@ -62,7 +62,6 @@ temp/
 *.tmp
 
 # Prisma
-backend/prisma/migrations/
 
 # Frontend specific
 .vite/
