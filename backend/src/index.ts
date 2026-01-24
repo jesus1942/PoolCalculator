@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import passport from './config/passport';
 
 console.log('[INIT] Iniciando servidor...');
@@ -154,6 +155,27 @@ app.use('/api/organizations', organizationRoutes); // Organizaciones
 app.use('/api/admin/ops', opsRoutes); // Observabilidad backend/db
 
 console.log('[INIT] Configurando middlewares y rutas...');
+
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+const frontendIndexPath = path.join(frontendDistPath, 'index.html');
+
+if (fs.existsSync(frontendIndexPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/uploads') ||
+      req.path.startsWith('/pool-images')
+    ) {
+      return next();
+    }
+
+    return res.sendFile(frontendIndexPath);
+  });
+  console.log(`[INIT] Frontend servido desde ${frontendDistPath}`);
+} else {
+  console.log(`[INIT] Frontend no encontrado en ${frontendDistPath}`);
+}
 
 app.listen(PORT, () => {
   console.log('');
