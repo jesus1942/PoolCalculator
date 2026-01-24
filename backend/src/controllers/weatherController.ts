@@ -59,7 +59,7 @@ const logWeatherError = (scope: string, error: unknown) => {
   console.error(`[WEATHER] ${scope} failed:`, message);
 };
 
-const isFresh = (entry?: CacheEntry<any>) =>
+const isFresh = (entry?: CacheEntry<any>): entry is CacheEntry<any> =>
   Boolean(entry && Date.now() - entry.timestamp < CACHE_TTL_MS);
 
 const buildCacheKey = (latitude: number, longitude: number, extra?: string) =>

@@ -1,4 +1,5 @@
 import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 
 type LogLevel = 'INFO' | 'WARN' | 'ERROR';
 type LogCategory = 'AGENDA_NOTIFY' | 'AGENDA_REMINDER' | 'SYSTEM';
@@ -7,7 +8,7 @@ type SystemLogPayload = {
   level: LogLevel;
   category: LogCategory;
   message: string;
-  meta?: Record<string, unknown> | null;
+  meta?: Prisma.JsonObject | null;
   userId?: string | null;
   eventId?: string | null;
 };
@@ -26,7 +27,7 @@ export const logSystemEvent = async ({
         level,
         category,
         message,
-        meta: meta ?? undefined,
+        meta: (meta ?? undefined) as Prisma.InputJsonValue | undefined,
         userId: userId ?? undefined,
         eventId: eventId ?? undefined,
       },

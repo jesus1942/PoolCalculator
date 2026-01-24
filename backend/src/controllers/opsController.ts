@@ -5,9 +5,10 @@ import { AuthRequest } from '../middleware/auth';
 const DEFAULT_LOG_LIMIT = 200;
 const MAX_LOG_LIMIT = 500;
 
-const parseLimit = (value?: string | string[]) => {
+const parseLimit = (value?: unknown) => {
   const raw = Array.isArray(value) ? value[0] : value;
-  const parsed = Number(raw);
+  const normalized = typeof raw === 'string' ? raw : undefined;
+  const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) return DEFAULT_LOG_LIMIT;
   return Math.min(Math.max(parsed, 1), MAX_LOG_LIMIT);
 };
@@ -29,7 +30,7 @@ export const getOpsStatus = async (_req: AuthRequest, res: Response) => {
 
   let remindersPending = 0;
   let remindersDue = 0;
-  let lastEmail: { emailSentAt: Date } | null = null;
+  let lastEmail: { emailSentAt: Date | null } | null = null;
   let countsByLevel: Record<string, number> = {};
 
   if (dbOk) {

@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { generateTaskFromAdditional } from '../utils/taskGenerator';
+import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
 // Obtener adicionales del proyecto
-export const getProjectAdditionals = async (req: Request, res: Response) => {
+export const getProjectAdditionals = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
     
@@ -26,11 +27,11 @@ export const getProjectAdditionals = async (req: Request, res: Response) => {
 };
 
 // Procesar adicionales (aplicar reglas de negocio)
-export const processAdditionals = async (req: Request, res: Response) => {
+export const processAdditionals = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
     const { modifications } = req.body; // Array de modificaciones al preset base
-    const userId = req.user?.id;
+    const userId = req.user?.userId ?? req.user?.id;
 
     // Obtener reglas activas del usuario
     const rules = await prisma.businessRule.findMany({
@@ -228,7 +229,7 @@ function generateSummary(additionals: any[]): any {
 }
 
 // Actualizar adicional
-export const updateAdditional = async (req: Request, res: Response) => {
+export const updateAdditional = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { newQuantity, notes } = req.body;
@@ -245,7 +246,7 @@ export const updateAdditional = async (req: Request, res: Response) => {
 };
 
 // Eliminar adicional
-export const deleteAdditional = async (req: Request, res: Response) => {
+export const deleteAdditional = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -298,9 +299,9 @@ export const deleteAdditional = async (req: Request, res: Response) => {
 };
 
 // CRUD para reglas de negocio
-export const getBusinessRules = async (req: Request, res: Response) => {
+export const getBusinessRules = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId ?? req.user?.id;
     
     const rules = await prisma.businessRule.findMany({
       where: { userId },
@@ -313,7 +314,7 @@ export const getBusinessRules = async (req: Request, res: Response) => {
   }
 };
 
-export const updateBusinessRule = async (req: Request, res: Response) => {
+export const updateBusinessRule = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     
