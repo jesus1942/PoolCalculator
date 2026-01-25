@@ -8,8 +8,18 @@ const API_URL = import.meta.env.VITE_API_URL || (
     : '/api'
 );
 
+const resolveApiBaseUrl = () => {
+  if (API_URL.startsWith('http://') || API_URL.startsWith('https://')) {
+    return API_URL.replace(/\/api\/?$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return '';
+};
+
 // URL base del backend (sin /api) para imágenes y recursos estáticos
-export const API_BASE_URL = API_URL.replace('/api', '');
+export const API_BASE_URL = resolveApiBaseUrl();
 
 const api = axios.create({
   baseURL: API_URL,
