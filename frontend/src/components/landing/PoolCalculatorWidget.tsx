@@ -206,6 +206,8 @@ export const PoolCalculatorWidget: React.FC = () => {
                           src={getImageUrl(pool.imageUrl)}
                           alt={pool.name}
                           className="w-24 h-24 object-cover rounded-lg"
+                          loading="lazy"
+                          decoding="async"
                         />
                       )}
                       <div className="flex-1">

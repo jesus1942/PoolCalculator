@@ -5,12 +5,24 @@ import { API_BASE_URL } from '@/services/api';
  * @param imageUrl - URL relativa de la imagen (ej: /pool-images/acquam-page-03.png)
  * @returns URL completa apuntando al backend
  */
+const optimizeCloudinaryUrl = (imageUrl: string): string => {
+  const match = imageUrl.match(/^https?:\/\/res\.cloudinary\.com\/([^/]+)\/image\/upload\/(.+)$/);
+  if (!match) return imageUrl;
+
+  const [, cloudName, rest] = match;
+  const hasTransform = rest.includes('/');
+  const transform = 'f_auto,q_auto,c_limit,w_1200';
+  const optimizedPath = hasTransform ? rest.replace(/^[^/]+/, (value) => `${transform}/${value}`) : `${transform}/${rest}`;
+
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${optimizedPath}`;
+};
+
 export const getImageUrl = (imageUrl?: string | null): string | undefined => {
   if (!imageUrl) return undefined;
 
   // Si ya es una URL completa, devolverla tal cual
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
+    return optimizeCloudinaryUrl(imageUrl);
   }
 
   // Obtener la URL base del API

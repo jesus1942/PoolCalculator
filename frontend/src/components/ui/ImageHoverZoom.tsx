@@ -78,6 +78,8 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
         <img
           src={currentSrc}
           alt={alt}
+          loading="lazy"
+          decoding="async"
           className={`transition-all duration-300 cursor-zoom-in ${className} ${
             isHovered ? 'brightness-105 scale-105' : ''
           }`}

@@ -39,28 +39,32 @@ const PoolPresetCard: React.FC<{
   };
 
   return (
-    <div style={{ height: '600px' }}>
+    <div className="h-[560px] sm:h-[600px]">
       <FlipCard
         disabled={!hasAdditionalContent}
         className="h-full"
         front={
           <div className="group relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 h-full">
             {/* Imagen con zoom hover */}
-            {preset.imageUrl && (
-              <div className="relative w-full h-48 bg-gray-100">
+            <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
+              {preset.imageUrl ? (
                 <ImageHoverZoom
                   src={getImageUrl(preset.imageUrl) || ''}
                   alt={preset.name}
                   className="w-full h-full object-cover"
                   containerClassName="w-full h-full"
                 />
-                {hasAdditionalContent && (
-                  <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg z-10 pointer-events-none">
-                    Click para más
-                  </div>
-                )}
-              </div>
-            )}
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-gray-400">
+                  <ImageIcon className="h-10 w-10" />
+                </div>
+              )}
+              {hasAdditionalContent && (
+                <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg z-10 pointer-events-none">
+                  Click para más
+                </div>
+              )}
+            </div>
 
             <div className="p-6 space-y-4">
               {/* Header */}
@@ -156,12 +160,14 @@ const PoolPresetCard: React.FC<{
       back={
         <div className="relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md h-full flex flex-col">
           {/* Carrusel de imágenes */}
-          <div className="relative w-full h-64 bg-gray-100">
+          <div className="relative w-full aspect-[4/3] bg-gray-100">
             {additionalImages[currentImageIndex] && (
               <img
                 src={getImageUrl(additionalImages[currentImageIndex]) || additionalImages[currentImageIndex]}
                 alt={`${preset.name} - Imagen ${currentImageIndex + 1}`}
                 className="w-full h-full object-contain"
+                loading="lazy"
+                decoding="async"
               />
             )}
 
