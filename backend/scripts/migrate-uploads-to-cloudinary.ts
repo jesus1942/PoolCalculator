@@ -24,11 +24,17 @@ const modelConfigs: ModelConfig[] = [
 ];
 
 const resolveLocalPath = (url: string) => {
+  if (url.startsWith('/pool-images/')) {
+    const trimmed = url.replace(/^\/+/, '');
+    return path.join(__dirname, '..', 'public', trimmed.replace(/^pool-images\//, 'pool-images/'));
+  }
+
   const trimmed = url.replace(/^\/+/, '');
   return path.join(__dirname, '..', trimmed);
 };
 
-const isUploadUrl = (url: string) => url.startsWith('/uploads/');
+const isUploadUrl = (url: string) =>
+  url.startsWith('/uploads/') || url.startsWith('/pool-images/');
 
 const migrateImageUrl = async (url: string, folder: string, prefix: string) => {
   if (!isUploadUrl(url)) return url;
