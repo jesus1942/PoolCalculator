@@ -473,27 +473,7 @@ const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* TOTAL PROYECTO - Card Destacada */}
-      <Card className="lg:col-span-3 bg-gradient-to-br from-primary-50 to-primary-100 border-2 border-primary-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-primary-700 mb-1">TOTAL DEL PROYECTO</p>
-            <h2 className="text-4xl font-bold text-primary-900">${grandTotal.toLocaleString('es-AR')}</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-6 text-right">
-            <div>
-              <p className="text-xs text-primary-700 mb-1">Materiales</p>
-              <p className="text-2xl font-bold text-blue-800">${totalMaterialCost.toLocaleString('es-AR')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-primary-700 mb-1">Mano de Obra</p>
-              <p className="text-2xl font-bold text-green-800">${totalLaborCost.toLocaleString('es-AR')}</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-3">
         <h3 className="text-lg font-semibold mb-4">Información del Cliente</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -518,67 +498,6 @@ const OldOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
               <p className="font-medium">{project.location}</p>
             </div>
           )}
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="text-lg font-semibold mb-4">Desglose de Costos</h3>
-        <div className="space-y-3">
-          {/* Desglose de Materiales */}
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Materiales Base</span>
-              <span className="font-medium">${project.materialCost.toLocaleString('es-AR')}</span>
-            </div>
-            {plumbingCosts > 0 && (
-              <div className="flex justify-between mb-1 text-sm pl-4">
-                <span className="text-gray-500">+ Plomería</span>
-                <span className="text-gray-700">${plumbingCosts.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            {electricalCosts > 0 && (
-              <div className="flex justify-between mb-1 text-sm pl-4">
-                <span className="text-gray-500">+ Instalación Eléctrica</span>
-                <span className="text-gray-700">${electricalCosts.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            {additionalsCosts.materialCost > 0 && (
-              <div className="flex justify-between mb-1 text-sm pl-4">
-                <span className="text-gray-500">+ Adicionales</span>
-                <span className="text-gray-700">${additionalsCosts.materialCost.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            <div className="flex justify-between pt-2 border-t">
-              <span className="text-gray-700 font-medium">Total Materiales</span>
-              <span className="font-bold text-blue-600">${totalMaterialCost.toLocaleString('es-AR')}</span>
-            </div>
-          </div>
-
-          {/* Desglose de Mano de Obra */}
-          <div className="pt-2">
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Mano de Obra Base</span>
-              <span className="font-medium">${project.laborCost.toLocaleString('es-AR')}</span>
-            </div>
-            {additionalsCosts.laborCost > 0 && (
-              <div className="flex justify-between mb-1 text-sm pl-4">
-                <span className="text-gray-500">+ M.O. Adicionales</span>
-                <span className="text-gray-700">${additionalsCosts.laborCost.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            <div className="flex justify-between pt-2 border-t">
-              <span className="text-gray-700 font-medium">Total Mano de Obra</span>
-              <span className="font-bold text-green-600">${totalLaborCost.toLocaleString('es-AR')}</span>
-            </div>
-          </div>
-
-          {/* Total General */}
-          <div className="border-t-2 pt-3 flex justify-between">
-            <span className="font-semibold text-lg">TOTAL PROYECTO</span>
-            <span className="font-bold text-primary-600 text-xl">
-              ${grandTotal.toLocaleString('es-AR')}
-            </span>
-          </div>
         </div>
       </Card>
 
