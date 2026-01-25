@@ -73,7 +73,7 @@ export const Layout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 overflow-x-hidden">
       <ReminderToasts />
       {/* Mobile overlay */}
       <button

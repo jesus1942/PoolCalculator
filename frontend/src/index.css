@@ -46,12 +46,21 @@
     font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--app-text);
     background-color: var(--app-bg);
+    overflow-x: hidden;
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
       radial-gradient(900px 600px at 10% -10%, rgba(73, 213, 255, 0.18), transparent 55%),
       radial-gradient(900px 600px at 90% 0%, rgba(108, 255, 142, 0.12), transparent 55%);
     background-size: 36px 36px, 36px 36px, auto, auto;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
 
   h1, h2, h3, h4 {

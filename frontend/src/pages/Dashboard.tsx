@@ -290,11 +290,11 @@ export const Dashboard: React.FC = () => {
       <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-black pointer-events-none -z-10"></div>
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-transparent to-transparent pointer-events-none -z-10"></div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 min-h-screen">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 min-h-screen">
         {/* Header Minimalista */}
         <div className="mb-12">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-3">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
                 <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
@@ -302,10 +302,10 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div>
-                <h1 className="text-5xl font-extralight text-white tracking-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extralight text-white tracking-tight">
                   Hola, <span className="font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">{user?.name}</span>
                 </h1>
-                <p className="text-zinc-500 mt-2 font-light tracking-wide">
+                <p className="text-zinc-500 mt-2 text-sm sm:text-base font-light tracking-wide">
                   {today.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               </div>
@@ -367,7 +367,7 @@ export const Dashboard: React.FC = () => {
         {/* Clima y Stats Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Widget de Clima con Flip - Estilo Strudel */}
-          <div className="lg:col-span-1 group relative" style={{ height: '480px' }}>
+          <div className="lg:col-span-1 group relative h-[420px] sm:h-[480px]">
             {/* Glow effect */}
             <div className={`absolute -inset-0.5 bg-gradient-to-br ${weather && isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? 'from-green-600 to-emerald-600' : 'from-red-600 to-orange-600'} rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500`}></div>
 
@@ -378,7 +378,7 @@ export const Dashboard: React.FC = () => {
                   {/* Efecto de cristal */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
 
-                  <div className="p-8">
+                  <div className="p-6 sm:p-8">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
                         <Activity className="h-5 w-5 text-cyan-400" />
@@ -391,14 +391,14 @@ export const Dashboard: React.FC = () => {
                       <>
                         <div className="flex items-start justify-between mb-8">
                           <div>
-                            <div className="text-7xl font-extralight text-white mb-3 tracking-tighter">
+                            <div className="text-5xl sm:text-6xl lg:text-7xl font-extralight text-white mb-3 tracking-tighter">
                               {weather.current.temperature}°
                             </div>
-                            <p className="text-zinc-400 font-light text-lg">
+                            <p className="text-zinc-400 font-light text-base sm:text-lg">
                               {getWeatherDescription(weather.current.weatherCode)}
                             </p>
                           </div>
-                          <div className="text-6xl opacity-90">
+                          <div className="text-5xl sm:text-6xl opacity-90">
                             {getWeatherEmoji(weather.current.weatherCode, true)}
                           </div>
                         </div>
@@ -522,7 +522,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Stats Cards - Grid 2x2 Estilo Strudel */}
-          <div className="lg:col-span-2 grid grid-cols-2 gap-5">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             {stats.map((stat, index) => (
               <div key={index} className="group relative">
                 {/* Glow effect */}
@@ -544,7 +544,7 @@ export const Dashboard: React.FC = () => {
 
                     <div>
                       <p className="text-sm font-light text-zinc-500 mb-2 tracking-wide">{stat.title}</p>
-                      <p className="text-5xl font-extralight text-white tracking-tight">
+                      <p className="text-3xl sm:text-4xl lg:text-5xl font-extralight text-white tracking-tight">
                         {stat.value}
                       </p>
                     </div>
@@ -566,8 +566,8 @@ export const Dashboard: React.FC = () => {
             <div className="relative rounded-3xl bg-zinc-950/90 backdrop-blur-2xl border border-zinc-800/50 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
 
-              <div className="relative p-8">
-                <div className="flex items-center justify-between mb-8">
+              <div className="relative p-6 sm:p-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
@@ -575,7 +575,7 @@ export const Dashboard: React.FC = () => {
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                     </div>
-                    <h2 className="text-2xl font-light text-white tracking-wide">Pronóstico de 7 días</h2>
+                    <h2 className="text-xl sm:text-2xl font-light text-white tracking-wide">Pronóstico de 7 días</h2>
                   </div>
                   <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-zinc-900/80 border border-zinc-800/50">
                     <CheckCircle2 className="h-5 w-5 text-emerald-400" />
@@ -585,7 +585,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-4">
+                <div className="grid grid-flow-col auto-cols-[minmax(180px,1fr)] gap-4 overflow-x-auto pb-2 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-2 lg:grid-cols-7">
                   {weather.daily.map((day, index) => {
                     // Parsear la fecha correctamente en zona horaria local (YYYY-MM-DD)
                     const [year, month, dayNum] = day.date.split('-').map(Number);
@@ -594,7 +594,7 @@ export const Dashboard: React.FC = () => {
                     const dayHourlyWeather = getHourlyWeatherForDay(day.date);
 
                     return (
-                      <div key={index} className="group/day relative" style={{ height: '280px' }}>
+                      <div key={index} className="group/day relative h-[250px] sm:h-[280px]">
                         <div className={`absolute -inset-0.5 ${isGoodDay ? 'bg-gradient-to-br from-emerald-600 to-green-600' : 'bg-gradient-to-br from-red-600 to-orange-600'} rounded-2xl blur-md opacity-0 group-hover/day:opacity-30 transition duration-300`}></div>
 
                         <FlipCard
