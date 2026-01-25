@@ -1,0 +1,8 @@
+{
+  "name": "pool-calculator",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ]
+}
