@@ -1,22 +1,22 @@
 # Pool Calculator
 
-Sistema completo de cálculo de materiales para montaje de piscinas de fibra de vidrio.
+Sistema completo de calculo de materiales para montaje de piscinas de fibra de vidrio.
 
-## 🏊‍♂️ Descripción
+## Descripcion
 
-Pool Calculator es una aplicación web profesional diseñada para instaladores de piscinas de fibra de vidrio. Permite calcular materiales exactos, presupuestar proyectos, y gestionar todo el ciclo de vida de la instalación de piscinas.
+Pool Calculator es una aplicacion web profesional disenada para instaladores de piscinas de fibra de vidrio. Permite calcular materiales exactos, presupuestar proyectos, y gestionar todo el ciclo de vida de la instalacion de piscinas.
 
-### Características Principales
+### Caracteristicas Principales
 
-- ✅ **24 Modelos ACQUAM**: Catálogo completo de piscinas de fibra con especificaciones técnicas
-- ✅ **Cálculos Precisos**: Automáticos de materiales, excavación, plomería y electricidad
-- ✅ **Gestión de Costos**: Control total de presupuestos y mano de obra en tiempo real
-- ✅ **Reportes Profesionales**: Genera presupuestos detallados para clientes
-- ✅ **Portal del Cliente**: Los clientes pueden ver el progreso de su proyecto
-- ✅ **Sistema de Backup**: Backups automáticos de base de datos
-- ✅ **Multi-usuario**: Sistema de roles (SUPERADMIN, ADMIN, USER)
+- **24 Modelos ACQUAM**: Catalogo completo de piscinas de fibra con especificaciones tecnicas
+- **Calculos Precisos**: Automaticos de materiales, excavacion, plomeria y electricidad
+- **Gestion de Costos**: Control total de presupuestos y mano de obra en tiempo real
+- **Reportes Profesionales**: Genera presupuestos detallados para clientes
+- **Portal del Cliente**: Los clientes pueden ver el progreso de su proyecto
+- **Sistema de Backup**: Backups automaticos de base de datos
+- **Multi-usuario**: Sistema de roles (SUPERADMIN, ADMIN, USER)
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnologico
 
 ### Frontend
 - React 18 + TypeScript
@@ -32,7 +32,17 @@ Pool Calculator es una aplicación web profesional diseñada para instaladores d
 - PostgreSQL
 - JWT Authentication
 
-## 🚀 Instalación
+## Estado Actual y Tecnologias Usadas
+
+- Deploy unificado en Railway (frontend servido desde backend con BrowserRouter)
+- Base de datos en Railway (PostgreSQL)
+- Almacenamiento de imagenes en Cloudinary
+- Migracion inicial de datos desde base local
+- Ajustes de layout mobile (sidebar y grillas)
+
+Tecnologias usadas en produccion: React, Vite, TailwindCSS, Node.js, Express, Prisma, PostgreSQL, Cloudinary, Railway.
+
+## Instalacion
 
 ### Requisitos Previos
 
@@ -61,17 +71,17 @@ npm install
 npm run dev
 ```
 
-## 📦 Scripts Disponibles
+## Scripts Disponibles
 
 ### Backend
 - `npm run dev` - Modo desarrollo con hot reload
 - `npm run build` - Compilar TypeScript
-- `npm start` - Iniciar servidor producción
+- `npm start` - Iniciar servidor produccion
 - `npm run seed` - Poblar base de datos con datos iniciales
 
 ### Frontend
 - `npm run dev` - Servidor desarrollo
-- `npm run build` - Build para producción
+- `npm run build` - Build para produccion
 - `npm run preview` - Preview del build
 
 ### Control Script
@@ -82,7 +92,7 @@ npm run dev
 ./control.sh status  # Ver estado
 ```
 
-## 🔧 Configuración
+## Configuracion
 
 ### Variables de Entorno (Backend)
 
@@ -93,9 +103,9 @@ PORT=3000
 NODE_ENV=development
 ```
 
-## 🗄️ Backups
+## Backups
 
-Sistema automático de backups incluido:
+Sistema automatico de backups incluido:
 
 ```bash
 # Backup manual
@@ -104,50 +114,50 @@ Sistema automático de backups incluido:
 # Restaurar backup
 ./backend/scripts/restore-database.sh backups/pool_calculator_backup_YYYYMMDD_HHMMSS.sql.gz
 
-# Configurar backup automático (cron)
+# Configurar backup automatico (cron)
 crontab -e
 # Agregar: 0 2 * * * cd /path/to/pool-calculator/backend && ./scripts/backup-database.sh
 ```
 
-Ver documentación completa en `backend/scripts/README_BACKUPS.md`
+Ver documentacion completa en `backend/scripts/README_BACKUPS.md`
 
-## 📱 Uso
+## Uso
 
 1. Acceder a http://localhost:5173
-2. Registrarse o iniciar sesión
+2. Registrarse o iniciar sesion
 3. Explorar modelos de piscinas
 4. Crear nuevo proyecto
 5. Configurar losetas y materiales
 6. Generar presupuesto
 7. Compartir con cliente (opcional)
 
-## 👥 Roles de Usuario
+## Roles de Usuario
 
-- **SUPERADMIN**: Acceso total, gestión de usuarios y configuración global
-- **ADMIN**: Gestión de su organización, proyectos y configuraciones
+- **SUPERADMIN**: Acceso total, gestion de usuarios y configuracion global
+- **ADMIN**: Gestion de su organizacion, proyectos y configuraciones
 - **USER**: Crear y gestionar sus propios proyectos
 - **VIEWER**: Solo lectura (para clientes)
 
-## 🔐 Seguridad
+## Seguridad
 
-- Autenticación JWT
-- Contraseñas hasheadas con bcrypt
-- Rate limiting en endpoints críticos
-- Validación de datos con Prisma
+- Autenticacion JWT
+- Contrasenas hasheadas con bcrypt
+- Rate limiting en endpoints criticos
+- Validacion de datos con Prisma
 - CORS configurado
 
-## 📄 Licencia
+## Licencia
 
-© 2025 Domotics & IoT Solutions - Jesús Olguín
+(c) 2025 Domotics & IoT Solutions - Jesus Olguin
 Todos los derechos reservados.
 
-## 🤝 Soporte
+## Soporte
 
-Para soporte técnico o consultas:
+Para soporte tecnico o consultas:
 - Email: [tu-email]
 - Web: [tu-website]
 
 ---
 
-**Desarrollado por Jesús Olguín - Domotics & IoT Solutions**
+**Desarrollado por Jesus Olguin - Domotics & IoT Solutions**
 Professional Developer
