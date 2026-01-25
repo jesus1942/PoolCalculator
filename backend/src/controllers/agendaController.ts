@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { sendEmail } from '../utils/mailer';
 import { logSystemEvent } from '../utils/systemLog';
 import { AuthRequest } from '../middleware/auth';
+import { storeImageFile } from '../utils/imageStorage';
 
 const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 
@@ -868,13 +869,23 @@ export const addAgendaMessage = async (req: AuthRequest, res: Response) => {
     const isAdmin = isAdminRole(role) && isOwner;
     const nextVisibility = (isOwner || isAdmin) ? (visibility || 'ALL') : 'ALL';
 
+    const imageUrls = await Promise.all(
+      files.map((file) =>
+        storeImageFile(file, {
+          folder: 'agenda',
+          localDir: 'agenda',
+          filenamePrefix: 'agenda',
+        })
+      )
+    );
+
     const message = await prisma.agendaMessage.create({
       data: {
         eventId: id,
         userId,
         body: body?.trim() || '',
         visibility: nextVisibility,
-        images: files.map((file) => `/uploads/agenda/${file.filename}`),
+        images: imageUrls,
       },
       include: {
         user: { select: { id: true, name: true, email: true } },

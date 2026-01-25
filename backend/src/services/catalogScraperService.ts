@@ -1,8 +1,8 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import prisma from '../config/database';
-import fs from 'fs';
 import path from 'path';
+import { storeImageBuffer } from '../utils/imageStorage';
 import { createHash } from 'crypto';
 
 interface ScrapedPool {
@@ -485,20 +485,6 @@ export const catalogScraperService = {
       const ext = path.extname(new URL(imageUrl).pathname) || '.jpg';
       const filename = `${vendorName.toLowerCase()}-${hash}${ext}`;
 
-      // Directorio de uploads
-      const uploadsDir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      const filepath = path.join(uploadsDir, filename);
-
-      // Si ya existe, retornar la ruta
-      if (fs.existsSync(filepath)) {
-        console.log(`✓ Imagen ya existe: ${filename}`);
-        return `/uploads/${filename}`;
-      }
-
       console.log(`⬇️  Descargando imagen: ${imageUrl}`);
 
       // Descargar la imagen
@@ -511,11 +497,18 @@ export const catalogScraperService = {
         timeout: 15000
       });
 
-      // Guardar la imagen
-      fs.writeFileSync(filepath, response.data);
-      console.log(`✅ Imagen guardada: ${filename}`);
+      const storedUrl = await storeImageBuffer(
+        Buffer.from(response.data),
+        filename,
+        {
+          folder: `catalog/${vendorName.toLowerCase()}`,
+          localDir: '',
+          filenamePrefix: vendorName.toLowerCase(),
+        }
+      );
+      console.log(`✅ Imagen guardada: ${storedUrl}`);
 
-      return `/uploads/${filename}`;
+      return storedUrl;
     } catch (error: any) {
       console.error(`❌ Error al descargar imagen ${imageUrl}:`, error.message);
       return null;

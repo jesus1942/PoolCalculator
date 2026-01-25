@@ -4,6 +4,7 @@ import prisma from '../config/database';
 import { calculatePerimeter, calculateWaterMirrorArea, calculateVolume } from '../utils/calculations';
 import path from 'path';
 import fs from 'fs';
+import { storeImageFile } from '../utils/imageStorage';
 
 // Mapeo de modelos con sus imágenes (sincronizado con update-pool-images.js)
 const modelImageMapping: { [key: string]: string } = {
@@ -72,7 +73,11 @@ export const createPoolPreset = async (req: AuthRequest, res: Response) => {
     // Manejar imagen principal
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.image?.[0]) {
-      data.imageUrl = `/uploads/${files.image[0].filename}`;
+      data.imageUrl = await storeImageFile(files.image[0], {
+        folder: 'pool-presets',
+        localDir: '',
+        filenamePrefix: 'pool',
+      });
     }
     // Si no, buscar automáticamente en el catálogo
     else if (data.name && modelImageMapping[data.name]) {
@@ -82,7 +87,15 @@ export const createPoolPreset = async (req: AuthRequest, res: Response) => {
 
     // Manejar imágenes adicionales
     if (files?.additionalImages && files.additionalImages.length > 0) {
-      data.additionalImages = files.additionalImages.map(file => `/uploads/${file.filename}`);
+      data.additionalImages = await Promise.all(
+        files.additionalImages.map((file) =>
+          storeImageFile(file, {
+            folder: 'pool-presets/additional',
+            localDir: '',
+            filenamePrefix: 'pool-additional',
+          })
+        )
+      );
     }
 
     const poolPreset = await prisma.poolPreset.create({ data });
@@ -178,7 +191,11 @@ export const updatePoolPreset = async (req: AuthRequest, res: Response) => {
           fs.unlinkSync(oldImagePath);
         }
       }
-      data.imageUrl = `/uploads/${files.image[0].filename}`;
+      data.imageUrl = await storeImageFile(files.image[0], {
+        folder: 'pool-presets',
+        localDir: '',
+        filenamePrefix: 'pool',
+      });
     }
 
     // Manejar imágenes adicionales
@@ -207,7 +224,15 @@ export const updatePoolPreset = async (req: AuthRequest, res: Response) => {
 
     // Agregar nuevas imágenes al final
     if (files?.additionalImages && files.additionalImages.length > 0) {
-      const newImageUrls = files.additionalImages.map(file => `/uploads/${file.filename}`);
+      const newImageUrls = await Promise.all(
+        files.additionalImages.map((file) =>
+          storeImageFile(file, {
+            folder: 'pool-presets/additional',
+            localDir: '',
+            filenamePrefix: 'pool-additional',
+          })
+        )
+      );
       updatedAdditionalImages = [...updatedAdditionalImages, ...newImageUrls];
       console.log(`📸 Nuevas imágenes agregadas: ${newImageUrls.length}`);
     }

@@ -7,31 +7,12 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { storeImageFile } from '../utils/imageStorage';
 
 const prisma = new PrismaClient();
 
-// Configurar multer para diferentes tipos de productos
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const productType = req.params.productType;
-    const uploadPath = path.join(__dirname, `../../uploads/products/${productType}`);
-
-    // Verificar que la carpeta existe
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext)
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-');
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
-  }
-});
+// Configurar multer en memoria para subir a Cloudinary o fallback local
+const storage = multer.memoryStorage();
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -65,8 +46,11 @@ export const uploadProductImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
     }
 
-    // Generar URL relativa
-    const imageUrl = `/uploads/products/${productType}/${file.filename}`;
+    const imageUrl = await storeImageFile(file, {
+      folder: `products/${productType}`,
+      localDir: `products/${productType}`,
+      filenamePrefix: productType,
+    });
 
     // Actualizar el producto correspondiente
     let updatedProduct;
@@ -144,8 +128,6 @@ export const uploadProductImage = async (req: Request, res: Response) => {
         break;
 
       default:
-        // Eliminar archivo subido
-        fs.unlinkSync(file.path);
         return res.status(400).json({
           error: 'Tipo de producto no válido. Use: equipment, tiles, accessories, materials, plumbing'
         });
@@ -158,15 +140,6 @@ export const uploadProductImage = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error al subir imagen:', error);
-
-    // Eliminar archivo si hubo error
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.error('Error al eliminar archivo temporal:', e);
-      }
-    }
 
     res.status(500).json({
       error: 'Error al subir imagen',
@@ -188,9 +161,14 @@ export const uploadAdditionalImages = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No se proporcionaron imágenes' });
     }
 
-    // Generar URLs relativas
-    const imageUrls = files.map(file =>
-      `/uploads/products/${productType}/${file.filename}`
+    const imageUrls = await Promise.all(
+      files.map((file) =>
+        storeImageFile(file, {
+          folder: `products/${productType}`,
+          localDir: `products/${productType}`,
+          filenamePrefix: productType,
+        })
+      )
     );
 
     // Obtener imágenes actuales y agregar las nuevas
@@ -274,8 +252,6 @@ export const uploadAdditionalImages = async (req: Request, res: Response) => {
         break;
 
       default:
-        // Eliminar archivos subidos
-        files.forEach(file => fs.unlinkSync(file.path));
         return res.status(400).json({ error: 'Tipo de producto no válido' });
     }
 
@@ -286,17 +262,6 @@ export const uploadAdditionalImages = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error al subir imágenes adicionales:', error);
-
-    // Eliminar archivos si hubo error
-    if (req.files) {
-      (req.files as Express.Multer.File[]).forEach(file => {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (e) {
-          console.error('Error al eliminar archivo temporal:', e);
-        }
-      });
-    }
 
     res.status(500).json({
       error: 'Error al subir imágenes',

@@ -12,7 +12,8 @@
     "prisma:studio": "prisma studio",
     "seed:products": "tsx prisma/seedProducts.ts",
     "seed:equipment": "tsx prisma/seedEquipment.ts",
-    "make-superadmin": "tsx scripts/make-superadmin.ts"
+    "make-superadmin": "tsx scripts/make-superadmin.ts",
+    "migrate:cloudinary": "tsx scripts/migrate-uploads-to-cloudinary.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -23,6 +24,7 @@
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.1.2",
+    "cloudinary": "^2.9.0",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.3.1",
