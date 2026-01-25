@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity } from 'lucide-react';
+import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity, Menu, X } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { organizationService, OrganizationItem } from '@/services/organizationService';
@@ -12,6 +12,7 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<OrganizationItem[]>([]);
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -74,20 +75,40 @@ export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900">
       <ReminderToasts />
+      {/* Mobile overlay */}
+      <button
+        type="button"
+        aria-label="Cerrar menú"
+        onClick={() => setSidebarOpen(false)}
+        className={`fixed inset-0 z-30 bg-black/60 transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+      />
+
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 shadow-2xl">
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-white/5 backdrop-blur-xl border-r border-white/10 shadow-2xl transition-transform duration-200 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 px-4 border-b border-white/10">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-3 text-xl font-light text-white hover:opacity-80 transition-opacity"
+              className="flex flex-1 items-center justify-center gap-3 text-xl font-light text-white hover:opacity-80 transition-opacity"
               title="Ir al inicio"
             >
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-white/10 shadow-md">
                 <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-5 w-auto" />
               </span>
               Pool Installer
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 lg:hidden"
+              aria-label="Cerrar menú"
+            >
+              <X size={18} />
             </button>
           </div>
 
@@ -97,6 +118,7 @@ export const Layout: React.FC = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     isActive
@@ -150,7 +172,18 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="ml-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen lg:ml-64">
+        <div className="sticky top-0 z-20 flex items-center gap-3 bg-black/60 px-4 py-3 backdrop-blur lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-zinc-200 hover:bg-white/10"
+            aria-label="Abrir menú"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-sm font-medium text-zinc-100">Panel</span>
+        </div>
         <div className="flex-grow">
           <Outlet />
         </div>
