@@ -7,14 +7,17 @@ import { Select } from '@/components/ui/Select';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
 import { Project, PoolPreset, ProjectStatus } from '@/types';
+import { calculateProjectFinancials } from '@/utils/projectCosting';
 import { Plus, Edit, Trash2, Eye, FileText, FolderOpen, Waves, CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const BASE_URL = API_URL.replace('/api', '');
 
 export const Projects: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [poolPresets, setPoolPresets] = useState<PoolPreset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +31,7 @@ export const Projects: React.FC = () => {
     clientPhone: '',
     location: '',
     poolPresetId: '',
+    includeBaseEquipment: true,
     status: 'DRAFT' as ProjectStatus,
   });
 
@@ -54,7 +58,20 @@ export const Projects: React.FC = () => {
     e.preventDefault();
     try {
       if (editingProject) {
-        await projectService.update(editingProject.id, formData);
+        const payload: Record<string, unknown> = {
+          name: formData.name.trim(),
+          clientName: formData.clientName.trim(),
+          clientEmail: formData.clientEmail.trim() || null,
+          clientPhone: formData.clientPhone.trim() || null,
+          location: formData.location.trim() || null,
+          status: formData.status,
+        };
+
+        if (formData.poolPresetId && formData.poolPresetId !== editingProject.poolPresetId) {
+          payload.poolPresetId = formData.poolPresetId;
+        }
+
+        await projectService.update(editingProject.id, payload as Partial<Project>);
       } else {
         await projectService.create(formData);
       }
@@ -75,6 +92,7 @@ export const Projects: React.FC = () => {
       clientPhone: project.clientPhone || '',
       location: project.location || '',
       poolPresetId: project.poolPresetId,
+      includeBaseEquipment: true,
       status: project.status,
     });
     setShowModal(true);
@@ -104,9 +122,11 @@ export const Projects: React.FC = () => {
       clientPhone: '',
       location: '',
       poolPresetId: '',
+      includeBaseEquipment: true,
       status: 'DRAFT',
     });
   };
+  const selectedPoolPreset = poolPresets.find((preset) => preset.id === formData.poolPresetId);
 
   const statusOptions = [
     { value: 'DRAFT', label: 'Borrador' },
@@ -145,6 +165,8 @@ export const Projects: React.FC = () => {
     return statusOptions.find(s => s.value === status)?.label || status;
   };
 
+  const canWriteProjects = user?.role !== 'VIEWER';
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -176,13 +198,15 @@ export const Projects: React.FC = () => {
                 <p className="text-gray-600 mt-1">Administra todos tus proyectos de piscinas</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg"
-            >
-              <Plus size={20} />
-              <span>Nuevo Proyecto</span>
-            </button>
+            {canWriteProjects && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg"
+              >
+                <Plus size={20} />
+                <span>Nuevo Proyecto</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -190,28 +214,37 @@ export const Projects: React.FC = () => {
         {projects.length === 0 ? (
           <div className="bg-white/10 rounded-xl border border-white/15 shadow-2xl">
             <div className="text-center py-16 px-6">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <FolderOpen className="h-8 w-8 text-zinc-400" />
+              <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+                <FolderOpen className="h-8 w-8 text-zinc-300" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">
                 No tenes proyectos todavia
               </h3>
-              <p className="text-zinc-400 mb-8 max-w-md mx-auto">
+              <p className="text-zinc-300 mb-8 max-w-md mx-auto">
                 Empieza creando tu primer proyecto de piscina y gestiona todos los detalles de construccion
               </p>
-              <button
-                onClick={() => setShowModal(true)}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg"
-              >
-                <Plus size={20} />
-                <span>Crear Primer Proyecto</span>
-              </button>
+              {canWriteProjects && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg"
+                >
+                  <Plus size={20} />
+                  <span>Crear Primer Proyecto</span>
+                </button>
+              )}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((project) => {
               const StatusIcon = getStatusIcon(project.status);
+              const financials = calculateProjectFinancials(project);
+              const materialCost = financials.totalMaterialCost;
+              const laborCost = financials.totalLaborCost;
+              const totalCost = financials.grandTotal;
+              const poolDepthLabel = project.poolPreset?.depthEnd && project.poolPreset.depthEnd !== project.poolPreset.depth
+                ? `${project.poolPreset.depth}m a ${project.poolPreset.depthEnd}m`
+                : `${project.poolPreset?.depth}m`;
               return (
                 <div
                   key={project.id}
@@ -224,7 +257,7 @@ export const Projects: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
                           {project.name}
                         </h3>
-                        <p className="text-sm text-zinc-400">{project.clientName}</p>
+                        <p className="text-sm text-zinc-300">{project.clientName}</p>
                       </div>
                       <span className={`px-2.5 py-1 text-xs font-medium rounded-lg flex items-center gap-1.5 flex-shrink-0 ${getStatusColor(project.status)}`}>
                         <StatusIcon className="h-3 w-3" />
@@ -234,38 +267,51 @@ export const Projects: React.FC = () => {
 
                     {/* Pool Preset Info */}
                     {project.poolPreset && (
-                      <div className="border-t border-white/10 pt-4">
+                      <div className="border-t border-white/20 pt-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Waves className="h-4 w-4 text-cyan-300" />
-                          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Modelo de Piscina</p>
+                          <p className="text-xs font-medium text-zinc-300 uppercase tracking-wide">Modelo de Piscina</p>
                         </div>
                         <p className="font-semibold text-white">{project.poolPreset.name}</p>
-                        <p className="text-sm text-zinc-400 mt-1">
-                          {project.poolPreset.length}m × {project.poolPreset.width}m × {project.poolPreset.depth}m
+                        <p className="text-sm text-zinc-300 mt-1">
+                          {project.poolPreset.length}m × {project.poolPreset.width}m × {poolDepthLabel}
                         </p>
                       </div>
                     )}
 
                     {/* Details Grid */}
-                    <div className="border-t border-white/10 pt-4 grid grid-cols-2 gap-3">
-                      {project.location && (
-                        <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                          <p className="text-xs text-zinc-500 mb-1 font-medium">Ubicacion</p>
-                          <p className="font-medium text-white text-sm truncate">{project.location}</p>
-                        </div>
-                      )}
-                      {project.totalCost > 0 && (
-                        <div className="bg-white/5 rounded-md p-3 border border-white/10">
-                          <p className="text-xs text-zinc-500 mb-1 font-medium">Costo Total</p>
-                          <p className="font-semibold text-emerald-300 text-sm">
-                            ${project.totalCost.toLocaleString('es-AR')}
+                    <div className="border-t border-white/20 pt-4 grid grid-cols-1 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="bg-white/10 rounded-lg p-3 border border-white/20">
+                          <p className="text-xs text-zinc-300 mb-1 font-medium">Materiales</p>
+                          <p className="font-semibold text-cyan-100 text-sm">
+                            ${materialCost.toLocaleString('es-AR')}
                           </p>
+                        </div>
+                        <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-300/20">
+                          <p className="text-xs text-cyan-100/80 mb-1 font-medium">Mano de obra</p>
+                          <p className="font-semibold text-cyan-200 text-sm">
+                            ${laborCost.toLocaleString('es-AR')}
+                          </p>
+                        </div>
+                        <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-300/20">
+                          <p className="text-xs text-emerald-100/80 mb-1 font-medium">Costo Total</p>
+                          <p className="font-semibold text-emerald-300 text-sm">
+                            ${totalCost.toLocaleString('es-AR')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {project.location && (
+                        <div className="bg-white/10 rounded-lg p-3 border border-white/20">
+                          <p className="text-xs text-zinc-300 mb-1 font-medium">Ubicacion</p>
+                          <p className="font-medium text-white text-sm truncate">{project.location}</p>
                         </div>
                       )}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 pt-4 border-t border-white/10">
+                    <div className="flex gap-2 pt-4 border-t border-white/20">
                       <button
                         onClick={() => handleView(project.id)}
                         className="flex-1 px-4 py-2 bg-cyan-400 text-zinc-950 font-semibold rounded-lg hover:bg-cyan-300 transition-colors duration-200 flex items-center justify-center gap-2"
@@ -273,18 +319,22 @@ export const Projects: React.FC = () => {
                         <Eye size={16} />
                         <span>Ver</span>
                       </button>
-                      <button
-                        onClick={() => handleEdit(project)}
-                        className="px-4 py-2 bg-white/5 text-zinc-200 hover:bg-white/10 rounded-lg transition-colors duration-200 border border-white/10"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(project.id)}
-                        className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {canWriteProjects && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(project)}
+                            className="px-4 py-2 bg-white/10 text-zinc-200 hover:bg-white/10 rounded-lg transition-colors duration-200 border border-white/20"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(project.id)}
+                            className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -332,6 +382,31 @@ export const Projects: React.FC = () => {
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as ProjectStatus })}
                 />
+
+                {selectedPoolPreset && (selectedPoolPreset.defaultPump || selectedPoolPreset.defaultFilter) && !editingProject && (
+                  <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-cyan-900">Equipamiento base del modelo</p>
+                        <p className="mt-1 text-sm text-cyan-800">
+                          {selectedPoolPreset.defaultPump?.name || 'Sin bomba'} · {selectedPoolPreset.defaultFilter?.name || 'Sin filtro'}
+                        </p>
+                        <p className="mt-2 text-xs text-cyan-700">
+                          Desactivá esta opción si querés crear el proyecto como casco solo.
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-cyan-900">
+                        <input
+                          type="checkbox"
+                          checked={formData.includeBaseEquipment}
+                          onChange={(e) => setFormData({ ...formData, includeBaseEquipment: e.target.checked })}
+                          className="rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500"
+                        />
+                        Incluir base
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

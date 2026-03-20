@@ -5,12 +5,13 @@ import { Project } from '@/types';
 import { plumbingCalculationService } from '@/services/plumbingCalculationService';
 import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
-import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File } from 'lucide-react';
+import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File, CheckCircle2, AlertTriangle } from 'lucide-react';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
+import { calculateProjectFinancials, getAdditionalName, getProjectAdditionals, isBaseModelAdditional, summarizeHydraulicSystem } from '@/utils/projectCosting';
 
 interface EnhancedExportManagerProps {
   project: Project;
@@ -23,12 +24,30 @@ interface EnhancedExportManagerProps {
 
 type ExportTemplate = 'client' | 'professional' | 'materials' | 'complete' | 'budget' | 'overview';
 
+type ClientDocumentBlockType = 'heading' | 'paragraph' | 'bullet_list' | 'divider' | 'data_field';
+
+type ClientDocumentBlock = {
+  id: string;
+  type: ClientDocumentBlockType;
+  content?: string;
+  fieldKey?: string;
+  label?: string;
+  comments?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  align?: 'left' | 'center' | 'right';
+};
+
 type ExportTemplateSettings = {
   title?: string;
   subtitle?: string;
   conditions?: string;
   sections?: Record<string, boolean>;
   drawingView?: 'cad' | 'planta';
+  installationMode?: 'basic' | 'with_extras';
+  clientPricingMode?: 'full' | 'labor_only';
+  documentBlocks?: ClientDocumentBlock[];
+  customBodyHtml?: string;
   values?: {
     materialCost?: number;
     laborCost?: number;
@@ -39,6 +58,45 @@ type ExportTemplateSettings = {
 type ExportSettings = {
   templates?: Partial<Record<ExportTemplate, ExportTemplateSettings>>;
 };
+
+type ExcelSectionKey = 'excavation' | 'supportBed' | 'sidewalk' | 'plumbing' | 'electrical' | 'labor' | 'sequence' | 'standards';
+
+type ExportAuditItem = {
+  id: string;
+  label: string;
+  detail: string;
+  value: string;
+  ready: boolean;
+};
+
+type MaterialExportSectionKey =
+  | 'sidewalkBase'
+  | 'taskMaterials'
+  | 'taskSequence'
+  | 'tiles'
+  | 'plumbing'
+  | 'electrical'
+  | 'complementary'
+  | 'supportBed'
+  | 'additionals';
+
+const getProjectCode = (project: Project) =>
+  project.projectCode || `PC-${project.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+const CLIENT_DYNAMIC_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'clientName', label: 'Cliente' },
+  { key: 'projectName', label: 'Proyecto' },
+  { key: 'location', label: 'Ubicación' },
+  { key: 'poolModel', label: 'Modelo de piscina' },
+  { key: 'dimensions', label: 'Dimensiones' },
+  { key: 'volume', label: 'Volumen' },
+  { key: 'waterMirrorArea', label: 'Espejo de agua' },
+  { key: 'installationTier', label: 'Alcance recomendado' },
+  { key: 'laborCost', label: 'Mano de obra' },
+  { key: 'materialCost', label: 'Materiales' },
+  { key: 'grandTotal', label: 'Total' },
+  { key: 'projectCode', label: 'Código de proyecto' },
+];
 
 export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ project, brandLogoUrl }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ExportTemplate>('client');
@@ -51,6 +109,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [calculatedSidewalkArea, setCalculatedSidewalkArea] = useState<number>(0);
   const poolCanvasRef = useRef<HTMLCanvasElement>(null);
   const cadCanvasRef = useRef<HTMLCanvasElement>(null);
+  const clientDocumentEditorRef = useRef<HTMLDivElement>(null);
   const [selectedSections, setSelectedSections] = useState({
     header: true,
     characteristics: true,
@@ -65,6 +124,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState<ExportSettings>({ templates: {} });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [generatingPackage, setGeneratingPackage] = useState(false);
+  const [downloadingPackage, setDownloadingPackage] = useState(false);
+  const [clientDocumentEditorHtml, setClientDocumentEditorHtml] = useState('');
   const [excelSections, setExcelSections] = useState({
     excavation: true,
     supportBed: true,
@@ -188,6 +250,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     setExportSettings((project.exportSettings as ExportSettings) || { templates: {} });
   }, [project]);
 
+  useEffect(() => {
+    if (!isEditorOpen || selectedTemplate !== 'client') return;
+    const clientTemplate = (draftSettings.templates?.client || {}) as ExportTemplateSettings;
+    const nextHtml = clientTemplate.customBodyHtml?.trim() || buildClientBudgetBody(clientTemplate);
+    setClientDocumentEditorHtml(nextHtml);
+  }, [isEditorOpen, selectedTemplate]);
+
   const loadRoles = async () => {
     try {
       const response = await api.get('/profession-roles');
@@ -280,26 +349,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return summary;
   };
 
-  const getTasksLaborCost = () => {
-    const tasks = project.tasks as any;
-    if (!tasks || typeof tasks !== 'object') return 0;
-    return Object.values(tasks).reduce((sum: number, categoryTasks: any) => {
-      if (!Array.isArray(categoryTasks)) return sum;
-      return sum + categoryTasks.reduce((inner: number, task: any) => inner + (task.laborCost || 0), 0);
-    }, 0);
-  };
+  const getTasksLaborCost = () => calculateProjectFinancials(project).baseLaborCost;
 
   const templates = [
     {
       id: 'client' as ExportTemplate,
-      name: 'Presupuesto Cliente',
-      description: 'Documento simplificado con costos e información esencial para presentar al cliente',
+      name: 'Propuesta Comercial',
+      description: 'Documento comercial para presentar la instalación recomendada al cliente',
       icon: User,
     },
     {
       id: 'professional' as ExportTemplate,
       name: 'Especificaciones Técnicas',
-      description: 'Documento técnico detallado para profesionales de construcción',
+      description: 'Ficha técnica de obra con criterios de instalación y equipamiento',
       icon: Briefcase,
     },
     {
@@ -316,63 +378,103 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     },
     {
       id: 'complete' as ExportTemplate,
-      name: 'Reporte Completo',
-      description: 'Documentación integral del proyecto con todos los detalles',
+      name: 'Dossier del Proyecto',
+      description: 'Documento integral con resumen, alcance comercial y respaldo técnico',
       icon: FileText,
     },
     {
       id: 'overview' as ExportTemplate,
       name: 'Vista General',
-      description: 'Resumen ejecutivo del proyecto',
+      description: 'Resumen visual del proyecto, el cliente y el alcance de instalación',
       icon: File,
     },
   ];
 
+  const visibleTemplates = templates.filter((template) => !['materials', 'budget'].includes(template.id));
+  const internalTemplates = templates.filter((template) => ['materials', 'budget'].includes(template.id));
+
+  const getTemplateName = (template: ExportTemplate) =>
+    templates.find((item) => item.id === template)?.name || 'Exportación';
+
   const calculateCosts = () => {
-    const additionals = (project as any).additionals || [];
-    const plumbingConfig = project.plumbingConfig as any;
-    const tasksLaborCost = getTasksLaborCost();
-    const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
+    return calculateProjectFinancials(project);
+  };
 
-    const additionalsCosts = additionals.reduce((acc: any, additional: any) => {
-      const quantity = additional.newQuantity || 0;
-      let materialCost = 0;
-      let laborCost = 0;
+  const normalizeExportText = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
 
-      if (additional.customPricePerUnit) {
-        materialCost = additional.customPricePerUnit * quantity;
-        laborCost = (additional.customLaborCost || 0) * quantity;
-      } else if (additional.accessory) {
-        materialCost = additional.accessory.pricePerUnit * quantity;
-      } else if (additional.equipment) {
-        materialCost = additional.equipment.pricePerUnit * quantity;
-      } else if (additional.material) {
-        materialCost = additional.material.pricePerUnit * quantity;
-      }
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
 
-      return {
-        materialCost: acc.materialCost + materialCost,
-        laborCost: acc.laborCost + laborCost,
-      };
-    }, { materialCost: 0, laborCost: 0 });
+  const isHydraulicOrEquipmentExtra = (additional: any) => {
+    const name = normalizeExportText(getAdditionalName(additional));
+    const category = normalizeExportText(
+      additional.customCategory ||
+      additional.accessory?.type ||
+      additional.equipment?.type ||
+      additional.material?.type ||
+      ''
+    );
 
-    const plumbingCosts = plumbingConfig?.selectedItems
-      ? plumbingConfig.selectedItems.reduce((sum: number, item: any) => sum + (item.quantity * item.pricePerUnit), 0)
-      : 0;
+    return [
+      'bomba',
+      'pump',
+      'hidrojet',
+      'hidromas',
+      'retorno',
+      'skimmer',
+      'barrefondo',
+      'aspir',
+      'desague',
+      'dren',
+      'filtro',
+      'filter',
+      'calef',
+      'caldaia',
+      'heater',
+    ].some((token) => name.includes(token) || category.includes(token));
+  };
 
-    const totalMaterialCost = project.materialCost + additionalsCosts.materialCost + plumbingCosts;
-    const totalLaborCost = baseLaborCost + additionalsCosts.laborCost;
-    const grandTotal = totalMaterialCost + totalLaborCost;
+  const isAccessoryExtra = (additional: any) => {
+    const name = normalizeExportText(getAdditionalName(additional));
+    return name.includes('pasamanos') || name.includes('cascada');
+  };
 
-    return {
-      additionals,
-      additionalsCosts,
-      plumbingCosts,
-      totalMaterialCost,
-      totalLaborCost,
-      grandTotal,
-      baseLaborCost,
-    };
+  const getHydraulicExtraAdditionals = () => {
+    const additionals = getProjectAdditionals(project);
+    return additionals.filter((additional) =>
+      (additional.newQuantity || 0) > 0 &&
+      !isBaseModelAdditional(project, additional) &&
+      isHydraulicOrEquipmentExtra(additional)
+    );
+  };
+
+  const getOtherAdditionals = () => {
+    const additionals = getProjectAdditionals(project);
+    return additionals.filter((additional) =>
+      (additional.newQuantity || 0) > 0 &&
+      !isBaseModelAdditional(project, additional) &&
+      !isHydraulicOrEquipmentExtra(additional) &&
+      !isAccessoryExtra(additional)
+    );
+  };
+
+  const getAccessoryAdditionals = () => {
+    const additionals = getProjectAdditionals(project);
+    return additionals.filter((additional) =>
+      (additional.newQuantity || 0) > 0 &&
+      !isBaseModelAdditional(project, additional) &&
+      isAccessoryExtra(additional)
+    );
   };
 
   const getTaskMaterials = () => {
@@ -399,9 +501,164 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return Array.from(map.values());
   };
 
-  const getTemplateSettings = (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
-    return settings.templates?.[template] || {};
+  const getTaskMaterialsByStage = () => {
+    const tasks = (project.tasks as any) || {};
+    const stageLabels: Record<string, string> = {
+      excavation: 'Excavación',
+      hydraulic: 'Instalación Hidráulica',
+      floor: 'Piso y Base',
+      electrical: 'Instalación Eléctrica',
+      tiles: 'Colocación de Losetas',
+      finishes: 'Terminaciones',
+    };
+
+    return Object.entries(tasks)
+      .map(([stageKey, task]: [string, any]) => {
+        if (!task || !Array.isArray(task.materials) || task.materials.length === 0) return null;
+
+        const stageMap = new Map<string, { name: string; quantity: number; unit: string }>();
+        task.materials.forEach((material: any) => {
+          if (!material?.name) return;
+          const quantity = Number(material.quantity || 0);
+          if (!quantity) return;
+          const unit = material.unit || 'ud';
+          const existing = stageMap.get(material.name);
+          if (existing) {
+            existing.quantity += quantity;
+          } else {
+            stageMap.set(material.name, { name: material.name, quantity, unit });
+          }
+        });
+
+        const items = Array.from(stageMap.values());
+        if (items.length === 0) return null;
+
+        return {
+          key: stageKey,
+          label: stageLabels[stageKey] || stageKey,
+          items,
+        };
+      })
+      .filter(Boolean) as Array<{ key: string; label: string; items: Array<{ name: string; quantity: number; unit: string }> }>;
   };
+
+  const getPlumbingItemSpec = (item: any) => {
+    const parts = [
+      item.diameter ? `Ø ${item.diameter}` : '',
+      item.category || '',
+      item.length ? `${item.length}m` : '',
+      item.specification || '',
+    ].filter(Boolean);
+
+    return parts.join(' · ');
+  };
+
+  const getPlumbingMaterialLabel = (item: any) => {
+    const baseLabel = item.itemName || item.name || item.label || item.description || 'Ítem hidráulico';
+    const spec = getPlumbingItemSpec(item);
+    return spec ? `${baseLabel} (${spec})` : baseLabel;
+  };
+
+  const getPlumbingItemName = (item: any) =>
+    item.itemName || item.name || item.label || item.description || 'Ítem hidráulico';
+
+  const normalizeExportName = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const dedupeLabeledItems = <T extends { name: string; quantity: number }>(items: T[]) => {
+    const map = new Map<string, T>();
+    items.forEach((item) => {
+      const key = `${normalizeExportName(item.name)}::${Number(item.quantity || 0)}`;
+      if (!map.has(key)) {
+        map.set(key, item);
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const isExtraPlumbingItem = (item: any) => {
+    const name = normalizeExportName(getPlumbingItemName(item));
+
+    return (
+      name.includes('hidromas') ||
+      name.includes('hidrojet') ||
+      name.includes('hidromasajeador') ||
+      name.includes('cascada') ||
+      name.includes('pasamanos')
+    );
+  };
+
+  const getInstallationTier = (extraItems: any[], additionalsList: any[]) => {
+    const names = [
+      ...extraItems.map((item: any) => normalizeExportName(getPlumbingItemName(item))),
+      ...additionalsList.map((additional: any) => normalizeExportName(getAdditionalName(additional))),
+    ];
+
+    const hasPlatinumFeature = names.some((name) =>
+      name.includes('caldera') ||
+      name.includes('caldaia') ||
+      name.includes('heater') ||
+      name.includes('heat pump')
+    );
+
+    const hasPremiumFeature = names.some((name) =>
+      name.includes('cascada') ||
+      name.includes('pasamanos')
+    );
+
+    const hasPersonalizedFeature = names.some((name) =>
+      name.includes('retorno') ||
+      name.includes('aspir') ||
+      name.includes('toma') ||
+      name.includes('hidro') ||
+      name.includes('jet') ||
+      name.includes('bomba')
+    );
+
+    if (hasPlatinumFeature) return 'Instalación platinum';
+    if (hasPremiumFeature) return 'Instalación premium';
+    if (hasPersonalizedFeature || extraItems.length > 0 || additionalsList.length > 0) return 'Instalación personalizada';
+    return 'Instalación básica';
+  };
+
+  const getClientBaseAccessoryScope = () => [
+    '4 retornos orientables',
+    '1 toma de aspiración',
+    '1 toma de fondo',
+    '1 skimmer',
+    'bomba de filtrado',
+    'filtro',
+    'luces',
+    'tablero con timer mecánico',
+  ];
+
+  const getTemplateSettings = (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
+    const templateSettings = settings.templates?.[template] || {};
+
+    if (template === 'client') {
+      return {
+        installationMode: 'with_extras' as const,
+        clientPricingMode: 'labor_only' as const,
+        ...templateSettings,
+      };
+    }
+
+    if (template === 'budget') {
+      return {
+        installationMode: 'with_extras' as const,
+        clientPricingMode: 'labor_only' as const,
+        ...templateSettings,
+      };
+    }
+
+    return templateSettings;
+  };
+
+  const formatCurrency = (value: number) => `$${value.toLocaleString('es-AR')}`;
 
   const resolveCostOverrides = (templateSettings: ExportTemplateSettings) => {
     const costs = calculateCosts();
@@ -426,193 +683,160 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       'Presupuesto válido por 30 días corridos',
       'Plazo de ejecución: 15-20 días hábiles',
       'Forma de pago: 50% al inicio de obra, 50% a la finalización',
-      'Garantía: 1 año en mano de obra, según fabricante en equipos',
-      'No incluye: Conexión eléctrica al tablero principal, provisión de agua',
+      'El presupuesto contempla viáticos, consumibles y extras de ejecución propios de la instalación',
+      'Garantía: 3 meses en mano de obra, según fabricante en equipos',
+      'No incluye: Conexión eléctrica al tablero principal, provisión de agua y provisión de gas',
     ];
   };
 
-  const generateClientBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
+  const materials = project.materials as any;
+  const plumbingConfig = project.plumbingConfig as any;
+  const selectedPlumbingItems = Array.isArray(plumbingConfig?.selectedItems) ? plumbingConfig.selectedItems : [];
+  const basePlumbingItems = selectedPlumbingItems.filter((item: any) => !isExtraPlumbingItem(item));
+  const extraPlumbingItems = selectedPlumbingItems.filter((item: any) => isExtraPlumbingItem(item));
+  const basePlumbingCosts = basePlumbingItems.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.pricePerUnit || 0)), 0);
+  const extraPlumbingCosts = extraPlumbingItems.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.pricePerUnit || 0)), 0);
+  const electricalConfig = project.electricalConfig as any;
+  const additionals = getProjectAdditionals(project);
+  const commercialAdditionals = additionals.filter((additional: any) =>
+    (additional.newQuantity || 0) > 0 && !isBaseModelAdditional(project, additional)
+  );
+  const hydraulicSummary = summarizeHydraulicSystem(project, commercialAdditionals);
+  const summarizedAdditionalItems = dedupeLabeledItems(hydraulicSummary.added.items);
+  const installationTier = getInstallationTier(extraPlumbingItems, commercialAdditionals);
+  const clientBaseAccessoryScope = getClientBaseAccessoryScope();
+  const rolesSummary = getRolesCostSummary();
+  const taskMaterials = getTaskMaterials();
+  const taskMaterialsByStage = getTaskMaterialsByStage();
+  const computedTaskCount = (Object.values((project.tasks as any) || {}) as any[]).reduce((sum: number, categoryTasks: any) => {
+    if (!Array.isArray(categoryTasks)) return sum;
+    return sum + categoryTasks.length;
+  }, 0);
+  const structuredMaterialCount = materials && typeof materials === 'object'
+    ? Object.values(materials).filter((item: any) => item && Number(item.quantity || 0) > 0).length
+    : 0;
+  const plumbingItemsCount = Array.isArray(plumbingConfig?.selectedItems) ? plumbingConfig.selectedItems.length : 0;
+  const electricalItemsCount = Array.isArray(electricalConfig?.items) ? electricalConfig.items.length : 0;
+  const rolesCount = Object.keys(rolesSummary).length;
+  const computedCosts = calculateProjectFinancials(project, commercialAdditionals);
+  const poolDepthLabel = project.poolPreset?.depthEnd && project.poolPreset.depthEnd !== project.poolPreset.depth
+    ? `${project.poolPreset.depth}m a ${project.poolPreset.depthEnd}m`
+    : `${project.poolPreset?.depth || 0}m`;
+  const conditionsCount = getConditionsList(getTemplateSettings('client').conditions).length;
+
+  const clientPricingMode = getTemplateSettings('client').clientPricingMode || 'labor_only';
+  const projectDynamicValues = {
+    clientName: project.clientName || '',
+    projectName: project.name || '',
+    location: project.location || 'Ubicación a definir',
+    poolModel: project.poolPreset?.name || 'Modelo sin definir',
+    dimensions: `${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${poolDepthLabel}`,
+    volume: `${project.volume.toFixed(2)} m³`,
+    waterMirrorArea: `${project.waterMirrorArea.toFixed(2)} m²`,
+    installationTier,
+    laborCost: formatCurrency(computedCosts.totalLaborCost),
+    materialCost: formatCurrency(computedCosts.totalMaterialCost),
+    grandTotal: formatCurrency(computedCosts.grandTotal),
+    projectCode: getProjectCode(project),
+  };
+
+  const interpolateProjectText = (value: string) =>
+    value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+      const normalizedKey = String(key);
+      return escapeHtml(String(projectDynamicValues[normalizedKey as keyof typeof projectDynamicValues] || ''));
+    });
+
+  const interpolateProjectHtml = (value: string) =>
+    value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+      const normalizedKey = String(key);
+      return escapeHtml(String(projectDynamicValues[normalizedKey as keyof typeof projectDynamicValues] || ''));
+    });
+
+  const renderClientDocumentBlocks = (blocks: ClientDocumentBlock[] = []) => {
+    if (!Array.isArray(blocks) || blocks.length === 0) return '';
+
+    return `
+      <div class="section">
+        <h2>Mensaje Personalizado</h2>
+        <div class="custom-blocks">
+          ${blocks.map((block) => {
+            const fontFamily = block.fontFamily || 'Segoe UI, Arial, sans-serif';
+            const fontSize = block.fontSize || (block.type === 'heading' ? 20 : 14);
+            const align = block.align || 'left';
+            const style = `style="font-family:${fontFamily};font-size:${fontSize}px;text-align:${align};"`;
+
+            if (block.type === 'divider') {
+              return `<div class="custom-divider"></div>`;
+            }
+
+            if (block.type === 'data_field') {
+              const fieldValue = projectDynamicValues[block.fieldKey as keyof typeof projectDynamicValues] || '';
+              return `
+                <div class="custom-block">
+                  <div class="custom-data-field" ${style}>
+                    ${block.label ? `<span class="custom-data-label">${escapeHtml(block.label)}:</span> ` : ''}
+                    <span>${escapeHtml(String(fieldValue))}</span>
+                  </div>
+                  ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
+                </div>
+              `;
+            }
+
+            if (block.type === 'bullet_list') {
+              const lines = (block.content || '')
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean);
+              if (lines.length === 0) return '';
+              return `
+                <div class="custom-block">
+                  <ul class="custom-bullets" ${style}>
+                    ${lines.map((line) => `<li>${interpolateProjectText(escapeHtml(line))}</li>`).join('')}
+                  </ul>
+                  ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
+                </div>
+              `;
+            }
+
+            if (block.type === 'heading') {
+              return `
+                <div class="custom-block">
+                  <h3 class="custom-heading" ${style}>${interpolateProjectText(escapeHtml(block.content || ''))}</h3>
+                  ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
+                </div>
+              `;
+            }
+
+            return `
+              <div class="custom-block">
+                <p class="custom-paragraph" ${style}>${interpolateProjectText(escapeHtml(block.content || '')).replace(/\n/g, '<br/>')}</p>
+                ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  };
+
+  const buildClientBudgetBody = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const sections = templateSettings.sections || selectedSections;
-    const { additionalsCosts, plumbingCosts, totalMaterialCost, totalLaborCost, grandTotal } = resolveCostOverrides(templateSettings);
-    const headerSubtitle = templateSettings.subtitle || 'Presupuesto de Construcción de Piscina';
-    const documentTitle = templateSettings.title || `Presupuesto - ${project.name}`;
+    const { additionalsCosts, totalLaborCost, baseMaterialCost } = resolveCostOverrides(templateSettings);
+    const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
+    const installationMode = templateSettings.installationMode || 'with_extras';
+    const includeExtras = installationMode === 'with_extras';
+    const showMaterialsToClient = clientPricingMode === 'full';
+    const clientBaseLaborCost = Math.max(0, totalLaborCost - additionalsCosts.laborCost);
+    const visibleCommercialBadge = includeExtras ? `${installationTier} recomendada` : 'Instalación base';
+    const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
+    const visibleHydraulicAdditionals = includeExtras ? summarizedAdditionalItems : [];
+    const platinumExtrasSummary = [
+      ...extraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`),
+      ...summarizedAdditionalItems.map((item) => `${item.name} x${item.quantity}`),
+    ];
     const conditions = getConditionsList(templateSettings.conditions);
-    const logoDataUrl = getLogoForTemplate('client');
 
-    const html = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>${documentTitle}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f9fafb;
-      padding: 20px;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .header {
-      background: #2563eb;
-      color: white;
-      padding: 30px 40px;
-      text-align: center;
-    }
-    .logo {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-    .subtitle {
-      font-size: 16px;
-      opacity: 0.9;
-    }
-    .date {
-      font-size: 13px;
-      opacity: 0.7;
-      margin-top: 10px;
-    }
-    .content {
-      padding: 40px;
-    }
-    .section {
-      margin: 30px 0;
-      page-break-inside: avoid;
-    }
-    .section h2 {
-      color: #1e40af;
-      border-bottom: 2px solid #3b82f6;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-      font-size: 20px;
-      font-weight: 600;
-    }
-    .content-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 30px;
-      margin: 20px 0;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin: 20px 0;
-    }
-    .info-item {
-      padding: 15px;
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
-    }
-    .info-label {
-      font-size: 11px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 5px;
-      font-weight: 500;
-    }
-    .info-value {
-      font-size: 15px;
-      font-weight: 600;
-      color: #1f2937;
-    }
-    .features-list {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .features-list li {
-      padding: 10px 15px;
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
-      font-size: 14px;
-    }
-    .cost-section {
-      background: #eff6ff;
-      padding: 25px;
-      margin: 20px 0;
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-    }
-    .cost-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid #bfdbfe;
-    }
-    .cost-row:last-child {
-      border-bottom: none;
-    }
-    .cost-label {
-      font-weight: 500;
-      color: #4b5563;
-      font-size: 15px;
-    }
-    .cost-value {
-      font-weight: 600;
-      color: #1f2937;
-      font-size: 15px;
-    }
-    .total-row {
-      background: #2563eb;
-      color: white;
-      padding: 20px;
-      margin-top: 15px;
-      font-size: 22px;
-      font-weight: 700;
-      border-radius: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .conditions-list {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .conditions-list li {
-      padding: 10px 15px;
-      background: #eff6ff;
-      border-left: 3px solid #3b82f6;
-      font-size: 14px;
-    }
-    .footer {
-      margin-top: 60px;
-      padding-top: 20px;
-      border-top: 1px solid #e0e0e0;
-      text-align: center;
-      font-size: 12px;
-      color: #999;
-    }
-    @media print {
-      body { background: white; padding: 0; }
-      .container { box-shadow: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
-      <p class="subtitle">${headerSubtitle}</p>
-      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-    </div>
-
-    <div class="content">
+    return `
       ${sections.header ? `
       <div class="section">
         <h2>Información del Cliente</h2>
@@ -640,7 +864,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           </div>
           <div class="info-item">
             <div class="info-label">Dimensiones</div>
-            <div class="info-value">${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${project.poolPreset?.depth}m</div>
+            <div class="info-value">${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${poolDepthLabel}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Volumen</div>
@@ -662,46 +886,46 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       <div class="section">
         <h2>Alcance del Proyecto</h2>
         <ul class="features-list">
+          <li>${visibleCommercialBadge}</li>
           <li>Excavación y preparación del terreno</li>
           <li>Instalación de la piscina de fibra de vidrio</li>
           <li>Sistema de filtración completo</li>
-          <li>Instalación hidráulica (${project.poolPreset?.returnsCount} retornos, ${project.poolPreset?.skimmerCount} skimmers)</li>
+          <li>Instalación base de accesorios: ${clientBaseAccessoryScope.join(', ')}</li>
+          ${visibleExtraPlumbingItems.length > 0 ? `<li>Accesorios extra de instalación: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}</li>` : ''}
+          ${visibleHydraulicAdditionals.length > 0 ? `<li>Equipos/agregados adicionales: ${visibleHydraulicAdditionals.map((item) => `${item.name} x${item.quantity}`).join(', ')}</li>` : ''}
           ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
           ${project.poolPreset?.hasBottomDrain ? `<li>Desagüe de fondo</li>` : ''}
           ${project.poolPreset?.hasVacuumIntake ? `<li>Toma de limpiafondos</li>` : ''}
-          <li>Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)</li>
-          <li>Materiales de construcción completos</li>
+          <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
           ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
           ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
         </ul>
-      </div>
-      ` : ''}
 
-      ${sections.costs ? `
-      <div class="section">
-        <h2>Detalle de Costos</h2>
-        <div class="cost-section">
-          <div class="cost-row">
-            <span class="cost-label">Materiales Base</span>
-            <span class="cost-value">$ ${project.materialCost.toLocaleString('es-AR')}</span>
+        <div class="comparison-grid">
+          <div class="comparison-card">
+            <div class="comparison-title">Instalación base</div>
+            <div class="comparison-subtitle">Versión estándar de instalación</div>
+            <ul class="comparison-list">
+              <li>Excavación, colocación y conexión de la piscina</li>
+              <li>${clientBaseAccessoryScope.join(', ')}</li>
+            </ul>
+            <div class="comparison-price">${showMaterialsToClient ? `Total base: ${formatCurrency(baseMaterialCost + clientBaseLaborCost)}` : `M.O. base: ${formatCurrency(clientBaseLaborCost)}`}</div>
           </div>
-          ${plumbingCosts > 0 ? `<div class="cost-row"><span class="cost-label">Plomería</span><span class="cost-value">$ ${plumbingCosts.toLocaleString('es-AR')}</span></div>` : ''}
-          ${additionalsCosts.materialCost > 0 ? `<div class="cost-row"><span class="cost-label">Adicionales</span><span class="cost-value">$ ${additionalsCosts.materialCost.toLocaleString('es-AR')}</span></div>` : ''}
-          <div class="cost-row" style="font-weight: 600;">
-            <span class="cost-label">Total Materiales</span>
-            <span class="cost-value">$ ${totalMaterialCost.toLocaleString('es-AR')}</span>
-          </div>
-          <div class="cost-row" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
-            <span class="cost-label">Mano de Obra</span>
-            <span class="cost-value">$ ${totalLaborCost.toLocaleString('es-AR')}</span>
-          </div>
-          <div class="total-row">
-            <span>INVERSIÓN TOTAL</span>
-            <span>$ ${grandTotal.toLocaleString('es-AR')}</span>
+
+          <div class="comparison-card recommended">
+            <div class="comparison-title">${installationTier}</div>
+            <div class="comparison-subtitle">Propuesta recomendada para este proyecto</div>
+            <ul class="comparison-list">
+              <li>Incluye todo el alcance de la instalación base</li>
+              ${platinumExtrasSummary.length > 0 ? platinumExtrasSummary.map((item) => `<li>${item}</li>`).join('') : '<li>Sin extras cargados</li>'}
+            </ul>
+            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + totalLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(totalLaborCost)}`}</div>
           </div>
         </div>
       </div>
       ` : ''}
+
+      ${renderClientDocumentBlocks(templateSettings.documentBlocks)}
 
       ${sections.conditions ? `
       <div class="section">
@@ -711,10 +935,642 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         </ul>
       </div>
       ` : ''}
+    `;
+  };
+
+  const templateAuditItems: Record<ExportTemplate, ExportAuditItem[]> = {
+    client: [
+      {
+        id: 'client-info',
+        label: 'Cliente y obra',
+        detail: 'Nombre, contacto, ubicación y datos generales.',
+        value: `${project.clientName}${project.location ? ` · ${project.location}` : ''}`,
+        ready: !!project.clientName,
+      },
+      {
+        id: 'client-pool',
+        label: 'Piscina y alcance',
+        detail: 'Modelo, dimensiones, volumen y alcance comercial.',
+        value: `${project.poolPreset?.name || 'Sin modelo'} · ${project.volume.toFixed(2)} m³`,
+        ready: !!project.poolPreset,
+      },
+      {
+        id: 'client-costs',
+        label: 'Costos presupuestados',
+        detail: clientPricingMode === 'labor_only' ? 'Solo mano de obra visible para cliente.' : 'Materiales, mano de obra y total.',
+        value: clientPricingMode === 'labor_only'
+          ? formatCurrency(computedCosts.totalLaborCost)
+          : `${formatCurrency(computedCosts.totalMaterialCost)} + ${formatCurrency(computedCosts.totalLaborCost)}`,
+        ready: computedCosts.grandTotal > 0,
+      },
+      {
+        id: 'client-conditions',
+        label: 'Condiciones comerciales',
+        detail: 'Texto final del presupuesto al cliente.',
+        value: `${conditionsCount} condiciones`,
+        ready: conditionsCount > 0,
+      },
+    ],
+    professional: [
+      {
+        id: 'prof-tech',
+        label: 'Datos técnicos',
+        detail: 'Medidas, volumen, forma y capacidad.',
+        value: `${project.poolPreset?.length || 0} x ${project.poolPreset?.width || 0} m`,
+        ready: !!project.poolPreset,
+      },
+      {
+        id: 'prof-materials',
+        label: 'Materiales estructurales',
+        detail: 'Materiales base y cantidades visibles en ficha técnica.',
+        value: `${structuredMaterialCount} materiales con cantidad`,
+        ready: structuredMaterialCount > 0,
+      },
+      {
+        id: 'prof-plumbing',
+        label: 'Instalación hidráulica',
+        detail: 'Ítems y especificaciones de cañerías y accesorios.',
+        value: `${plumbingItemsCount} ítems`,
+        ready: plumbingItemsCount > 0,
+      },
+      {
+        id: 'prof-plan',
+        label: 'Plano exportado',
+        detail: 'Plano CAD o vista planta según configuración.',
+        value: getTemplateSettings('professional').drawingView === 'planta' ? 'Vista planta' : 'Plano CAD',
+        ready: true,
+      },
+    ],
+    materials: [
+      {
+        id: 'mat-base',
+        label: 'Materiales base',
+        detail: 'Materiales calculados del proyecto.',
+        value: `${structuredMaterialCount} materiales`,
+        ready: structuredMaterialCount > 0,
+      },
+      {
+        id: 'mat-tasks',
+        label: 'Materiales por tareas',
+        detail: 'Suma de materiales cargados dentro de tareas.',
+        value: `${taskMaterials.length} registros`,
+        ready: taskMaterials.length > 0,
+      },
+      {
+        id: 'mat-additionals',
+        label: 'Adicionales',
+        detail: 'Accesorios, equipos o materiales extra.',
+        value: `${additionals.length} adicionales`,
+        ready: additionals.length > 0,
+      },
+      {
+        id: 'mat-plumbing',
+        label: 'Plomería',
+        detail: 'Ítems seleccionados para instalación hidráulica.',
+        value: `${plumbingItemsCount} ítems`,
+        ready: plumbingItemsCount > 0,
+      },
+    ],
+    budget: [
+      {
+        id: 'budget-materials',
+        label: 'Costo de materiales',
+        detail: 'Base, plomería y adicionales.',
+        value: formatCurrency(computedCosts.totalMaterialCost),
+        ready: computedCosts.totalMaterialCost > 0,
+      },
+      {
+        id: 'budget-labor',
+        label: 'Costo de mano de obra',
+        detail: 'Tareas y adicionales con mano de obra.',
+        value: formatCurrency(computedCosts.totalLaborCost),
+        ready: computedCosts.totalLaborCost > 0,
+      },
+      {
+        id: 'budget-total',
+        label: 'Total general',
+        detail: 'Inversión total del proyecto.',
+        value: formatCurrency(computedCosts.grandTotal),
+        ready: computedCosts.grandTotal > 0,
+      },
+      {
+        id: 'budget-roles',
+        label: 'Soporte por roles',
+        detail: 'Resumen por tareas, horas y costo.',
+        value: `${rolesCount} roles · ${computedTaskCount} tareas`,
+        ready: rolesCount > 0,
+      },
+    ],
+    complete: [
+      {
+        id: 'complete-summary',
+        label: 'Resumen ejecutivo',
+        detail: 'Cliente, obra y KPIs del proyecto.',
+        value: `${project.name} · ${project.clientName}`,
+        ready: !!project.name && !!project.clientName,
+      },
+      {
+        id: 'complete-costs',
+        label: 'Costos completos',
+        detail: 'Materiales, mano de obra y total.',
+        value: formatCurrency(computedCosts.grandTotal),
+        ready: computedCosts.grandTotal > 0,
+      },
+      {
+        id: 'complete-tech',
+        label: 'Bloque técnico',
+        detail: 'Materiales, hidráulica y equipos.',
+        value: `${structuredMaterialCount} materiales · ${plumbingItemsCount} ítems hidráulicos`,
+        ready: structuredMaterialCount > 0 || plumbingItemsCount > 0,
+      },
+      {
+        id: 'complete-work',
+        label: 'Tareas y mano de obra',
+        detail: 'Horas, roles y secuencia de obra.',
+        value: `${computedTaskCount} tareas · ${rolesCount} roles`,
+        ready: computedTaskCount > 0,
+      },
+    ],
+    overview: [
+      {
+        id: 'overview-client',
+        label: 'Datos generales',
+        detail: 'Proyecto, cliente y ubicación.',
+        value: `${project.name} · ${project.clientName}`,
+        ready: !!project.name && !!project.clientName,
+      },
+      {
+        id: 'overview-pool',
+        label: 'Indicadores de piscina',
+        detail: 'Modelo, volumen y espejo de agua.',
+        value: `${project.poolPreset?.name || 'Sin modelo'} · ${project.waterMirrorArea.toFixed(2)} m²`,
+        ready: !!project.poolPreset,
+      },
+      {
+        id: 'overview-costs',
+        label: 'Costos resumidos',
+        detail: 'Materiales, mano de obra y total.',
+        value: formatCurrency(computedCosts.grandTotal),
+        ready: computedCosts.grandTotal > 0,
+      },
+      {
+        id: 'overview-progress',
+        label: 'Carga técnica',
+        detail: 'Tareas, roles y sistemas ya configurados.',
+        value: `${computedTaskCount} tareas · ${rolesCount} roles · ${plumbingItemsCount} ítems hidráulicos`,
+        ready: computedTaskCount > 0 || plumbingItemsCount > 0,
+      },
+    ],
+  };
+
+  const excelSectionDefinitions: Array<{
+    key: ExcelSectionKey;
+    label: string;
+    description: string;
+    preview: string;
+    ready: boolean;
+  }> = [
+    {
+      key: 'excavation',
+      label: 'Excavación y Preparación',
+      description: 'Dimensiones, volumen de tierra y parámetros base.',
+      preview: `${project.excavationLength} x ${project.excavationWidth} x ${project.excavationDepth} m · ${(project.excavationLength * project.excavationWidth * project.excavationDepth).toFixed(2)} m³`,
+      ready: project.excavationLength > 0 && project.excavationWidth > 0 && project.excavationDepth > 0,
+    },
+    {
+      key: 'supportBed',
+      label: 'Relleno y Fondo',
+      description: 'Geomembrana, malla, arena terciada y cemento para relleno/cama.',
+      preview: `${Number(materials?.geomembrane?.quantity || 0)} geomembrana · ${Number(materials?.electroweldedMesh?.quantity || 0)} malla · ${Number(materials?.sandForBed?.quantity || 0)} m³ arena`,
+      ready: Number(materials?.geomembrane?.quantity || 0) > 0 || Number(materials?.sandForBed?.quantity || 0) > 0 || Number(materials?.cementBags?.quantity || 0) > 0,
+    },
+    {
+      key: 'sidewalk',
+      label: 'Solado de Vereda',
+      description: 'Área y materiales de terminación exterior.',
+      preview: `${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m² · ${Number(materials?.cement?.quantity || 0)} cemento`,
+      ready: (calculatedSidewalkArea || project.sidewalkArea || 0) > 0,
+    },
+    {
+      key: 'plumbing',
+      label: 'Instalación Hidráulica',
+      description: 'Cañerías, accesorios y configuración del circuito.',
+      preview: `${plumbingItemsCount} ítems · Distancia equipo ${Number(plumbingConfig?.distanceToEquipment || 0)} m`,
+      ready: plumbingItemsCount > 0,
+    },
+    {
+      key: 'electrical',
+      label: 'Instalación Eléctrica',
+      description: 'Equipos, consumo y protecciones.',
+      preview: `${electricalItemsCount} ítems · ${Number(electricalConfig?.totalWatts ?? electricalConfig?.totalPower ?? 0)} W`,
+      ready: electricalItemsCount > 0 || Number(electricalConfig?.totalWatts ?? electricalConfig?.totalPower ?? 0) > 0 || !!equipmentRecommendation,
+    },
+    {
+      key: 'labor',
+      label: 'Mano de Obra',
+      description: 'Roles, tareas, horas y costos.',
+      preview: `${rolesCount} roles · ${computedTaskCount} tareas · ${formatCurrency(computedCosts.totalLaborCost)}`,
+      ready: rolesCount > 0 || computedTaskCount > 0 || computedCosts.totalLaborCost > 0,
+    },
+    {
+      key: 'sequence',
+      label: 'Secuencia de Trabajo',
+      description: 'Orden sugerido de ejecución.',
+      preview: '9 pasos estándar de obra',
+      ready: true,
+    },
+    {
+      key: 'standards',
+      label: 'Normativas Aplicables',
+      description: 'IRAM, seguridad eléctrica y observaciones.',
+      preview: 'Normas y observaciones generales',
+      ready: true,
+    },
+  ];
+
+  const selectedTemplateAuditItems = templateAuditItems[selectedTemplate];
+  const selectedExcelItems = excelSectionDefinitions.filter((section) => excelSections[section.key]);
+  const readyExcelItems = excelSectionDefinitions.filter((section) => section.ready).length;
+  const hydraulicExtraAdditionals = getHydraulicExtraAdditionals();
+  const otherAdditionals = getOtherAdditionals();
+  const materialSectionDefinitions: Array<{
+    key: MaterialExportSectionKey;
+    label: string;
+    description: string;
+    preview: string;
+    ready: boolean;
+  }> = [
+    {
+      key: 'sidewalkBase',
+      label: 'Materiales de Vereda',
+      description: 'Base calculada para vereda, adhesivo y terminaciones.',
+      preview: `${Number(materials?.cement?.quantity || 0)} cemento · ${Number(materials?.sand?.quantity || 0)} arena · ${Number(materials?.gravel?.quantity || 0)} grava`,
+      ready: !!(materials?.cement || materials?.sand || materials?.gravel || materials?.adhesive || materials?.whiteCement || materials?.marmolina),
+    },
+    {
+      key: 'taskMaterials',
+      label: 'Materiales del Plan de Tareas',
+      description: 'Listado consolidado de materiales cargados manualmente en tareas.',
+      preview: `${taskMaterials.length} materiales consolidados`,
+      ready: taskMaterials.length > 0,
+    },
+    {
+      key: 'taskSequence',
+      label: 'Por Orden de Avance',
+      description: 'Materiales agrupados por etapa de obra.',
+      preview: `${taskMaterialsByStage.length} etapas con materiales`,
+      ready: taskMaterialsByStage.length > 0,
+    },
+    {
+      key: 'tiles',
+      label: 'Losetas y Revestimientos',
+      description: 'Cantidad calculada de losetas guardada en el proyecto.',
+      preview: `${Array.isArray(materials?.tiles) ? materials.tiles.length : 0} ítems`,
+      ready: Array.isArray(materials?.tiles) && materials.tiles.length > 0,
+    },
+    {
+      key: 'plumbing',
+      label: 'Instalación Hidráulica',
+      description: 'Base hidráulica del proyecto según la configuración guardada.',
+      preview: `${plumbingItemsCount} ítems base`,
+      ready: plumbingItemsCount > 0,
+    },
+    {
+      key: 'electrical',
+      label: 'Instalación Eléctrica',
+      description: 'Equipos, cableado y protecciones guardadas en la configuración eléctrica.',
+      preview: `${electricalItemsCount} ítems eléctricos`,
+      ready: electricalItemsCount > 0,
+    },
+    {
+      key: 'complementary',
+      label: 'Materiales Complementarios',
+      description: 'Mallas e impermeabilización asociadas al cálculo.',
+      preview: `${Number(materials?.wireMesh?.quantity || 0)} malla`,
+      ready: !!materials?.wireMesh,
+    },
+    {
+      key: 'supportBed',
+      label: 'Relleno y Fondo',
+      description: 'Malla, arena terciada y cemento para cama/relleno.',
+      preview: `${Number(materials?.sandForBed?.quantity || 0)} arena · ${Number(materials?.cementBags?.quantity || 0)} cemento`,
+      ready: !!(materials?.electroweldedMesh || materials?.sandForBed || materials?.cementBags),
+    },
+    {
+      key: 'additionals',
+      label: 'Adicionales',
+      description: 'Extras hidráulicos, equipos agregados y otros accesorios fuera de la instalación base.',
+      preview: `${hydraulicExtraAdditionals.length} extras hidráulicos · ${otherAdditionals.length} otros`,
+      ready: hydraulicExtraAdditionals.length > 0 || otherAdditionals.length > 0,
+    },
+  ];
+
+  const generateClientBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
+    const headerSubtitle = templateSettings.subtitle || 'Propuesta Comercial de Instalación';
+    const documentTitle = templateSettings.title || `Propuesta Comercial - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('client');
+    const bodyHtml = templateSettings.customBodyHtml?.trim()
+      ? interpolateProjectHtml(templateSettings.customBodyHtml)
+      : buildClientBudgetBody(templateSettings);
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f9fafb;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: #111111;
+      color: white;
+      padding: 30px 40px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    .date {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-top: 10px;
+    }
+    .content {
+      padding: 40px;
+    }
+    .section {
+      margin: 30px 0;
+      page-break-inside: avoid;
+    }
+    .section h2 {
+      color: #111111;
+      border-bottom: 1px solid #d4d4d8;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+      margin: 20px 0;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .info-item {
+      padding: 15px;
+      background: #fafafa;
+      border-left: 2px solid #d4d4d8;
+    }
+    .info-label {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    .info-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .features-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .features-list li {
+      padding: 10px 15px;
+      background: #fafafa;
+      border-left: 2px solid #d4d4d8;
+      font-size: 14px;
+    }
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .comparison-card {
+      border: 1px solid #e4e4e7;
+      border-radius: 12px;
+      padding: 18px;
+      background: #fafafa;
+    }
+    .comparison-card.recommended {
+      background: #111111;
+      color: white;
+      border-color: #111111;
+    }
+    .comparison-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .comparison-subtitle {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    .comparison-card.recommended .comparison-subtitle {
+      color: rgba(255,255,255,0.72);
+    }
+    .comparison-list {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .comparison-price {
+      margin-top: 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .cost-section {
+      background: #fafafa;
+      padding: 25px;
+      margin: 20px 0;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+    }
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e4e4e7;
+    }
+    .cost-row:last-child {
+      border-bottom: none;
+    }
+    .cost-label {
+      font-weight: 500;
+      color: #4b5563;
+      font-size: 15px;
+    }
+    .cost-value {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 15px;
+    }
+    .total-row {
+      background: #111111;
+      color: white;
+      padding: 20px;
+      margin-top: 15px;
+      font-size: 22px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .conditions-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .conditions-list li {
+      padding: 10px 15px;
+      background: #fafafa;
+      border-left: 2px solid #d4d4d8;
+      font-size: 14px;
+    }
+    .custom-blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .custom-block {
+      padding: 16px 18px;
+      background: #fafafa;
+      border: 1px solid #e4e4e7;
+      border-radius: 10px;
+    }
+    .custom-heading {
+      color: #111111;
+      margin: 0;
+      line-height: 1.3;
+    }
+    .custom-paragraph {
+      color: #27272a;
+      margin: 0;
+      line-height: 1.7;
+    }
+    .custom-bullets {
+      margin: 0;
+      padding-left: 20px;
+      color: #27272a;
+      line-height: 1.7;
+    }
+    .custom-divider {
+      border-top: 1px solid #d4d4d8;
+      margin: 8px 0;
+    }
+    .custom-data-field {
+      color: #18181b;
+      font-weight: 600;
+    }
+    .custom-data-label {
+      color: #71717a;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+    .custom-comment {
+      margin-top: 8px;
+      color: #71717a;
+      font-size: 12px;
+      font-style: italic;
+    }
+    .custom-document table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+    }
+    .custom-document th,
+    .custom-document td {
+      border: 1px solid #d4d4d8;
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .custom-document .doc-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .custom-document .doc-comment {
+      border-left: 3px solid #a1a1aa;
+      padding: 10px 14px;
+      background: #fafafa;
+      color: #52525b;
+      font-size: 13px;
+      font-style: italic;
+      margin: 12px 0;
+    }
+    .footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+
+    <div class="content">
+      <div class="custom-document">
+        ${bodyHtml}
+      </div>
 
       <div class="footer">
         <p><strong>Pool Installer</strong> | Sistema Profesional de Cálculo de Materiales para Piscinas</p>
-        <p>Documento generado el ${new Date().toLocaleDateString('es-AR')} | Código: ${project.id.substring(0, 8).toUpperCase()}</p>
+        <p>Documento generado el ${new Date().toLocaleDateString('es-AR')} | Código: ${getProjectCode(project)}</p>
       </div>
     </div>
   </div>
@@ -729,6 +1585,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   ) => {
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
+    const projectEquipmentAdditionals = commercialAdditionals
+      .filter((additional) => additional?.equipment)
+      .map((additional) => ({
+        quantity: additional.newQuantity || additional.baseQuantity || 1,
+        equipment: additional.equipment,
+      }));
     const headerSubtitle = templateSettings.subtitle || 'Especificaciones Técnicas del Proyecto';
     const documentTitle = templateSettings.title || `Especificaciones Técnicas - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('professional');
@@ -748,6 +1610,59 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const qty = Number(quantity || 0);
       return !!qty && !Number.isNaN(qty);
     };
+    const formatNumeric = (value: number | string | undefined, decimals = 1) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return '';
+      return parsed.toLocaleString('es-AR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: decimals,
+      });
+    };
+    const getEquipmentSpecs = (equipment: any) => {
+      const specs: string[] = [];
+      const type = String(equipment?.type || '').toUpperCase();
+
+      if (equipment?.brand || equipment?.model) {
+        specs.push([equipment.brand, equipment.model].filter(Boolean).join(' '));
+      }
+
+      if ((type === 'PUMP' || type === 'HEAT_PUMP') && equipment?.flowRate) {
+        specs.push(`Caudal: ${formatNumeric(equipment.flowRate)} m³/h`);
+      }
+      if (type === 'FILTER') {
+        if (equipment?.filterDiameter) specs.push(`Diámetro: ${formatNumeric(equipment.filterDiameter)} mm`);
+        if (equipment?.filterArea) specs.push(`Área filtrante: ${formatNumeric(equipment.filterArea, 2)} m²`);
+        if (equipment?.sandRequired) specs.push(`Arena requerida: ${formatNumeric(equipment.sandRequired)} kg`);
+        if (equipment?.capacity) specs.push(`Capacidad de trabajo: ${formatNumeric(equipment.capacity)} m³/h`);
+      }
+      if (type === 'HEATER' || type === 'HEAT_PUMP') {
+        if (equipment?.thermalPower) specs.push(`Potencia térmica: ${formatNumeric(equipment.thermalPower)} kcal/h`);
+        if (equipment?.power) specs.push(`${type === 'HEAT_PUMP' ? 'Potencia eléctrica' : 'Potencia'}: ${formatNumeric(equipment.power)} ${type === 'HEAT_PUMP' ? 'kW' : 'HP'}`);
+      }
+      if (type === 'CHLORINATOR' && equipment?.capacity) {
+        specs.push(`Producción: ${formatNumeric(equipment.capacity)} g/h`);
+      }
+      if (!['FILTER'].includes(type) && equipment?.power) {
+        const powerUnit = type === 'HEATER' || type === 'HEAT_PUMP' ? 'kW' : 'HP';
+        specs.push(`Potencia: ${formatNumeric(equipment.power)} ${powerUnit}`);
+      }
+      if (equipment?.consumption) specs.push(`Consumo: ${formatNumeric(equipment.consumption)} W`);
+      if (equipment?.voltage) specs.push(`Tensión: ${equipment.voltage} V`);
+      if (equipment?.connectionSize) specs.push(`Conexión: ${equipment.connectionSize}`);
+
+      return specs.filter(Boolean);
+    };
+    const technicalMaterialRows = [
+      materials?.electroweldedMesh && shouldInclude(materials.electroweldedMesh.quantity)
+        ? `<tr><td>Malla electrosoldada</td><td>${formatQuantity(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit)}</td><td>${materials.electroweldedMesh.unit}</td><td>Refuerzo de apoyo y relleno</td></tr>`
+        : '',
+      materials?.sandForBed && shouldInclude(materials.sandForBed.quantity)
+        ? `<tr><td>Arena terciada para relleno</td><td>${formatQuantity(materials.sandForBed.quantity, materials.sandForBed.unit)}</td><td>${materials.sandForBed.unit}</td><td>Cama y relleno de instalación</td></tr>`
+        : '',
+      materials?.cementBags && shouldInclude(materials.cementBags.quantity)
+        ? `<tr><td>Cemento para cama y relleno</td><td>${formatQuantity(materials.cementBags.quantity, materials.cementBags.unit)}</td><td>${materials.cementBags.unit}</td><td>Base y fijación de instalación</td></tr>`
+        : '',
+    ].filter(Boolean);
 
     return `
 <!DOCTYPE html>
@@ -761,8 +1676,18 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .spec-item { padding: 15px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; }
     .spec-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 500; }
     .spec-value { font-size: 16px; font-weight: 600; color: #1f2937; margin-top: 5px; }
+    .hydraulic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+    .hydraulic-item { padding: 14px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; }
+    .hydraulic-label { font-size: 11px; color: #71717a; text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em; }
+    .hydraulic-value { font-size: 18px; font-weight: 700; color: #18181b; margin-top: 6px; }
+    .equipment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 18px; }
+    .equipment-card { padding: 16px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 10px; }
+    .equipment-title { font-size: 15px; font-weight: 700; color: #18181b; }
+    .equipment-qty { font-size: 11px; color: #71717a; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em; margin-top: 4px; }
+    .equipment-specs { margin: 10px 0 0; padding-left: 18px; color: #3f3f46; }
+    .equipment-specs li { margin: 4px 0; font-size: 13px; }
     .materials-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .materials-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 13px; }
+    .materials-table th { background: #18181b; color: white; padding: 12px; text-align: left; font-size: 13px; }
     .materials-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
     .materials-table tr:hover { background: #f9fafb; }
     .cad-wrap { margin-top: 24px; padding: 16px; border: 1px solid #e5e7eb; background: #f9fafb; text-align: center; }
@@ -783,16 +1708,68 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <div class="spec-grid">
           <div class="spec-item"><div class="spec-label">Largo</div><div class="spec-value">${project.poolPreset?.length || 0} m</div></div>
           <div class="spec-item"><div class="spec-label">Ancho</div><div class="spec-value">${project.poolPreset?.width || 0} m</div></div>
-          <div class="spec-item"><div class="spec-label">Profundidad</div><div class="spec-value">${project.poolPreset?.depth || 0} m</div></div>
+          <div class="spec-item"><div class="spec-label">Profundidad</div><div class="spec-value">${poolDepthLabel}</div></div>
           <div class="spec-item"><div class="spec-label">Volumen</div><div class="spec-value">${project.volume.toFixed(2)} m³</div></div>
           <div class="spec-item"><div class="spec-label">Capacidad</div><div class="spec-value">${(project.volume * 1000).toFixed(0)} litros</div></div>
           <div class="spec-item"><div class="spec-label">Área Espejo</div><div class="spec-value">${project.waterMirrorArea.toFixed(2)} m²</div></div>
           <div class="spec-item"><div class="spec-label">Forma</div><div class="spec-value">${project.poolPreset?.shape || 'RECTANGULAR'}</div></div>
-          <div class="spec-item"><div class="spec-label">Skimmers</div><div class="spec-value">${project.poolPreset?.skimmerCount || 0}</div></div>
-          <div class="spec-item"><div class="spec-label">Retornos</div><div class="spec-value">${project.poolPreset?.returnsCount || 0}</div></div>
+          <div class="spec-item"><div class="spec-label">Skimmers</div><div class="spec-value">${hydraulicSummary.total.skimmers}</div></div>
+          <div class="spec-item"><div class="spec-label">Retornos</div><div class="spec-value">${hydraulicSummary.total.returns}</div></div>
+        </div>
+        ${hydraulicSummary.added.items.length > 0 ? `
+        <div style="margin-top:16px;padding:14px;background:#fafafa;border:1px solid #e4e4e7;border-radius:8px;">
+          <div style="font-size:12px;font-weight:700;color:#27272a;text-transform:uppercase;margin-bottom:8px;">Agregados del proyecto</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${hydraulicSummary.added.items.map((item) => `<span style="display:inline-block;padding:6px 10px;border-radius:999px;background:#f4f4f5;color:#27272a;font-size:12px;font-weight:600;border:1px solid #e4e4e7;">${item.name} x${item.quantity}</span>`).join('')}
+          </div>
+        </div>
+        ` : ''}
+        ${projectEquipmentAdditionals.length > 0 ? `
+        <div class="equipment-grid">
+          ${projectEquipmentAdditionals.map(({ equipment, quantity }) => {
+            const specs = getEquipmentSpecs(equipment);
+            return `
+            <div class="equipment-card">
+              <div class="equipment-title">${equipment.name}</div>
+              <div class="equipment-qty">${quantity} ${quantity === 1 ? 'unidad instalada' : 'unidades instaladas'}</div>
+              ${specs.length > 0 ? `
+              <ul class="equipment-specs">
+                ${specs.map((spec) => `<li>${spec}</li>`).join('')}
+              </ul>
+              ` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+        ` : ''}
+        <div class="hydraulic-grid">
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Retornos orientables</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.returns}</div>
+          </div>
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Tomas de aspiración</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.vacuumIntakes}</div>
+          </div>
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Desagües de fondo</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.bottomDrains}</div>
+          </div>
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Skimmers</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.skimmers}</div>
+          </div>
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Hidrojets</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.hydrojets}</div>
+          </div>
+          <div class="hydraulic-item">
+            <div class="hydraulic-label">Luces</div>
+            <div class="hydraulic-value">${hydraulicSummary.total.lights}</div>
+          </div>
         </div>
       </div>
 
+      ${technicalMaterialRows.length > 0 ? `
       <div class="section">
         <h2>Especificaciones de Materiales</h2>
         <table class="materials-table">
@@ -805,15 +1782,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             </tr>
           </thead>
           <tbody>
-            ${materials?.cement && shouldInclude(materials.cement.quantity) ? `<tr><td>Cemento Portland</td><td>${formatQuantity(materials.cement.quantity, materials.cement.unit)}</td><td>${materials.cement.unit}</td><td>Hormigón base vereda</td></tr>` : ''}
-            ${materials?.sand && shouldInclude(materials.sand.quantity) ? `<tr><td>Arena gruesa</td><td>${formatQuantity(materials.sand.quantity, materials.sand.unit)}</td><td>${materials.sand.unit}</td><td>Mezcla hormigón</td></tr>` : ''}
-            ${materials?.gravel && shouldInclude(materials.gravel.quantity) ? `<tr><td>Grava/Piedra</td><td>${formatQuantity(materials.gravel.quantity, materials.gravel.unit)}</td><td>${materials.gravel.unit}</td><td>Agregado grueso</td></tr>` : ''}
-            ${materials?.adhesive && shouldInclude(materials.adhesive.quantity) ? `<tr><td>Adhesivo para losetas</td><td>${formatQuantity(materials.adhesive.quantity, materials.adhesive.unit)}</td><td>${materials.adhesive.unit}</td><td>Pegado de vereda</td></tr>` : ''}
-            ${materials?.wireMesh && shouldInclude(materials.wireMesh.quantity) ? `<tr><td>Malla de alambre</td><td>${formatQuantity(materials.wireMesh.quantity, materials.wireMesh.unit)}</td><td>${materials.wireMesh.unit}</td><td>Refuerzo estructural</td></tr>` : ''}
-            ${materials?.waterproofing && shouldInclude(materials.waterproofing.quantity) ? `<tr><td>Impermeabilizante</td><td>${formatQuantity(materials.waterproofing.quantity, materials.waterproofing.unit)}</td><td>${materials.waterproofing.unit}</td><td>Protección vereda</td></tr>` : ''}
+            ${technicalMaterialRows.join('')}
           </tbody>
         </table>
       </div>
+      ` : ''}
 
       ${equipmentRecommendation ? `
       <div class="section">
@@ -840,7 +1813,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </div>
       ` : ''}
 
-      ${plumbingConfig?.selectedItems?.length > 0 ? `
+      ${basePlumbingItems.length > 0 ? `
       <div class="section">
         <h2>Instalación Hidráulica</h2>
         <table class="materials-table">
@@ -848,8 +1821,24 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <tr><th>Item</th><th>Cantidad</th><th>Especificación</th></tr>
           </thead>
           <tbody>
-            ${plumbingConfig.selectedItems.map((item: any) =>
-              `<tr><td>${item.name}</td><td>${item.quantity}</td><td>${item.diameter || item.specification || '-'}</td></tr>`
+            ${basePlumbingItems.map((item: any) =>
+              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td>${item.diameter || item.specification || '-'}</td></tr>`
+            ).join('')}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${extraPlumbingItems.length > 0 ? `
+      <div class="section">
+        <h2>Adicionales Hidráulicos</h2>
+        <table class="materials-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th>Especificación</th></tr>
+          </thead>
+          <tbody>
+            ${extraPlumbingItems.map((item: any) =>
+              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td>${item.diameter || item.specification || '-'}</td></tr>`
             ).join('')}
           </tbody>
         </table>
@@ -867,7 +1856,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
       <div class="footer">
         <p><strong>Pool Installer</strong> | Especificaciones Técnicas</p>
-        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${getProjectCode(project)}</p>
       </div>
     </div>
   </div>
@@ -877,10 +1866,22 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const generateMaterialsList = (templateSettings: ExportTemplateSettings = getTemplateSettings('materials')) => {
     const materials = project.materials as any;
-    const { additionals } = calculateCosts();
+    const installationMode = templateSettings.installationMode || 'with_extras';
+    const includeExtras = installationMode === 'with_extras';
     const plumbingConfig = project.plumbingConfig as any;
     const taskMaterials = getTaskMaterials();
+    const taskMaterialsByStage = getTaskMaterialsByStage();
+    const hydraulicExtras = getHydraulicExtraAdditionals();
+    const accessoryExtras = getAccessoryAdditionals();
+    const otherExtras = getOtherAdditionals();
+    const calculatedTiles = Array.isArray(materials?.tiles) ? materials.tiles : [];
     const hasStructuredMaterials = materials && Object.keys(materials).length > 0;
+    const sections = templateSettings.sections || {};
+    const includeSection = (key: MaterialExportSectionKey) => sections[key] !== false;
+    const shouldInclude = (quantity: number | string | undefined) => {
+      const qty = Number(quantity || 0);
+      return !!qty && !Number.isNaN(qty);
+    };
     const formatMeshSheets = (quantity: number, unit: string, sheetAreaM2: number, sheetLabel: string) => {
       if (!quantity || !unit) return '';
       const normalizedUnit = unit.toLowerCase();
@@ -889,8 +1890,72 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       return ` (≈ ${sheets} mallas de ${sheetLabel})`;
     };
     const hasElectroweldedMesh = materials?.electroweldedMesh?.quantity > 0;
+    const sidewalkMaterials = [
+      materials?.cement ? { name: 'Cemento Portland', quantity: materials.cement.quantity, unit: materials.cement.unit } : null,
+      materials?.sand ? { name: 'Arena Gruesa', quantity: materials.sand.quantity, unit: materials.sand.unit } : null,
+      materials?.gravel ? { name: 'Piedra/Grava', quantity: materials.gravel.quantity, unit: materials.gravel.unit } : null,
+      materials?.adhesive ? { name: 'Adhesivo para Losetas', quantity: materials.adhesive.quantity, unit: materials.adhesive.unit } : null,
+      materials?.whiteCement ? { name: 'Cemento Blanco', quantity: materials.whiteCement.quantity, unit: materials.whiteCement.unit } : null,
+      materials?.marmolina ? { name: 'Marmolina', quantity: materials.marmolina.quantity, unit: materials.marmolina.unit } : null,
+    ].filter((item): item is { name: string; quantity: number; unit: string } => Boolean(item && shouldInclude(item.quantity)));
+    const supportBedMaterials = [
+      materials?.electroweldedMesh
+      && shouldInclude(materials.electroweldedMesh.quantity)
+        ? {
+            name: 'Malla Electrosoldada',
+            quantityLabel: `${materials.electroweldedMesh.quantity} ${materials.electroweldedMesh.unit}${formatMeshSheets(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, 12, '2x6m')}`,
+          }
+        : null,
+      materials?.sandForBed
+      && shouldInclude(materials.sandForBed.quantity)
+        ? { name: 'Arena terciada para relleno', quantityLabel: `${materials.sandForBed.quantity} ${materials.sandForBed.unit}` }
+        : null,
+      materials?.sandForBedBulkBags
+      && shouldInclude(materials.sandForBedBulkBags.quantity)
+        ? { name: 'Referencia bolsones arena', quantityLabel: `${materials.sandForBedBulkBags.quantity} ${materials.sandForBedBulkBags.unit}` }
+        : null,
+      materials?.cementBags
+      && shouldInclude(materials.cementBags.quantity)
+        ? { name: 'Cemento para cama/relleno', quantityLabel: `${materials.cementBags.quantity} ${materials.cementBags.unit}` }
+        : null,
+    ].filter((item): item is { name: string; quantityLabel: string } => Boolean(item));
+    const complementaryMaterials = [
+      materials?.wireMesh && !hasElectroweldedMesh
+      && shouldInclude(materials.wireMesh.quantity)
+        ? {
+            name: 'Malla de Alambre',
+            quantityLabel: `${materials.wireMesh.quantity} ${materials.wireMesh.unit}${formatMeshSheets(materials.wireMesh.quantity, materials.wireMesh.unit, 6, '2x3m')}`,
+          }
+        : null,
+      materials?.waterproofing
+      && shouldInclude(materials.waterproofing.quantity)
+        ? {
+            name: 'Impermeabilizante',
+            quantityLabel: `${materials.waterproofing.quantity} ${materials.waterproofing.unit}`,
+          }
+        : null,
+    ].filter((item): item is { name: string; quantityLabel: string } => Boolean(item));
+    const electricalMaterials = Array.isArray(electricalConfig?.items)
+      ? electricalConfig.items
+          .filter((item: any) => Number(item?.quantity || 0) > 0)
+          .map((item: any) => {
+            const detailParts = [
+              item?.cableType ? `· ${item.cableType}` : '',
+              item?.cableLength ? `· ${item.cableLength} m` : '',
+              item?.watts ? `· ${item.watts} W` : '',
+            ].filter(Boolean);
+            return {
+              name: item?.name || 'Ítem eléctrico',
+              quantityLabel: `${item.quantity} ud ${detailParts.join(' ')}`.trim(),
+            };
+          })
+      : [];
+    const showSidewalkSection = includeSection('sidewalkBase') && sidewalkMaterials.length > 0;
+    const showSupportBedSection = supportBedMaterials.length > 0;
+    const showComplementarySection = includeSection('complementary') && complementaryMaterials.length > 0;
+    const showElectricalSection = includeSection('electrical') && electricalMaterials.length > 0;
 
-    const headerSubtitle = templateSettings.subtitle || 'Lista Completa de Materiales';
+    const headerSubtitle = templateSettings.subtitle || 'Listado Interno de Materiales';
     const documentTitle = templateSettings.title || `Lista de Materiales - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('materials');
 
@@ -902,12 +1967,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   <title>${documentTitle}</title>
   <style>
     ${getCommonStyles()}
-    .category-section { margin: 30px 0; }
-    .category-title { background: #2563eb; color: white; padding: 12px 20px; font-size: 18px; font-weight: 600; margin-bottom: 15px; border-radius: 6px; }
-    .material-item { display: flex; justify-content: space-between; padding: 12px 20px; background: #f9fafb; border-left: 4px solid #3b82f6; margin-bottom: 8px; align-items: center; }
+    .summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+    .summary-card { background: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px; }
+    .summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #71717a; margin-bottom: 6px; }
+    .summary-value { font-size: 18px; font-weight: 700; color: #18181b; }
+    .category-section { margin: 22px 0; }
+    .category-title { background: #18181b; color: white; padding: 12px 18px; font-size: 17px; font-weight: 600; margin-bottom: 10px; border-radius: 10px; }
+    .category-meta { margin: 0 0 10px; font-size: 12px; color: #71717a; }
+    .material-item { display: flex; justify-content: space-between; gap: 16px; padding: 12px 16px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 10px; margin-bottom: 8px; align-items: center; }
     .material-name { font-weight: 600; color: #1f2937; flex: 1; }
-    .material-qty { font-size: 18px; font-weight: 700; color: #2563eb; min-width: 120px; text-align: right; }
-    .content-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
+    .material-qty { font-size: 16px; font-weight: 700; color: #18181b; min-width: 140px; text-align: right; }
+    .content-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
   </style>
 </head>
 <body>
@@ -919,81 +1989,154 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     </div>
 
     <div class="content">
+      <div class="summary-strip">
+        <div class="summary-card">
+          <div class="summary-label">Proyecto</div>
+          <div class="summary-value">${project.name}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Instalación</div>
+          <div class="summary-value">${includeExtras ? installationTier : 'Base'}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Cliente</div>
+          <div class="summary-value">${project.clientName}</div>
+        </div>
+      </div>
+
       <div class="content-grid">
-        <div>
+          ${showSidewalkSection ? `
           <div class="category-section">
             <div class="category-title">Materiales de Vereda</div>
-            ${materials?.cement ? `<div class="material-item"><span class="material-name">Cemento Portland</span><span class="material-qty">${materials.cement.quantity} ${materials.cement.unit}</span></div>` : ''}
-            ${materials?.sand ? `<div class="material-item"><span class="material-name">Arena Gruesa</span><span class="material-qty">${materials.sand.quantity} ${materials.sand.unit}</span></div>` : ''}
-            ${materials?.gravel ? `<div class="material-item"><span class="material-name">Piedra/Grava</span><span class="material-qty">${materials.gravel.quantity} ${materials.gravel.unit}</span></div>` : ''}
-            ${materials?.adhesive ? `<div class="material-item"><span class="material-name">Adhesivo para Losetas</span><span class="material-qty">${materials.adhesive.quantity} ${materials.adhesive.unit}</span></div>` : ''}
-            ${materials?.whiteCement ? `<div class="material-item"><span class="material-name">Cemento Blanco</span><span class="material-qty">${materials.whiteCement.quantity} ${materials.whiteCement.unit}</span></div>` : ''}
-            ${materials?.marmolina ? `<div class="material-item"><span class="material-name">Marmolina</span><span class="material-qty">${materials.marmolina.quantity} ${materials.marmolina.unit}</span></div>` : ''}
+            <div class="category-meta">Base estructural y terminación exterior.</div>
+            ${sidewalkMaterials.map((item) =>
+              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantity} ${item.unit}</span></div>`
+            ).join('')}
           </div>
+          ` : ''}
 
-          ${!hasStructuredMaterials && taskMaterials.length > 0 ? `
+          ${includeSection('taskMaterials') && taskMaterials.length > 0 ? `
           <div class="category-section">
-            <div class="category-title">Materiales del plan de tareas</div>
+            <div class="category-title">Materiales por Tareas</div>
+            <div class="category-meta">Cargados manualmente en la planificación de obra.</div>
             ${taskMaterials.map((material) =>
               `<div class="material-item"><span class="material-name">${material.name}</span><span class="material-qty">${material.quantity} ${material.unit}</span></div>`
             ).join('')}
           </div>
           ` : ''}
 
-          ${(project.tileQuantities as any)?.length > 0 ? `
+          ${includeSection('taskSequence') && taskMaterialsByStage.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Materiales por Orden de Avance</div>
+            <div class="category-meta">Agrupados por etapa de obra.</div>
+            ${taskMaterialsByStage.map((stage) => `
+              <div style="margin-bottom: 18px;">
+                <div style="font-size: 13px; font-weight: 700; color: #18181b; margin-bottom: 8px;">${stage.label}</div>
+                ${stage.items.map((material) =>
+                  `<div class="material-item"><span class="material-name">${material.name}</span><span class="material-qty">${material.quantity} ${material.unit}</span></div>`
+                ).join('')}
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+
+          ${includeSection('sidewalkBase') && includeSection('tiles') && calculatedTiles.length > 0 ? `
           <div class="category-section">
             <div class="category-title">Losetas y Revestimientos</div>
-            ${(project.tileQuantities as any[]).map(tile =>
+            <div class="category-meta">Piezas calculadas para terminaciones.</div>
+            ${calculatedTiles.map((tile: any) =>
               `<div class="material-item"><span class="material-name">${tile.tileName}</span><span class="material-qty">${tile.quantity} ${tile.unit}</span></div>`
             ).join('')}
           </div>
           ` : ''}
-        </div>
 
-        <div>
-          ${plumbingConfig?.selectedItems?.length > 0 ? `
+          ${includeSection('plumbing') && basePlumbingItems.length > 0 ? `
           <div class="category-section">
-            <div class="category-title">Instalación Hidráulica</div>
-            ${plumbingConfig.selectedItems.map((item: any) =>
-              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantity} ${item.unit || 'ud'}</span></div>`
+            <div class="category-title">Instalación Hidráulica Base</div>
+            <div class="category-meta">Accesorios y cañería de la instalación base.</div>
+            ${basePlumbingItems.map((item: any) =>
+              `<div class="material-item"><span class="material-name">${getPlumbingItemName(item)}</span><span class="material-qty">${item.quantity} ${item.unit || 'ud'}</span></div>`
             ).join('')}
           </div>
           ` : ''}
 
-          ${materials?.wireMesh || materials?.waterproofing ? `
+          ${includeSection('additionals') && extraPlumbingItems.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Adicionales Hidráulicos</div>
+            <div class="category-meta">Agregados hidráulicos por encima de la instalación base.</div>
+            ${extraPlumbingItems.map((item: any) =>
+              `<div class="material-item"><span class="material-name">${getPlumbingItemName(item)}</span><span class="material-qty">${item.quantity} ${item.unit || 'ud'}</span></div>`
+            ).join('')}
+          </div>
+          ` : ''}
+
+          ${showComplementarySection ? `
           <div class="category-section">
             <div class="category-title">Materiales Complementarios</div>
-            ${materials?.wireMesh && !hasElectroweldedMesh ? `<div class="material-item"><span class="material-name">Malla de Alambre</span><span class="material-qty">${materials.wireMesh.quantity} ${materials.wireMesh.unit}${formatMeshSheets(materials.wireMesh.quantity, materials.wireMesh.unit, 6, '2x3m')}</span></div>` : ''}
-            ${materials?.waterproofing ? `<div class="material-item"><span class="material-name">Impermeabilizante</span><span class="material-qty">${materials.waterproofing.quantity} ${materials.waterproofing.unit}</span></div>` : ''}
+            <div class="category-meta">Apoyos y refuerzos complementarios.</div>
+            ${complementaryMaterials.map((item) =>
+              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantityLabel}</span></div>`
+            ).join('')}
           </div>
           ` : ''}
 
-          ${materials?.geomembrane || materials?.electroweldedMesh || materials?.sandForBed || materials?.cementBags || materials?.drainStone ? `
+          ${showSupportBedSection ? `
           <div class="category-section">
-            <div class="category-title">Cama Interna</div>
-            ${materials?.geomembrane ? `<div class="material-item"><span class="material-name">Geomembrana</span><span class="material-qty">${materials.geomembrane.quantity} ${materials.geomembrane.unit}</span></div>` : ''}
-            ${materials?.electroweldedMesh ? `<div class="material-item"><span class="material-name">Malla Electrosoldada</span><span class="material-qty">${materials.electroweldedMesh.quantity} ${materials.electroweldedMesh.unit}${formatMeshSheets(materials.electroweldedMesh.quantity, materials.electroweldedMesh.unit, 12, '2x6m')}</span></div>` : ''}
-            ${materials?.sandForBed ? `<div class="material-item"><span class="material-name">Arena para Cama</span><span class="material-qty">${materials.sandForBed.quantity} ${materials.sandForBed.unit}</span></div>` : ''}
-            ${materials?.cementBags ? `<div class="material-item"><span class="material-name">Cemento para Cama</span><span class="material-qty">${materials.cementBags.quantity} ${materials.cementBags.unit}</span></div>` : ''}
-            ${materials?.drainStone ? `<div class="material-item"><span class="material-name">Piedra de Drenaje</span><span class="material-qty">${materials.drainStone.quantity} ${materials.drainStone.unit}</span></div>` : ''}
+            <div class="category-title">Materiales para Cama y Relleno</div>
+            <div class="category-meta">Se incluyen siempre que existan en el proyecto.</div>
+            ${supportBedMaterials.map((item) =>
+              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantityLabel}</span></div>`
+            ).join('')}
           </div>
           ` : ''}
 
-          ${additionals?.length > 0 ? `
+          ${showElectricalSection ? `
           <div class="category-section">
-            <div class="category-title">Adicionales</div>
-            ${additionals.map((add: any) => {
-              const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name || 'Item adicional';
+            <div class="category-title">Materiales Eléctricos</div>
+            <div class="category-meta">Cableado, protecciones y componentes cargados en la instalación eléctrica.</div>
+            ${electricalMaterials.map((item) =>
+              `<div class="material-item"><span class="material-name">${item.name}</span><span class="material-qty">${item.quantityLabel}</span></div>`
+            ).join('')}
+          </div>
+          ` : ''}
+
+          ${includeSection('additionals') && includeExtras && hydraulicExtras.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Extras Hidráulicos y Equipos</div>
+            <div class="category-meta">Bombas, calefacción y accesorios agregados al proyecto.</div>
+            ${hydraulicExtras.map((add: any) => {
+              const name = getAdditionalName(add);
               return `<div class="material-item"><span class="material-name">${name}</span><span class="material-qty">${add.newQuantity} ${add.customUnit || 'ud'}</span></div>`;
             }).join('')}
           </div>
           ` : ''}
-        </div>
+
+          ${includeSection('additionals') && includeExtras && accessoryExtras.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Adicionales Accesorios</div>
+            <div class="category-meta">Accesorios extra cargados fuera de la instalación base.</div>
+            ${accessoryExtras.map((add: any) => {
+              const name = getAdditionalName(add);
+              return `<div class="material-item"><span class="material-name">${name}</span><span class="material-qty">${add.newQuantity} ${add.customUnit || 'ud'}</span></div>`;
+            }).join('')}
+          </div>
+          ` : ''}
+
+          ${includeSection('additionals') && includeExtras && otherExtras.length > 0 ? `
+          <div class="category-section">
+            <div class="category-title">Otros Adicionales</div>
+            <div class="category-meta">Otros agregados cargados en el proyecto.</div>
+            ${otherExtras.map((add: any) => {
+              const name = getAdditionalName(add);
+              return `<div class="material-item"><span class="material-name">${name}</span><span class="material-qty">${add.newQuantity} ${add.customUnit || 'ud'}</span></div>`;
+            }).join('')}
+          </div>
+          ` : ''}
       </div>
 
       <div class="footer">
         <p><strong>Pool Installer</strong> | Lista de Materiales</p>
-        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${getProjectCode(project)}</p>
       </div>
     </div>
   </div>
@@ -1003,10 +2146,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const generateDetailedBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('budget')) => {
     const materials = project.materials as any;
-    const { additionals, additionalsCosts, plumbingCosts, totalMaterialCost, totalLaborCost, grandTotal } = resolveCostOverrides(templateSettings);
-    const plumbingConfig = project.plumbingConfig as any;
+    const installationMode = templateSettings.installationMode || 'with_extras';
+    const includeExtras = installationMode === 'with_extras';
+    const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
+    const showMaterialsToClient = clientPricingMode === 'full';
+    const { additionals, additionalsCosts, totalMaterialCost, totalLaborCost, grandTotal, baseMaterialCost, baseLaborCost } = resolveCostOverrides(templateSettings);
     const rolesSummary = getRolesCostSummary();
-    const headerSubtitle = templateSettings.subtitle || 'Presupuesto Detallado con Costos Unitarios';
+    const visibleMaterialCost = includeExtras ? totalMaterialCost : baseMaterialCost;
+    const visibleLaborCost = includeExtras ? totalLaborCost : baseLaborCost;
+    const visibleGrandTotal = includeExtras ? grandTotal : (baseMaterialCost + baseLaborCost);
+    const headerSubtitle = templateSettings.subtitle || (showMaterialsToClient ? 'Presupuesto Detallado con Costos Unitarios' : 'Presupuesto de Instalación');
     const documentTitle = templateSettings.title || `Presupuesto Detallado - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('budget');
 
@@ -1019,11 +2168,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   <style>
     ${getCommonStyles()}
     .budget-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .budget-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 13px; }
+    .budget-table th { background: #18181b; color: white; padding: 12px; text-align: left; font-size: 13px; }
     .budget-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
     .budget-table tr:hover { background: #f9fafb; }
-    .budget-table .subtotal-row { background: #eff6ff; font-weight: 600; }
-    .budget-table .total-row { background: #2563eb; color: white; font-weight: 700; font-size: 16px; }
+    .budget-table .subtotal-row { background: #fafafa; font-weight: 600; }
+    .budget-table .total-row { background: #111111; color: white; font-weight: 700; font-size: 16px; }
     .text-right { text-align: right; }
   </style>
 </head>
@@ -1036,6 +2185,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     </div>
 
     <div class="content">
+      ${showMaterialsToClient ? `
       <div class="section">
         <h2>Materiales Base - Vereda y Estructurales</h2>
         <table class="budget-table">
@@ -1047,29 +2197,47 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             ${materials?.sand ? `<tr><td>Arena Gruesa</td><td>${materials.sand.quantity}</td><td>${materials.sand.unit}</td><td class="text-right">$ ${(parseFloat(materials.sand.cost) / parseFloat(materials.sand.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.sand.cost).toLocaleString('es-AR')}</td></tr>` : ''}
             ${materials?.gravel ? `<tr><td>Piedra/Grava</td><td>${materials.gravel.quantity}</td><td>${materials.gravel.unit}</td><td class="text-right">$ ${(parseFloat(materials.gravel.cost) / parseFloat(materials.gravel.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.gravel.cost).toLocaleString('es-AR')}</td></tr>` : ''}
             ${materials?.adhesive ? `<tr><td>Adhesivo</td><td>${materials.adhesive.quantity}</td><td>${materials.adhesive.unit}</td><td class="text-right">$ ${(materials.adhesive.cost / materials.adhesive.quantity).toFixed(2)}</td><td class="text-right">$ ${materials.adhesive.cost.toLocaleString('es-AR')}</td></tr>` : ''}
-            <tr class="subtotal-row"><td colspan="4">Subtotal Materiales Base</td><td class="text-right">$ ${project.materialCost.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      ${plumbingConfig?.selectedItems?.length > 0 ? `
-      <div class="section">
-        <h2>Instalación Hidráulica</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
-          </thead>
-          <tbody>
-            ${plumbingConfig.selectedItems.map((item: any) =>
-              `<tr><td>${item.name}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
-            ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Subtotal Plomería</td><td class="text-right">$ ${plumbingCosts.toLocaleString('es-AR')}</td></tr>
+            <tr class="subtotal-row"><td colspan="4">Subtotal Materiales Base</td><td class="text-right">$ ${baseMaterialCost.toLocaleString('es-AR')}</td></tr>
           </tbody>
         </table>
       </div>
       ` : ''}
 
-      ${additionals?.length > 0 ? `
+      ${showMaterialsToClient && basePlumbingItems.length > 0 ? `
+      <div class="section">
+        <h2>Instalación Hidráulica Base</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            ${basePlumbingItems.map((item: any) =>
+              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
+            ).join('')}
+            <tr class="subtotal-row"><td colspan="3">Subtotal Plomería Base</td><td class="text-right">$ ${basePlumbingCosts.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${showMaterialsToClient && includeExtras && extraPlumbingItems.length > 0 ? `
+      <div class="section">
+        <h2>Adicionales Hidráulicos</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            ${extraPlumbingItems.map((item: any) =>
+              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
+            ).join('')}
+            <tr class="subtotal-row"><td colspan="3">Subtotal Adicionales Hidráulicos</td><td class="text-right">$ ${extraPlumbingCosts.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      ${showMaterialsToClient && includeExtras && additionals?.length > 0 ? `
       <div class="section">
         <h2>Items Adicionales</h2>
         <table class="budget-table">
@@ -1078,7 +2246,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           </thead>
           <tbody>
             ${additionals.map((add: any) => {
-              const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name;
+              const name = getAdditionalName(add);
               const price = add.customPricePerUnit || add.accessory?.pricePerUnit || add.equipment?.pricePerUnit || add.material?.pricePerUnit || 0;
               return `<tr><td>${name}</td><td>${add.newQuantity}</td><td class="text-right">$ ${price.toLocaleString('es-AR')}</td><td class="text-right">$ ${(add.newQuantity * price).toLocaleString('es-AR')}</td></tr>`;
             }).join('')}
@@ -1098,24 +2266,37 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             ${Object.values(rolesSummary).map((role: any) =>
               `<tr><td>${role.roleName}</td><td>${role.tasksCount}</td><td>${role.hours.toFixed(1)} hs</td><td class="text-right">$ ${role.cost.toLocaleString('es-AR')}</td></tr>`
             ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Total Mano de Obra</td><td class="text-right">$ ${totalLaborCost.toLocaleString('es-AR')}</td></tr>
+            <tr class="subtotal-row"><td colspan="3">Mano de Obra Base</td><td class="text-right">$ ${baseLaborCost.toLocaleString('es-AR')}</td></tr>
+            ${includeExtras && additionalsCosts.laborCost > 0 ? `<tr class="subtotal-row"><td colspan="3">M.O. por Agregados</td><td class="text-right">$ ${additionalsCosts.laborCost.toLocaleString('es-AR')}</td></tr>` : ''}
+            <tr class="subtotal-row"><td colspan="3">Total Mano de Obra</td><td class="text-right">$ ${visibleLaborCost.toLocaleString('es-AR')}</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="section">
-        <table class="budget-table">
-          <tbody>
-            <tr class="subtotal-row"><td colspan="4">TOTAL MATERIALES</td><td class="text-right">$ ${totalMaterialCost.toLocaleString('es-AR')}</td></tr>
-            <tr class="subtotal-row"><td colspan="4">TOTAL MANO DE OBRA</td><td class="text-right">$ ${totalLaborCost.toLocaleString('es-AR')}</td></tr>
-            <tr class="total-row"><td colspan="4">INVERSIÓN TOTAL DEL PROYECTO</td><td class="text-right">$ ${grandTotal.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
+        <div class="cost-section">
+          ${showMaterialsToClient ? `
+          <div class="cost-row">
+            <span class="cost-label">Total materiales</span>
+            <span class="cost-value">$ ${visibleMaterialCost.toLocaleString('es-AR')}</span>
+          </div>
+          ` : ''}
+          <div class="cost-row">
+            <span class="cost-label">Total mano de obra</span>
+            <span class="cost-value">$ ${visibleLaborCost.toLocaleString('es-AR')}</span>
+          </div>
+          ${showMaterialsToClient ? `
+          <div class="cost-row" style="font-weight: 700;">
+            <span class="cost-label">Inversión total del proyecto</span>
+            <span class="cost-value">$ ${visibleGrandTotal.toLocaleString('es-AR')}</span>
+          </div>
+          ` : ''}
+        </div>
       </div>
 
       <div class="footer">
         <p><strong>Pool Installer</strong> | Presupuesto Detallado</p>
-        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${getProjectCode(project)}</p>
       </div>
     </div>
   </div>
@@ -1137,10 +2318,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   <title>${documentTitle}</title>
   <style>
     ${getCommonStyles()}
-    .timeline-item { padding: 15px 20px; background: #eff6ff; border-left: 4px solid #3b82f6; margin: 10px 0; }
+    .timeline-item { padding: 15px 20px; background: #fafafa; border-left: 2px solid #d4d4d8; margin: 10px 0; }
     .timeline-date { font-size: 12px; color: #6b7280; font-weight: 500; }
     .timeline-content { font-size: 14px; color: #1f2937; margin-top: 5px; }
-    .highlight-box { background: #dbeafe; border: 2px solid #3b82f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .highlight-box { background: #fafafa; border: 1px solid #d4d4d8; padding: 20px; border-radius: 8px; margin: 20px 0; }
   </style>
 </head>
 <body>
@@ -1153,12 +2334,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
     <div class="content">
       <div class="highlight-box">
-        <h3 style="color: #1e40af; margin: 0 0 10px 0; font-size: 18px;">Resumen Ejecutivo</h3>
+        <h3 style="color: #18181b; margin: 0 0 10px 0; font-size: 18px;">Resumen Ejecutivo</h3>
         <p style="font-size: 14px; line-height: 1.6; margin: 0;">
           Proyecto <strong>${project.name}</strong> para <strong>${project.clientName}</strong>.
-          Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${project.poolPreset?.depth}m
+          Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${poolDepthLabel}
           con capacidad de ${(project.volume * 1000).toFixed(0)} litros.
-          Inversión total: <strong style="color: #2563eb; font-size: 18px;">$${grandTotal.toLocaleString('es-AR')}</strong>
+          Inversión total: <strong style="color: #111111; font-size: 18px;">$${grandTotal.toLocaleString('es-AR')}</strong>
         </p>
       </div>
 
@@ -1178,7 +2359,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
       <div class="footer">
         <p><strong>Pool Installer</strong> | Reporte Completo</p>
-        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${project.id.substring(0, 8).toUpperCase()}</p>
+        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${getProjectCode(project)}</p>
       </div>
     </div>
   </div>
@@ -1186,11 +2367,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 </html>`;
   };
 
-  const generateOverview = (templateSettings: ExportTemplateSettings = getTemplateSettings('overview')) => {
+  const generateOverview = (
+    templateSettings: ExportTemplateSettings = getTemplateSettings('overview'),
+    poolImageDataUrl?: string
+  ) => {
     const sidewalkAreaM2 = calculatedSidewalkArea || project.sidewalkArea || 0;
     const headerSubtitle = templateSettings.subtitle || 'Vista General del Proyecto';
     const documentTitle = templateSettings.title || `Vista General - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('overview');
+    const overviewHydraulicSummary = hydraulicSummary;
 
     return `
 <!DOCTYPE html>
@@ -1274,6 +2459,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .project-meta {
       font-size: 13px;
       color: #6b7280;
+    }
+    .project-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
     }
 
     /* MAIN GRID */
@@ -1410,6 +2608,66 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
+    .scope-panel {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 16px 18px;
+    }
+    .scope-title {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .scope-value {
+      font-size: 13px;
+      color: #111827;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .visual-panel {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .visual-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .visual-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .visual-caption {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .visual-frame {
+      background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 290px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .visual-frame img {
+      max-width: 100%;
+      max-height: 420px;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
 
     /* FOOTER */
     .footer {
@@ -1445,7 +2703,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <div class="doc-title">${headerSubtitle}</div>
       </div>
       <div class="header-info">
-        <div class="project-id">Proyecto: ${project.id.substring(0, 8).toUpperCase()}</div>
+        <div class="project-id">Proyecto: ${getProjectCode(project)}</div>
         <div class="doc-date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
       </div>
     </div>
@@ -1457,6 +2715,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <strong>Cliente:</strong> ${project.clientName}
         ${project.location ? ` | <strong>Ubicación:</strong> ${project.location}` : ''}
       </div>
+      <div class="project-badge">${installationTier}</div>
     </div>
 
     <!-- CONTENT -->
@@ -1469,8 +2728,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           <div class="metric-label">Dimensiones (m)</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">${project.poolPreset?.depth || 0}</div>
-          <div class="metric-label">Profundidad (m)</div>
+          <div class="metric-value">${poolDepthLabel}</div>
+          <div class="metric-label">Profundidad</div>
         </div>
         <div class="metric-card">
           <div class="metric-value">${(project.volume * 1000).toFixed(0)}</div>
@@ -1540,18 +2799,53 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
       </div>
 
+      <div class="content-grid" style="flex: 0 0 auto;">
+        <div class="scope-panel">
+          <div class="scope-title">Instalación Base</div>
+          <div class="scope-value">${clientBaseAccessoryScope.join(', ')}</div>
+        </div>
+        <div class="scope-panel">
+          <div class="scope-title">Extras y Personalizaciones</div>
+          <div class="scope-value">${extraPlumbingItems.length > 0 || summarizedAdditionalItems.length > 0
+            ? [
+                ...extraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`),
+                ...dedupeLabeledItems(overviewHydraulicSummary.added.items).map((item) => `${item.name} x${item.quantity}`),
+              ].join(', ')
+            : 'Sin extras cargados'}
+          </div>
+        </div>
+      </div>
+
+      ${poolImageDataUrl ? `
+      <div class="visual-panel">
+        <div class="visual-header">
+          <div class="visual-title">Visualización del Proyecto</div>
+          <div class="visual-caption">Planta con medidas y terminación</div>
+        </div>
+        <div class="visual-frame">
+          <img src="${poolImageDataUrl}" alt="Visualización de la piscina con losetas y medidas" />
+        </div>
+      </div>
+      ` : ''}
+
       <!-- ACCESSORIES -->
       <div class="info-panel">
         <div class="panel-title">Accesorios e Instalaciones</div>
         <div class="accessories-grid">
           <div class="accessory-box">
-            <div class="accessory-count">${project.poolPreset?.returnsCount || 0}</div>
+            <div class="accessory-count">${overviewHydraulicSummary.total.returns}</div>
             <div class="accessory-label">Retornos</div>
           </div>
           <div class="accessory-box">
-            <div class="accessory-count">${project.poolPreset?.skimmerCount || 0}</div>
+            <div class="accessory-count">${overviewHydraulicSummary.total.skimmers}</div>
             <div class="accessory-label">Skimmers</div>
           </div>
+          ${overviewHydraulicSummary.total.hydrojets > 0 ? `
+          <div class="accessory-box">
+            <div class="accessory-count">${overviewHydraulicSummary.total.hydrojets}</div>
+            <div class="accessory-label">Hidrojets</div>
+          </div>
+          ` : ''}
           ${project.poolPreset?.hasLighting ? `
           <div class="accessory-box">
             <div class="accessory-count">${project.poolPreset.lightingCount}</div>
@@ -1590,15 +2884,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; background: #f9fafb; padding: 20px; }
     .container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .header { background: #2563eb; color: white; padding: 30px 40px; text-align: center; }
+    .header { background: #111111; color: white; padding: 30px 40px; text-align: center; }
     .logo { font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
     .subtitle { font-size: 16px; opacity: 0.9; }
     .date { font-size: 13px; opacity: 0.7; margin-top: 10px; }
     .content { padding: 30px 40px; }
     .section { margin: 30px 0; page-break-inside: avoid; }
-    .section h2 { color: #1e40af; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; font-size: 20px; font-weight: 600; }
+    .section h2 { color: #111111; border-bottom: 1px solid #d4d4d8; padding-bottom: 10px; margin-bottom: 20px; font-size: 20px; font-weight: 600; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-    .info-item { padding: 15px; background: #eff6ff; border-left: 3px solid #3b82f6; }
+    .info-item { padding: 15px; background: #fafafa; border-left: 2px solid #d4d4d8; }
     .info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-weight: 500; }
     .info-value { font-size: 15px; font-weight: 600; color: #1f2937; }
     .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280; }
@@ -1608,95 +2902,83 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const generateWhatsAppMessage = (template: ExportTemplate, sections = selectedSections): string => {
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
-    const additionals = (project as any).additionals || [];
-    const tasksLaborCost = getTasksLaborCost();
-    const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
-
-    const additionalsCosts = additionals.reduce((acc: any, additional: any) => {
-      const quantity = additional.newQuantity || 0;
-      let materialCost = 0;
-      let laborCost = 0;
-
-      if (additional.customPricePerUnit) {
-        materialCost = additional.customPricePerUnit * quantity;
-        laborCost = (additional.customLaborCost || 0) * quantity;
-      } else if (additional.accessory) {
-        materialCost = additional.accessory.pricePerUnit * quantity;
-      } else if (additional.equipment) {
-        materialCost = additional.equipment.pricePerUnit * quantity;
-      } else if (additional.material) {
-        materialCost = additional.material.pricePerUnit * quantity;
-      }
-
-      return {
-        materialCost: acc.materialCost + materialCost,
-        laborCost: acc.laborCost + laborCost,
-      };
-    }, { materialCost: 0, laborCost: 0 });
-
-    const plumbingCosts = plumbingConfig?.selectedItems
-      ? plumbingConfig.selectedItems.reduce((sum: number, item: any) => sum + (item.quantity * item.pricePerUnit), 0)
-      : 0;
-
-    const electricalConfig = project.electricalConfig as any;
-    const electricalCosts = electricalConfig?.items
-      ? electricalConfig.items.reduce((sum: number, item: any) => sum + (item.pricePerUnit ? item.pricePerUnit * item.quantity : 0), 0)
-      : 0;
-
-    const totalMaterialCost = project.materialCost + additionalsCosts.materialCost + plumbingCosts + electricalCosts;
-    const totalLaborCost = baseLaborCost + additionalsCosts.laborCost;
-    const grandTotal = totalMaterialCost + totalLaborCost;
+    const clientTemplateSettings = getTemplateSettings('client');
+    const clientPricingMode = clientTemplateSettings.clientPricingMode || 'labor_only';
+    const installationMode = clientTemplateSettings.installationMode || 'with_extras';
+    const includeExtras = installationMode === 'with_extras';
+    const showMaterialsToClient = clientPricingMode === 'full';
+    const {
+      additionals,
+      additionalsCosts,
+      plumbingCosts,
+      electricalCosts,
+      totalLaborCost,
+      baseMaterialCost,
+    } = calculateProjectFinancials(project);
+    const visibleAdditionals = includeExtras ? additionals : [];
+    const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
+    const visibleAdditionalsMaterialCost = includeExtras ? additionalsCosts.materialCost : 0;
+    const visibleAdditionalsLaborCost = includeExtras ? additionalsCosts.laborCost : 0;
+    const visibleMaterialCost = baseMaterialCost + visibleAdditionalsMaterialCost;
+    const clientBaseLaborCost = Math.max(0, totalLaborCost - additionalsCosts.laborCost);
+    const visibleLaborCost = clientBaseLaborCost + visibleAdditionalsLaborCost;
+    const visibleGrandTotal = visibleMaterialCost + visibleLaborCost;
+    const visibleInstallationTier = includeExtras ? installationTier : 'Instalación base';
 
     let message = '';
 
     if (sections.header) {
-      message += `*PRESUPUESTO - CONSTRUCCION DE PISCINA*\n\n*Proyecto:* ${project.name}\n*Cliente:* ${project.clientName}\n*Ubicacion:* ${project.location || 'A definir'}`;
+      message += `*PRESUPUESTO - INSTALACION DE PISCINA*\n\n*Proyecto:* ${project.name}\n*Cliente:* ${project.clientName}\n*Ubicacion:* ${project.location || 'A definir'}`;
     }
 
     if (sections.characteristics) {
-      message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*\n- Modelo: ${project.poolPreset?.name || 'N/A'}\n- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${project.poolPreset?.depth || 0}m\n- Volumen: ${project.volume.toFixed(2)} m³ (${(project.volume * 1000).toFixed(0)} litros)\n- Forma: ${project.poolPreset?.shape || 'N/A'}`;
+      message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*\n- Modelo: ${project.poolPreset?.name || 'N/A'}\n- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${poolDepthLabel}\n- Volumen: ${project.volume.toFixed(2)} m³ (${(project.volume * 1000).toFixed(0)} litros)\n- Forma: ${project.poolPreset?.shape || 'N/A'}`;
     }
 
     if (sections.includes) {
-      message += `${message ? '\n\n' : ''}*INCLUYE:*\n- Excavacion y preparacion del terreno\n- Instalacion de piscina de fibra de vidrio\n- Sistema de filtracion completo\n${equipmentRecommendation ? `- Bomba ${equipmentRecommendation.pump.name} (${equipmentRecommendation.pump.power}HP)\n` : ''}- Instalacion hidraulica (${project.poolPreset?.returnsCount || 0} retornos, ${project.poolPreset?.skimmerCount || 0} skimmers)\n${project.poolPreset?.hasLighting ? `- Iluminacion LED (${project.poolPreset.lightingCount} unidades)\n` : ''}- Vereda perimetral (${(calculatedSidewalkArea || project.sidewalkArea || 0).toFixed(2)} m²)\n- Materiales de construccion`;
+      message += `${message ? '\n\n' : ''}*INCLUYE:*\n- ${includeExtras ? `${installationTier} recomendada` : visibleInstallationTier}\n- Excavacion y preparacion del terreno\n- Instalacion de piscina de fibra de vidrio\n- Sistema de filtracion completo\n- Instalacion base de accesorios: ${clientBaseAccessoryScope.join(', ')}\n${visibleExtraPlumbingItems.length > 0 ? `- Accesorios extra de instalacion: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}\n` : ''}${visibleAdditionals.length > 0 ? `- Equipos/agregados adicionales: ${visibleAdditionals.map((add: any) => `${getAdditionalName(add)} x${add.newQuantity}`).join(', ')}\n` : ''}${showMaterialsToClient ? '- Materiales de construccion' : '- Materiales y equipos fuera del valor comercial informado'}`;
     }
 
-    if (sections.additionals && additionals && additionals.length > 0) {
+    if (sections.additionals && visibleAdditionals.length > 0) {
       message += `${message ? '\n\n' : ''}*ADICIONALES INCLUIDOS:*\n`;
-      additionals.forEach((add: any) => {
-        const name = add.customName || add.accessory?.name || add.equipment?.name || add.material?.name || 'Item adicional';
+      visibleAdditionals.forEach((add: any) => {
+        const name = getAdditionalName(add);
         message += `- ${name} (${add.newQuantity} ${add.customUnit || 'unidades'})\n`;
       });
     }
 
     if (sections.costs) {
-      message += `${message ? '\n\n' : ''}*INVERSION TOTAL*\n- Materiales base: $${project.materialCost.toLocaleString('es-AR')}`;
+      if (showMaterialsToClient) {
+        message += `${message ? '\n\n' : ''}*INVERSION TOTAL*\n- Materiales base: $${project.materialCost.toLocaleString('es-AR')}`;
 
-      if (plumbingCosts > 0) {
-        message += `\n- Plomeria: $${plumbingCosts.toLocaleString('es-AR')}`;
+        if (plumbingCosts > 0) {
+          message += `\n- Plomeria: $${plumbingCosts.toLocaleString('es-AR')}`;
+        }
+
+        if (electricalCosts > 0) {
+          message += `\n- Electrica: $${electricalCosts.toLocaleString('es-AR')}`;
+        }
+
+        if (visibleAdditionalsMaterialCost > 0) {
+          message += `\n- Adicionales: $${visibleAdditionalsMaterialCost.toLocaleString('es-AR')}`;
+        }
+
+        message += `\n- Total materiales: $${visibleMaterialCost.toLocaleString('es-AR')}`;
+        message += `\n\n- Mano de obra: $${visibleLaborCost.toLocaleString('es-AR')}`;
+        message += `\n\n*TOTAL PROYECTO: $${visibleGrandTotal.toLocaleString('es-AR')}*`;
+      } else {
+        message += `${message ? '\n\n' : ''}*MANO DE OBRA*\n- Instalacion base: $${clientBaseLaborCost.toLocaleString('es-AR')}`;
+
+        if (visibleAdditionalsLaborCost > 0) {
+          message += `\n- Adicionales: $${visibleAdditionalsLaborCost.toLocaleString('es-AR')}`;
+        }
+
+        message += `\n- Total mano de obra: $${visibleLaborCost.toLocaleString('es-AR')}`;
       }
-
-      if (electricalCosts > 0) {
-        message += `\n- Electrica: $${electricalCosts.toLocaleString('es-AR')}`;
-      }
-
-      if (additionalsCosts.materialCost > 0) {
-        message += `\n- Adicionales: $${additionalsCosts.materialCost.toLocaleString('es-AR')}`;
-      }
-
-      message += `\n- Total materiales: $${totalMaterialCost.toLocaleString('es-AR')}`;
-      message += `\n\n- Mano de obra base: $${baseLaborCost.toLocaleString('es-AR')}`;
-
-      if (additionalsCosts.laborCost > 0) {
-        message += `\n- M.O. adicionales: $${additionalsCosts.laborCost.toLocaleString('es-AR')}`;
-      }
-
-      message += `\n- Total mano de obra: $${totalLaborCost.toLocaleString('es-AR')}`;
-      message += `\n\n*TOTAL PROYECTO: $${grandTotal.toLocaleString('es-AR')}*`;
     }
 
     if (sections.conditions) {
-      message += `${message ? '\n\n' : ''}*CONDICIONES:*\n- Valido por 30 dias\n- Plazo: 15-20 dias habiles\n- Pago: 50% inicio, 50% finalizacion\n- Garantia: 1 año mano de obra`;
+      message += `${message ? '\n\n' : ''}*CONDICIONES:*\n- Valido por 30 dias\n- Plazo: 15-20 dias habiles\n- Pago: 50% inicio, 50% finalizacion\n- El valor contempla viaticos, consumibles y extras de ejecucion propios de la instalacion\n- Garantia: 3 meses mano de obra`;
     }
 
     message += `\n\n_Generado por Pool Installer - ${new Date().toLocaleDateString('es-AR')}_`;
@@ -1714,7 +2996,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const getContentForTemplate = (
     template: ExportTemplate,
     settings: ExportSettings = exportSettings,
-    extras: { cadImageDataUrl?: string } = {}
+    extras: { cadImageDataUrl?: string; poolImageDataUrl?: string } = {}
   ): string => {
     const templateSettings = getTemplateSettings(template, settings);
     switch (template) {
@@ -1729,28 +3011,217 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       case 'complete':
         return generateCompleteReport(templateSettings);
       case 'overview':
-        return generateOverview(templateSettings);
+        return generateOverview(templateSettings, extras.poolImageDataUrl);
       default:
         return generateClientBudget(templateSettings);
     }
   };
 
-  const handleExport = async (format: 'html', template: ExportTemplate) => {
-    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
-    let cadImageDataUrl = '';
-    if (template === 'professional') {
-      const templateSettings = getTemplateSettings('professional', exportSettings);
-      const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
-      if (canvasRef.current) {
-        await nextFrame();
-        try {
-          cadImageDataUrl = canvasRef.current.toDataURL('image/png');
-        } catch (error) {
-          console.warn('No se pudo capturar el plano CAD:', error);
-        }
+  const extractBodyContent = (html: string) =>
+    html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1]?.trim() || html;
+
+  const createUnifiedPackageDocument = (parts: Array<{ title: string; content: string }>) => {
+    const logoDataUrl = getLogoForTemplate('complete');
+    const renderedSections = parts
+      .filter((part) => part.content.trim().length > 0)
+      .map((part) => `
+        <section class="merged-section">
+          <div class="merged-section-title">${part.title}</div>
+          <div class="merged-section-body">${extractBodyContent(part.content)}</div>
+        </section>
+      `)
+      .join('');
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Proyecto ${project.name} ${project.clientName}</title>
+  <style>
+    ${getCommonStyles()}
+    @page { size: A4; margin: 10mm; }
+    body { background: #f3f4f6; padding: 16px; }
+    .merged-cover { width: min(100%, 210mm); margin: 0 auto 16px; background: #111111; color: white; padding: 20px 24px; border-radius: 18px; }
+    .merged-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+    .merged-subtitle { font-size: 15px; opacity: 0.82; }
+    .merged-meta { margin-top: 12px; font-size: 13px; opacity: 0.7; }
+    .merged-index { width: min(100%, 210mm); margin: 0 auto 12px; background: white; border: 1px solid #e5e7eb; border-radius: 18px; padding: 16px 24px; box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06); }
+    .merged-index-title { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a; margin-bottom: 10px; }
+    .merged-index-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+    .merged-index-item { font-size: 13px; color: #18181b; }
+    .merged-section { width: min(100%, 210mm); margin: 0 auto 16px; background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 22px rgba(15, 23, 42, 0.08); page-break-before: always; }
+    .merged-section:first-of-type { page-break-before: auto; }
+    .merged-section-title { background: #f4f4f5; color: #18181b; padding: 12px 24px; font-size: 15px; font-weight: 700; letter-spacing: 0.01em; border-bottom: 1px solid #e5e7eb; }
+    .merged-section-body { padding: 0; }
+    .merged-section-body .container,
+    .merged-section-body .page {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: auto !important;
+      height: auto !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+    .merged-section-body .page {
+      padding: 10mm !important;
+    }
+    .merged-section-body .content,
+    .merged-section-body .content-wrapper {
+      padding: 24px !important;
+      gap: 16px !important;
+    }
+    .merged-section-body .header,
+    .merged-section-body .project-header {
+      display: none !important;
+    }
+    .merged-section-body .footer { padding-bottom: 24px; }
+    .merged-section-body img,
+    .merged-section-body svg,
+    .merged-section-body canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    .merged-section-body .content-grid,
+    .merged-section-body .info-grid,
+    .merged-section-body .features-list {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+    .merged-section-body .spec-grid,
+    .merged-section-body .hydraulic-grid,
+    .merged-section-body .metrics-row,
+    .merged-section-body .summary-strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+    }
+    .merged-section-body .equipment-grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+    .merged-section-body .accessories-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+    .merged-section-body .visual-panel,
+    .merged-section-body .scope-panel,
+    .merged-section-body .info-panel,
+    .merged-section-body .section,
+    .merged-section-body .cad-wrap {
+      page-break-inside: avoid;
+    }
+    .merged-section-body .visual-frame,
+    .merged-section-body .cad-wrap {
+      min-height: 0 !important;
+      padding: 10px !important;
+      overflow: hidden !important;
+    }
+    .merged-section-body .visual-frame img {
+      max-height: 150mm !important;
+      object-fit: contain !important;
+    }
+    .merged-section-body .cad-wrap img {
+      width: 100% !important;
+      max-height: 170mm !important;
+      object-fit: contain !important;
+    }
+    .merged-section-body .project-name,
+    .merged-section-body .summary-value,
+    .merged-section-body .scope-value,
+    .merged-section-body .equipment-name,
+    .merged-section-body .material-name {
+      overflow-wrap: anywhere;
+    }
+    .merged-section-body table {
+      width: 100% !important;
+      table-layout: fixed;
+    }
+    .merged-section-body th,
+    .merged-section-body td {
+      word-break: break-word;
+    }
+    @media (max-width: 900px) {
+      .merged-cover,
+      .merged-index,
+      .merged-section {
+        width: 100%;
+      }
+      .merged-index-list {
+        grid-template-columns: 1fr;
+      }
+      .merged-section-body .spec-grid,
+      .merged-section-body .hydraulic-grid,
+      .merged-section-body .metrics-row,
+      .merged-section-body .summary-strip,
+      .merged-section-body .accessories-grid {
+        grid-template-columns: 1fr !important;
       }
     }
-    if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
+    @media print {
+      body { background: white; padding: 0; }
+      .merged-cover,
+      .merged-index { box-shadow: none; border-radius: 0; margin-bottom: 0; }
+      .merged-section { box-shadow: none; border-radius: 0; margin-bottom: 0; }
+      .merged-section-body .page { padding: 0 !important; }
+      .merged-section-body .content,
+      .merged-section-body .content-wrapper { padding: 20px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="merged-cover">
+    <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+    <div class="merged-title">Proyecto ${project.name} ${project.clientName}</div>
+    <div class="merged-subtitle">Propuesta comercial, especificaciones tecnicas y listado de materiales</div>
+    <div class="merged-meta">Código ${getProjectCode(project)} · ${new Date().toLocaleDateString('es-AR')}</div>
+  </div>
+  <div class="merged-index">
+    <div class="merged-index-title">Indice del expediente</div>
+    <div class="merged-index-list">
+      ${parts
+        .filter((part) => part.content.trim().length > 0)
+        .map((part, index) => `<div class="merged-index-item">${index + 1}. ${part.title}</div>`)
+        .join('')}
+    </div>
+  </div>
+  ${renderedSections}
+</body>
+</html>`;
+  };
+
+  const getPoolImageDataUrl = async () => {
+    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+    let poolImageDataUrl = '';
+
+    if (poolCanvasRef.current) {
+      await nextFrame();
+      await nextFrame();
+      try {
+        poolImageDataUrl = poolCanvasRef.current.toDataURL('image/png');
+      } catch (error) {
+        console.warn('No se pudo capturar la vista de la piscina:', error);
+      }
+    }
+
+    return poolImageDataUrl;
+  };
+
+  const getProfessionalImageDataUrl = async (settings: ExportSettings = exportSettings) => {
+    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+    let cadImageDataUrl = '';
+    const templateSettings = getTemplateSettings('professional', settings);
+    const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
+
+    if (canvasRef.current) {
+      await nextFrame();
+      try {
+        cadImageDataUrl = canvasRef.current.toDataURL('image/png');
+      } catch (error) {
+        console.warn('No se pudo capturar el plano CAD:', error);
+      }
+    }
+
+    if (cadCanvasRef.current && !cadImageDataUrl) {
       await nextFrame();
       try {
         cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
@@ -1758,7 +3229,119 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         console.warn('No se pudo capturar el plano CAD:', error);
       }
     }
-    const content = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
+
+    return cadImageDataUrl;
+  };
+
+  const handleGenerateProjectPackage = async () => {
+    try {
+      setGeneratingPackage(true);
+      const cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
+      const poolImageDataUrl = await getPoolImageDataUrl();
+      const packageSettings: ExportSettings = JSON.parse(JSON.stringify(exportSettings || { templates: {} }));
+      const clientTemplate = getTemplateSettings('client', packageSettings);
+      const hasRecommendedExtras = extraPlumbingItems.length > 0 || summarizedAdditionalItems.length > 0;
+      const recommendedClientContent = getContentForTemplate('client', {
+        ...packageSettings,
+        templates: {
+          ...packageSettings.templates,
+          client: {
+            ...clientTemplate,
+            installationMode: hasRecommendedExtras ? 'with_extras' : 'basic',
+            title: `${hasRecommendedExtras ? 'Propuesta Comercial Recomendada' : 'Propuesta Comercial Base'} - ${project.name}`,
+          },
+        },
+      }, { cadImageDataUrl, poolImageDataUrl });
+      const professionalContent = getContentForTemplate('professional', packageSettings, { cadImageDataUrl, poolImageDataUrl });
+      const overviewContent = getContentForTemplate('overview', packageSettings, { cadImageDataUrl, poolImageDataUrl });
+      const materialsContent = getContentForTemplate('materials', packageSettings, { cadImageDataUrl, poolImageDataUrl });
+      const unifiedPackageContent = createUnifiedPackageDocument([
+        { title: hasRecommendedExtras ? 'Propuesta Comercial Recomendada' : 'Propuesta Comercial Base', content: recommendedClientContent },
+        { title: 'Especificaciones Técnicas', content: professionalContent },
+        { title: 'Vista General', content: overviewContent },
+        { title: 'Lista de Materiales', content: materialsContent },
+      ]);
+
+      const documents = [
+        {
+          fileName: '00-propuesta-comercial-base.html',
+          content: getContentForTemplate('client', {
+            ...packageSettings,
+            templates: {
+              ...packageSettings.templates,
+              client: {
+                ...clientTemplate,
+                installationMode: 'basic',
+                title: `Propuesta Comercial Base - ${project.name}`,
+              },
+            },
+          }, { cadImageDataUrl, poolImageDataUrl }),
+        },
+        {
+          fileName: `01-Proyecto ${project.name} ${project.clientName}.html`,
+          content: unifiedPackageContent,
+        },
+        {
+          fileName: '04-dossier-proyecto.html',
+          content: getContentForTemplate('complete', packageSettings, { cadImageDataUrl, poolImageDataUrl }),
+        },
+        {
+          fileName: '06-presupuesto-interno.html',
+          content: getContentForTemplate('budget', {
+            ...packageSettings,
+            templates: {
+              ...packageSettings.templates,
+              budget: {
+                ...getTemplateSettings('budget', packageSettings),
+                clientPricingMode: 'full',
+                title: `Presupuesto Interno - ${project.name}`,
+              },
+            },
+          }, { cadImageDataUrl, poolImageDataUrl }),
+        },
+      ];
+
+      await projectService.createProjectPackage(project.id, {
+        documents,
+        excelSections,
+        metadata: {
+          includedTemplates: documents.map((doc) => doc.fileName),
+          projectName: project.name,
+          clientName: project.clientName,
+        },
+      });
+
+      alert('Expediente generado en el servidor.');
+    } catch (error: any) {
+      console.error('Error al generar expediente del proyecto:', error);
+      alert(error?.response?.data?.error || 'No se pudo generar el expediente del proyecto');
+    } finally {
+      setGeneratingPackage(false);
+    }
+  };
+
+  const handleDownloadProjectPackage = async () => {
+    try {
+      setDownloadingPackage(true);
+      await projectService.downloadProjectPackage(project.id);
+    } catch (error: any) {
+      console.error('Error al descargar expediente del proyecto:', error);
+      alert(error?.response?.data?.error || 'No se pudo descargar el expediente del proyecto');
+    } finally {
+      setDownloadingPackage(false);
+    }
+  };
+
+  const handleExport = async (format: 'html', template: ExportTemplate) => {
+    let cadImageDataUrl = '';
+    let poolImageDataUrl = '';
+    if (template === 'overview' || template === 'complete') {
+      poolImageDataUrl = await getPoolImageDataUrl();
+    }
+    if (template === 'professional') {
+      cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
+    }
+    const content = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
     const filename = `${template}-${project.name.replace(/\s+/g, '-').toLowerCase()}.html`;
     const mimeType = 'text/html';
 
@@ -1776,6 +3359,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const handlePrint = async (template: ExportTemplate) => {
     const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
     let cadImageDataUrl = '';
+    let poolImageDataUrl = '';
+    if (template === 'overview' || template === 'complete') {
+      poolImageDataUrl = await getPoolImageDataUrl();
+    }
     if (template === 'professional') {
       const templateSettings = getTemplateSettings('professional', exportSettings);
       const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
@@ -1796,7 +3383,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         console.warn('No se pudo capturar el plano CAD:', error);
       }
     }
-    const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
+    const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(html);
@@ -1851,15 +3438,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
       // 2) Captura de visualización (alta resolución)
       let poolImageDataUrl = '';
-      if ((template === 'complete' || template === 'overview') && poolCanvasRef.current) {
-        // dar un par de frames por si el canvas se está pintando
-        await nextFrame();
-        await nextFrame();
-        try {
-          poolImageDataUrl = poolCanvasRef.current.toDataURL('image/png');
-        } catch (e) {
-          console.warn('No se pudo capturar el canvas de pileta para el PDF:', e);
-        }
+      if (template === 'complete' || template === 'overview') {
+        poolImageDataUrl = await getPoolImageDataUrl();
       }
 
       // 3) Construimos wrapper A4 en px (evita “mm” inconsistentes en html2canvas)
@@ -1890,7 +3470,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         }
       }
 
-      const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl });
+      const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
       const { styleText, bodyHtml } = extractBodyAndStyles(html);
 
       wrapper = document.createElement('div');
@@ -1919,7 +3499,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       wrapper.innerHTML = `
         <style>${styleText}\n${fixCss}</style>
         ${bodyHtml}
-        ${poolImageDataUrl ? `
+        ${poolImageDataUrl && template === 'complete' ? `
           <div style="margin-top: 28px; page-break-before: always;">
             <h2 style="color:#1e40af; border-bottom: 2px solid #93c5fd; padding-bottom: 10px; margin-bottom: 16px;">
               Visualización del Proyecto
@@ -2074,6 +3654,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
 
   const handleExportToExcel = async () => {
+    if (selectedExcelItems.length === 0) {
+      alert('Seleccioná al menos un ítem para exportar a Excel.');
+      return;
+    }
+
     setExportingToExcel(true);
     try {
       await projectService.exportToExcel(project.id, excelSections);
@@ -2144,6 +3729,114 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     });
   };
 
+  const updateDraftClientBlocks = (updater: (blocks: ClientDocumentBlock[]) => ClientDocumentBlock[]) => {
+    setDraftSettings((prev) => {
+      const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
+      const nextBlocks = updater(Array.isArray(prevTemplate.documentBlocks) ? prevTemplate.documentBlocks : []);
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          client: {
+            ...prevTemplate,
+            documentBlocks: nextBlocks,
+          },
+        },
+      };
+    });
+  };
+
+  const addClientDocumentBlock = (type: ClientDocumentBlockType) => {
+    const defaults: Record<ClientDocumentBlockType, Partial<ClientDocumentBlock>> = {
+      heading: { content: 'Nuevo título', fontSize: 22, align: 'left' },
+      paragraph: { content: 'Nuevo párrafo. Podés usar variables como {{clientName}} o {{laborCost}}.', fontSize: 14, align: 'left' },
+      bullet_list: { content: 'Primer punto\nSegundo punto', fontSize: 14, align: 'left' },
+      divider: {},
+      data_field: { fieldKey: 'clientName', label: 'Dato real', fontSize: 14, align: 'left' },
+    };
+
+    updateDraftClientBlocks((blocks) => ([
+      ...blocks,
+      {
+        id: `block-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type,
+        ...defaults[type],
+      },
+    ]));
+  };
+
+  const patchClientDocumentBlock = (blockId: string, updates: Partial<ClientDocumentBlock>) => {
+    updateDraftClientBlocks((blocks) =>
+      blocks.map((block) => block.id === blockId ? { ...block, ...updates } : block)
+    );
+  };
+
+  const removeClientDocumentBlock = (blockId: string) => {
+    updateDraftClientBlocks((blocks) => blocks.filter((block) => block.id !== blockId));
+  };
+
+  const moveClientDocumentBlock = (blockId: string, direction: -1 | 1) => {
+    updateDraftClientBlocks((blocks) => {
+      const index = blocks.findIndex((block) => block.id === blockId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= blocks.length) return blocks;
+      const cloned = [...blocks];
+      const [item] = cloned.splice(index, 1);
+      cloned.splice(nextIndex, 0, item);
+      return cloned;
+    });
+  };
+
+  const updateDraftClientCustomBody = (html: string) => {
+    setClientDocumentEditorHtml(html);
+    setDraftSettings((prev) => {
+      const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          client: {
+            ...prevTemplate,
+            customBodyHtml: html,
+          },
+        },
+      };
+    });
+  };
+
+  const handleResetClientDocument = () => {
+    const nextHtml = buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings);
+    updateDraftClientCustomBody(nextHtml);
+  };
+
+  const handleUseAutomaticClientDocument = () => {
+    setClientDocumentEditorHtml(buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings));
+    setDraftSettings((prev) => {
+      const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
+      const nextTemplate = { ...prevTemplate };
+      delete nextTemplate.customBodyHtml;
+      return {
+        ...prev,
+        templates: {
+          ...prev.templates,
+          client: nextTemplate,
+        },
+      };
+    });
+  };
+
+  const runClientDocumentCommand = (command: string, value?: string) => {
+    if (selectedTemplate !== 'client') return;
+    clientDocumentEditorRef.current?.focus();
+    document.execCommand(command, false, value);
+    const currentHtml = clientDocumentEditorRef.current?.innerHTML || '';
+    updateDraftClientCustomBody(currentHtml);
+  };
+
+  const insertClientDocumentHtml = (html: string) => {
+    runClientDocumentCommand('insertHTML', html);
+  };
+
   const handleSaveExportSettings = async () => {
     setSavingSettings(true);
     try {
@@ -2158,21 +3851,26 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
   };
 
-  const selectedTemplateData = templates.find((template) => template.id === selectedTemplate) || templates[0];
+  const selectedTemplateData = templates.find((template) => template.id === selectedTemplate) || visibleTemplates[0] || templates[0];
   const activeDraftTemplate = draftSettings.templates?.[selectedTemplate] || {};
+  const activeClientBlocks = selectedTemplate === 'client' && Array.isArray((activeDraftTemplate as ExportTemplateSettings).documentBlocks)
+    ? (activeDraftTemplate as ExportTemplateSettings).documentBlocks || []
+    : [];
   const draftSections = selectedTemplate === 'client'
     ? (activeDraftTemplate.sections || selectedSections)
     : undefined;
+  const draftMaterialSections = selectedTemplate === 'materials'
+    ? (activeDraftTemplate.sections || {})
+    : undefined;
   const draftPreviewHtml = getContentForTemplate(selectedTemplate, draftSettings);
-  const computedCosts = calculateCosts();
   const defaultConditionsText = getConditionsList().join('\n');
   const templatePreviewHighlights: Record<ExportTemplate, string[]> = {
-    client: ['Resumen de costos', 'Datos clave del cliente', 'Condiciones comerciales'],
-    professional: ['Especificaciones técnicas', 'Normativas y medidas', 'Secuencia de obra'],
+    client: ['Instalación recomendada', 'Comparación base vs platinum', 'Condiciones comerciales'],
+    professional: ['Criterio técnico', 'Medidas y alcances', 'Secuencia de obra'],
     materials: ['Listado por categorías', 'Unidades y cantidades', 'Notas de obra'],
     budget: ['Costos unitarios', 'Subtotales', 'Materiales vs mano de obra'],
-    complete: ['Todo en un solo documento', 'Técnico + presupuesto', 'Anexos y notas'],
-    overview: ['Resumen ejecutivo', 'Datos generales', 'Indicadores clave'],
+    complete: ['Resumen comercial', 'Soporte técnico', 'Anexos del proyecto'],
+    overview: ['Resumen visual', 'Datos del proyecto', 'Alcance de instalación'],
   };
 
   return (
@@ -2185,6 +3883,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           width={1600}
           height={1000}
           showMeasurements={true}
+          renderQuality={2.5}
         />
         <PoolVisualizationCanvas
           ref={cadCanvasRef}
@@ -2194,37 +3893,38 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           height={1000}
           showMeasurements={true}
           viewMode="cad"
+          renderQuality={2.5}
         />
       </div>
 
-      <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6">
+      <Card className="overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+        <div className="bg-zinc-950 text-white p-6 border-b border-white/8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              <div className="bg-white/10 p-3 rounded-2xl border border-white/15">
+              <div className="bg-white/[0.06] p-3 rounded-2xl border border-white/10 shadow-inner">
                 <FileDown size={30} className="text-white" />
               </div>
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight">Exportación de Documentos</h2>
-                <p className="text-slate-300 mt-1">Genere documentos profesionales para su proyecto.</p>
+                <p className="text-zinc-300 mt-1">Prepare una propuesta clara para cliente y el respaldo técnico de la obra.</p>
               </div>
             </div>
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-zinc-300">
               Plantilla activa: <span className="font-semibold text-white">{selectedTemplateData.name}</span>
             </div>
           </div>
         </div>
 
-        <div className="p-6 lg:p-8 bg-slate-50">
+        <div className="p-6 lg:p-8 bg-zinc-950">
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
             <div className="space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">Plantillas disponibles</h3>
-                <span className="text-xs text-slate-500">Seleccione una plantilla para previsualizar.</span>
+                <h3 className="text-lg font-semibold text-white">Plantillas disponibles</h3>
+                <span className="text-xs text-zinc-500">Mostramos solo las plantillas útiles para presentar la propuesta.</span>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                {templates.map((template) => {
+                {visibleTemplates.map((template) => {
                   const Icon = template.icon;
                   const isSelected = selectedTemplate === template.id;
 
@@ -2232,19 +3932,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template.id)}
-                      className={`text-left p-4 rounded-2xl border transition-all shadow-sm ${
+                      className={`text-left p-4 rounded-2xl border transition-all duration-200 ${
                         isSelected
-                          ? 'bg-white border-slate-900 text-slate-900 shadow-lg'
-                          : 'bg-white/70 border-transparent hover:border-slate-200 hover:bg-white'
+                          ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.22)]'
+                          : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}>
                           <Icon size={20} />
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900">{template.name}</p>
-                          <p className="text-xs text-slate-500 mt-1">{template.description}</p>
+                          <p className="font-semibold text-zinc-100">{template.name}</p>
+                          <p className="text-xs text-zinc-400 mt-1">{template.description}</p>
                         </div>
                       </div>
                     </button>
@@ -2252,33 +3952,74 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 })}
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              {internalTemplates.length > 0 && (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 p-5">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-zinc-100">Uso interno / técnico</h4>
+                      <p className="text-xs text-zinc-400 mt-1">Documentos de costos y materiales. Quedan aparte para no mezclar la propuesta comercial.</p>
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wide text-zinc-500">Interno</span>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {internalTemplates.map((template) => {
+                      const Icon = template.icon;
+                      const isSelected = selectedTemplate === template.id;
+
+                      return (
+                        <button
+                          key={template.id}
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`text-left p-4 rounded-2xl border transition-all duration-200 ${
+                            isSelected
+                              ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.22)]'
+                              : 'bg-zinc-950/70 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl ${isSelected ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}>
+                              <Icon size={20} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-zinc-100">{template.name}</p>
+                              <p className="text-xs text-zinc-400 mt-1">{template.description}</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-slate-900 text-white">
+                  <div className="p-3 rounded-xl bg-zinc-100 text-zinc-950">
                     <selectedTemplateData.icon size={24} />
                   </div>
                   <div>
-                    <h4 className="text-xl font-semibold text-slate-900">{selectedTemplateData.name}</h4>
-                    <p className="text-slate-600 mt-2">{selectedTemplateData.description}</p>
+                    <h4 className="text-xl font-semibold text-white">{selectedTemplateData.name}</h4>
+                    <p className="text-zinc-300 mt-2">{selectedTemplateData.description}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm">
+              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-900">Vista previa real</h4>
+                  <h4 className="text-sm font-semibold text-white">Vista previa real</h4>
                   <button
                     onClick={() => {
                       setDraftSettings(JSON.parse(JSON.stringify(exportSettings || { templates: {} })));
                       setIsEditorOpen(true);
                     }}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                    className="text-xs font-semibold text-zinc-300 hover:text-white"
                   >
                     Editar en pantalla completa
                   </button>
                 </div>
 
-                <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white">
+                <div className="mt-4 border border-zinc-800 rounded-xl overflow-hidden bg-white shadow-inner">
                   <iframe
                     title="preview"
                     srcDoc={getContentForTemplate(selectedTemplate)}
@@ -2292,25 +4033,65 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   {(templatePreviewHighlights[selectedTemplateData.id] || []).map((item) => (
                     <span
                       key={item}
-                      className="text-xs text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-3 py-1"
+                      className="text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1"
                     >
                       {item}
                     </span>
                   ))}
                 </div>
               </div>
+
+              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Control de datos a exportar</h4>
+                    <p className="text-xs text-zinc-400 mt-1">Cada bloque indica qué dato sale y desde dónde se está armando.</p>
+                  </div>
+                  <span className="text-xs font-medium text-zinc-400">
+                    {selectedTemplateAuditItems.filter((item) => item.ready).length}/{selectedTemplateAuditItems.length} listos
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {selectedTemplateAuditItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-xl border p-4 ${
+                        item.ready
+                          ? 'border-zinc-700 bg-zinc-900'
+                          : 'border-zinc-800 bg-zinc-950'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-100">{item.label}</p>
+                          <p className="text-xs text-zinc-300 mt-1">{item.detail}</p>
+                          <p className="text-xs text-zinc-400 mt-2">Dato detectado: {item.value}</p>
+                        </div>
+                        <div className={`shrink-0 rounded-full p-1.5 ${
+                          item.ready
+                            ? 'bg-zinc-100 text-zinc-950 border border-zinc-200'
+                            : 'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                        }`}>
+                          {item.ready ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-fit space-y-4">
+            <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] h-fit space-y-4">
               <div>
-                <h4 className="text-lg font-semibold text-slate-900">Acciones rápidas</h4>
-                <p className="text-xs text-slate-500">Exportá, imprimí o compartí la plantilla seleccionada.</p>
+                <h4 className="text-lg font-semibold text-white">Acciones rápidas</h4>
+                <p className="text-xs text-zinc-400">Exportá, imprimí o compartí la plantilla seleccionada.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleExportPDF(selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors shadow-sm"
+                  className="flex flex-col items-center gap-2 p-4 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm"
                 >
                   <FileDown size={20} />
                   <span className="font-semibold text-xs">PDF</span>
@@ -2318,7 +4099,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
                 <button
                   onClick={() => handleExport('html', selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors shadow-sm"
+                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
                   <Download size={20} />
                   <span className="font-semibold text-xs">HTML</span>
@@ -2326,7 +4107,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
                 <button
                   onClick={() => handlePrint(selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl transition-colors shadow-sm"
+                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
                   <Printer size={20} />
                   <span className="font-semibold text-xs">Imprimir</span>
@@ -2334,7 +4115,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
                 <button
                   onClick={handleWhatsAppShare}
-                  className="flex flex-col items-center gap-2 p-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-sm"
+                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
                   <MessageCircle size={20} />
                   <span className="font-semibold text-xs">WhatsApp</span>
@@ -2343,34 +4124,79 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
               <button
                 onClick={() => setShowExcelDialog(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm text-sm font-semibold"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
               >
                 <FileSpreadsheet size={18} />
                 Excel Técnico
               </button>
+
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={handleGenerateProjectPackage}
+                  disabled={generatingPackage}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm text-sm font-semibold"
+                >
+                  <FileText size={18} />
+                  {generatingPackage ? 'Generando expediente...' : 'Generar expediente'}
+                </button>
+
+                <button
+                  onClick={handleDownloadProjectPackage}
+                  disabled={downloadingPackage}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white disabled:opacity-60 text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
+                >
+                  <Download size={18} />
+                  {downloadingPackage ? 'Preparando ZIP...' : 'Descargar ZIP'}
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-white">Resumen verificable</p>
+                  <span className="text-xs text-zinc-500">Antes de exportar</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                    <p className="text-xs text-zinc-400">Materiales</p>
+                    <p className="font-semibold text-zinc-100">{formatCurrency(computedCosts.totalMaterialCost)}</p>
+                  </div>
+                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                    <p className="text-xs text-zinc-400">Mano de obra</p>
+                    <p className="font-semibold text-zinc-100">{formatCurrency(computedCosts.totalLaborCost)}</p>
+                  </div>
+                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                    <p className="text-xs text-zinc-400">Tareas cargadas</p>
+                    <p className="font-semibold text-zinc-100">{computedTaskCount}</p>
+                  </div>
+                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                    <p className="text-xs text-zinc-400">Ítems hidráulicos</p>
+                    <p className="font-semibold text-zinc-100">{plumbingItemsCount}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm">
-          <div className="absolute inset-0 flex flex-col bg-white">
-            <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md">
+          <div className="absolute inset-0 flex flex-col bg-zinc-950">
+            <div className="flex flex-col gap-3 border-b border-zinc-800 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-slate-900">Editor de documentos</h3>
-                <p className="text-sm text-slate-500">Plantilla activa: {selectedTemplateData.name}</p>
+                <h3 className="text-xl font-semibold text-white">Editor de documentos</h3>
+                <p className="text-sm text-zinc-400">Plantilla activa: {selectedTemplateData.name}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsEditorOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500"
                 >
                   Cerrar
                 </button>
                 <button
                   onClick={handleSaveExportSettings}
-                  className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                  className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-950 hover:bg-white"
                   disabled={savingSettings}
                 >
                   {savingSettings ? 'Guardando...' : 'Guardar cambios'}
@@ -2378,9 +4204,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-              <div className="bg-slate-100 p-4 overflow-auto">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[70vh]">
+            <div className="flex-1 grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="bg-zinc-950 p-4 overflow-auto min-h-0">
+                <div className="bg-white rounded-2xl border border-zinc-800 shadow-sm overflow-auto min-h-[70vh] h-[calc(100vh-170px)]">
                   <iframe
                     title="preview-editor"
                     srcDoc={draftPreviewHtml}
@@ -2390,24 +4216,24 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 </div>
               </div>
 
-              <div className="border-l border-slate-200 p-5 overflow-auto">
+              <div className="border-l border-zinc-800 p-5 overflow-auto bg-zinc-950">
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900 mb-3">Textos del documento</h4>
+                    <h4 className="text-sm font-semibold text-white mb-3">Textos del documento</h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Título del documento</label>
+                        <label className="block text-xs text-zinc-400 mb-1">Título del documento</label>
                         <input
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
                           value={activeDraftTemplate.title || ''}
                           onChange={(event) => updateDraftTemplate({ title: event.target.value })}
                           placeholder={`${selectedTemplateData.name} - ${project.name}`}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Subtítulo de portada</label>
+                        <label className="block text-xs text-zinc-400 mb-1">Subtítulo de portada</label>
                         <input
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
                           value={activeDraftTemplate.subtitle || ''}
                           onChange={(event) => updateDraftTemplate({ subtitle: event.target.value })}
                           placeholder={selectedTemplateData.description}
@@ -2415,40 +4241,67 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                       </div>
                       {selectedTemplate === 'client' && (
                         <div>
-                          <label className="block text-xs text-slate-500 mb-1">Condiciones comerciales</label>
+                          <label className="block text-xs text-zinc-400 mb-1">Condiciones comerciales</label>
                           <textarea
-                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm min-h-[140px]"
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[140px]"
                             value={activeDraftTemplate.conditions || ''}
                             onChange={(event) => updateDraftTemplate({ conditions: event.target.value })}
                             placeholder={defaultConditionsText}
                           />
-                          <p className="text-[11px] text-slate-400 mt-1">Una condición por línea.</p>
+                          <p className="text-[11px] text-zinc-500 mt-1">Una condición por línea.</p>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900 mb-3">Valores y costos</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs text-slate-500 mb-1">Materiales</label>
-                        <input
-                          type="number"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                          value={activeDraftTemplate.values?.materialCost ?? ''}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
-                          }}
-                          placeholder={computedCosts.totalMaterialCost.toFixed(2)}
-                        />
+                    <h4 className="text-sm font-semibold text-white mb-3">Valores y costos</h4>
+                    {selectedTemplate === 'client' && (
+                      <div className="mb-4">
+                        <label className="block text-xs text-zinc-400 mb-1">Alcance de instalación</label>
+                        <select
+                          value={activeDraftTemplate.installationMode || 'with_extras'}
+                          onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm mb-3"
+                        >
+                          <option value="basic">Instalación base</option>
+                          <option value="with_extras">{installationTier}</option>
+                        </select>
+                        <p className="text-[11px] text-zinc-500 mt-1 mb-3">Podés descargar el presupuesto cliente solo con alcance base o con todos los extras del proyecto.</p>
+
+                        <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
+                        <select
+                          value={activeDraftTemplate.clientPricingMode || 'labor_only'}
+                          onChange={(event) => updateDraftTemplate({ clientPricingMode: event.target.value as 'full' | 'labor_only' })}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                        >
+                          <option value="labor_only">Solo mano de obra</option>
+                          <option value="full">Materiales + mano de obra</option>
+                        </select>
+                        <p className="text-[11px] text-zinc-500 mt-1">En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.</p>
                       </div>
+                    )}
+                    <div className="space-y-3">
+                      {!(selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only') && (
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Materiales</label>
+                          <input
+                            type="number"
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                            value={activeDraftTemplate.values?.materialCost ?? ''}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
+                            }}
+                            placeholder={computedCosts.totalMaterialCost.toFixed(2)}
+                          />
+                        </div>
+                      )}
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Mano de obra</label>
+                        <label className="block text-xs text-zinc-400 mb-1">Mano de obra</label>
                         <input
                           type="number"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
                           value={activeDraftTemplate.values?.laborCost ?? ''}
                           onChange={(event) => {
                             const value = event.target.value;
@@ -2458,16 +4311,18 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">Total</label>
+                        <label className="block text-xs text-zinc-400 mb-1">Total</label>
                         <input
                           type="number"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
                           value={activeDraftTemplate.values?.totalCost ?? ''}
                           onChange={(event) => {
                             const value = event.target.value;
                             updateDraftValues({ totalCost: value === '' ? undefined : Number(value) });
                           }}
-                          placeholder={computedCosts.grandTotal.toFixed(2)}
+                          placeholder={selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only'
+                            ? computedCosts.totalLaborCost.toFixed(2)
+                            : computedCosts.grandTotal.toFixed(2)}
                         />
                       </div>
                     </div>
@@ -2475,8 +4330,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
                   {selectedTemplate === 'client' && (
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900 mb-3">Secciones visibles</h4>
-                      <div className="space-y-2 text-sm text-slate-600">
+                      <h4 className="text-sm font-semibold text-white mb-3">Secciones visibles</h4>
+                      <div className="space-y-2 text-sm text-zinc-300">
                         {[
                           { key: 'header', label: 'Información del cliente' },
                           { key: 'includes', label: 'Alcance del proyecto' },
@@ -2497,21 +4352,320 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                     </div>
                   )}
 
+                  {selectedTemplate === 'client' && (
+                    <div>
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Documento editable</h4>
+                          <p className="text-[11px] text-zinc-500 mt-1">Editás la propuesta de este proyecto. Los placeholders siguen saliendo de la app, por ejemplo <code>{'{{clientName}}'}</code> o <code>{'{{laborCost}}'}</code>.</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleResetClientDocument}
+                            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
+                          >
+                            Cargar base
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleUseAutomaticClientDocument}
+                            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
+                          >
+                            Volver a automático
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => runClientDocumentCommand('bold')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Negrita</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('italic')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Itálica</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h2>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H2</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h3>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H3</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<p>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Párrafo</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('insertUnorderedList')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Lista</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('justifyLeft')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Izq</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('justifyCenter')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Centro</button>
+                          <button type="button" onClick={() => runClientDocumentCommand('justifyRight')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Der</button>
+                          <button type="button" onClick={() => insertClientDocumentHtml('<hr />')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">División</button>
+                          <button type="button" onClick={() => insertClientDocumentHtml('<table><thead><tr><th>Concepto</th><th>Detalle</th></tr></thead><tbody><tr><td>Item</td><td>Valor</td></tr></tbody></table>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Tabla</button>
+                          <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-columns\"><div><h3>Columna 1</h3><p>Contenido</p></div><div><h3>Columna 2</h3><p>Contenido</p></div></div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">2 columnas</button>
+                          <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-comment\">Comentario interno o nota comercial.</div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Comentario</button>
+                        </div>
+
+                        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 p-3">
+                          <p className="text-[11px] font-semibold text-zinc-400 mb-2">Insertar dato real del proyecto</p>
+                          <div className="flex flex-wrap gap-2">
+                            {CLIENT_DYNAMIC_FIELDS.map((field) => (
+                              <button
+                                key={field.key}
+                                type="button"
+                                onClick={() => insertClientDocumentHtml(`{{${field.key}}}`)}
+                                className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:text-white"
+                              >
+                                {field.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div
+                          ref={clientDocumentEditorRef}
+                          contentEditable
+                          suppressContentEditableWarning
+                          onInput={(event) => updateDraftClientCustomBody(event.currentTarget.innerHTML)}
+                          className="min-h-[360px] rounded-xl border border-zinc-800 bg-white px-4 py-4 text-sm text-zinc-900 focus:outline-none"
+                          dangerouslySetInnerHTML={{ __html: clientDocumentEditorHtml }}
+                        />
+
+                        <p className="text-[11px] text-zinc-500">
+                          Si querés volver al armado original de la app, usá <strong>Volver a automático</strong>. Mientras uses este editor, el contenido queda persistido en este proyecto.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTemplate === 'client' && (
+                    <div>
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">Bloques personalizados</h4>
+                          <p className="text-[11px] text-zinc-500 mt-1">Texto libre con variables reales del proyecto. Se guarda dentro de este proyecto.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <button type="button" onClick={() => addClientDocumentBlock('heading')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Título</button>
+                        <button type="button" onClick={() => addClientDocumentBlock('paragraph')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Párrafo</button>
+                        <button type="button" onClick={() => addClientDocumentBlock('bullet_list')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Lista</button>
+                        <button type="button" onClick={() => addClientDocumentBlock('data_field')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Dato real</button>
+                        <button type="button" onClick={() => addClientDocumentBlock('divider')} className="col-span-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ División</button>
+                      </div>
+
+                      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 p-3 mb-4">
+                        <p className="text-[11px] font-semibold text-zinc-400 mb-2">Variables disponibles</p>
+                        <div className="flex flex-wrap gap-2">
+                          {CLIENT_DYNAMIC_FIELDS.map((field) => (
+                            <code key={field.key} className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                              {`{{${field.key}}}`}
+                            </code>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        {activeClientBlocks.length === 0 && (
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
+                            Todavía no hay bloques personalizados para esta propuesta.
+                          </div>
+                        )}
+
+                        {activeClientBlocks.map((block, index) => (
+                          <div key={block.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                                Bloque {index + 1} · {block.type}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => moveClientDocumentBlock(block.id, -1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↑</button>
+                                <button type="button" onClick={() => moveClientDocumentBlock(block.id, 1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↓</button>
+                                <button type="button" onClick={() => removeClientDocumentBlock(block.id)} className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:text-red-200">Eliminar</button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Tipografía</label>
+                                <select
+                                  value={block.fontFamily || 'Segoe UI, Arial, sans-serif'}
+                                  onChange={(event) => patchClientDocumentBlock(block.id, { fontFamily: event.target.value })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                >
+                                  <option value="Segoe UI, Arial, sans-serif">Sans</option>
+                                  <option value="Georgia, serif">Serif</option>
+                                  <option value="'Courier New', monospace">Monospace</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Tamaño</label>
+                                <input
+                                  type="number"
+                                  value={block.fontSize || ''}
+                                  onChange={(event) => patchClientDocumentBlock(block.id, { fontSize: event.target.value === '' ? undefined : Number(event.target.value) })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-1">Alineación</label>
+                              <select
+                                value={block.align || 'left'}
+                                onChange={(event) => patchClientDocumentBlock(block.id, { align: event.target.value as 'left' | 'center' | 'right' })}
+                                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                              >
+                                <option value="left">Izquierda</option>
+                                <option value="center">Centro</option>
+                                <option value="right">Derecha</option>
+                              </select>
+                            </div>
+
+                            {block.type === 'data_field' ? (
+                              <>
+                                <div>
+                                  <label className="block text-xs text-zinc-400 mb-1">Dato de proyecto</label>
+                                  <select
+                                    value={block.fieldKey || 'clientName'}
+                                    onChange={(event) => patchClientDocumentBlock(block.id, { fieldKey: event.target.value })}
+                                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                  >
+                                    {CLIENT_DYNAMIC_FIELDS.map((field) => (
+                                      <option key={field.key} value={field.key}>{field.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-zinc-400 mb-1">Etiqueta</label>
+                                  <input
+                                    value={block.label || ''}
+                                    onChange={(event) => patchClientDocumentBlock(block.id, { label: event.target.value })}
+                                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                    placeholder="Ej: Inversión estimada"
+                                  />
+                                </div>
+                              </>
+                            ) : block.type !== 'divider' ? (
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Contenido</label>
+                                <textarea
+                                  value={block.content || ''}
+                                  onChange={(event) => patchClientDocumentBlock(block.id, { content: event.target.value })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm min-h-[110px]"
+                                  placeholder="Podés escribir texto libre y usar variables como {{clientName}} o {{laborCost}}"
+                                />
+                              </div>
+                            ) : (
+                              <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm text-zinc-400">
+                                Este bloque agrega una división visual en el documento.
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-1">Comentario interno</label>
+                              <input
+                                value={block.comments || ''}
+                                onChange={(event) => patchClientDocumentBlock(block.id, { comments: event.target.value })}
+                                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                placeholder="Nota para vos sobre este bloque"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {selectedTemplate === 'professional' && (
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900 mb-3">Plano incluido</h4>
-                      <div className="space-y-2 text-sm text-slate-600">
-                        <label className="block text-xs text-slate-500 mb-1">Vista del dibujo</label>
+                      <h4 className="text-sm font-semibold text-white mb-3">Plano incluido</h4>
+                      <div className="space-y-2 text-sm text-zinc-300">
+                        <label className="block text-xs text-zinc-400 mb-1">Vista del dibujo</label>
                         <select
                           value={activeDraftTemplate.drawingView || 'cad'}
                           onChange={(event) => updateDraftTemplate({ drawingView: event.target.value as 'cad' | 'planta' })}
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
                         >
                           <option value="cad">Plano CAD</option>
                           <option value="planta">Vista Planta</option>
                         </select>
-                        <p className="text-[11px] text-slate-400">Se mostrará en la exportación de Especificaciones Técnicas.</p>
+                        <p className="text-[11px] text-zinc-500">Se mostrará en la exportación de Especificaciones Técnicas.</p>
                       </div>
+                    </div>
+                  )}
+
+                  {selectedTemplate === 'materials' && (
+                    <div>
+                      <div className="mb-4">
+                        <label className="block text-xs text-zinc-400 mb-1">Alcance de instalación</label>
+                        <select
+                          value={activeDraftTemplate.installationMode || 'with_extras'}
+                          onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                        >
+                          <option value="basic">Instalación básica</option>
+                          <option value="with_extras">Instalación con extras</option>
+                        </select>
+                        <p className="text-[11px] text-zinc-500 mt-1">La lista de materiales sigue sin valores; esto solo cambia el alcance incluido.</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <h4 className="text-sm font-semibold text-white">Bloques del listado de materiales</h4>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, true))}
+                            className="text-[11px] text-zinc-400 hover:text-white"
+                          >
+                            Marcar todo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, false))}
+                            className="text-[11px] text-zinc-400 hover:text-white"
+                          >
+                            Quitar todo
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {materialSectionDefinitions.map((item) => (
+                          <label
+                            key={item.key}
+                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${
+                              draftMaterialSections?.[item.key] !== false
+                            ? 'border-zinc-700 bg-zinc-900'
+                            : 'border-zinc-800 bg-zinc-900/60'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={draftMaterialSections?.[item.key] !== false}
+                              onChange={(event) => updateDraftSection(item.key, event.target.checked)}
+                              className="h-4 w-4 mt-0.5"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-zinc-100">{item.label}</p>
+                              <p className="text-xs text-zinc-400 mt-1">{item.description}</p>
+                              <p className="text-[11px] text-zinc-500 mt-2">{item.preview}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedTemplate === 'budget' && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-3">Alcance del presupuesto</h4>
+                      <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
+                      <select
+                        value={activeDraftTemplate.clientPricingMode || 'labor_only'}
+                        onChange={(event) => updateDraftTemplate({ clientPricingMode: event.target.value as 'full' | 'labor_only' })}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm mb-3"
+                      >
+                        <option value="labor_only">Solo mano de obra</option>
+                        <option value="full">Materiales + mano de obra</option>
+                      </select>
+                      <label className="block text-xs text-zinc-400 mb-1">Modo de instalación</label>
+                      <select
+                        value={activeDraftTemplate.installationMode || 'with_extras'}
+                        onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                      >
+                        <option value="basic">Instalación básica</option>
+                        <option value="with_extras">Instalación con extras</option>
+                      </select>
+                      <p className="text-[11px] text-zinc-500 mt-1">Por defecto queda seguro para cliente: solo mano de obra. Si activás materiales, vuelve a mostrarse el presupuesto interno completo.</p>
                     </div>
                   )}
                 </div>
@@ -2522,159 +4676,131 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       )}
 
       {showExcelDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-emerald-600 text-white p-6 rounded-t-lg">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-zinc-950 text-white p-6 rounded-t-2xl border-b border-zinc-800">
               <h3 className="text-xl font-bold">Configurar Exportación a Excel</h3>
-              <p className="text-sm text-emerald-100 mt-2">
-                Seleccione las secciones que desea incluir en el documento técnico
+              <p className="text-sm text-zinc-300 mt-2">
+                Seleccione las secciones y valide los datos reales que se van a incluir en el documento técnico
               </p>
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.excavation}
-                    onChange={(e) => setExcelSections({ ...excelSections, excavation: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Excavación y Preparación</p>
-                    <p className="text-xs text-gray-600 mt-1">Dimensiones, volumen de tierra, advertencias</p>
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6">
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {excelSectionDefinitions.map((section) => (
+                      <label
+                        key={section.key}
+                        className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+                          excelSections[section.key]
+                            ? 'border-zinc-700 bg-zinc-900'
+                            : 'border-zinc-800 bg-zinc-900/70 hover:bg-zinc-900'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={excelSections[section.key]}
+                          onChange={(e) => setExcelSections({ ...excelSections, [section.key]: e.target.checked })}
+                          className="w-5 h-5 rounded mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-zinc-100">{section.label}</p>
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                              section.ready
+                                ? 'bg-zinc-100 text-zinc-950 border border-zinc-200'
+                                : 'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                            }`}>
+                              {section.ready ? 'Datos listos' : 'Revisar'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-300 mt-1">{section.description}</p>
+                          <p className="text-xs text-zinc-500 mt-2">Vista previa: {section.preview}</p>
+                        </div>
+                      </label>
+                    ))}
                   </div>
-                </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.supportBed}
-                    onChange={(e) => setExcelSections({ ...excelSections, supportBed: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Cama de Apoyo Interna</p>
-                    <p className="text-xs text-gray-600 mt-1">Geomembrana, malla, arena, cemento</p>
+                  <div className="flex gap-2 pt-4 border-t border-zinc-800 mt-4">
+                    <Button
+                      onClick={() => setExcelSections({
+                        excavation: true,
+                        supportBed: true,
+                        sidewalk: true,
+                        plumbing: true,
+                        electrical: true,
+                        labor: true,
+                        sequence: true,
+                        standards: true,
+                      })}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      Seleccionar Todo
+                    </Button>
+                    <Button
+                      onClick={() => setExcelSections({
+                        excavation: false,
+                        supportBed: false,
+                        sidewalk: false,
+                        plumbing: false,
+                        electrical: false,
+                        labor: false,
+                        sequence: false,
+                        standards: false,
+                      })}
+                      variant="secondary"
+                      className="flex-1"
+                    >
+                      Limpiar
+                    </Button>
                   </div>
-                </label>
+                </div>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.sidewalk}
-                    onChange={(e) => setExcelSections({ ...excelSections, sidewalk: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Solado de Vereda</p>
-                    <p className="text-xs text-gray-600 mt-1">Materiales, área total, especificaciones</p>
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 h-fit space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Comprobación previa</h4>
+                    <p className="text-xs text-zinc-400 mt-1">Confirmá qué ítems van a salir y con qué datos.</p>
                   </div>
-                </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.plumbing}
-                    onChange={(e) => setExcelSections({ ...excelSections, plumbing: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Instalación Hidráulica</p>
-                    <p className="text-xs text-gray-600 mt-1">Cañerías, accesorios, configuración del sistema</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-zinc-950 border border-zinc-800 p-3">
+                      <p className="text-xs text-zinc-400">Seleccionados</p>
+                      <p className="text-lg font-semibold text-zinc-100">{selectedExcelItems.length}</p>
+                    </div>
+                    <div className="rounded-xl bg-zinc-950 border border-zinc-800 p-3">
+                      <p className="text-xs text-zinc-400">Con datos listos</p>
+                      <p className="text-lg font-semibold text-zinc-100">{readyExcelItems}</p>
+                    </div>
                   </div>
-                </label>
 
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.electrical}
-                    onChange={(e) => setExcelSections({ ...excelSections, electrical: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Instalación Eléctrica</p>
-                    <p className="text-xs text-gray-600 mt-1">Bomba, filtro, luces, consumo, especificaciones</p>
+                  <div className="space-y-2">
+                    {selectedExcelItems.length > 0 ? selectedExcelItems.map((section) => (
+                      <div key={section.key} className="rounded-xl bg-zinc-950 border border-zinc-800 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-zinc-100">{section.label}</p>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                            section.ready
+                              ? 'bg-zinc-100 text-zinc-950 border border-zinc-200'
+                              : 'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                          }`}>
+                            {section.ready ? 'OK' : 'Revisar'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-2">{section.preview}</p>
+                      </div>
+                    )) : (
+                      <div className="rounded-xl bg-zinc-950 border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
+                        No hay secciones seleccionadas para exportar.
+                      </div>
+                    )}
                   </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.labor}
-                    onChange={(e) => setExcelSections({ ...excelSections, labor: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Mano de Obra</p>
-                    <p className="text-xs text-gray-600 mt-1">Roles, tareas, horas estimadas, costos</p>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.sequence}
-                    onChange={(e) => setExcelSections({ ...excelSections, sequence: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Secuencia de Trabajo</p>
-                    <p className="text-xs text-gray-600 mt-1">Orden recomendado de construcción</p>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg hover:bg-gray-50 cursor-pointer border-gray-200">
-                  <input
-                    type="checkbox"
-                    checked={excelSections.standards}
-                    onChange={(e) => setExcelSections({ ...excelSections, standards: e.target.checked })}
-                    className="w-5 h-5 text-gray-900 rounded mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Normativas Aplicables</p>
-                    <p className="text-xs text-gray-600 mt-1">AEA 90364, IRAM, códigos</p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
-                <Button
-                  onClick={() => setExcelSections({
-                    excavation: true,
-                    supportBed: true,
-                    sidewalk: true,
-                    plumbing: true,
-                    electrical: true,
-                    labor: true,
-                    sequence: true,
-                    standards: true,
-                  })}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Seleccionar Todo
-                </Button>
-                <Button
-                  onClick={() => setExcelSections({
-                    excavation: false,
-                    supportBed: false,
-                    sidewalk: false,
-                    plumbing: false,
-                    electrical: false,
-                    labor: false,
-                    sequence: false,
-                    standards: false,
-                  })}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Limpiar
-                </Button>
+                </div>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex gap-3">
+            <div className="sticky bottom-0 bg-zinc-950/95 border-t border-zinc-800 p-6 flex gap-3 backdrop-blur-sm">
               <Button
                 onClick={() => setShowExcelDialog(false)}
                 variant="secondary"
@@ -2686,7 +4812,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               <Button
                 onClick={handleExportToExcel}
                 disabled={exportingToExcel}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="flex-1 bg-zinc-100 hover:bg-white text-zinc-950"
               >
                 {exportingToExcel ? 'Exportando...' : 'Exportar a Excel'}
               </Button>

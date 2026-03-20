@@ -11,11 +11,504 @@ import { calculateBedMaterials } from '../utils/bedCalculations';
 import { generateDefaultTasks } from '../utils/taskGenerator';
 import { calculateHydraulicSystem } from '../utils/hydraulicCalculations';
 import { calculateElectricalSystem } from '../utils/electricalCalculations';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import os from 'os';
+import fs from 'fs/promises';
+import { randomUUID } from 'crypto';
+import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+const AUTO_TASK_CATEGORIES = ['excavation', 'hydraulic', 'electrical', 'floor', 'tiles', 'finishes'];
+
+const normalizeTaskName = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const normalizeSearchValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const getAdditionalName = (additional: any) =>
+  additional?.customName ||
+  additional?.accessory?.name ||
+  additional?.equipment?.name ||
+  additional?.material?.name ||
+  'Item adicional';
+
+const detectAdditionalKind = (additional: any) => {
+  const name = normalizeSearchValue(getAdditionalName(additional));
+  const category = normalizeSearchValue(
+    additional?.customCategory ||
+    additional?.accessory?.type ||
+    additional?.equipment?.type ||
+    additional?.material?.type ||
+    ''
+  );
+
+  if (name.includes('skimmer') || category.includes('skimmer')) return 'skimmer';
+  if (name.includes('retorno') || name.includes('return') || category.includes('return')) return 'return';
+  if (name.includes('hidrojet') || name.includes('hydrojet') || name.includes('hidromas') || category.includes('hydro')) return 'hydrojet';
+  if (name.includes('dren') || name.includes('desague fondo') || category.includes('drain')) return 'bottom_drain';
+  if (name.includes('aspira') || name.includes('vacuum') || name.includes('barrefondo')) return 'vacuum';
+  if (category === 'lighting' || name.includes('luz')) return 'light';
+  return 'other';
+};
+
+const getAdditionalDeltaQuantity = (additional: any) => {
+  const newQuantity = Number(additional?.newQuantity || 0);
+  const baseQuantity = Number(additional?.baseQuantity || 0);
+  return Math.max(0, newQuantity - baseQuantity);
+};
+
+const buildEffectivePoolPreset = (poolPreset: any, projectAdditionals: any[] = []) => {
+  const effectivePoolPreset = { ...poolPreset };
+
+  projectAdditionals.forEach((additional) => {
+    const delta = getAdditionalDeltaQuantity(additional);
+    if (!delta) return;
+
+    switch (detectAdditionalKind(additional)) {
+      case 'skimmer':
+        effectivePoolPreset.hasSkimmer = true;
+        effectivePoolPreset.skimmerCount = Number(effectivePoolPreset.skimmerCount || 0) + delta;
+        break;
+      case 'return':
+        effectivePoolPreset.returnsCount = Number(effectivePoolPreset.returnsCount || 0) + delta;
+        break;
+      case 'hydrojet':
+        effectivePoolPreset.hasHydroJets = true;
+        effectivePoolPreset.hydroJetsCount = Number(effectivePoolPreset.hydroJetsCount || 0) + delta;
+        break;
+      case 'bottom_drain':
+        effectivePoolPreset.hasBottomDrain = true;
+        break;
+      case 'vacuum':
+        effectivePoolPreset.hasVacuumIntake = true;
+        effectivePoolPreset.vacuumIntakeCount = Number(effectivePoolPreset.vacuumIntakeCount || 0) + delta;
+        break;
+      case 'light':
+        effectivePoolPreset.hasLighting = true;
+        effectivePoolPreset.lightingCount = Number(effectivePoolPreset.lightingCount || 0) + delta;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return effectivePoolPreset;
+};
+
+const mapRoleRates = (rolesRaw: Array<{
+  id: string;
+  name: string;
+  hourlyRate: number | null;
+  dailyRate: number | null;
+  billingType: any;
+  ratePerUnit: number | null;
+  bocaRates: any;
+}>) => rolesRaw.map((r) => ({
+  id: r.id,
+  name: r.name,
+  hourlyRate: r.hourlyRate ?? undefined,
+  dailyRate: r.dailyRate ?? undefined,
+  billingType: r.billingType,
+  ratePerUnit: r.ratePerUnit ?? undefined,
+  bocaRates: r.bocaRates ?? undefined,
+}));
+
+const buildTaskGenerationContext = (projectLike: { plumbingConfig?: any; electricalConfig?: any; projectAdditionals?: any[] }) => {
+  const plumbingConfig = (projectLike.plumbingConfig as any) || {};
+  const electricalConfig = (projectLike.electricalConfig as any) || {};
+  const projectAdditionals = projectLike.projectAdditionals || [];
+  const additionalsEquipmentCount = projectAdditionals.reduce((sum: number, item: any) => {
+    if (!item?.equipmentId && !item?.equipment) return sum;
+    return sum + Math.max(1, Number(item?.newQuantity || 1));
+  }, 0);
+
+  return {
+    distanceToEquipment: Number(plumbingConfig.distanceToEquipment || 0),
+    distanceToPanel: Number(electricalConfig.distanceToPanel || plumbingConfig.distanceToEquipment || 0),
+    hydraulicItemsCount: Array.isArray(plumbingConfig.selectedItems) ? plumbingConfig.selectedItems.length : 0,
+    electricalItemsCount: Array.isArray(electricalConfig.items) ? electricalConfig.items.length : 0,
+    equipmentCount: Math.max(2, additionalsEquipmentCount + (Array.isArray(electricalConfig.items) ? electricalConfig.items.length : 0)),
+  };
+};
+
+const calculateTasksLaborCost = (tasks: Record<string, any[]>) => {
+  let totalLaborCost = 0;
+
+  Object.values(tasks).forEach((categoryTasks: any) => {
+    if (!Array.isArray(categoryTasks)) return;
+    categoryTasks.forEach((task: any) => {
+      totalLaborCost += task.laborCost || 0;
+    });
+  });
+
+  return totalLaborCost;
+};
+
+const getProjectTaskAutomationLocked = (projectLike: { exportSettings?: any }) =>
+  Boolean((projectLike.exportSettings as any)?.taskAutomationLocked);
+
+const sanitizeFileSegment = (value: string, fallback = 'archivo') => {
+  const source = value || fallback;
+  const parsed = path.parse(source);
+  const safeExtension = (parsed.ext || path.parse(fallback).ext || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9.]/g, '')
+    .slice(0, 10);
+  const maxBaseLength = Math.max(1, 120 - safeExtension.length);
+  const safeBaseName = (parsed.name || path.parse(fallback).name || 'archivo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._ -]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, maxBaseLength);
+
+  return `${safeBaseName || 'archivo'}${safeExtension}`;
+};
+
+const buildProjectCode = (projectId: string) =>
+  `PC-${projectId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+
+const ensureProjectCode = async <T extends { id: string; projectCode?: string | null }>(project: T): Promise<T & { projectCode: string }> => {
+  const projectCode =
+    typeof (project as any).projectCode === 'string' && (project as any).projectCode.trim()
+      ? (project as any).projectCode.trim()
+      : buildProjectCode(project.id);
+
+  if ((project as any).projectCode === projectCode) {
+    return project as T & { projectCode: string };
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "Project"
+    SET "projectCode" = ${projectCode}
+    WHERE "id" = ${project.id}
+      AND ("projectCode" IS NULL OR "projectCode" = '')
+  `;
+
+  return {
+    ...project,
+    projectCode,
+  };
+};
+
+const getProjectPackageFolderName = (project: any) =>
+  sanitizeFileSegment(project.name || 'Proyecto', `proyecto-${project.id}`);
+
+const getProjectPackageBaseDir = () =>
+  path.join(process.cwd(), 'uploads', 'project-packages');
+
+const getProjectPackageDir = (project: any) =>
+  path.join(getProjectPackageBaseDir(), project.id, getProjectPackageFolderName(project));
+
+const getAssignedProjectIdsForUser = async (userId: string, orgId?: string | null) => {
+  const assignedEvents = await prisma.agendaEvent.findMany({
+    where: {
+      projectId: { not: null },
+      ...(orgId ? { organizationId: orgId } : {}),
+      OR: [
+        { assignees: { some: { userId } } },
+        { crew: { members: { some: { userId } } } },
+      ],
+    },
+    select: { projectId: true },
+  });
+
+  return Array.from(new Set(
+    assignedEvents
+      .map((event) => event.projectId)
+      .filter((projectId): projectId is string => Boolean(projectId))
+  ));
+};
+
+const buildProjectExportData = async (project: any, sections?: any) => {
+  const plumbingConfig = (project.plumbingConfig as any) || {};
+  const selectedPlumbingItems = plumbingConfig.selectedItems || [];
+  const electricalConfig = (project.electricalConfig as any) || {};
+  const materials = (project.materials as any) || {};
+  const tasks = (project.tasks as any) || {};
+  const excavationVolume = project.excavationLength * project.excavationWidth * project.excavationDepth;
+  const calculationSettings = await prisma.calculationSettings.findUnique({
+    where: { userId: project.userId },
+  });
+  const sidewalkBaseThicknessCm = calculationSettings?.sidewalkBaseThicknessCm || 10;
+  const sidewalkConcreteVolume = ((project.sidewalkArea || 0) * sidewalkBaseThicknessCm) / 100;
+
+  const plumbingItems = selectedPlumbingItems.map((item: any) => ({
+    name: item.itemName || '',
+    diameter: item.diameter || '-',
+    quantity: item.quantity || 0,
+    type: item.type || 'PVC',
+    observations: item.observations || '-',
+  }));
+
+  const laborByRoles: any[] = [];
+  if (tasks && Object.keys(tasks).length > 0) {
+    const rolesSummary: Record<string, any> = {};
+
+    Object.values(tasks).forEach((categoryTasks: any) => {
+      if (!Array.isArray(categoryTasks)) return;
+      categoryTasks.forEach((task: any) => {
+        if (task.assignedRoleId || task.assignedRole) {
+          const roleId = task.assignedRoleId || task.assignedRole;
+          if (!rolesSummary[roleId]) {
+            rolesSummary[roleId] = {
+              role: task.assignedRole || 'Sin nombre',
+              tasks: 0,
+              hours: 0,
+              cost: 0,
+            };
+          }
+          rolesSummary[roleId].tasks += 1;
+          rolesSummary[roleId].hours += task.estimatedHours || 0;
+          rolesSummary[roleId].cost += task.laborCost || 0;
+        }
+      });
+    });
+
+    laborByRoles.push(...Object.values(rolesSummary));
+  }
+
+  const totalWatts = electricalConfig.totalWatts ?? electricalConfig.totalPower ?? 0;
+
+  const projectData: any = {
+    projectId: (project as any).projectCode || buildProjectCode(project.id),
+    projectName: project.name,
+    clientName: project.clientName,
+    location: project.location || '-',
+    address: project.location || '-',
+    date: new Date().toLocaleDateString('es-AR'),
+    responsible: 'Jesús Olguin',
+    pool: {
+      name: project.poolPreset?.name || 'Piscina',
+      length: project.poolPreset?.length || 0,
+      width: project.poolPreset?.width || 0,
+      shallowDepth: project.poolPreset?.depth || 0,
+      deepDepth: project.poolPreset?.depthEnd || project.poolPreset?.depth || 0,
+      volume: project.volume,
+      shape: project.poolPreset?.shape || 'RECTANGULAR',
+      waterMirrorArea: project.waterMirrorArea,
+      hasStairsOnly: project.poolPreset?.hasStairsOnly || false,
+      stairsCount: project.poolPreset?.stairsCount || 0,
+      canaletasCount: project.poolPreset?.canaletasCount || 0,
+      returnsCount: project.poolPreset?.returnsCount || 0,
+      skimmersCount: project.poolPreset?.skimmerCount || 0,
+      lightingCount: project.poolPreset?.lightingCount || 0,
+    },
+    tileCalculation: project.tileCalculation || {},
+    excavation: {
+      length: project.excavationLength,
+      width: project.excavationWidth,
+      depth: project.excavationDepth,
+      volume: excavationVolume,
+    },
+    supportBed: {
+      materials: {
+        geomembrane: materials.geomembrane?.quantity || 0,
+        geomembraneUnit: materials.geomembrane?.unit || 'm²',
+        mesh: materials.electroweldedMesh?.quantity || 0,
+        meshUnit: materials.electroweldedMesh?.unit || 'm²',
+        sand: materials.sandForBed?.quantity || 0,
+        sandUnit: materials.sandForBed?.unit || 'm³',
+        cement: materials.cementBags?.quantity || 0,
+        cementUnit: materials.cementBags?.unit || 'bolsas',
+        mixed: Number(materials.drainStone?.quantity || 0),
+        mixedUnit: 'm³',
+      }
+    },
+    sidewalk: {
+      materials: {
+        area: project.sidewalkArea || 0,
+        concreteVolume: Number(sidewalkConcreteVolume.toFixed(2)),
+        cement: materials.cement?.quantity || 0,
+        cementUnit: materials.cement?.unit || 'bolsas',
+        sand: materials.sand?.quantity || 0,
+        sandUnit: materials.sand?.unit || 'm³',
+        stone: materials.gravel?.quantity || 0,
+        stoneUnit: materials.gravel?.unit || 'm³',
+        mesh: materials.wireMesh?.quantity || 0,
+        meshUnit: materials.wireMesh?.unit || 'm²',
+        adhesive: materials.adhesive?.quantity || 0,
+        adhesiveUnit: materials.adhesive?.unit || 'kg',
+        whiteCement: materials.whiteCement?.quantity || 0,
+        whiteCementUnit: materials.whiteCement?.unit || 'bolsas',
+        marmolina: materials.marmolina?.quantity || 0,
+        marmolinaUnit: materials.marmolina?.unit || 'bolsas',
+      }
+    },
+    plumbing: {
+      distanceToEquipment: plumbingConfig.distanceToEquipment || 0,
+      returnsCount: project.poolPreset?.returnsCount || 0,
+      skimmersCount: project.poolPreset?.skimmerCount || 0,
+      hasBottomDrain: project.poolPreset?.hasBottomDrain || false,
+      hasVacuumIntake: project.poolPreset?.hasVacuumIntake || false,
+      items: plumbingItems,
+    },
+    electrical: {
+      watts: totalWatts,
+      amps: totalWatts ? parseFloat((totalWatts / 220).toFixed(1)) : 0,
+      recommendedBreaker: electricalConfig.recommendedBreaker || 16,
+      recommendedRCD: electricalConfig.recommendedRCD || 16,
+      cableSection: electricalConfig.cableSection || '2.5mm²',
+      distanceToPanel: electricalConfig.distanceToPanel || plumbingConfig.distanceToEquipment || 15,
+      pump: {
+        power: electricalConfig.pump?.power || '-',
+        observations: electricalConfig.pump?.observations || '-',
+        imageUrl: electricalConfig.pump?.imageUrl || null,
+      },
+      filter: {
+        diameter: electricalConfig.filter?.diameter || '-',
+        observations: electricalConfig.filter?.observations || '-',
+        imageUrl: electricalConfig.filter?.imageUrl || null,
+      },
+      consumptionBreakdown: electricalConfig.consumptionBreakdown || [],
+    },
+    labor: {
+      roles: laborByRoles,
+    },
+    sections: sections || {
+      excavation: true,
+      supportBed: true,
+      sidewalk: true,
+      plumbing: true,
+      electrical: true,
+      labor: true,
+      sequence: true,
+      standards: true,
+      hydraulicAnalysis: true,
+      electricalAnalysis: true,
+    },
+    hydraulicAnalysis: null,
+    electricalAnalysis: null,
+  };
+
+  try {
+    const availableEquipment = await prisma.equipmentPreset.findMany({
+      where: { type: { in: ['PUMP', 'FILTER'] } }
+    });
+
+    const distanceToEquipment = plumbingConfig.distanceToEquipment || 8;
+    const staticLift = 1.5;
+
+    projectData.hydraulicAnalysis = calculateHydraulicSystem(
+      project as any,
+      distanceToEquipment,
+      staticLift,
+      availableEquipment
+    );
+
+    projectData.electricalAnalysis = calculateElectricalSystem(
+      project as any,
+      {
+        voltage: 220,
+        distanceToPanel: plumbingConfig.distanceToEquipment || 15,
+        installationType: 'CONDUIT',
+        ambientTemp: 25,
+        maxVoltageDrop: 3,
+        electricityCostPerKwh: 0.15,
+      }
+    );
+  } catch (calcError) {
+    console.error('[EXPORT] Error al ejecutar cálculos profesionales:', calcError);
+  }
+
+  return projectData;
+};
+
+const generateExcelExportFileFromProject = async (project: any, sections?: any, outputPath?: string) => {
+  const projectData = await buildProjectExportData(project, sections);
+  const scriptPath = path.join(__dirname, '../../public/export_to_excel.py');
+  const templatePath = path.join(__dirname, '../../public/CALCULADORA MATERIALES AQUAM.xlsx');
+  const safeProjectName = sanitizeFileSegment(project.name, 'proyecto');
+  const exportFileName = `${safeProjectName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const exportPath = outputPath || path.join(os.tmpdir(), `${Date.now()}_${exportFileName}`);
+
+  await fs.mkdir(path.dirname(exportPath), { recursive: true });
+  await fs.copyFile(templatePath, exportPath);
+  await execFileAsync('python3', [scriptPath, JSON.stringify(projectData), exportPath]);
+
+  return { exportPath, exportFileName };
+};
+
+const zipDirectory = async (sourceDir: string, zipPath: string) => {
+  const zipScript = [
+    'import os, sys, zipfile',
+    'source_dir = sys.argv[1]',
+    'zip_path = sys.argv[2]',
+    'with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:',
+    '    for root, _, files in os.walk(source_dir):',
+    '        for file_name in files:',
+    '            full_path = os.path.join(root, file_name)',
+    '            arcname = os.path.relpath(full_path, os.path.dirname(source_dir))',
+    '            zf.write(full_path, arcname)',
+  ].join('\n');
+
+  await fs.mkdir(path.dirname(zipPath), { recursive: true });
+  await execFileAsync('python3', ['-c', zipScript, sourceDir, zipPath]);
+};
+
+const mergeGeneratedTasks = (
+  existingTasks: Record<string, any> = {},
+  generatedTasks: Record<string, any[]>
+) => {
+  const mergedTasks: Record<string, any[]> = {};
+
+  AUTO_TASK_CATEGORIES.forEach((category) => {
+    const previous = Array.isArray(existingTasks?.[category]) ? existingTasks[category] : [];
+    const generated = Array.isArray(generatedTasks?.[category]) ? generatedTasks[category] : [];
+    const previousMap = new Map(previous.map((task: any) => [`${category}:${normalizeTaskName(task.name || '')}`, task]));
+    const generatedKeys = new Set<string>();
+
+    mergedTasks[category] = generated.map((task: any) => {
+      const key = `${category}:${normalizeTaskName(task.name || '')}`;
+      generatedKeys.add(key);
+      const existing = previousMap.get(key);
+
+      return existing
+        ? {
+            ...task,
+            status: existing.status || task.status,
+            assignedRole: existing.assignedRole || task.assignedRole,
+            assignedRoleId: existing.assignedRoleId || task.assignedRoleId,
+          }
+        : task;
+    });
+
+    previous.forEach((task: any) => {
+      const key = `${category}:${normalizeTaskName(task.name || '')}`;
+      if (!generatedKeys.has(key)) {
+        mergedTasks[category].push(task);
+      }
+    });
+  });
+
+  Object.entries(existingTasks || {}).forEach(([category, categoryTasks]) => {
+    if (AUTO_TASK_CATEGORIES.includes(category)) return;
+    mergedTasks[category] = Array.isArray(categoryTasks) ? categoryTasks : [];
+  });
+
+  return mergedTasks;
+};
+
+const withCommercialProfile = <T extends { plumbingConfig?: any; projectAdditionals?: any[] }>(project: T) => ({
+  ...project,
+  commercialProfile: buildProjectCommercialProfile(project),
+});
 
 export const createProject = async (req: AuthRequest, res: Response) => {
   try {
@@ -26,9 +519,14 @@ export const createProject = async (req: AuthRequest, res: Response) => {
     }
 
     const { name, clientName, clientEmail, clientPhone, location, poolPresetId, status } = req.body;
+    const includeBaseEquipment = req.body.includeBaseEquipment !== 'false' && req.body.includeBaseEquipment !== false;
 
     const poolPreset = await prisma.poolPreset.findUnique({
       where: { id: poolPresetId },
+      include: {
+        defaultPump: true,
+        defaultFilter: true,
+      },
     });
 
     if (!poolPreset) {
@@ -46,10 +544,11 @@ export const createProject = async (req: AuthRequest, res: Response) => {
     const perimeter = calculatePerimeter(dimensions);
     const waterMirrorArea = calculateWaterMirrorArea(dimensions);
     const volume = calculateVolume(dimensions);
+    const deepestDepth = Math.max(poolPreset.depth, poolPreset.depthEnd || poolPreset.depth);
 
     const excavationLength = poolPreset.length + (poolPreset.lateralCushionSpace * 2);
     const excavationWidth = poolPreset.width + (poolPreset.lateralCushionSpace * 2);
-    const excavationDepth = poolPreset.depth + poolPreset.floorCushionDepth;
+    const excavationDepth = deepestDepth + poolPreset.floorCushionDepth;
 
     // Cargar roles para calcular costos de mano de obra
     console.log('[PROJECT] Cargando roles de profesión...');
@@ -65,34 +564,29 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         bocaRates: true,
       },
     });
-    // Convertir null a undefined para compatibilidad con RoleRate
-    const roles = rolesRaw.map(r => ({
-      id: r.id,
-      name: r.name,
-      hourlyRate: r.hourlyRate ?? undefined,
-      dailyRate: r.dailyRate ?? undefined,
-      billingType: r.billingType,
-      ratePerUnit: r.ratePerUnit ?? undefined,
-      bocaRates: r.bocaRates ?? undefined,
-    }));
+    const roles = mapRoleRates(rolesRaw);
     console.log(`[PROJECT] Roles cargados: ${roles.length}`);
 
     // Generar tareas automáticas basadas en las características de la piscina
     console.log('[PROJECT] Generando tareas automáticas para:', poolPreset.name);
-    const defaultTasks = generateDefaultTasks(poolPreset, volume, perimeter, roles);
+    const defaultTasks = generateDefaultTasks(
+      buildEffectivePoolPreset(poolPreset, []),
+      volume,
+      perimeter,
+      roles,
+      buildTaskGenerationContext({})
+    );
     console.log('[PROJECT] Tareas generadas:', Object.keys(defaultTasks).map(cat => `${cat}: ${defaultTasks[cat].length}`).join(', '));
 
     // Calcular costo total de mano de obra desde las tareas generadas
-    let totalLaborCost = 0;
-    Object.values(defaultTasks).forEach((categoryTasks: any[]) => {
-      categoryTasks.forEach(task => {
-        totalLaborCost += task.laborCost || 0;
-      });
-    });
+    const totalLaborCost = calculateTasksLaborCost(defaultTasks);
     console.log(`[PROJECT] Costo total de mano de obra: $${totalLaborCost.toLocaleString('es-AR')}`);
 
+    const projectId = randomUUID();
     const project = await prisma.project.create({
       data: {
+        id: projectId,
+        projectCode: buildProjectCode(projectId),
         name,
         clientName,
         clientEmail: clientEmail || null,
@@ -119,7 +613,57 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json(project);
+    const defaultEquipmentAdditionals = includeBaseEquipment ? [
+      poolPreset.defaultPump ? {
+        projectId: project.id,
+        equipmentId: poolPreset.defaultPump.id,
+        baseQuantity: 1,
+        newQuantity: 1,
+        dependencies: [],
+        notes: `Equipamiento base asociado al modelo ${poolPreset.name}`,
+      } : null,
+      poolPreset.defaultFilter ? {
+        projectId: project.id,
+        equipmentId: poolPreset.defaultFilter.id,
+        baseQuantity: 1,
+        newQuantity: 1,
+        dependencies: [],
+        notes: `Equipamiento base asociado al modelo ${poolPreset.name}`,
+      } : null,
+    ].filter(Boolean) as Array<{
+      projectId: string;
+      equipmentId: string;
+      baseQuantity: number;
+      newQuantity: number;
+      dependencies: never[];
+      notes: string;
+    }> : [];
+
+    if (defaultEquipmentAdditionals.length > 0) {
+      await prisma.projectAdditional.createMany({
+        data: defaultEquipmentAdditionals,
+      });
+    }
+
+    const createdProject = await prisma.project.findUnique({
+      where: { id: project.id },
+      include: {
+        poolPreset: true,
+        projectAdditionals: {
+          include: {
+            accessory: true,
+            equipment: true,
+            material: true,
+          },
+        },
+      },
+    });
+
+    const normalizedCreatedProject = createdProject
+      ? await ensureProjectCode(createdProject)
+      : await ensureProjectCode(project as any);
+
+    res.status(201).json(withCommercialProfile(normalizedCreatedProject as any));
   } catch (error) {
     console.error('Error al crear proyecto:', error);
     res.status(500).json({ error: 'Error al crear proyecto' });
@@ -130,12 +674,55 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    let where: any;
+    if (isAdmin) {
+      where = orgId ? { organizationId: orgId } : {};
+    } else if (role === 'VIEWER') {
+      const assignedProjectIds = await getAssignedProjectIdsForUser(userId, orgId);
+      where = {
+        id: { in: assignedProjectIds.length > 0 ? assignedProjectIds : ['__none__'] },
+        ...(orgId ? { organizationId: orgId } : {}),
+      };
+    } else {
+      where = { userId };
+    }
 
     const projects = await prisma.project.findMany({
-      where: orgId ? { organizationId: orgId } : (isAdmin ? {} : { userId }),
+      where,
       include: {
         poolPreset: true,
+        projectAdditionals: {
+          include: {
+            accessory: {
+              select: {
+                id: true,
+                name: true,
+                pricePerUnit: true,
+              },
+            },
+            equipment: {
+              select: {
+                id: true,
+                name: true,
+                pricePerUnit: true,
+              },
+            },
+            material: {
+              select: {
+                id: true,
+                name: true,
+                pricePerUnit: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,
@@ -149,7 +736,8 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json(projects);
+    const normalizedProjects = await Promise.all(projects.map((project) => ensureProjectCode(project)));
+    res.json(normalizedProjects.map((project) => withCommercialProfile(project)));
   } catch (error) {
     console.error('Error al obtener proyectos:', error);
     res.status(500).json({ error: 'Error al obtener proyectos' });
@@ -161,35 +749,59 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
-    const project = await prisma.project.findFirst({
-      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
-      include: {
-        poolPreset: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const baseInclude = {
+      poolPreset: true,
+      projectAdditionals: {
+        include: {
+          accessory: true,
+          equipment: true,
+          material: true,
         },
       },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    } as const;
+
+    let project = await prisma.project.findFirst({
+      where: isAdmin
+        ? { id, ...(orgId ? { organizationId: orgId } : {}) }
+        : { id, userId },
+      include: baseInclude,
     });
+
+    if (!project && role === 'VIEWER') {
+      const assignedProjectIds = await getAssignedProjectIdsForUser(userId, orgId);
+      if (assignedProjectIds.includes(id)) {
+        project = await prisma.project.findFirst({
+          where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+          include: baseInclude,
+        });
+      }
+    }
 
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (project.userId !== userId && !isAdmin) {
-      return res.status(403).json({ error: 'No tenés permiso para ver este proyecto' });
-    }
+    project = await ensureProjectCode(project);
 
     // VALIDACIÓN: Verificar que las dimensiones de excavación sean correctas
     const preset = project.poolPreset;
     const expectedExcavLength = preset.length + (preset.lateralCushionSpace * 2);
     const expectedExcavWidth = preset.width + (preset.lateralCushionSpace * 2);
-    const expectedExcavDepth = preset.depth + preset.floorCushionDepth;
+    const expectedExcavDepth = Math.max(preset.depth, preset.depthEnd || preset.depth) + preset.floorCushionDepth;
 
     const tolerance = 0.01; // Tolerancia de 1cm
     const lengthDiff = Math.abs(project.excavationLength - expectedExcavLength);
@@ -213,26 +825,98 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       });
 
       // Recargar proyecto con valores corregidos
-      const correctedProject = await prisma.project.findFirst({
+      let correctedProject = await prisma.project.findFirst({
         where: { id, ...(orgId ? { organizationId: orgId } : {}) },
-        include: {
-          poolPreset: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
+        include: baseInclude,
       });
 
       console.log(`  ✓ Proyecto corregido`);
-      res.json(correctedProject);
+      if (correctedProject) {
+        correctedProject = await ensureProjectCode(correctedProject);
+      }
+      res.json(correctedProject ? withCommercialProfile(correctedProject as any) : correctedProject);
       return;
     }
 
-    res.json(project);
+    const projectMaterials = (project.materials as any) || {};
+    const needsMaterialsRefresh =
+      project.tileCalculation &&
+      Object.keys(project.tileCalculation as any).length > 0 &&
+      !projectMaterials.fillReference;
+
+    if (needsMaterialsRefresh) {
+      try {
+        let settings = await prisma.calculationSettings.findUnique({
+          where: { userId: project.userId },
+        });
+
+        if (!settings) {
+          settings = await prisma.calculationSettings.create({
+            data: { userId: project.userId },
+          });
+        }
+
+        const tilePresets = await prisma.tilePreset.findMany();
+        const materialPrices = await prisma.constructionMaterialPreset.findMany({
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            pricePerUnit: true,
+            unit: true,
+            bagWeight: true,
+          },
+        });
+
+        const tileCalculations = calculateTileMaterials(
+          project.poolPreset,
+          project.tileCalculation as any,
+          tilePresets,
+          settings,
+          materialPrices
+        );
+
+        const bedCalculations = calculateBedMaterials(
+          project.poolPreset,
+          settings,
+          materialPrices
+        );
+
+        const refreshedMaterials: any = {
+          ...tileCalculations.materials,
+          ...bedCalculations.bedMaterials,
+          tiles: tileCalculations.tiles as any,
+        };
+
+        const refreshedMaterialCost = tileCalculations.totalMaterialCost + bedCalculations.totalBedMaterialCost;
+
+        await prisma.project.update({
+          where: { id },
+          data: {
+            sidewalkArea: tileCalculations.sidewalkArea,
+            totalTileArea: tileCalculations.sidewalkArea,
+            materials: refreshedMaterials,
+            materialCost: refreshedMaterialCost,
+            totalCost: refreshedMaterialCost + (project.laborCost || 0),
+          },
+        });
+
+        let refreshedProject = await prisma.project.findFirst({
+          where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+          include: baseInclude,
+        });
+
+        if (refreshedProject) {
+          refreshedProject = await ensureProjectCode(refreshedProject);
+        }
+        res.json(refreshedProject ? withCommercialProfile(refreshedProject as any) : refreshedProject);
+        return;
+      } catch (refreshError) {
+        console.error('Error al refrescar materiales del proyecto:', refreshError);
+      }
+    }
+
+    res.json(project ? withCommercialProfile(project as any) : project);
   } catch (error) {
     console.error('Error al obtener proyecto:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -251,7 +935,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
 
     const existingProject = await prisma.project.findFirst({
       where: { id, ...(orgId ? { organizationId: orgId } : {}) },
-      include: { poolPreset: true },
+      include: { poolPreset: true, projectAdditionals: true },
     });
 
     if (!existingProject) {
@@ -262,7 +946,37 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'No tenés permiso para modificar este proyecto' });
     }
 
+    const requestedExportSettings = req.body.exportSettings !== undefined
+      ? {
+          ...((existingProject.exportSettings as any) || {}),
+          ...(req.body.exportSettings as any),
+        }
+      : undefined;
+
     let updateData: any = { ...req.body };
+    delete updateData.includeBaseEquipment;
+    if (updateData.poolPresetId === '' || updateData.poolPresetId === existingProject.poolPresetId) {
+      delete updateData.poolPresetId;
+    }
+    if (updateData.clientEmail === '') {
+      updateData.clientEmail = null;
+    }
+    if (updateData.clientPhone === '') {
+      updateData.clientPhone = null;
+    }
+    if (updateData.location === '') {
+      updateData.location = null;
+    }
+    if (updateData.status === '' || updateData.status == null) {
+      delete updateData.status;
+    }
+    if (requestedExportSettings !== undefined) {
+      updateData.exportSettings = requestedExportSettings;
+    }
+    let recalculatedTasks: Record<string, any[]> | null = null;
+    const taskAutomationLocked = requestedExportSettings !== undefined
+      ? Boolean(requestedExportSettings.taskAutomationLocked)
+      : getProjectTaskAutomationLocked(existingProject);
 
     // Si se está actualizando la configuración de losetas, recalcular materiales
     if (req.body.tileCalculation) {
@@ -326,10 +1040,10 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
           console.log(`Costo materiales cama: $${bedCalculations.totalBedMaterialCost.toLocaleString('es-AR')}`);
 
           // Combinar ambos cálculos
-          const allMaterials = {
+          const allMaterials: any = {
             ...tileCalculations.materials,
             ...bedCalculations.bedMaterials,
-            tiles: tileCalculations.tiles, // Agregar las losetas calculadas
+            tiles: tileCalculations.tiles as any, // Agregar las losetas calculadas
           };
 
           // Calcular costo total de materiales
@@ -349,21 +1063,64 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const shouldRegenerateAutomaticTasks = !taskAutomationLocked && !req.body.tasks && (
+      req.body.poolPresetId !== undefined ||
+      req.body.plumbingConfig !== undefined ||
+      req.body.electricalConfig !== undefined
+    );
+
+    if (shouldRegenerateAutomaticTasks) {
+      const poolPreset = req.body.poolPresetId && req.body.poolPresetId !== existingProject.poolPresetId
+        ? await prisma.poolPreset.findUnique({ where: { id: req.body.poolPresetId } })
+        : existingProject.poolPreset;
+
+      if (poolPreset) {
+        const dimensions = {
+          length: poolPreset.length,
+          width: poolPreset.width,
+          depth: poolPreset.depth,
+          depthEnd: poolPreset.depthEnd || undefined,
+          shape: poolPreset.shape,
+        };
+        const perimeter = calculatePerimeter(dimensions);
+        const volume = calculateVolume(dimensions);
+
+        const rolesRaw = await prisma.professionRole.findMany({
+          where: { userId: existingProject.userId },
+          select: {
+            id: true,
+            name: true,
+            hourlyRate: true,
+            dailyRate: true,
+            billingType: true,
+            ratePerUnit: true,
+            bocaRates: true,
+          },
+        });
+        const roles = mapRoleRates(rolesRaw);
+        const generatedTasks = generateDefaultTasks(
+          buildEffectivePoolPreset(poolPreset, existingProject.projectAdditionals),
+          volume,
+          perimeter,
+          roles,
+          buildTaskGenerationContext({
+            plumbingConfig: req.body.plumbingConfig ?? existingProject.plumbingConfig,
+            electricalConfig: req.body.electricalConfig ?? existingProject.electricalConfig,
+            projectAdditionals: existingProject.projectAdditionals,
+          })
+        );
+
+        recalculatedTasks = mergeGeneratedTasks((existingProject.tasks as any) || {}, generatedTasks);
+        updateData.tasks = recalculatedTasks;
+      }
+    }
+
     // Si se están actualizando las tareas, recalcular el costo de mano de obra
-    if (req.body.tasks) {
+    if (req.body.tasks || recalculatedTasks) {
       console.log('Detectada actualización de tareas, recalculando costos de mano de obra...');
 
-      let totalLaborCost = 0;
-      const tasks = req.body.tasks;
-
-      // Iterar sobre todas las categorías de tareas
-      Object.values(tasks).forEach((categoryTasks: any) => {
-        if (Array.isArray(categoryTasks)) {
-          categoryTasks.forEach((task: any) => {
-            totalLaborCost += task.laborCost || 0;
-          });
-        }
-      });
+      const tasks = (recalculatedTasks || req.body.tasks) as Record<string, any[]>;
+      const totalLaborCost = calculateTasksLaborCost(tasks);
 
       console.log(`Costo total de mano de obra recalculado: $${totalLaborCost.toLocaleString('es-AR')}`);
 
@@ -386,11 +1143,20 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       data: updateData,
       include: {
         poolPreset: true,
+        projectAdditionals: {
+          include: {
+            accessory: true,
+            equipment: true,
+            material: true,
+          },
+        },
       },
     });
 
+    const normalizedProject = await ensureProjectCode(project);
+
     console.log('Proyecto actualizado exitosamente');
-    res.json(project);
+    res.json(withCommercialProfile(normalizedProject as any));
   } catch (error) {
     console.error('Error al actualizar proyecto:', error);
     res.status(500).json({ error: 'Error al actualizar proyecto' });
@@ -458,248 +1224,13 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'No tenés permiso para exportar este proyecto' });
     }
 
-    // Extraer configuraciones del JSON
-    const plumbingConfig = (project.plumbingConfig as any) || {};
-    const selectedPlumbingItems = plumbingConfig.selectedItems || [];
-    const electricalConfig = (project.electricalConfig as any) || {};
-    const materials = (project.materials as any) || {};
-    const tasks = (project.tasks as any) || {};
-
-    // Calcular datos de excavación
-    const excavationVolume = project.excavationLength * project.excavationWidth * project.excavationDepth;
-
-    // Procesar items de plomería con detalles
-    const plumbingItems = selectedPlumbingItems.map((item: any) => ({
-      name: item.itemName || '',
-      diameter: item.diameter || '-',
-      quantity: item.quantity || 0,
-      type: item.type || 'PVC',
-      observations: item.observations || '-',
-    }));
-
-    // Calcular mano de obra por roles
-    const laborByRoles: any[] = [];
-    if (tasks && Object.keys(tasks).length > 0) {
-      const rolesSummary: Record<string, any> = {};
-
-      Object.values(tasks).forEach((categoryTasks: any) => {
-        if (Array.isArray(categoryTasks)) {
-          categoryTasks.forEach((task: any) => {
-            if (task.assignedRoleId || task.assignedRole) {
-              const roleId = task.assignedRoleId || task.assignedRole;
-              if (!rolesSummary[roleId]) {
-                rolesSummary[roleId] = {
-                  role: task.assignedRole || 'Sin nombre',
-                  tasks: 0,
-                  hours: 0,
-                  cost: 0,
-                };
-              }
-              rolesSummary[roleId].tasks += 1;
-              rolesSummary[roleId].hours += task.estimatedHours || 0;
-              rolesSummary[roleId].cost += task.laborCost || 0;
-            }
-          });
-        }
-      });
-
-      laborByRoles.push(...Object.values(rolesSummary));
-    }
-
-    // Preparar datos completos para el Excel
-    const totalWatts = electricalConfig.totalWatts ?? electricalConfig.totalPower ?? 0;
-
-    const projectData = {
-      // Información básica
-      projectId: project.id.substring(0, 8).toUpperCase(),
-      projectName: project.name,
-      clientName: project.clientName,
-      location: project.location || '-',
-      date: new Date().toLocaleDateString('es-AR'),
-      responsible: 'Jesús Olguin',
-
-      // Características de la piscina
-      pool: {
-        name: project.poolPreset?.name || 'Piscina',
-        length: project.poolPreset?.length || 0,
-        width: project.poolPreset?.width || 0,
-        shallowDepth: project.poolPreset?.depth || 0,
-        deepDepth: project.poolPreset?.depthEnd || project.poolPreset?.depth || 0,
-        volume: project.volume,
-        shape: project.poolPreset?.shape || 'RECTANGULAR',
-        waterMirrorArea: project.waterMirrorArea,
-      },
-
-      // Excavación
-      excavation: {
-        length: project.excavationLength,
-        width: project.excavationWidth,
-        depth: project.excavationDepth,
-        volume: excavationVolume,
-      },
-
-      // Materiales de cama de apoyo
-      supportBed: {
-        materials: {
-          geomembrane: materials.geomembrane?.quantity || 0,
-          geomembraneUnit: materials.geomembrane?.unit || 'm²',
-          mesh: materials.electroweldedMesh?.quantity || 0,
-          meshUnit: materials.electroweldedMesh?.unit || 'm²',
-          sand: materials.sandForBed?.quantity || 0,
-          sandUnit: materials.sandForBed?.unit || 'm³',
-          cement: materials.cementBags?.quantity || 0,
-          cementUnit: materials.cementBags?.unit || 'bolsas',
-          mixed: 0,
-          mixedUnit: 'm³',
-        }
-      },
-
-      // Materiales de vereda
-      sidewalk: {
-        materials: {
-          area: project.sidewalkArea || 0,
-          cement: materials.cement?.quantity || 0,
-          cementUnit: materials.cement?.unit || 'bolsas',
-          sand: materials.sand?.quantity || 0,
-          sandUnit: materials.sand?.unit || 'm³',
-          stone: materials.gravel?.quantity || 0,
-          stoneUnit: materials.gravel?.unit || 'm³',
-          mesh: materials.wireMesh?.quantity || 0,
-          meshUnit: materials.wireMesh?.unit || 'm²',
-          adhesive: materials.adhesive?.quantity || 0,
-          adhesiveUnit: materials.adhesive?.unit || 'kg',
-          whiteCement: materials.whiteCement?.quantity || 0,
-          whiteCementUnit: materials.whiteCement?.unit || 'bolsas',
-          marmolina: materials.marmolina?.quantity || 0,
-          marmolinaUnit: materials.marmolina?.unit || 'bolsas',
-        }
-      },
-
-      // Plomería detallada
-      plumbing: {
-        distanceToEquipment: plumbingConfig.distanceToEquipment || 0,
-        returnsCount: project.poolPreset?.returnsCount || 0,
-        skimmersCount: project.poolPreset?.skimmerCount || 0,
-        hasBottomDrain: project.poolPreset?.hasBottomDrain || false,
-        hasVacuumIntake: project.poolPreset?.hasVacuumIntake || false,
-        items: plumbingItems,
-      },
-
-      // Instalación eléctrica
-      electrical: {
-        watts: totalWatts,
-        amps: totalWatts ? parseFloat((totalWatts / 220).toFixed(1)) : 0,
-        recommendedBreaker: electricalConfig.recommendedBreaker || 16,
-        recommendedRCD: electricalConfig.recommendedRCD || 16,
-        cableSection: electricalConfig.cableSection || '2.5mm²',
-        distanceToPanel: 15,
-        // Equipos
-        pump: {
-          power: electricalConfig.pump?.power || '-',
-          observations: electricalConfig.pump?.observations || '-',
-          imageUrl: electricalConfig.pump?.imageUrl || null,
-        },
-        filter: {
-          diameter: electricalConfig.filter?.diameter || '-',
-          observations: electricalConfig.filter?.observations || '-',
-          imageUrl: electricalConfig.filter?.imageUrl || null,
-        },
-        // Desglose de consumo
-        consumptionBreakdown: electricalConfig.consumptionBreakdown || [],
-      },
-
-      // Mano de obra
-      labor: {
-        roles: laborByRoles,
-      },
-
-      // Secciones a incluir
-      sections: sections || {
-        excavation: true,
-        supportBed: true,
-        sidewalk: true,
-        plumbing: true,
-        electrical: true,
-        labor: true,
-        sequence: true,
-        standards: true,
-        hydraulicAnalysis: true,     // Nueva sección
-        electricalAnalysis: true,    // Nueva sección
-      },
-
-      // Placeholder para cálculos profesionales (se llenarán después)
-      hydraulicAnalysis: null as any,
-      electricalAnalysis: null as any,
-    };
-
-    // ========== CÁLCULOS PROFESIONALES ==========
-    // Ejecutar análisis hidráulico profesional
-    let hydraulicAnalysis: any = null;
-    let electricalAnalysis: any = null;
-
-    try {
-      // Obtener equipos disponibles para cálculos
-      const availableEquipment = await prisma.equipmentPreset.findMany({
-        where: { type: { in: ['PUMP', 'FILTER'] } }
-      });
-
-      // Parámetros de instalación
-      const distanceToEquipment = plumbingConfig.distanceToEquipment || 8;  // metros
-      const staticLift = 1.5;  // metros (altura desde nivel de agua a equipo)
-
-      // Análisis hidráulico
-      hydraulicAnalysis = calculateHydraulicSystem(
-        project as any,
-        distanceToEquipment,
-        staticLift,
-        availableEquipment
-      );
-
-      // Análisis eléctrico profesional
-      electricalAnalysis = calculateElectricalSystem(
-        project as any,
-        {
-          voltage: 220,
-          distanceToPanel: plumbingConfig.distanceToEquipment || 15,
-          installationType: 'CONDUIT',
-          ambientTemp: 25,
-          maxVoltageDrop: 3,
-          electricityCostPerKwh: 0.15,
-        }
-      );
-
-      // Agregar análisis al projectData
-      projectData.hydraulicAnalysis = hydraulicAnalysis;
-      projectData.electricalAnalysis = electricalAnalysis;
-
-      console.log('[EXPORT] Cálculos profesionales ejecutados correctamente');
-    } catch (calcError) {
-      console.error('[EXPORT] Error al ejecutar cálculos profesionales:', calcError);
-      // Continuar con la exportación sin los cálculos profesionales
-      projectData.hydraulicAnalysis = null;
-      projectData.electricalAnalysis = null;
-    }
-
-    // Escapar JSON para pasarlo como argumento
-    const jsonData = JSON.stringify(projectData).replace(/"/g, '\\"');
-
-    // Ejecutar el script Python
-    const scriptPath = path.join(__dirname, '../../public/export_to_excel.py');
-    const excelPath = path.join(__dirname, '../../public/CALCULADORA MATERIALES AQUAM.xlsx');
-    const command = `python3 "${scriptPath}" "${jsonData}"`;
-
-    console.log('Ejecutando script Python para exportar proyecto...');
-    const { stdout, stderr } = await execAsync(command);
-
-    if (stderr) {
-      console.error('Advertencias del script:', stderr);
-    }
-
-    console.log('Salida del script:', stdout);
+    const { exportPath, exportFileName } = await generateExcelExportFileFromProject(project, sections);
 
     // Enviar el archivo Excel como descarga
-    const fileName = `${project.name.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-    res.download(excelPath, fileName, (err) => {
+    res.download(exportPath, exportFileName, (err) => {
+      fs.unlink(exportPath).catch((unlinkError) => {
+        console.error('Error al limpiar archivo temporal de exportación:', unlinkError);
+      });
       if (err) {
         console.error('Error al enviar archivo:', err);
         if (!res.headersSent) {
@@ -713,5 +1244,125 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
       error: 'Error al exportar proyecto',
       details: error.message,
     });
+  }
+};
+
+export const createProjectPackage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { documents = [], excelSections, metadata = {} } = req.body || {};
+    const userId = req.user?.userId;
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+
+    const project = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+      include: {
+        poolPreset: true,
+        projectAdditionals: {
+          include: {
+            accessory: true,
+            equipment: true,
+            material: true,
+          }
+        },
+      },
+    });
+
+    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
+    if (project.userId !== userId && !isAdmin) {
+      return res.status(403).json({ error: 'No tenés permiso para exportar este proyecto' });
+    }
+
+    const packageDir = getProjectPackageDir(project);
+    await fs.rm(packageDir, { recursive: true, force: true });
+    await fs.mkdir(packageDir, { recursive: true });
+    await fs.mkdir(path.join(packageDir, '06-imagenes'), { recursive: true });
+    await fs.mkdir(path.join(packageDir, '07-notas'), { recursive: true });
+
+    const writtenDocuments: Array<{ fileName: string; path: string }> = [];
+    for (const doc of Array.isArray(documents) ? documents : []) {
+      const fileName = sanitizeFileSegment(doc?.fileName || 'documento.html', 'documento.html');
+      const content = typeof doc?.content === 'string' ? doc.content : '';
+      if (!content) continue;
+      const targetPath = path.join(packageDir, fileName);
+      await fs.writeFile(targetPath, content, 'utf8');
+      writtenDocuments.push({ fileName, path: targetPath });
+    }
+
+    const excelTargetPath = path.join(packageDir, '05-libro-proyecto.xlsx');
+    await generateExcelExportFileFromProject(project, excelSections, excelTargetPath);
+
+    const manifest = {
+      generatedAt: new Date().toISOString(),
+      projectId: project.id,
+      projectName: project.name,
+      clientName: project.clientName,
+      folderName: path.basename(packageDir),
+      documents: writtenDocuments.map((doc) => doc.fileName),
+      excelFile: '05-libro-proyecto.xlsx',
+      metadata,
+    };
+
+    await fs.writeFile(
+      path.join(packageDir, '07-notas', 'metadata.json'),
+      JSON.stringify(manifest, null, 2),
+      'utf8'
+    );
+
+    res.json({
+      success: true,
+      folderName: path.basename(packageDir),
+      relativePath: path.relative(process.cwd(), packageDir),
+      documents: manifest.documents,
+      excelFile: manifest.excelFile,
+    });
+  } catch (error) {
+    console.error('Error al generar expediente del proyecto:', error);
+    res.status(500).json({ error: 'Error al generar expediente del proyecto' });
+  }
+};
+
+export const downloadProjectPackage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const orgId = req.user?.orgId || null;
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+
+    const project = await prisma.project.findFirst({
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+      select: {
+        id: true,
+        name: true,
+        clientName: true,
+        userId: true,
+      },
+    });
+
+    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
+    if (project.userId !== userId && !isAdmin) {
+      return res.status(403).json({ error: 'No tenés permiso para descargar este expediente' });
+    }
+
+    const packageDir = getProjectPackageDir(project);
+    try {
+      await fs.access(packageDir);
+    } catch {
+      return res.status(404).json({ error: 'El expediente todavía no fue generado' });
+    }
+
+    const zipName = `${getProjectPackageFolderName(project)}.zip`;
+    const zipPath = path.join(getProjectPackageBaseDir(), project.id, zipName);
+    await zipDirectory(packageDir, zipPath);
+
+    res.download(zipPath, zipName, async (err) => {
+      if (err && !res.headersSent) {
+        res.status(500).json({ error: 'Error al descargar el expediente' });
+      }
+    });
+  } catch (error) {
+    console.error('Error al descargar expediente del proyecto:', error);
+    res.status(500).json({ error: 'Error al descargar expediente del proyecto' });
   }
 };
