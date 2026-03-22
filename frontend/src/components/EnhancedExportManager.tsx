@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Project } from '@/types';
 import { plumbingCalculationService } from '@/services/plumbingCalculationService';
 import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
+import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
 import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File, CheckCircle2, AlertTriangle } from 'lucide-react';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
@@ -22,7 +24,7 @@ interface EnhancedExportManagerProps {
   brandLogoUrl?: string;
 }
 
-type ExportTemplate = 'client' | 'professional' | 'materials' | 'complete' | 'budget' | 'overview';
+type ExportTemplate = 'client' | 'professional' | 'materials' | 'complete' | 'budget' | 'overview' | 'hydraulic';
 
 type ClientDocumentBlockType = 'heading' | 'paragraph' | 'bullet_list' | 'divider' | 'data_field';
 
@@ -387,6 +389,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       name: 'Vista General',
       description: 'Resumen visual del proyecto, el cliente y el alcance de instalación',
       icon: File,
+    },
+    {
+      id: 'hydraulic' as ExportTemplate,
+      name: 'Hidráulica',
+      description: 'Esquema técnico hidráulico sin controles para exportar o imprimir',
+      icon: Wrench,
     },
   ];
 
@@ -1119,6 +1127,36 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         detail: 'Tareas, roles y sistemas ya configurados.',
         value: `${computedTaskCount} tareas · ${rolesCount} roles · ${plumbingItemsCount} ítems hidráulicos`,
         ready: computedTaskCount > 0 || plumbingItemsCount > 0,
+      },
+    ],
+    hydraulic: [
+      {
+        id: 'hyd-project',
+        label: 'Proyecto hidráulico',
+        detail: 'Referencia, cabecera y distancia a equipo.',
+        value: `${(plumbingConfig?.hydraulicLayout?.referenceSide || 'north').toUpperCase()} · ${Number(plumbingConfig?.distanceToEquipment || 0).toFixed(2)} m`,
+        ready: !!plumbingConfig?.hydraulicLayout,
+      },
+      {
+        id: 'hyd-points',
+        label: 'Puntos hidráulicos',
+        detail: 'Bocas configuradas en el layout del proyecto.',
+        value: `${Array.isArray(plumbingConfig?.hydraulicLayout?.points) ? plumbingConfig.hydraulicLayout.points.length : 0} puntos`,
+        ready: Array.isArray(plumbingConfig?.hydraulicLayout?.points) && plumbingConfig.hydraulicLayout.points.length > 0,
+      },
+      {
+        id: 'hyd-circuits',
+        label: 'Circuitos',
+        detail: 'Skimmers, retornos e hidrojets detectados.',
+        value: `${hydraulicSummary.total.skimmers} / ${hydraulicSummary.total.returns} / ${hydraulicSummary.total.hydrojets}`,
+        ready: hydraulicSummary.total.skimmers + hydraulicSummary.total.returns + hydraulicSummary.total.hydrojets > 0,
+      },
+      {
+        id: 'hyd-equipment',
+        label: 'Sala técnica',
+        detail: 'Workspace del equipo sin controles de edición.',
+        value: 'SVG estático listo para exportación',
+        ready: true,
       },
     ],
   };
@@ -2876,6 +2914,501 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   </div>
 </body>
+  </html>`;
+  };
+
+  const generateHydraulicReport = (
+    templateSettings: ExportTemplateSettings = getTemplateSettings('hydraulic')
+  ) => {
+    const headerSubtitle = templateSettings.subtitle || 'Esquema técnico hidráulico';
+    const documentTitle = templateSettings.title || `Hidráulica - ${project.name}`;
+    const logoDataUrl = getLogoForTemplate('hydraulic');
+    const hydraulicLayout = plumbingConfig?.hydraulicLayout || {
+      referenceSide: 'north',
+      points: [],
+      equipmentWorkspaceLayout: undefined,
+    };
+    const distanceToEquipment = Number(plumbingConfig?.distanceToEquipment || 0);
+    const pointRows = Array.isArray(hydraulicLayout.points)
+      ? hydraulicLayout.points.map((point: any) => `
+          <tr>
+            <td>${point.label || point.kind || 'Punto'}</td>
+            <td>${point.side || '-'}</td>
+            <td>${Number(point.offsetMeters || 0).toFixed(2)} m</td>
+            <td>${Number(point.depthMeters || 0).toFixed(2)} m</td>
+          </tr>
+        `).join('')
+      : '';
+    const poolLength = Number(project.poolPreset?.length || 8);
+    const poolWidth = Number(project.poolPreset?.width || 4);
+    const topViewSvg = (() => {
+      const W = 1120;
+      const H = 700;
+      const PAD_X = 140;
+      const PAD_Y = 90;
+      const drawW = W - PAD_X * 2;
+      const drawH = H - PAD_Y * 2;
+      const scale = Math.min(drawW / Math.max(poolLength, 0.01), drawH / Math.max(poolWidth, 0.01));
+      const poolW = poolLength * scale;
+      const poolH = poolWidth * scale;
+      const poolX = (W - poolW) / 2;
+      const poolY = (H - poolH) / 2;
+      const metersToSvg = (meters: number) => meters * scale;
+      const oppositeSideDepth = Math.min(metersToSvg(1), poolW * 0.35);
+      const oppositeSideHalfH = poolH / 2;
+      const internalWallSpanMeters = 1;
+      const internalWallXStart = poolX + poolW - oppositeSideDepth;
+      const internalWallXEnd = poolX + poolW;
+      const internalWallY = poolY + oppositeSideHalfH;
+      const equipmentSide = String(hydraulicLayout.referenceSide || 'north') as 'north' | 'south' | 'east' | 'west';
+      const equipmentSideSpan = equipmentSide === 'north' || equipmentSide === 'south' ? poolWidth : poolLength;
+      const equipmentOffsetRatio = Math.min(1, Math.max(0, Number(hydraulicLayout.equipmentOffsetMeters || 0) / Math.max(equipmentSideSpan, 0.01)));
+      const equipmentDistanceSvg = Math.max(metersToSvg(distanceToEquipment), metersToSvg(0.8));
+      const equipmentSymbolRadius = Math.max(metersToSvg(0.48), 40);
+      const colors: Record<string, string> = {
+        skimmer: '#38bdf8',
+        return: '#34d399',
+        hydrojet: '#f59e0b',
+        hydrojet_suction: '#f97316',
+        vacuum: '#e879f9',
+        bottom_drain: '#f87171',
+      };
+      const labels: Record<string, string> = {
+        north: 'NORTE',
+        south: 'SUR',
+        east: 'ESTE',
+        west: 'OESTE',
+        internal_wall: 'PARED INTERNA',
+      };
+      const laneOrder: Record<string, number> = {
+        skimmer: 0,
+        return: 1,
+        hydrojet: 2,
+        hydrojet_suction: 3,
+        vacuum: 4,
+        bottom_drain: 5,
+      };
+      const equipment = equipmentSide === 'north'
+        ? { x: poolX - equipmentDistanceSvg, y: poolY + poolH * equipmentOffsetRatio }
+        : equipmentSide === 'south'
+          ? { x: poolX + poolW + equipmentDistanceSvg, y: poolY + poolH * equipmentOffsetRatio }
+          : equipmentSide === 'east'
+            ? { x: poolX + poolW * equipmentOffsetRatio, y: poolY - equipmentDistanceSvg }
+            : { x: poolX + poolW * equipmentOffsetRatio, y: poolY + poolH + equipmentDistanceSvg };
+
+      const pointToSvg = (point: any) => {
+        if (point.side === 'internal_wall') {
+          const ratio = Math.min(1, Math.max(0, Number(point.offsetMeters || 0) / Math.max(internalWallSpanMeters, 0.01)));
+          return {
+            x: internalWallXEnd - oppositeSideDepth * ratio,
+            y: internalWallY,
+          };
+        }
+
+        const sideSpan = point.side === 'north' || point.side === 'south' ? poolWidth : poolLength;
+        const ratio = Math.min(1, Math.max(0, Number(point.offsetMeters || 0) / Math.max(sideSpan, 0.01)));
+        if (point.side === 'north') return { x: poolX, y: poolY + poolH * ratio };
+        if (point.side === 'south') return { x: poolX + poolW, y: poolY + poolH * ratio };
+        if (point.side === 'east') return { x: poolX + poolW * ratio, y: poolY };
+        return { x: poolX + poolW * ratio, y: poolY + poolH };
+      };
+
+      const pointPipeRoute = (point: any) => {
+        const pos = pointToSvg(point);
+        const match = String(point.id || '').match(/-(\d+)$/);
+        const sequence = match ? Number(match[1]) - 1 : 0;
+        const laneMeters = 0.65 + (laneOrder[point.kind || 'return'] ?? 0) * 0.18 + sequence * 0.08;
+        const outsideGap = Math.max(metersToSvg(laneMeters), 44);
+        const outerLeft = poolX - outsideGap;
+        const outerRight = poolX + poolW + outsideGap;
+        const outerTop = poolY - outsideGap;
+        const outerBottom = poolY + poolH + outsideGap;
+
+        const exitPoint =
+          point.side === 'north'
+            ? { x: outerLeft, y: pos.y }
+            : point.side === 'south'
+              ? { x: outerRight, y: pos.y }
+              : point.side === 'east'
+                ? { x: pos.x, y: outerTop }
+                : point.side === 'west'
+                  ? { x: pos.x, y: outerBottom }
+                  : { x: outerRight, y: pos.y };
+
+        const route = [pos, exitPoint];
+
+        if (point.side === 'internal_wall') {
+          route.push({ x: outerRight, y: pos.y });
+          route.push({ x: outerRight, y: equipment.y });
+        } else if (
+          (point.side === 'north' && equipmentSide === 'south') ||
+          (point.side === 'south' && equipmentSide === 'north')
+        ) {
+          const useTop = ((pos.y + equipment.y) / 2) < (poolY + poolH / 2);
+          const perimeterY = useTop ? outerTop : outerBottom;
+          route.push({ x: exitPoint.x, y: perimeterY });
+          route.push({ x: equipmentSide === 'north' ? outerLeft : outerRight, y: perimeterY });
+          route.push({ x: equipmentSide === 'north' ? outerLeft : outerRight, y: equipment.y });
+        } else if (
+          (point.side === 'east' && equipmentSide === 'west') ||
+          (point.side === 'west' && equipmentSide === 'east')
+        ) {
+          const useLeft = ((pos.x + equipment.x) / 2) < (poolX + poolW / 2);
+          const perimeterX = useLeft ? outerLeft : outerRight;
+          route.push({ x: perimeterX, y: exitPoint.y });
+          route.push({ x: perimeterX, y: equipmentSide === 'east' ? outerTop : outerBottom });
+          route.push({ x: equipment.x, y: equipmentSide === 'east' ? outerTop : outerBottom });
+        } else if (point.side !== equipmentSide) {
+          if (
+            (point.side === 'east' && equipmentSide === 'north') ||
+            (point.side === 'north' && equipmentSide === 'east')
+          ) {
+            route.push({ x: outerLeft, y: outerTop });
+          } else if (
+            (point.side === 'east' && equipmentSide === 'south') ||
+            (point.side === 'south' && equipmentSide === 'east')
+          ) {
+            route.push({ x: outerRight, y: outerTop });
+          } else if (
+            (point.side === 'west' && equipmentSide === 'north') ||
+            (point.side === 'north' && equipmentSide === 'west')
+          ) {
+            route.push({ x: outerLeft, y: outerBottom });
+          } else if (
+            (point.side === 'west' && equipmentSide === 'south') ||
+            (point.side === 'south' && equipmentSide === 'west')
+          ) {
+            route.push({ x: outerRight, y: outerBottom });
+          }
+        }
+
+        if (equipmentSide === 'north' || equipmentSide === 'south') {
+          route.push({ x: equipmentSide === 'north' ? outerLeft : outerRight, y: equipment.y });
+        } else {
+          route.push({ x: equipment.x, y: equipmentSide === 'east' ? outerTop : outerBottom });
+        }
+
+        route.push(equipment);
+        return route;
+      };
+
+      const collectorRouteToEquipment = (start: { x: number; y: number }, kind: 'return' | 'hydrojet') => {
+        const laneMeters = kind === 'hydrojet' ? 1.45 : 1.05;
+        const outsideGap = Math.max(metersToSvg(laneMeters), kind === 'hydrojet' ? 74 : 58);
+        const outerLeft = poolX - outsideGap;
+        const outerRight = poolX + poolW + outsideGap;
+        const outerTop = poolY - outsideGap;
+        const outerBottom = poolY + poolH + outsideGap;
+        const route = [start];
+
+        if (equipmentSide === 'south') {
+          route.push({ x: Math.max(start.x, outerRight), y: start.y });
+          route.push({ x: Math.max(start.x, outerRight), y: equipment.y });
+        } else if (equipmentSide === 'north') {
+          const perimeterY = start.y <= poolY + poolH / 2 ? outerTop : outerBottom;
+          route.push({ x: Math.max(start.x, outerRight), y: perimeterY });
+          route.push({ x: outerLeft, y: perimeterY });
+          route.push({ x: outerLeft, y: equipment.y });
+        } else if (equipmentSide === 'east') {
+          route.push({ x: start.x, y: outerTop });
+          route.push({ x: equipment.x, y: outerTop });
+        } else {
+          route.push({ x: start.x, y: outerBottom });
+          route.push({ x: equipment.x, y: outerBottom });
+        }
+
+        route.push(equipment);
+        return route;
+      };
+
+      const points = Array.isArray(hydraulicLayout.points) ? hydraulicLayout.points : [];
+      const returnPoints = points.filter((point: any) => point.kind === 'return').sort((a: any, b: any) => a.offsetMeters - b.offsetMeters);
+      const returnCollectorGap = Math.max(metersToSvg(1.05), 58);
+      const returnCollectorX = poolX + poolW + returnCollectorGap;
+      const returnCollectorNodes = returnPoints.map((point: any) => ({ point, pos: pointToSvg(point) }));
+      const returnCollectorAnchor =
+        returnCollectorNodes.find(({ point }: any) => point.id === 'return-4') ||
+        returnCollectorNodes[Math.min(3, Math.max(returnCollectorNodes.length - 1, 0))] ||
+        null;
+      const returnCollectorStartY = returnCollectorNodes.length > 0 ? Math.min(...returnCollectorNodes.map(({ pos }: any) => pos.y)) : null;
+      const returnCollectorEndY = returnCollectorNodes.length > 0 ? Math.max(...returnCollectorNodes.map(({ pos }: any) => pos.y)) : null;
+      const returnCollectorRoute = returnCollectorAnchor
+        ? collectorRouteToEquipment({ x: returnCollectorX, y: returnCollectorAnchor.pos.y }, 'return')
+        : [];
+
+      const hydrojetPoints = points.filter((point: any) => point.kind === 'hydrojet').sort((a: any, b: any) => a.offsetMeters - b.offsetMeters);
+      const hydrojetCollectorGap = Math.max(metersToSvg(1.45), 74);
+      const hydrojetCollectorX = poolX + poolW + hydrojetCollectorGap;
+      const hydrojetCollectorNodes = hydrojetPoints.map((point: any) => ({ point, pos: pointToSvg(point) }));
+      const hydrojetCollectorAnchor =
+        hydrojetCollectorNodes.find(({ point }: any) => point.id === 'hydrojet-4') ||
+        hydrojetCollectorNodes[Math.min(3, Math.max(hydrojetCollectorNodes.length - 1, 0))] ||
+        null;
+      const hydrojetCollectorStartY = hydrojetCollectorNodes.length > 0 ? Math.min(...hydrojetCollectorNodes.map(({ pos }: any) => pos.y)) : null;
+      const hydrojetCollectorEndY = hydrojetCollectorNodes.length > 0 ? Math.max(...hydrojetCollectorNodes.map(({ pos }: any) => pos.y)) : null;
+      const hydrojetCollectorRoute = hydrojetCollectorAnchor
+        ? collectorRouteToEquipment({ x: hydrojetCollectorX, y: hydrojetCollectorAnchor.pos.y }, 'hydrojet')
+        : [];
+
+      const returnCollectorSvg = returnCollectorStartY !== null && returnCollectorEndY !== null ? `
+        <g>
+          ${returnCollectorNodes.map(({ point, pos }: any) => (
+            returnCollectorAnchor?.point.id === point.id ? '' : `
+              <line
+                x1="${pos.x}"
+                y1="${pos.y}"
+                x2="${returnCollectorX}"
+                y2="${pos.y}"
+                stroke="${colors.return}"
+                stroke-opacity="0.5"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            `
+          )).join('')}
+          <line x1="${returnCollectorX}" y1="${returnCollectorStartY}" x2="${returnCollectorX}" y2="${returnCollectorEndY}" stroke="${colors.return}" stroke-opacity="0.85" stroke-width="2.4" stroke-linecap="round" />
+          ${returnCollectorAnchor ? `<line x1="${returnCollectorAnchor.pos.x}" y1="${returnCollectorAnchor.pos.y}" x2="${returnCollectorX}" y2="${returnCollectorAnchor.pos.y}" stroke="${colors.return}" stroke-opacity="1" stroke-width="2.8" stroke-linecap="round" />` : ''}
+          <polyline points="${returnCollectorRoute.map((node) => `${node.x},${node.y}`).join(' ')}" fill="none" stroke="${colors.return}" stroke-opacity="0.85" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
+        </g>
+      ` : '';
+
+      const hydrojetCollectorSvg = hydrojetCollectorStartY !== null && hydrojetCollectorEndY !== null ? `
+        <g>
+          ${hydrojetCollectorNodes.map(({ point, pos }: any) => (
+            hydrojetCollectorAnchor?.point.id === point.id ? '' : `
+              <line
+                x1="${pos.x}"
+                y1="${pos.y}"
+                x2="${hydrojetCollectorX}"
+                y2="${pos.y}"
+                stroke="${colors.hydrojet}"
+                stroke-opacity="0.5"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            `
+          )).join('')}
+          <line x1="${hydrojetCollectorX}" y1="${hydrojetCollectorStartY}" x2="${hydrojetCollectorX}" y2="${hydrojetCollectorEndY}" stroke="${colors.hydrojet}" stroke-opacity="0.85" stroke-width="2.4" stroke-linecap="round" />
+          ${hydrojetCollectorAnchor ? `<line x1="${hydrojetCollectorAnchor.pos.x}" y1="${hydrojetCollectorAnchor.pos.y}" x2="${hydrojetCollectorX}" y2="${hydrojetCollectorAnchor.pos.y}" stroke="${colors.hydrojet}" stroke-opacity="1" stroke-width="2.8" stroke-linecap="round" />` : ''}
+          <polyline points="${hydrojetCollectorRoute.map((node) => `${node.x},${node.y}`).join(' ')}" fill="none" stroke="${colors.hydrojet}" stroke-opacity="0.85" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" />
+        </g>
+      ` : '';
+
+      const pointSvg = points.map((point: any) => {
+        const pos = pointToSvg(point);
+        const route = pointPipeRoute(point);
+        const color = colors[point.kind || 'return'] || '#334155';
+        const drawRoute = point.kind !== 'return' && point.kind !== 'hydrojet';
+        return `
+          <g>
+            ${drawRoute ? `<polyline points="${route.map((node) => `${node.x},${node.y}`).join(' ')}" fill="none" stroke="${color}" stroke-opacity="0.42" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />` : ''}
+            <circle cx="${pos.x}" cy="${pos.y}" r="9" fill="transparent" stroke="${color}" stroke-opacity="0.28" stroke-width="1.5" />
+            <circle cx="${pos.x}" cy="${pos.y}" r="5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          </g>
+        `;
+      }).join('');
+
+      return `
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista superior hidráulica">
+          <rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>
+          <rect x="${poolX}" y="${poolY}" width="${poolW}" height="${poolH}" fill="#dbeafe" stroke="#0f172a" stroke-width="2.2"/>
+          <rect x="${poolX + 14}" y="${poolY + 14}" width="${poolW - 28}" height="${poolH - 28}" fill="none" stroke="#93c5fd" stroke-width="1.2"/>
+          <text x="${W / 2}" y="${poolY - 28}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700">${labels.east}</text>
+          <text x="${W / 2}" y="${poolY + poolH + 42}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700">${labels.west}</text>
+          <text x="${poolX - 56}" y="${H / 2}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700" transform="rotate(-90 ${poolX - 56} ${H / 2})">${labels.north}</text>
+          <text x="${poolX + poolW + 56}" y="${H / 2}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700" transform="rotate(90 ${poolX + poolW + 56} ${H / 2})">${labels.south}</text>
+          <rect x="${poolX + poolW - oppositeSideDepth}" y="${poolY + oppositeSideHalfH}" width="${oppositeSideDepth}" height="${oppositeSideHalfH}" fill="rgba(8,145,178,0.12)" stroke="rgba(14,116,144,0.45)" stroke-width="1.3"/>
+          <text x="${poolX + poolW - oppositeSideDepth + 12}" y="${poolY + oppositeSideHalfH + 24}" fill="#155e75" font-size="12" font-weight="700">PLAYA HUMEDA</text>
+          <rect x="${poolX + poolW - oppositeSideDepth}" y="${poolY}" width="${oppositeSideDepth}" height="${oppositeSideHalfH}" fill="rgba(240,249,255,0.16)" stroke="rgba(125,211,252,0.5)" stroke-width="1.5"/>
+          <line x1="${internalWallXStart}" y1="${internalWallY}" x2="${internalWallXEnd}" y2="${internalWallY}" stroke="rgba(14,116,144,0.95)" stroke-width="2.4" stroke-dasharray="10 6"/>
+          ${[0, 1, 2].map((step) => {
+            const treadInset = (2 - step) * 14;
+            const stepX = poolX + poolW - oppositeSideDepth + treadInset;
+            const stepW = oppositeSideDepth - treadInset;
+            return `
+              <g>
+                <rect x="${stepX}" y="${poolY}" width="${stepW}" height="${oppositeSideHalfH}" rx="2" fill="rgba(255,255,255,0.16)" stroke="rgba(14,116,144,0.55)" stroke-width="1.6"/>
+                <line x1="${stepX}" y1="${poolY}" x2="${stepX}" y2="${poolY + oppositeSideHalfH}" stroke="rgba(14,116,144,0.82)" stroke-width="1.8"/>
+                <rect x="${stepX}" y="${poolY}" width="5" height="${oppositeSideHalfH}" fill="rgba(8,47,73,0.22)"/>
+              </g>
+            `;
+          }).join('')}
+          <text x="${poolX + poolW - oppositeSideDepth + 12}" y="${poolY + 24}" fill="#155e75" font-size="12" font-weight="700">ESCALERAS</text>
+          <line x1="${equipmentSide === 'north' ? poolX : equipmentSide === 'south' ? poolX + poolW : equipment.x}"
+            y1="${equipmentSide === 'east' ? poolY : equipmentSide === 'west' ? poolY + poolH : equipment.y}"
+            x2="${equipment.x}"
+            y2="${equipment.y}"
+            stroke="#fbbf24"
+            stroke-width="4"
+            stroke-dasharray="10 8"
+            stroke-linecap="round"/>
+          ${returnCollectorSvg}
+          ${hydrojetCollectorSvg}
+          ${pointSvg}
+          <g>
+            <circle cx="${equipment.x}" cy="${equipment.y}" r="${equipmentSymbolRadius + 10}" fill="rgba(245,158,11,0.08)" stroke="rgba(217,119,6,0.22)" stroke-width="2"/>
+            <circle cx="${equipment.x}" cy="${equipment.y}" r="${equipmentSymbolRadius}" fill="#ffffff" stroke="rgba(217,119,6,0.65)" stroke-width="2.4"/>
+            <polygon points="${equipment.x - equipmentSymbolRadius * 0.42},${equipment.y + equipmentSymbolRadius * 0.52} ${equipment.x - equipmentSymbolRadius * 0.42},${equipment.y - equipmentSymbolRadius * 0.52} ${equipment.x + equipmentSymbolRadius * 0.62},${equipment.y}" fill="rgba(217,119,6,0.92)" stroke="#78350f" stroke-width="1.4" stroke-linejoin="round"/>
+          </g>
+          <text x="${equipment.x}" y="${equipment.y + equipmentSymbolRadius + 18}" fill="#0f172a" font-size="14" font-weight="700" text-anchor="middle">Equipo</text>
+          <text x="${equipment.x}" y="${equipment.y + equipmentSymbolRadius + 36}" fill="#475569" font-size="11" text-anchor="middle">${labels[equipmentSide]} · ${distanceToEquipment.toFixed(1)} m</text>
+          <text x="${poolX + 18}" y="${poolY + 26}" fill="#0f172a" font-size="13" font-weight="700">${poolLength.toFixed(2)} m x ${poolWidth.toFixed(2)} m</text>
+        </svg>
+      `;
+    })();
+    const equipmentSvg = renderToStaticMarkup(
+      <EquipmentWorkspacePreviewShared
+        project={project}
+        hydraulicSummary={hydraulicSummary}
+        hydraulicLayout={hydraulicLayout}
+        distanceToEquipment={distanceToEquipment}
+      />
+    );
+
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${documentTitle}</title>
+  <style>
+    ${getCommonStyles()}
+    body { background: #eceff1; color: #18181b; }
+    .container { width: 210mm; max-width: 210mm; border-radius: 0; box-shadow: 0 0 0 1px #d4d4d8, 0 18px 40px rgba(15, 23, 42, 0.08); }
+    .content.hyd-wrap {
+      display: grid;
+      gap: 18px;
+      background: #f5f5f4;
+      padding: 22px;
+    }
+    .section {
+      margin: 0;
+      padding: 18px 20px;
+      background: white;
+      border: 1px solid #d4d4d8;
+      border-radius: 0;
+      box-shadow: inset 0 0 0 1px #f5f5f5;
+    }
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #27272a;
+      border-bottom: 1px solid #d4d4d8;
+      padding-bottom: 10px;
+    }
+    .hyd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .hyd-card {
+      padding: 14px;
+      background: linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);
+      border: 1px solid #d6d3d1;
+      border-radius: 0;
+      min-height: 92px;
+    }
+    .hyd-label { font-size: 10px; color: #71717a; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; }
+    .hyd-value { font-size: 24px; font-weight: 800; color: #18181b; margin-top: 8px; line-height: 1; }
+    .hyd-detail { font-size: 12px; color: #52525b; margin-top: 8px; }
+    .hyd-diagram {
+      border: 1px solid #a1a1aa;
+      border-radius: 0;
+      overflow: hidden;
+      background: #020617;
+      padding: 8px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .hyd-diagram svg { display: block; width: 100%; height: auto; }
+    .hyd-top-view {
+      border: 1px solid #a1a1aa;
+      border-radius: 0;
+      overflow: hidden;
+      background: #ffffff;
+      padding: 10px;
+    }
+    .hyd-top-view svg { display: block; width: 100%; height: auto; }
+    .hyd-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .hyd-table th {
+      background: #27272a;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid #3f3f46;
+    }
+    .hyd-table td {
+      padding: 10px 12px;
+      border: 1px solid #d4d4d8;
+      font-size: 12px;
+      color: #27272a;
+      background: #fff;
+    }
+    .hyd-table tbody tr:nth-child(even) td { background: #fafaf9; }
+    .footer {
+      margin-top: 0;
+      padding: 14px 20px 0;
+      border-top: 1px solid #d4d4d8;
+      text-align: left;
+      font-size: 11px;
+      color: #71717a;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+      .content.hyd-wrap { background: white; padding: 12mm; }
+      .section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <p class="subtitle">${headerSubtitle}</p>
+      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+    <div class="content hyd-wrap">
+      <div class="section">
+        <h2>Resumen Hidráulico</h2>
+        <div class="hyd-grid">
+          <div class="hyd-card"><div class="hyd-label">Skimmers</div><div class="hyd-value">${hydraulicSummary.total.skimmers}</div><div class="hyd-detail">Base ${hydraulicSummary.base.skimmers}</div></div>
+          <div class="hyd-card"><div class="hyd-label">Retornos</div><div class="hyd-value">${hydraulicSummary.total.returns}</div><div class="hyd-detail">Base ${hydraulicSummary.base.returns}</div></div>
+          <div class="hyd-card"><div class="hyd-label">Hidrojets</div><div class="hyd-value">${hydraulicSummary.total.hydrojets}</div><div class="hyd-detail">Extra hidráulico</div></div>
+          <div class="hyd-card"><div class="hyd-label">Cabecera</div><div class="hyd-value">${String(hydraulicLayout.referenceSide || 'north').toUpperCase()}</div><div class="hyd-detail">Distancia ${distanceToEquipment.toFixed(2)} m</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Vista Superior Hidráulica</h2>
+        <div class="hyd-top-view">${topViewSvg}</div>
+      </div>
+      <div class="section">
+        <h2>Flujo de sentido hidráulico</h2>
+        <div class="hyd-diagram">${equipmentSvg}</div>
+      </div>
+      <div class="section">
+        <h2>Puntos Configurados</h2>
+        <table class="hyd-table">
+          <thead>
+            <tr>
+              <th>Punto</th>
+              <th>Lateral</th>
+              <th>Offset</th>
+              <th>Profundidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pointRows || '<tr><td colspan="4">Sin puntos hidráulicos configurados.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="footer">
+        <p><strong>Pool Installer</strong> | Esquema Hidráulico</p>
+        <p>Documento generado el ${new Date().toLocaleDateString('es-AR')} | Código: ${getProjectCode(project)}</p>
+      </div>
+    </div>
+  </div>
+</body>
 </html>`;
   };
 
@@ -3012,6 +3545,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         return generateCompleteReport(templateSettings);
       case 'overview':
         return generateOverview(templateSettings, extras.poolImageDataUrl);
+      case 'hydraulic':
+        return generateHydraulicReport(templateSettings);
       default:
         return generateClientBudget(templateSettings);
     }
@@ -3871,6 +4406,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     budget: ['Costos unitarios', 'Subtotales', 'Materiales vs mano de obra'],
     complete: ['Resumen comercial', 'Soporte técnico', 'Anexos del proyecto'],
     overview: ['Resumen visual', 'Datos del proyecto', 'Alcance de instalación'],
+    hydraulic: ['Esquema limpio', 'Sala técnica', 'Puntos hidráulicos'],
   };
 
   return (
