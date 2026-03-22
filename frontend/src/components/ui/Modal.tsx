@@ -26,33 +26,31 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
         <div
           className="fixed inset-0 transition-opacity bg-black/70 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        <div className={`inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full ${sizeClasses[size]}`}>
-          <div className="bg-white/5 border border-white/10 backdrop-blur-xl">
-            <div className="px-6 pt-6 pb-5 sm:p-8 text-zinc-200">
+        <div className={`relative z-[1001] w-full ${sizeClasses[size]}`}>
+          <div className="max-h-[90vh] overflow-hidden rounded-2xl border border-white/20 bg-zinc-950/96 shadow-2xl backdrop-blur-xl">
+            <div className="max-h-[90vh] overflow-y-auto px-6 pt-6 pb-5 sm:p-8 text-zinc-100">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-white">
                   {title}
                 </h3>
                 <button
                   onClick={onClose}
-                  className="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                  className="text-zinc-300 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/15"
                 >
                   <X size={24} />
                 </button>
               </div>
-              <div className="text-zinc-200">
+              <div className="text-zinc-100">
                 {children}
               </div>
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

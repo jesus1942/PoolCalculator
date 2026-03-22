@@ -1,12 +1,17 @@
-const CACHE_NAME = 'pool-calculator-v1';
+const CACHE_NAME = 'pool-calculator-v3';
 const CORE_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/pwa-192.png',
   '/pwa-512.png',
   '/apple-touch-icon.png',
 ];
+
+const NEVER_CACHE_PATHS = new Set([
+  '/',
+  '/index.html',
+  '/service-worker.js',
+  '/manifest.json',
+]);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -34,32 +39,49 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Nunca cachear API ni auth para evitar datos obsoletos por usuario/rol.
+  if (url.pathname.startsWith('/api') || NEVER_CACHE_PATHS.has(url.pathname)) {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('/index.html').then((response) => response || caches.match('/')))
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        const networkFetch = fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            }
+            return response;
+          });
+
+        return cached || networkFetch;
+      })
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-
-      return fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         if (response.ok) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

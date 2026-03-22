@@ -60,19 +60,37 @@ export const ProjectDetail: React.FC = () => {
       .catch((error) => console.error('Error al cargar modelos de piscina:', error));
   }, [user?.role]);
 
+  const hydrateProjectData = async (data: Project) => {
+    const hydratedProject = { ...data } as Project & { additionals?: any[] };
+
+    try {
+      if (!id) return hydratedProject;
+      const additionalsService = await import('@/services/additionalsService');
+      hydratedProject.additionals = await additionalsService.additionalsService.getProjectAdditionals(id);
+    } catch (error) {
+      console.log('No se pudieron cargar los adicionales:', error);
+      hydratedProject.additionals = [];
+    }
+
+    return hydratedProject;
+  };
+
+  const syncEditFormData = (data: Project) => {
+    setEditFormData({
+      name: data.name,
+      clientName: data.clientName,
+      clientEmail: data.clientEmail || '',
+      clientPhone: data.clientPhone || '',
+      location: data.location || '',
+      poolPresetId: data.poolPresetId,
+      status: data.status,
+    });
+  };
+
   const loadProject = async () => {
     try {
       if (!id) return;
-      const data = await projectService.getById(id);
-
-      try {
-        const additionalsService = await import('@/services/additionalsService');
-        const additionals = await additionalsService.additionalsService.getProjectAdditionals(id);
-        (data as any).additionals = additionals;
-      } catch (error) {
-        console.log('No se pudieron cargar los adicionales:', error);
-        (data as any).additionals = [];
-      }
+      const data = await hydrateProjectData(await projectService.getById(id));
 
       if (data.poolPreset && id) {
         let needsUpdate = false;
@@ -106,8 +124,9 @@ export const ProjectDetail: React.FC = () => {
         if (needsUpdate) {
           try {
             await projectService.update(id, updates);
-            const updatedData = await projectService.getById(id);
+            const updatedData = await hydrateProjectData(await projectService.getById(id));
             setProject(updatedData);
+            syncEditFormData(updatedData);
             console.log('[Auto-config] Configuraciones guardadas automáticamente');
             return;
           } catch (error) {
@@ -117,15 +136,7 @@ export const ProjectDetail: React.FC = () => {
       }
 
       setProject(data);
-      setEditFormData({
-        name: data.name,
-        clientName: data.clientName,
-        clientEmail: data.clientEmail || '',
-        clientPhone: data.clientPhone || '',
-        location: data.location || '',
-        poolPresetId: data.poolPresetId,
-        status: data.status,
-      });
+      syncEditFormData(data);
     } catch (error) {
       console.error('Error al cargar proyecto:', error);
     } finally {
@@ -156,6 +167,16 @@ export const ProjectDetail: React.FC = () => {
     } catch (error) {
       console.error('Error al guardar configuración:', error);
       alert('Error al guardar la configuración');
+    }
+  };
+
+  const handleAutoSavePlumbingConfig = async (plumbingConfig: any) => {
+    try {
+      if (!id) return;
+      await projectService.update(id, { plumbingConfig });
+      setProject((prev) => prev ? { ...prev, plumbingConfig } : prev);
+    } catch (error) {
+      console.error('Error al persistir configuración hidráulica:', error);
     }
   };
 
@@ -345,7 +366,7 @@ export const ProjectDetail: React.FC = () => {
         {activeTab === 'overview' && <ImprovedOverviewTab project={project} />}
         {activeTab === 'status' && <ProjectStatusPanel project={project} />}
         {activeTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
-        {activeTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} />}
+        {activeTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
         {activeTab === 'electrical' && id && !isReadOnlyProjectUser && (
           <div className="space-y-6">
             <EquipmentSelector
