@@ -129,6 +129,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [generatingPackage, setGeneratingPackage] = useState(false);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const [clientDocumentEditorHtml, setClientDocumentEditorHtml] = useState('');
+  const [copiedPwaLink, setCopiedPwaLink] = useState(false);
   const [excelSections, setExcelSections] = useState({
     excavation: true,
     supportBed: true,
@@ -240,6 +241,38 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const getLogoForTemplate = (template: ExportTemplate) => {
     const isDarkHeader = template !== 'overview';
     return isDarkHeader ? brandLogoLightDataUrl : brandLogoDarkDataUrl;
+  };
+
+  const clientPwaPath = publicAssetUrl('sistemas-pwa/index.html');
+
+  const getClientPwaUrl = () => {
+    if (typeof window === 'undefined') return clientPwaPath;
+    return new URL(clientPwaPath, window.location.origin).toString();
+  };
+
+  const handleOpenClientPwa = () => {
+    if (typeof window === 'undefined') return;
+    window.open(getClientPwaUrl(), '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyClientPwaLink = async () => {
+    const url = getClientPwaUrl();
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setCopiedPwaLink(true);
+        window.setTimeout(() => setCopiedPwaLink(false), 2200);
+        return;
+      }
+    } catch (_error) {}
+
+    window.prompt('Copiá este link para el cliente', url);
+  };
+
+  const handleShareClientPwaWhatsApp = () => {
+    if (typeof window === 'undefined') return;
+    const message = `Manual del sistema de piscina para ${project.clientName || project.name}:\n${getClientPwaUrl()}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -4574,6 +4607,54 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                       {item}
                     </span>
                   ))}
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Manual PWA del cliente</h4>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Acceso visible al manual instalable para cliente final. Hoy apunta a <span className="text-zinc-200 font-medium">/sistemas-pwa/</span>.
+                    </p>
+                  </div>
+                  <span className="text-[11px] uppercase tracking-wide text-zinc-500">Cliente final</span>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">Link</p>
+                  <p className="mt-2 break-all text-sm text-zinc-200">{getClientPwaUrl()}</p>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-zinc-800 bg-white">
+                  <iframe
+                    title="manual-pwa-preview"
+                    src={clientPwaPath}
+                    className="h-64 w-full"
+                  />
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <a
+                    href={clientPwaPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-sm font-semibold text-zinc-950 hover:bg-white"
+                  >
+                    Abrir PWA
+                  </a>
+                  <button
+                    onClick={handleCopyClientPwaLink}
+                    className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-500"
+                  >
+                    {copiedPwaLink ? 'Link copiado' : 'Copiar link'}
+                  </button>
+                  <button
+                    onClick={handleShareClientPwaWhatsApp}
+                    className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-500"
+                  >
+                    Enviar por WhatsApp
+                  </button>
                 </div>
               </div>
 

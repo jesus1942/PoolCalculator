@@ -351,6 +351,9 @@ export const listAgendaEvents = async (req: AuthRequest, res: Response) => {
     }
     if (projectId) filters.projectId = String(projectId);
     if (crewId) filters.crewId = String(crewId);
+    if (assigneeId && isAdminRole(role)) {
+      filters.assignees = { some: { userId: String(assigneeId) } };
+    }
     if (status) filters.status = String(status);
     if (priority) filters.priority = String(priority);
     if (type) filters.type = String(type);

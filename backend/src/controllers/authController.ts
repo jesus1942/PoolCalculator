@@ -65,30 +65,15 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const defaultOrg = await prisma.organization.findFirst({
-      where: { slug: 'domotics-iot' },
-      select: { id: true },
-    });
-
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         provider: 'EMAIL', // Marcar como usuario de email/password
-        currentOrgId: defaultOrg?.id || null,
+        currentOrgId: null,
       },
     });
-
-    if (defaultOrg?.id) {
-      await prisma.organizationMember.create({
-        data: {
-          organizationId: defaultOrg.id,
-          userId: user.id,
-          role: 'MEMBER',
-        },
-      });
-    }
 
     const orgId = await ensureCurrentOrganization(user.id, user.name);
     const token = generateToken(user.id, user.email, user.role, orgId);

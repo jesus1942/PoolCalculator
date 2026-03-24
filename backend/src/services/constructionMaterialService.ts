@@ -3,7 +3,10 @@ import prisma from '../config/database';
 export const constructionMaterialService = {
   async getAll() {
     return await prisma.constructionMaterialPreset.findMany({
-      orderBy: { type: 'asc' },
+      orderBy: [
+        { type: 'asc' },
+        { name: 'asc' },
+      ],
     });
   },
 

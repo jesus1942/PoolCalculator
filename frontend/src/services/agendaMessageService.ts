@@ -17,9 +17,7 @@ export const agendaMessageService = {
       formData.append('body', body);
       if (visibility) formData.append('visibility', visibility);
       images.forEach((file) => formData.append('images', file));
-      const response = await api.post(`/agenda/${eventId}/messages`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await api.post(`/agenda/${eventId}/messages`, formData);
       return response.data;
     }
     const response = await api.post(`/agenda/${eventId}/messages`, { body, visibility });

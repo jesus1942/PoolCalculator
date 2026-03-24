@@ -1,6 +1,16 @@
 import api, { API_BASE_URL } from './api';
 
-export type ProductType = 'equipment' | 'tiles' | 'accessories' | 'materials' | 'plumbing';
+export type ProductType =
+  | 'equipment'
+  | 'tiles'
+  | 'accessories'
+  | 'materials'
+  | 'plumbing'
+  | 'POOL_PRESET'
+  | 'TILE_PRESET'
+  | 'ACCESSORY_PRESET'
+  | 'EQUIPMENT_PRESET'
+  | 'CONSTRUCTION_MATERIAL';
 
 export interface UploadImageResponse {
   message: string;

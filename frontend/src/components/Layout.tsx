@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity, Menu, X } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
+import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
 import { organizationService, OrganizationItem } from '@/services/organizationService';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
@@ -54,6 +55,7 @@ export const Layout: React.FC = () => {
       { to: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
       { to: '/pool-models', icon: Waves, label: 'Modelos de Piscinas' },
       { to: '/projects', icon: FolderOpen, label: 'Proyectos' },
+      { to: '/agenda', icon: Calendar, label: 'La Agenda' },
       { to: '/settings', icon: Settings, label: 'Configuración' },
     ];
 
@@ -75,6 +77,7 @@ export const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 overflow-x-hidden">
       <ReminderToasts />
+      <BrowserNotificationPrompt />
       {/* Mobile overlay */}
       <button
         type="button"

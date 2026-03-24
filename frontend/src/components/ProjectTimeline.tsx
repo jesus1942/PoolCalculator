@@ -368,7 +368,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                               {item.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
                             </button>
                             <button
-                              onClick={() => handleEditClick(item as ProjectUpdate)}
+                              onClick={() => handleEditClick(item as unknown as ProjectUpdate)}
                               className="text-blue-600 hover:text-blue-800 p-1"
                               title="Editar actualización"
                             >

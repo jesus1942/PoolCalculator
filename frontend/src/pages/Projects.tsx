@@ -8,6 +8,7 @@ import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
 import { Project, PoolPreset, ProjectStatus } from '@/types';
 import { calculateProjectFinancials } from '@/utils/projectCosting';
+import { buildProjectAutoConfigurations } from '@/utils/presetAutoConfig';
 import { Plus, Edit, Trash2, Eye, FileText, FolderOpen, Waves, CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -57,6 +58,8 @@ export const Projects: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const selectedPreset = poolPresets.find((preset) => preset.id === formData.poolPresetId);
+
       if (editingProject) {
         const payload: Record<string, unknown> = {
           name: formData.name.trim(),
@@ -69,11 +72,17 @@ export const Projects: React.FC = () => {
 
         if (formData.poolPresetId && formData.poolPresetId !== editingProject.poolPresetId) {
           payload.poolPresetId = formData.poolPresetId;
+          if (selectedPreset) {
+            Object.assign(payload, buildProjectAutoConfigurations(selectedPreset));
+          }
         }
 
         await projectService.update(editingProject.id, payload as Partial<Project>);
       } else {
-        await projectService.create(formData);
+        const createdProject = await projectService.create(formData);
+        if (selectedPreset) {
+          await projectService.update(createdProject.id, buildProjectAutoConfigurations(selectedPreset) as Partial<Project>);
+        }
       }
       setShowModal(false);
       resetForm();

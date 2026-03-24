@@ -1,10 +1,14 @@
 import { randomUUID } from 'crypto';
+import { findMatchingRole } from './laborReferences';
 
 interface PoolPreset {
   shape: string;
   length: number;
   width: number;
   depth: number;
+  depthEnd?: number | null;
+  lateralCushionSpace?: number;
+  floorCushionDepth?: number;
   hasWetDeck: boolean;
   hasStairsOnly: boolean;
   hasHydroJets: boolean;
@@ -53,7 +57,14 @@ export function generateDefaultTasks(
   poolPreset: PoolPreset,
   volume: number,
   perimeter: number,
-  roles: RoleRate[] = []
+  roles: RoleRate[] = [],
+  context: {
+    distanceToEquipment?: number;
+    distanceToPanel?: number;
+    hydraulicItemsCount?: number;
+    electricalItemsCount?: number;
+    equipmentCount?: number;
+  } = {}
 ): Record<string, TaskDetail[]> {
   // Helper function to calculate labor cost
   const calculateLaborCost = (
@@ -66,10 +77,7 @@ export function generateDefaultTasks(
     if (!suggestedRoleType || roles.length === 0) return 0;
 
     // Buscar el rol por nombre (case-insensitive)
-    const role = roles.find(r =>
-      r.name.toLowerCase().includes(suggestedRoleType.toLowerCase()) ||
-      suggestedRoleType.toLowerCase().includes(r.name.toLowerCase())
-    );
+    const role = findMatchingRole(roles, suggestedRoleType);
 
     if (!role) return 0;
 
@@ -91,6 +99,12 @@ export function generateDefaultTasks(
     const hourlyRate = role.hourlyRate || (role.dailyRate ? role.dailyRate / 8 : 0);
     return hours * hourlyRate;
   };
+
+  const distanceToEquipment = Math.max(0, context.distanceToEquipment || 0);
+  const distanceToPanel = Math.max(0, context.distanceToPanel || distanceToEquipment || 0);
+  const hydraulicItemsCount = Math.max(0, context.hydraulicItemsCount || 0);
+  const electricalItemsCount = Math.max(0, context.electricalItemsCount || 0);
+  const equipmentCount = Math.max(2, context.equipmentCount || 2);
   const tasks: Record<string, TaskDetail[]> = {
     excavation: [],
     hydraulic: [],
@@ -104,7 +118,11 @@ export function generateDefaultTasks(
   // ========================
   // EXCAVACIÓN
   // ========================
-  const excavationVolume = volume * 1.5; // Volumen con colchón
+  const deepestDepth = Math.max(poolPreset.depth, poolPreset.depthEnd || poolPreset.depth);
+  const excavationLength = poolPreset.length + ((poolPreset.lateralCushionSpace || 0.15) * 2);
+  const excavationWidth = poolPreset.width + ((poolPreset.lateralCushionSpace || 0.15) * 2);
+  const excavationDepth = deepestDepth + (poolPreset.floorCushionDepth || 0.1);
+  const excavationVolume = excavationLength * excavationWidth * excavationDepth;
 
   tasks.excavation.push({
     id: randomUUID(),
@@ -122,7 +140,7 @@ export function generateDefaultTasks(
   tasks.excavation.push({
     id: randomUUID(),
     name: 'Excavación de terreno',
-    description: `Excavación de aproximadamente ${excavationVolume.toFixed(2)}m³ (incluye colchones)`,
+    description: `Excavación de aproximadamente ${excavationVolume.toFixed(2)}m³ (${excavationLength.toFixed(2)}m x ${excavationWidth.toFixed(2)}m x ${excavationDepth.toFixed(2)}m)`,
     estimatedHours: excavationHours,
     laborCost: calculateLaborCost(excavationHours, 'Excavador'),
     status: 'pending',
@@ -144,7 +162,7 @@ export function generateDefaultTasks(
   // ========================
   // INSTALACIÓN HIDRÁULICA
   // ========================
-  const hydraulicBaseHours = 8;
+  const hydraulicBaseHours = 6 + Math.ceil(distanceToEquipment / 4);
   let hydraulicExtraHours = 0;
 
   if (poolPreset.hasSkimmer) {
@@ -221,12 +239,42 @@ export function generateDefaultTasks(
   tasks.hydraulic.push({
     id: randomUUID(),
     name: 'Tendido de cañerías principales',
-    description: 'Instalación de cañerías de impulsión y succión',
+    description: distanceToEquipment > 0
+      ? `Instalación de cañerías de impulsión y succión hasta cabecera a ${distanceToEquipment}m`
+      : 'Instalación de cañerías de impulsión y succión',
     estimatedHours: hydraulicBaseHours,
     laborCost: calculateLaborCost(hydraulicBaseHours, 'Plomero'),
     status: 'pending',
     category: 'hydraulic',
     suggestedRoleType: 'Plomero',
+  });
+
+  if (distanceToEquipment > 0) {
+    const interconnectionHours = Math.max(2, Math.ceil(distanceToEquipment / 3));
+    tasks.hydraulic.push({
+      id: randomUUID(),
+      name: 'Interconexión hidráulica pileta-cabecera',
+      description: `Tendido, pegado y ordenado de líneas hidráulicas para ${distanceToEquipment}m de distancia al equipo`,
+      estimatedHours: interconnectionHours,
+      quantity: Number(distanceToEquipment.toFixed(2)),
+      unit: 'ml',
+      laborCost: calculateLaborCost(interconnectionHours, 'Plomero'),
+      status: 'pending',
+      category: 'hydraulic',
+      suggestedRoleType: 'Plomero',
+    });
+  }
+
+  const hydraulicHeadAssemblyHours = Math.max(3, Math.ceil(equipmentCount * 1.5) + Math.ceil(hydraulicItemsCount / 6));
+  tasks.hydraulic.push({
+    id: randomUUID(),
+    name: 'Montaje de cabecera y equipos hidráulicos',
+    description: `Armado de cabecera, soporte, conexiones y montaje de ${equipmentCount} equipo(s) vinculados al circuito`,
+    estimatedHours: hydraulicHeadAssemblyHours,
+    laborCost: calculateLaborCost(hydraulicHeadAssemblyHours, 'Instalador de Equipos'),
+    status: 'pending',
+    category: 'hydraulic',
+    suggestedRoleType: 'Instalador de Equipos',
   });
 
   tasks.hydraulic.push({
@@ -244,7 +292,7 @@ export function generateDefaultTasks(
   // INSTALACIÓN ELÉCTRICA
   // ========================
   if (poolPreset.hasLighting) {
-    const lightingHours = 3 * poolPreset.lightingCount;
+    const lightingHours = (2.5 * poolPreset.lightingCount) + Math.ceil(distanceToPanel / 10);
     tasks.electrical.push({
       id: randomUUID(),
       name: `Instalación de ${poolPreset.lightingCount} luz(ces)`,
@@ -260,12 +308,27 @@ export function generateDefaultTasks(
     });
   }
 
+  const electricalWiringHours = 4 + Math.ceil(distanceToPanel / 5) + Math.ceil(electricalItemsCount / 4);
   tasks.electrical.push({
     id: randomUUID(),
     name: 'Tendido de cableado eléctrico',
-    description: 'Instalación de cableado para bombas y equipamiento',
-    estimatedHours: 6,
-    laborCost: calculateLaborCost(6, 'Electricista'),
+    description: distanceToPanel > 0
+      ? `Instalación de cableado para bombas y equipamiento con recorrido estimado de ${distanceToPanel}m`
+      : 'Instalación de cableado para bombas y equipamiento',
+    estimatedHours: electricalWiringHours,
+    laborCost: calculateLaborCost(electricalWiringHours, 'Electricista'),
+    status: 'pending',
+    category: 'electrical',
+    suggestedRoleType: 'Electricista',
+  });
+
+  const electricalEquipmentHours = Math.max(2, equipmentCount + Math.ceil(electricalItemsCount / 3));
+  tasks.electrical.push({
+    id: randomUUID(),
+    name: 'Conexión eléctrica de equipos de cabecera',
+    description: `Cableado, maniobra y verificación de ${equipmentCount} equipo(s) asociados a la piscina`,
+    estimatedHours: electricalEquipmentHours,
+    laborCost: calculateLaborCost(electricalEquipmentHours, 'Electricista'),
     status: 'pending',
     category: 'electrical',
     suggestedRoleType: 'Electricista',
@@ -300,6 +363,7 @@ export function generateDefaultTasks(
   // SOLADO Y CAMA INTERNA
   // ========================
   const floorArea = poolPreset.length * poolPreset.width;
+  const fillVolume = (excavationLength * excavationWidth * excavationDepth) - (poolPreset.length * poolPreset.width * deepestDepth);
   const floorHours = Math.ceil(floorArea * 0.5); // 0.5 horas por m²
   const geomembraneHours = Math.ceil(floorHours * 0.3);
   const meshHours = Math.ceil(floorHours * 0.2);
@@ -333,7 +397,7 @@ export function generateDefaultTasks(
   tasks.floor.push({
     id: randomUUID(),
     name: 'Preparación y colado de cama de arena-cemento',
-    description: `Preparación de ${(floorArea * 0.1).toFixed(2)}m³ de mezcla y colado`,
+    description: `Preparación de ${fillVolume.toFixed(2)}m³ de mezcla/relleno`,
     estimatedHours: floorHours,
     quantity: Number(floorArea.toFixed(2)),
     unit: 'm2',
@@ -348,10 +412,21 @@ export function generateDefaultTasks(
   // ========================
   tasks.tiles.push({
     id: randomUUID(),
-    name: 'Colocación de piscina de fibra',
-    description: `Posicionamiento y nivelación de piscina ${poolPreset.shape}`,
-    estimatedHours: 8,
-    laborCost: calculateLaborCost(8, 'Capataz'),
+    name: 'Descarga, izaje y manipuleo del casco',
+    description: `Descarga de la piscina, movimiento en obra y presentación sobre el pozo para piscina ${poolPreset.shape}`,
+    estimatedHours: 4,
+    laborCost: calculateLaborCost(4, 'Capataz'),
+    status: 'pending',
+    category: 'tiles',
+    suggestedRoleType: 'Capataz',
+  });
+
+  tasks.tiles.push({
+    id: randomUUID(),
+    name: 'Alineación y nivelación del casco en pozo',
+    description: 'Posicionamiento final, aplome y nivelación de la piscina antes del relleno y conexiones',
+    estimatedHours: 4,
+    laborCost: calculateLaborCost(4, 'Capataz'),
     status: 'pending',
     category: 'tiles',
     suggestedRoleType: 'Capataz',
@@ -432,16 +507,14 @@ export function generateTaskFromAdditional(
   additionalType: string,
   quantity: number,
   suggestedCategory: string = 'other',
-  roles: RoleRate[] = []
+  roles: RoleRate[] = [],
+  laborCostOverridePerUnit?: number
 ): TaskDetail {
   // Helper function to calculate labor cost
   const calculateLaborCost = (hours: number, suggestedRoleType?: string): number => {
     if (!suggestedRoleType || roles.length === 0) return 0;
 
-    const role = roles.find(r =>
-      r.name.toLowerCase().includes(suggestedRoleType.toLowerCase()) ||
-      suggestedRoleType.toLowerCase().includes(r.name.toLowerCase())
-    );
+    const role = findMatchingRole(roles, suggestedRoleType);
 
     if (!role) return 0;
 
@@ -465,13 +538,16 @@ export function generateTaskFromAdditional(
   }
 
   const finalHours = Math.max(1, Math.ceil(estimatedHours));
+  const overrideLaborCost = laborCostOverridePerUnit && laborCostOverridePerUnit > 0
+    ? laborCostOverridePerUnit * quantity
+    : undefined;
 
   return {
     id: randomUUID(),
     name: `Instalación/Colocación: ${additionalName}`,
     description: `Tarea generada automáticamente por adicional: ${additionalName} (x${quantity})`,
     estimatedHours: finalHours,
-    laborCost: calculateLaborCost(finalHours, suggestedRole),
+    laborCost: overrideLaborCost ?? calculateLaborCost(finalHours, suggestedRole),
     status: 'pending',
     category: suggestedCategory,
     suggestedRoleType: suggestedRole,

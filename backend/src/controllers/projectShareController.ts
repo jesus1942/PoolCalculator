@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
+import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 
 // Crear o actualizar link compartido
 export const createOrUpdateShare = async (req: Request, res: Response) => {
@@ -281,6 +282,7 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
         clientName: projectShare.project.clientName,
         status: projectShare.project.status,
         createdAt: projectShare.project.createdAt,
+        commercialProfile: buildProjectCommercialProfile(projectShare.project as any),
       },
       updates: projectShare.project.projectUpdates,
       timeline,

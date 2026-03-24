@@ -444,7 +444,7 @@ export const Agenda: React.FC = () => {
             <h1 className="text-4xl font-extralight text-white tracking-tight">
                 La Agenda
               </h1>
-              <p className="text-zinc-500 mt-1 font-light tracking-wide">
+              <p className="text-zinc-300 mt-1 font-light tracking-wide">
                 Gestión de visitas, instalaciones y mantenimiento
               </p>
             </div>
@@ -480,7 +480,7 @@ export const Agenda: React.FC = () => {
               className={`px-4 py-2 rounded-xl text-sm font-light transition-all ${
                 activeTab === 'events'
                   ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
-                  : 'text-zinc-400 hover:text-white border border-transparent'
+                  : 'text-zinc-300 hover:text-white border border-transparent'
               }`}
             >
               Eventos
@@ -490,7 +490,7 @@ export const Agenda: React.FC = () => {
               className={`px-4 py-2 rounded-xl text-sm font-light transition-all ${
                 activeTab === 'crews'
                   ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
-                  : 'text-zinc-400 hover:text-white border border-transparent'
+                  : 'text-zinc-300 hover:text-white border border-transparent'
               }`}
             >
               Crews
@@ -502,7 +502,7 @@ export const Agenda: React.FC = () => {
                   className={`px-3 py-2 rounded-lg text-xs font-light border transition-all ${
                     viewMode === 'month'
                       ? 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'
-                      : 'border-zinc-800 text-zinc-400 hover:text-white'
+                      : 'border-zinc-800 text-zinc-300 hover:text-white'
                   }`}
                 >
                   Mes
@@ -512,7 +512,7 @@ export const Agenda: React.FC = () => {
                   className={`px-3 py-2 rounded-lg text-xs font-light border transition-all ${
                     viewMode === 'week'
                       ? 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'
-                      : 'border-zinc-800 text-zinc-400 hover:text-white'
+                      : 'border-zinc-800 text-zinc-300 hover:text-white'
                   }`}
                 >
                   Semana
@@ -522,7 +522,7 @@ export const Agenda: React.FC = () => {
                   className={`px-3 py-2 rounded-lg text-xs font-light border transition-all ${
                     viewMode === 'day'
                       ? 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'
-                      : 'border-zinc-800 text-zinc-400 hover:text-white'
+                      : 'border-zinc-800 text-zinc-300 hover:text-white'
                   }`}
                 >
                   Día
@@ -541,7 +541,7 @@ export const Agenda: React.FC = () => {
           {filtersOpen && activeTab === 'events' && (
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Desde</label>
+                <label className="block text-xs text-zinc-300 mb-1">Desde</label>
                 <input
                   type="datetime-local"
                   value={toDateInput(filters.start)}
@@ -550,7 +550,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Hasta</label>
+                <label className="block text-xs text-zinc-300 mb-1">Hasta</label>
                 <input
                   type="datetime-local"
                   value={toDateInput(filters.end)}
@@ -559,7 +559,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Estado</label>
+                <label className="block text-xs text-zinc-300 mb-1">Estado</label>
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -572,7 +572,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Prioridad</label>
+                <label className="block text-xs text-zinc-300 mb-1">Prioridad</label>
                 <select
                   value={filters.priority}
                   onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
@@ -585,7 +585,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Tipo</label>
+                <label className="block text-xs text-zinc-300 mb-1">Tipo</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value })}
@@ -598,7 +598,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Proyecto</label>
+                <label className="block text-xs text-zinc-300 mb-1">Proyecto</label>
                 <select
                   value={filters.projectId}
                   onChange={(e) => setFilters({ ...filters, projectId: e.target.value })}
@@ -615,11 +615,11 @@ export const Agenda: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center text-zinc-500 py-16">Cargando agenda...</div>
+          <div className="text-center text-zinc-300 py-16">Cargando agenda...</div>
         ) : activeTab === 'events' ? (
           <div className="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-zinc-400">
+              <div className="text-sm text-zinc-300">
                 {anchorDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
               </div>
               <div className="flex items-center gap-2">
@@ -647,7 +647,7 @@ export const Agenda: React.FC = () => {
             {viewMode === 'month' && (
               <div className="grid grid-cols-7 gap-2">
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((label) => (
-                  <div key={label} className="text-xs text-zinc-500 text-center">
+                  <div key={label} className="text-xs text-zinc-300 text-center">
                     {label}
                   </div>
                 ))}
@@ -665,7 +665,7 @@ export const Agenda: React.FC = () => {
                       role="button"
                       tabIndex={0}
                     >
-                      <div className="text-xs text-zinc-400 mb-2">{day.getDate()}</div>
+                      <div className="text-xs text-zinc-300 mb-2">{day.getDate()}</div>
                       <div className="space-y-1">
                         {dayEvents.slice(0, 3).map((event) => (
                           <div
@@ -689,7 +689,7 @@ export const Agenda: React.FC = () => {
                           </div>
                         ))}
                         {dayEvents.length > 3 && (
-                          <div className="text-[11px] text-zinc-500">+{dayEvents.length - 3} más</div>
+                          <div className="text-[11px] text-zinc-300">+{dayEvents.length - 3} más</div>
                         )}
                       </div>
                     </div>
@@ -700,15 +700,15 @@ export const Agenda: React.FC = () => {
 
             {viewMode === 'week' && (
               <div className="grid grid-cols-8 gap-2">
-                <div className="text-xs text-zinc-500">Hora</div>
+                <div className="text-xs text-zinc-300">Hora</div>
                 {weekDays.map((day) => (
-                  <div key={formatDateKey(day)} className="text-xs text-zinc-400 text-center">
+                  <div key={formatDateKey(day)} className="text-xs text-zinc-300 text-center">
                     {day.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit' })}
                   </div>
                 ))}
                 {dayHours.map((hour) => (
                   <React.Fragment key={`hour-${hour}`}>
-                    <div className="text-xs text-zinc-500 py-3">{String(hour).padStart(2, '0')}:00</div>
+                    <div className="text-xs text-zinc-300 py-3">{String(hour).padStart(2, '0')}:00</div>
                     {weekDays.map((day) => {
                       const slotKey = formatDateKey(day);
                       const slotEvents = (eventsByDay.get(slotKey) || []).filter((event) => {
@@ -754,8 +754,8 @@ export const Agenda: React.FC = () => {
 
             {viewMode === 'day' && (
               <div className="grid grid-cols-2 gap-2">
-                <div className="text-xs text-zinc-500">Hora</div>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-zinc-300">Hora</div>
+                <div className="text-xs text-zinc-300">
                   {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
                 </div>
                 {dayHours.map((hour) => {
@@ -766,7 +766,7 @@ export const Agenda: React.FC = () => {
                   });
                   return (
                     <React.Fragment key={`day-${hour}`}>
-                      <div className="text-xs text-zinc-500 py-3">{String(hour).padStart(2, '0')}:00</div>
+                      <div className="text-xs text-zinc-300 py-3">{String(hour).padStart(2, '0')}:00</div>
                       <div
                         className="border border-zinc-800/50 rounded-lg min-h-[48px] p-1 cursor-pointer"
                         onClick={() => openCreateForSlot(anchorDate, hour)}
@@ -804,7 +804,7 @@ export const Agenda: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {crews.length === 0 ? (
-              <div className="text-center text-zinc-500 py-16">No hay crews creados.</div>
+              <div className="text-center text-zinc-300 py-16">No hay crews creados.</div>
             ) : (
               crews.map((crew) => (
                 <div
@@ -815,12 +815,12 @@ export const Agenda: React.FC = () => {
                     <div>
                       <h3 className="text-lg text-white font-light">{crew.name}</h3>
                       {crew.description && (
-                        <p className="text-xs text-zinc-500 mt-1">{crew.description}</p>
+                        <p className="text-xs text-zinc-300 mt-1">{crew.description}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-zinc-300">
                     Miembros: {crew.members?.length || 0}
                   </div>
 
@@ -834,7 +834,7 @@ export const Agenda: React.FC = () => {
                         {canManage && (
                           <button
                             onClick={() => handleRemoveCrewMember(crew.id, member.userId)}
-                            className="text-zinc-500 hover:text-red-300"
+                            className="text-zinc-300 hover:text-red-300"
                           >
                             Quitar
                           </button>
@@ -873,7 +873,7 @@ export const Agenda: React.FC = () => {
               setEditingEvent(null);
             }}
           />
-          <div className="relative w-full max-w-4xl bg-zinc-900/80 border border-white/10 rounded-3xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)] max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+          <div className="relative w-full max-w-4xl bg-zinc-900/80 border border-white/20 rounded-3xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)] max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain scrollbar-hide">
             <div className="absolute inset-0 rounded-3xl pointer-events-none bg-gradient-to-br from-white/[0.06] via-transparent to-white/[0.02]" />
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl text-white font-light">
@@ -884,7 +884,7 @@ export const Agenda: React.FC = () => {
                   setShowCreate(false);
                   setEditingEvent(null);
                 }}
-                className="text-zinc-400 hover:text-white transition-colors"
+                className="text-zinc-300 hover:text-white transition-colors"
               >
                 Cerrar
               </button>
@@ -892,7 +892,7 @@ export const Agenda: React.FC = () => {
 
             {selectedEvents.length > 0 && (
               <div className="mb-6">
-                <div className="text-xs text-zinc-500 mb-2">
+                <div className="text-xs text-zinc-300 mb-2">
                   Eventos existentes en {selectedSlotLabel}
                 </div>
                 <div className="space-y-2">
@@ -908,7 +908,7 @@ export const Agenda: React.FC = () => {
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <div className="text-sm text-zinc-200">{event.title}</div>
-                          <div className="text-xs text-zinc-500">
+                          <div className="text-xs text-zinc-300">
                             {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} -{' '}
                             {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
@@ -916,7 +916,7 @@ export const Agenda: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openEditEvent(event)}
-                          className="px-3 py-1.5 text-xs rounded-full border border-white/10 text-zinc-200 hover:border-white/20 hover:text-white transition-colors"
+                          className="px-3 py-1.5 text-xs rounded-full border border-white/20 text-zinc-100 hover:border-white/30 hover:text-white transition-colors"
                         >
                           Editar
                         </button>
@@ -968,7 +968,7 @@ export const Agenda: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Título</label>
+                <label className="block text-xs text-zinc-300 mb-1">Título</label>
                 <input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -978,7 +978,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Tipo</label>
+                <label className="block text-xs text-zinc-300 mb-1">Tipo</label>
                 <select
                   value={form.type}
                   onChange={(e) => setForm({ ...form, type: e.target.value })}
@@ -991,7 +991,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Estado</label>
+                <label className="block text-xs text-zinc-300 mb-1">Estado</label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
@@ -1003,7 +1003,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Prioridad</label>
+                <label className="block text-xs text-zinc-300 mb-1">Prioridad</label>
                 <select
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
@@ -1016,7 +1016,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Inicio</label>
+                <label className="block text-xs text-zinc-300 mb-1">Inicio</label>
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="date"
@@ -1058,7 +1058,7 @@ export const Agenda: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Fin</label>
+                <label className="block text-xs text-zinc-300 mb-1">Fin</label>
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="date"
@@ -1100,7 +1100,7 @@ export const Agenda: React.FC = () => {
                 </div>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs text-zinc-500 mb-1">Ubicación</label>
+                <label className="block text-xs text-zinc-300 mb-1">Ubicación</label>
                 <input
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
@@ -1109,7 +1109,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Proyecto</label>
+                <label className="block text-xs text-zinc-300 mb-1">Proyecto</label>
                 <select
                   value={form.projectId}
                   onChange={(e) => setForm({ ...form, projectId: e.target.value })}
@@ -1123,7 +1123,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Crew</label>
+                <label className="block text-xs text-zinc-300 mb-1">Crew</label>
                 <select
                   value={form.crewId}
                   onChange={(e) => setForm({ ...form, crewId: e.target.value })}
@@ -1137,7 +1137,7 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs text-zinc-500 mb-2">Asignar usuarios</label>
+                <label className="block text-xs text-zinc-300 mb-2">Asignar usuarios</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {users.map((member) => (
                     <label
@@ -1157,7 +1157,7 @@ export const Agenda: React.FC = () => {
                 </div>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs text-zinc-500 mb-1">Notas internas</label>
+                <label className="block text-xs text-zinc-300 mb-1">Notas internas</label>
                 <textarea
                   value={form.notesInternal}
                   onChange={(e) => setForm({ ...form, notesInternal: e.target.value })}
@@ -1166,7 +1166,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs text-zinc-500 mb-1">Notas para instalador</label>
+                <label className="block text-xs text-zinc-300 mb-1">Notas para instalador</label>
                 <textarea
                   value={form.notesInstaller}
                   onChange={(e) => setForm({ ...form, notesInstaller: e.target.value })}
@@ -1177,11 +1177,11 @@ export const Agenda: React.FC = () => {
                 <div className="md:col-span-2 rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm text-zinc-200 font-light">Conversación del evento</div>
-                    <span className="text-xs text-zinc-500">Comunicaciones internas</span>
+                    <span className="text-xs text-zinc-300">Comunicaciones internas</span>
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-hide">
                     {messages.length === 0 ? (
-                      <div className="text-xs text-zinc-500">Sin mensajes todavía.</div>
+                      <div className="text-xs text-zinc-300">Sin mensajes todavía.</div>
                     ) : (
                       messages.map((msg) => (
                         <div key={msg.id} className="rounded-lg border border-zinc-800/70 bg-zinc-950/60 px-3 py-2">
@@ -1195,7 +1195,7 @@ export const Agenda: React.FC = () => {
                                   Solo admin
                                 </span>
                               )}
-                              <span className="text-[10px] text-zinc-500">
+                              <span className="text-[10px] text-zinc-300">
                                 {new Date(msg.createdAt).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -1240,7 +1240,7 @@ export const Agenda: React.FC = () => {
                         />
                       </label>
                       {messageImages.length > 0 && (
-                        <span className="text-[10px] text-zinc-500">{messageImages.length} imagen(es) seleccionada(s)</span>
+                        <span className="text-[10px] text-zinc-300">{messageImages.length} imagen(es) seleccionada(s)</span>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1327,7 +1327,7 @@ export const Agenda: React.FC = () => {
               <h2 className="text-xl text-white font-light">Nuevo crew</h2>
               <button
                 onClick={() => setShowCrewCreate(false)}
-                className="text-zinc-400 hover:text-white transition-colors"
+                className="text-zinc-300 hover:text-white transition-colors"
               >
                 Cerrar
               </button>
@@ -1335,7 +1335,7 @@ export const Agenda: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Nombre</label>
+                <label className="block text-xs text-zinc-300 mb-1">Nombre</label>
                 <input
                   value={crewForm.name}
                   onChange={(e) => setCrewForm({ ...crewForm, name: e.target.value })}
@@ -1343,7 +1343,7 @@ export const Agenda: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">Descripción</label>
+                <label className="block text-xs text-zinc-300 mb-1">Descripción</label>
                 <textarea
                   value={crewForm.description}
                   onChange={(e) => setCrewForm({ ...crewForm, description: e.target.value })}

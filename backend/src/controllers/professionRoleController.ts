@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
+import {
+  getReferenceRoleBlueprints,
+  getRoleAliases,
+  PUERTO_MADRYN_LABOR_REFERENCE,
+} from '../utils/laborReferences';
 
 const parseFormData = (body: any) => {
   const parsed: any = {};
@@ -22,17 +27,14 @@ const parseFormData = (body: any) => {
   return parsed;
 };
 
-// Roles predefinidos
-const DEFAULT_ROLES = [
-  { name: 'Albañil', description: 'Construcción de estructura y mampostería' },
-  { name: 'Sanitarista', description: 'Instalación de cañerías y sistemas de agua' },
-  { name: 'Electricista', description: 'Instalación eléctrica y iluminación' },
-  { name: 'Colocador de Losetas', description: 'Instalación de revestimientos' },
-  { name: 'Excavador', description: 'Movimiento de suelos y excavación' },
-  { name: 'Instalador de Equipos', description: 'Instalación de bombas y filtros' },
-  { name: 'Pintor', description: 'Pintura y acabados' },
-  { name: 'Gasista', description: 'Instalación de gas para calefacción' },
-];
+const DEFAULT_ROLES = getReferenceRoleBlueprints().map(({ aliases, ...role }) => role);
+
+const normalize = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 export const getProfessionRoles = async (req: AuthRequest, res: Response) => {
   try {
@@ -156,5 +158,64 @@ export const deleteProfessionRole = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error al eliminar rol:', error);
     res.status(500).json({ error: 'Error al eliminar rol' });
+  }
+};
+
+export const applyReferenceLaborRates = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const currentRoles = await prisma.professionRole.findMany({
+      where: { userId },
+    });
+
+    const blueprints = getReferenceRoleBlueprints();
+    const operations = blueprints.map((blueprint) => {
+      const aliases = [blueprint.name, ...getRoleAliases(blueprint.name), ...blueprint.aliases].map(normalize);
+      const existingRole = currentRoles.find((role) => aliases.includes(normalize(role.name)));
+      const { aliases: _aliases, ...roleData } = blueprint;
+
+      if (existingRole) {
+        return prisma.professionRole.update({
+          where: { id: existingRole.id },
+          data: {
+            description: roleData.description,
+            hourlyRate: roleData.hourlyRate ?? null,
+            dailyRate: roleData.dailyRate ?? null,
+            billingType: roleData.billingType,
+            ratePerUnit: roleData.ratePerUnit ?? null,
+            bocaRates: roleData.bocaRates || [],
+          },
+        });
+      }
+
+      return prisma.professionRole.create({
+        data: {
+          ...roleData,
+          bocaRates: roleData.bocaRates || [],
+          userId,
+        },
+      });
+    });
+
+    const appliedRoles = await prisma.$transaction(operations);
+
+    res.json({
+      message: 'Tarifas de referencia aplicadas',
+      reference: {
+        id: PUERTO_MADRYN_LABOR_REFERENCE.id,
+        label: PUERTO_MADRYN_LABOR_REFERENCE.label,
+        effectiveDate: PUERTO_MADRYN_LABOR_REFERENCE.effectiveDate,
+        sourceSummary: PUERTO_MADRYN_LABOR_REFERENCE.sourceSummary,
+        sourceUrls: PUERTO_MADRYN_LABOR_REFERENCE.sourceUrls,
+      },
+      roles: appliedRoles,
+    });
+  } catch (error) {
+    console.error('Error al aplicar tarifas de referencia:', error);
+    res.status(500).json({ error: 'Error al aplicar tarifas de referencia' });
   }
 };

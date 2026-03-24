@@ -173,10 +173,9 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
               id="main-image-upload"
             />
             <Button
-              as="label"
-              htmlFor="main-image-upload"
               variant="outline"
               disabled={uploading}
+              onClick={() => mainImageInputRef.current?.click()}
             >
               {uploading ? (
                 <>
@@ -244,10 +243,9 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
             id="additional-images-upload"
           />
           <Button
-            as="label"
-            htmlFor="additional-images-upload"
             variant="outline"
             disabled={uploadingMultiple}
+            onClick={() => additionalImagesInputRef.current?.click()}
           >
             {uploadingMultiple ? (
               <>

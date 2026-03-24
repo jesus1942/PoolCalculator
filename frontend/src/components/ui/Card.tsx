@@ -31,7 +31,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title }) =
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`card-surface bg-white/5 rounded-xl border border-white/10 shadow-sm ${className}`}
+      className={`card-surface bg-white/10 rounded-xl border border-white/20 shadow-sm ${className}`}
     >
       <div className="p-6">
         {title && <h3 className="text-xl font-bold text-white mb-4">{title}</h3>}

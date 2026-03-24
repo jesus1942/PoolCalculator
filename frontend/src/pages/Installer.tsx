@@ -19,8 +19,14 @@ export const Installer: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [messageText, setMessageText] = useState('');
   const [messageImages, setMessageImages] = useState<File[]>([]);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherError, setWeatherError] = useState<string | null>(null);
+  const messageImagePreviews = useMemo(
+    () => messageImages.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [messageImages],
+  );
 
   const range = useMemo(() => {
     const start = new Date();
@@ -83,6 +89,10 @@ export const Installer: React.FC = () => {
     loadMessages(selectedEvent.id);
   }, [selectedEvent]);
 
+  useEffect(() => () => {
+    messageImagePreviews.forEach((image) => URL.revokeObjectURL(image.url));
+  }, [messageImagePreviews]);
+
   const handleSave = async () => {
     if (!selectedEvent) return;
     try {
@@ -102,12 +112,17 @@ export const Installer: React.FC = () => {
     const body = messageText.trim();
     if (!body && messageImages.length === 0) return;
     try {
+      setSendingMessage(true);
+      setMessageError(null);
       const created = await agendaMessageService.create(selectedEvent.id, body, 'ALL', messageImages);
       setMessages((prev) => [...prev, created]);
       setMessageText('');
       setMessageImages([]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al enviar mensaje:', error);
+      setMessageError(error?.response?.data?.error || 'No se pudo enviar el mensaje o las imágenes.');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -273,29 +288,54 @@ export const Installer: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
+                    {messageError && (
+                      <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                        {messageError}
+                      </div>
+                    )}
                     <textarea
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 min-h-[80px]"
                       placeholder="Escribí un mensaje para el equipo..."
                     />
+                    {messageImagePreviews.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {messageImagePreviews.map((image, idx) => (
+                          <div key={`${image.file.name}-${idx}`} className="relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                            <img src={image.url} alt={image.file.name} className="h-24 w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setMessageImages((prev) => prev.filter((_, index) => index !== idx))}
+                              className="absolute right-1 top-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-3">
                       <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
                         <ImagePlus size={14} />
-                        Adjuntar imágenes
+                        {messageImages.length > 0 ? `${messageImages.length} imagen${messageImages.length === 1 ? '' : 'es'} adjuntas` : 'Adjuntar imágenes'}
                         <input
                           type="file"
                           accept="image/*"
                           multiple
                           className="hidden"
-                          onChange={(e) => setMessageImages(Array.from(e.target.files || []))}
+                          onChange={(e) => {
+                            setMessageError(null);
+                            setMessageImages(Array.from(e.target.files || []));
+                          }}
                         />
                       </label>
                       <button
                         onClick={handleSendMessage}
+                        disabled={sendingMessage}
                         className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/30"
                       >
-                        Enviar mensaje
+                        {sendingMessage ? 'Enviando...' : 'Enviar mensaje'}
                       </button>
                     </div>
                   </div>

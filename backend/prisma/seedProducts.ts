@@ -23,7 +23,7 @@ async function seedProducts() {
         name: 'Cemento Portland Loma Negra CPC40',
         type: 'CEMENT',
         unit: 'bolsa 50kg',
-        bagWeight: 50,
+        bagWeight: 25,
         pricePerUnit: 12500,
         brand: 'Loma Negra',
         description: 'Cemento Portland Compuesto, ideal para hormigones y morteros',

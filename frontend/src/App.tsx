@@ -37,7 +37,13 @@ function App() {
   const Router = BrowserRouter;
   return (
     <AuthProvider>
-      <Router basename={basePath || undefined}>
+      <Router
+        basename={basePath || undefined}
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
           {basePath === '' && <Route path="/PoolCalculator/*" element={<Navigate to="/" replace />} />}
           <Route path="/" element={<HomeRedirect />} />
@@ -85,7 +91,7 @@ function App() {
               </RoleRoute>
             } />
             <Route path="/admin/users" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
+              <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
                 <UsersManager />
               </RoleRoute>
             } />
@@ -100,17 +106,17 @@ function App() {
               </RoleRoute>
             } />
             <Route path="/admin/catalogs" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
+              <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
                 <CatalogManager />
               </RoleRoute>
             } />
             <Route path="/admin/equipment" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
+              <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
                 <EquipmentManager />
               </RoleRoute>
             } />
             <Route path="/admin/products-images" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
+              <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
                 <ProductsImageManager />
               </RoleRoute>
             } />

@@ -1,6 +1,12 @@
 {
   "name": "pool-calculator",
   "private": true,
+  "scripts": {
+    "dev": "bash -lc 'npm run dev:backend & npm run dev:frontend & wait'",
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "build": "npm --workspace backend run build && npm --workspace frontend run build"
+  },
   "workspaces": [
     "frontend",
     "backend"

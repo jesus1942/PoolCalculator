@@ -11,6 +11,9 @@ export interface PlumbingItem {
   pricePerUnit: number;
   brand?: string;
   description?: string;
+  imageUrl?: string;
+  additionalImages?: string[];
+  catalogPage?: string;
 }
 
 export const plumbingItemService = {

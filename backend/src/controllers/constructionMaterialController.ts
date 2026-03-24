@@ -8,7 +8,7 @@ const parseFormData = (body: any) => {
   for (const key in body) {
     const value = body[key];
     
-    if (['pricePerUnit'].includes(key)) {
+    if (['pricePerUnit', 'bagWeight'].includes(key)) {
       parsed[key] = value ? parseFloat(value) : 0;
     } else {
       parsed[key] = value;
@@ -31,10 +31,23 @@ export const createConstructionMaterial = async (req: AuthRequest, res: Response
 
 export const getConstructionMaterials = async (req: Request, res: Response) => {
   try {
+    const { category, type } = req.query;
+    const where: any = {};
+
+    if (typeof category === 'string' && category) {
+      where.category = category;
+    }
+
+    if (typeof type === 'string' && type) {
+      where.type = type;
+    }
+
     const materials = await prisma.constructionMaterialPreset.findMany({
-      orderBy: {
-        type: 'asc',
-      },
+      where,
+      orderBy: [
+        { type: 'asc' },
+        { name: 'asc' },
+      ],
     });
     res.json(materials);
   } catch (error) {

@@ -20,6 +20,7 @@ interface ProfessionRole {
 export const RolesManager: React.FC = () => {
   const [roles, setRoles] = useState<ProfessionRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [applyingReference, setApplyingReference] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingRole, setEditingRole] = useState<ProfessionRole | null>(null);
   const [formData, setFormData] = useState({
@@ -101,6 +102,23 @@ export const RolesManager: React.FC = () => {
     });
   };
 
+  const handleApplyReferenceRates = async () => {
+    setApplyingReference(true);
+    try {
+      const response = await api.post('/profession-roles/apply-reference-rates');
+      await loadRoles();
+      alert(
+        `Referencia aplicada: ${response.data.reference.label}\n` +
+        `Fecha: ${response.data.reference.effectiveDate}\n\n` +
+        'Quedó como base editable para tus presupuestos.'
+      );
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Error al aplicar tarifas de referencia');
+    } finally {
+      setApplyingReference(false);
+    }
+  };
+
   if (loading) {
     return <div className="animate-pulse">Cargando roles...</div>;
   }
@@ -111,14 +129,33 @@ export const RolesManager: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold">Roles y Oficios</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Administrá los roles de profesionales para tus proyectos
+            Administrá tarifas base por oficio. Las tareas automáticas de la piscina toman estos valores y después podés afinarlos.
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus size={16} className="mr-2" />
-          Nuevo Rol
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={handleApplyReferenceRates} disabled={applyingReference}>
+            {applyingReference ? 'Aplicando...' : 'Cargar referencia Puerto Madryn'}
+          </Button>
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={16} className="mr-2" />
+            Nuevo Rol
+          </Button>
+        </div>
       </div>
+
+      <Card>
+        <div className="space-y-2 text-sm text-gray-700">
+          <p className="font-medium text-gray-900">Referencia sugerida</p>
+          <p>
+            Puerto Madryn, Chubut, Argentina. Base de salarios UOCRA Zona B informada el <strong>11 de marzo de 2026</strong>.
+            Se usa como punto de partida editable para instalación de piscinas.
+          </p>
+          <p className="text-xs text-gray-500">
+            Incluye oficios como capataz, excavador, albañil, plomero, electricista, colocador, ayudante e instalador de equipos.
+            No reemplaza grúa, flete, viáticos ni alquiler de maquinaria.
+          </p>
+        </div>
+      </Card>
 
       {roles.length === 0 ? (
         <Card className="text-center py-12">

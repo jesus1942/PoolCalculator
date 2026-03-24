@@ -87,33 +87,33 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200 overflow-hidden shadow-sm">
+      <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shadow-sm">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg">
+            <div className="p-3 rounded-xl bg-zinc-100 shadow-lg">
               <Lightbulb className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Recomendaciones Inteligentes</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-2xl font-bold text-white">Recomendaciones Inteligentes</h2>
+              <p className="text-base text-zinc-300">
                 Sistema experto para dimensionar equipos y planificar mantenimiento
               </p>
             </div>
           </div>
 
-          <div className="bg-white/60 rounded-lg p-4 border border-blue-100">
+          <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
             <div className="flex items-start gap-3">
-              <TrendingUp className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
+              <TrendingUp className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">¿Cómo funciona?</h3>
-                <p className="text-gray-700 text-sm mb-3">
+                <h3 className="text-lg font-semibold text-white mb-2">¿Cómo funciona?</h3>
+                <p className="text-zinc-300 text-base mb-3">
                   Nuestro sistema analiza las características de tu piscina (volumen: <strong>{project.volume.toFixed(2)} m³</strong>)
                   y calcula automáticamente los requisitos óptimos de:
                 </p>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• <strong className="text-gray-900">Calefacción:</strong> BTU/Kcal necesarios, tiempo de calentamiento y costos operativos</li>
-                  <li>• <strong className="text-gray-900">Filtración:</strong> Caudal requerido, tamaño de filtro y carga filtrante</li>
-                  <li>• <strong className="text-gray-900">Mantenimiento:</strong> Dosificación de químicos y cronograma de cuidados</li>
+                <ul className="space-y-1 text-base text-zinc-300">
+                  <li>• <strong className="text-white">Calefacción:</strong> BTU/Kcal necesarios, tiempo de calentamiento y costos operativos</li>
+                  <li>• <strong className="text-white">Filtración:</strong> Caudal requerido, tamaño de filtro y carga filtrante</li>
+                  <li>• <strong className="text-white">Mantenimiento:</strong> Dosificación de químicos y cronograma de cuidados</li>
                 </ul>
               </div>
             </div>
@@ -124,11 +124,11 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
       {/* Sections */}
       <div className="space-y-4">
         {sections.map((section) => (
-          <Card key={section.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+          <Card key={section.id} className="overflow-hidden hover:shadow-lg transition-shadow bg-zinc-950 border border-zinc-800 text-zinc-100">
             {/* Section Header - Always visible */}
             <button
               onClick={() => toggleSection(section.id as any)}
-              className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+              className="w-full p-6 text-left hover:bg-zinc-900 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -138,19 +138,19 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{section.title}</h3>
-                    <p className="text-sm text-gray-600">{section.description}</p>
+                    <h3 className="text-xl font-bold text-white mb-1">{section.title}</h3>
+                    <p className="text-base text-zinc-300">{section.description}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   {expandedSection === section.id ? (
-                    <span className="text-sm text-blue-600 font-medium">Ocultar</span>
+                    <span className="text-sm text-zinc-200 font-medium">Ocultar</span>
                   ) : (
-                    <span className="text-sm text-gray-500 font-medium">Ver más</span>
+                    <span className="text-sm text-zinc-400 font-medium">Ver más</span>
                   )}
                   <ChevronDown
-                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
+                    className={`w-5 h-5 text-zinc-500 transition-transform duration-300 ${
                       expandedSection === section.id ? 'rotate-180' : ''
                     }`}
                   />
@@ -160,7 +160,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
 
             {/* Section Content - Expandable */}
             {expandedSection === section.id && (
-              <div className="px-6 pb-6 border-t border-gray-100">
+              <div className="px-6 pb-6 border-t border-zinc-800">
                 <div className="pt-6">
                   {section.component}
                 </div>

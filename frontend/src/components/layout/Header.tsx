@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { LogOut, User, Settings, Layout, Waves, Menu, X, Database, Calendar } from 'lucide-react';
+import { LogOut, User, Settings, Layout, Waves, Menu, X, Database, Calendar, Droplets } from 'lucide-react';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 export const Header: React.FC = () => {

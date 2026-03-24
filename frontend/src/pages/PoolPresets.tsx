@@ -26,6 +26,8 @@ export const PoolPresets: React.FC = () => {
     shape: 'RECTANGULAR' as PoolShape,
     hasWetDeck: false,
     hasStairsOnly: false,
+    stairsCount: 0,
+    canaletasCount: 0,
     returnsCount: 2,
     hasHotWaterReturn: false,
     hasBottomDrain: true,
@@ -93,6 +95,8 @@ export const PoolPresets: React.FC = () => {
       shape: preset.shape,
       hasWetDeck: preset.hasWetDeck,
       hasStairsOnly: preset.hasStairsOnly,
+      stairsCount: preset.stairsCount,
+      canaletasCount: preset.canaletasCount,
       returnsCount: preset.returnsCount,
       hasHotWaterReturn: preset.hasHotWaterReturn,
       hasBottomDrain: preset.hasBottomDrain,
@@ -125,6 +129,8 @@ export const PoolPresets: React.FC = () => {
       shape: 'RECTANGULAR',
       hasWetDeck: false,
       hasStairsOnly: false,
+      stairsCount: 0,
+      canaletasCount: 0,
       returnsCount: 2,
       hasHotWaterReturn: false,
       hasBottomDrain: true,
@@ -251,6 +257,12 @@ export const PoolPresets: React.FC = () => {
                   <p className="text-gray-600">Ancho</p>
                   <p className="font-semibold">{preset.width}m</p>
                 </div>
+                <div className="col-span-2">
+                  <p className="text-gray-600">Equipamiento base</p>
+                  <p className="font-semibold">
+                    {preset.defaultPump?.model || 'Sin bomba'} · {preset.defaultFilter?.model || 'Sin filtro'}
+                  </p>
+                </div>
                 <div>
                   <p className="text-gray-600">Profundidad</p>
                   <p className="font-semibold">{preset.depth}m</p>
@@ -270,6 +282,16 @@ export const PoolPresets: React.FC = () => {
                 {preset.hasSkimmer && (
                   <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                     Skimmer x{preset.skimmerCount}
+                  </span>
+                )}
+                {preset.stairsCount > 0 && (
+                  <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded">
+                    Escalones x{preset.stairsCount}
+                  </span>
+                )}
+                {preset.canaletasCount > 0 && (
+                  <span className="px-2 py-1 bg-sky-100 text-sky-800 text-xs rounded">
+                    Canaletas x{preset.canaletasCount}
                   </span>
                 )}
                 {preset.hasBottomDrain && (
@@ -442,6 +464,22 @@ export const PoolPresets: React.FC = () => {
                 min="1"
               />
             )}
+
+            <Input
+              label="Cantidad de escalones"
+              type="number"
+              value={formData.stairsCount}
+              onChange={(e) => setFormData({ ...formData, stairsCount: parseInt(e.target.value) || 0 })}
+              min="0"
+            />
+
+            <Input
+              label="Cantidad de canaletas"
+              type="number"
+              value={formData.canaletasCount}
+              onChange={(e) => setFormData({ ...formData, canaletasCount: parseInt(e.target.value) || 0 })}
+              min="0"
+            />
           </div>
 
           <div className="flex space-x-3 pt-4">

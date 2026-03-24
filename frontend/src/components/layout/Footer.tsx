@@ -14,9 +14,14 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="relative bg-zinc-950 border-t border-zinc-800/50 mt-auto">
-      {/* Glow effect sutil */}
-      <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 via-transparent to-transparent pointer-events-none"></div>
+    <footer className="relative mt-auto overflow-hidden border-t border-zinc-800/50 bg-[#02050b]">
+      <div className="footer-horizon absolute inset-0 pointer-events-none" />
+      <div className="footer-nebula absolute inset-0 pointer-events-none" />
+      <div className="footer-spacefield absolute inset-0 opacity-75 pointer-events-none" />
+      <div className="footer-sweep absolute inset-y-0 left-[-18%] w-[48%] opacity-40 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/55 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-[72px] h-px bg-gradient-to-r from-transparent via-white/12 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">

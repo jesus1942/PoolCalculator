@@ -14,18 +14,77 @@ const RemindersContext = createContext<ReminderContextValue | undefined>(undefin
 export const RemindersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const notifiedReminderIdsRef = React.useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem('browser-notified-reminders');
+      if (stored) {
+        notifiedReminderIdsRef.current = new Set(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.warn('No se pudo restaurar el historial de notificaciones del navegador', error);
+    }
+  }, []);
+
+  const persistNotifiedReminderIds = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        'browser-notified-reminders',
+        JSON.stringify(Array.from(notifiedReminderIdsRef.current)),
+      );
+    } catch (error) {
+      console.warn('No se pudo guardar el historial de notificaciones del navegador', error);
+    }
+  }, []);
+
+  const notifyBrowserForReminders = useCallback((items: any[]) => {
+    if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+
+    const freshReminders = items.filter((reminder) => !notifiedReminderIdsRef.current.has(reminder.id));
+    freshReminders.forEach((reminder) => {
+      const startAt = new Date(reminder.event.startAt);
+      const startLabel = startAt.toLocaleString('es-AR', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const notification = new Notification('Recordatorio de agenda', {
+        body: `${reminder.event.title}\n${startLabel}${reminder.event.location ? `\n${reminder.event.location}` : ''}`,
+        tag: `agenda-reminder-${reminder.id}`,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        window.location.href = '/agenda';
+      };
+
+      notifiedReminderIdsRef.current.add(reminder.id);
+    });
+
+    if (freshReminders.length > 0) {
+      persistNotifiedReminderIds();
+    }
+  }, [persistNotifiedReminderIds]);
 
   const refresh = useCallback(async () => {
     try {
       const data = await agendaReminderService.listDue();
       setReminders(data);
+      notifyBrowserForReminders(data);
     } catch (error) {
       console.error('Error al cargar recordatorios:', error);
       setReminders([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notifyBrowserForReminders]);
 
   useEffect(() => {
     refresh();

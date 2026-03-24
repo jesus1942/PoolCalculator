@@ -41,7 +41,11 @@ interface ProfessionalRecommendation {
     };
   };
   hydraulicAnalysis: {
-    requiredFlowRate: number;
+    pumpSelectionDetails: {
+      requiredFlowRate: number;
+      requiredHead: number;
+      safetyFactor: number;
+    };
     velocityChecks: any[];
     totalDynamicHead: number;
   };
@@ -166,7 +170,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
                   <Gauge className="w-4 h-4 text-cyan-400" />
                   <p className="text-xs text-zinc-500">Caudal Requerido</p>
                 </div>
-                <p className="text-2xl font-light text-white">{recommendation.hydraulicAnalysis.requiredFlowRate.toFixed(1)}</p>
+                <p className="text-2xl font-light text-white">{recommendation.hydraulicAnalysis.pumpSelectionDetails.requiredFlowRate.toFixed(1)}</p>
                 <p className="text-xs text-zinc-600">m³/h</p>
               </div>
               <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
@@ -345,7 +349,9 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
                   </div>
                   <div>
                     <p className="text-zinc-500 mb-1">Caudal de Diseño</p>
-                    <p className="text-white text-xl font-light">{recommendation.hydraulicAnalysis.requiredFlowRate.toFixed(1)} m³/h</p>
+                    <p className="text-white text-xl font-light">
+                      {recommendation.hydraulicAnalysis.pumpSelectionDetails.requiredFlowRate.toFixed(1)} m³/h
+                    </p>
                   </div>
                 </div>
               </div>

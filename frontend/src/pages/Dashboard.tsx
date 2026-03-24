@@ -34,6 +34,81 @@ export const Dashboard: React.FC = () => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [isNight, setIsNight] = useState(false);
 
+  const weatherBackdrop = useMemo(() => {
+    const weatherCode = weather?.current.weatherCode ?? 0;
+
+    if (weatherCode >= 95) {
+      return {
+        base: 'from-slate-950 via-zinc-950 to-black',
+        accent: 'from-violet-950/22 via-sky-950/12 to-transparent',
+        cloud: 'from-slate-400/12 via-slate-200/8 to-transparent',
+        mist: 'from-slate-500/10 via-zinc-400/6 to-transparent',
+        glow: 'from-violet-400/12 via-sky-300/10 to-transparent',
+        rain: true,
+        mistEnabled: true,
+      };
+    }
+
+    if ((weatherCode >= 51 && weatherCode <= 65) || (weatherCode >= 80 && weatherCode <= 82)) {
+      return {
+        base: 'from-slate-950 via-zinc-950 to-black',
+        accent: 'from-sky-950/24 via-cyan-950/12 to-transparent',
+        cloud: 'from-slate-300/12 via-slate-200/8 to-transparent',
+        mist: 'from-slate-400/10 via-slate-300/5 to-transparent',
+        glow: 'from-cyan-400/8 via-blue-300/8 to-transparent',
+        rain: true,
+        mistEnabled: true,
+      };
+    }
+
+    if (weatherCode >= 45 && weatherCode <= 48) {
+      return {
+        base: 'from-zinc-950 via-slate-950 to-black',
+        accent: 'from-slate-900/28 via-zinc-900/12 to-transparent',
+        cloud: 'from-slate-200/10 via-white/5 to-transparent',
+        mist: 'from-slate-300/12 via-zinc-300/6 to-transparent',
+        glow: 'from-white/6 via-slate-300/4 to-transparent',
+        rain: false,
+        mistEnabled: true,
+      };
+    }
+
+    if (weatherCode === 3 || weatherCode === 2 || weatherCode === 1) {
+      return {
+        base: 'from-zinc-950 via-slate-950 to-black',
+        accent: 'from-cyan-950/16 via-slate-950/10 to-transparent',
+        cloud: 'from-slate-200/10 via-slate-100/6 to-transparent',
+        mist: 'from-slate-400/8 via-slate-200/4 to-transparent',
+        glow: 'from-cyan-300/6 via-blue-300/4 to-transparent',
+        rain: false,
+        mistEnabled: false,
+      };
+    }
+
+    return {
+      base: 'from-zinc-950 via-black to-black',
+      accent: isNight ? 'from-indigo-950/18 via-sky-950/10 to-transparent' : 'from-cyan-950/16 via-blue-950/8 to-transparent',
+      cloud: 'from-slate-200/6 via-white/4 to-transparent',
+      mist: 'from-cyan-300/5 via-white/3 to-transparent',
+      glow: isNight ? 'from-indigo-300/8 via-sky-300/5 to-transparent' : 'from-cyan-300/8 via-blue-300/5 to-transparent',
+      rain: false,
+      mistEnabled: false,
+    };
+  }, [weather, isNight]);
+
+  const rainDrops = useMemo(
+    () =>
+      Array.from({ length: 26 }, (_, index) => ({
+        id: index,
+        left: `${4 + ((index * 11) % 92)}%`,
+        top: `${(index * 13) % 64}%`,
+        duration: `${1.45 + (index % 5) * 0.22}s`,
+        delay: `${(index % 7) * 0.17}s`,
+        height: 26 + (index % 4) * 8,
+      })),
+    []
+  );
+
   useEffect(() => {
     loadData();
     // Detectar si es de noche
@@ -278,19 +353,47 @@ export const Dashboard: React.FC = () => {
             <div className="absolute inset-0 rounded-full border-4 border-cyan-500/30"></div>
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-500 animate-spin"></div>
           </div>
-          <p className="text-zinc-400 text-lg font-light tracking-wide">Cargando dashboard...</p>
+          <p className="text-zinc-300 text-lg font-light tracking-wide">Cargando dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-black">
-      {/* Gradiente de fondo sutil */}
-      <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-black pointer-events-none -z-10"></div>
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-transparent to-transparent pointer-events-none -z-10"></div>
+    <div className="relative isolate overflow-hidden bg-black">
+      <div className={`absolute inset-0 bg-gradient-to-br ${weatherBackdrop.base} pointer-events-none z-0`} />
+      <div className={`dashboard-weather-glow absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] ${weatherBackdrop.accent} pointer-events-none z-0`} />
+      <div className="dashboard-weather-clouds absolute inset-x-[-8%] top-0 h-[46vh] pointer-events-none z-0">
+        <div className={`absolute left-[-6%] top-10 h-56 w-[34rem] rounded-full bg-gradient-to-r ${weatherBackdrop.cloud} blur-3xl opacity-90`} />
+        <div className={`absolute right-[8%] top-24 h-48 w-[28rem] rounded-full bg-gradient-to-r ${weatherBackdrop.cloud} blur-3xl opacity-75`} />
+        <div className={`absolute left-[38%] top-6 h-40 w-[22rem] rounded-full bg-gradient-to-r ${weatherBackdrop.glow} blur-3xl opacity-70`} />
+      </div>
+      {weatherBackdrop.mistEnabled && (
+        <div className="dashboard-weather-mist absolute inset-x-[-10%] bottom-[18%] h-48 pointer-events-none z-0">
+          <div className={`absolute inset-0 bg-gradient-to-r ${weatherBackdrop.mist} blur-3xl opacity-80`} />
+        </div>
+      )}
+      {weatherBackdrop.rain && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          {rainDrops.map((drop) => (
+            <span
+              key={drop.id}
+              className="dashboard-weather-rain absolute w-px rounded-full bg-gradient-to-b from-sky-200/0 via-sky-200/38 to-cyan-200/0"
+              style={{
+                left: drop.left,
+                top: drop.top,
+                height: `${drop.height}px`,
+                ['--rain-duration' as '--rain-duration']: drop.duration,
+                ['--rain-delay' as '--rain-delay']: drop.delay,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 min-h-screen">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.12)_35%,rgba(0,0,0,0.26)_100%)] pointer-events-none z-0" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 min-h-screen">
         {/* Header Minimalista */}
         <div className="mb-12">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-3">
@@ -305,7 +408,7 @@ export const Dashboard: React.FC = () => {
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extralight text-white tracking-tight">
                   Hola, <span className="font-semibold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">{user?.name}</span>
                 </h1>
-                <p className="text-zinc-500 mt-2 text-sm sm:text-base font-light tracking-wide">
+                <p className="text-zinc-300 mt-2 text-sm sm:text-base font-light tracking-wide">
                   {today.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               </div>
@@ -337,7 +440,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-light text-white tracking-wide">Efemérides de Año Nuevo</h2>
-                      <p className="text-zinc-500 text-sm font-light">Historia breve del 1 de enero</p>
+                      <p className="text-zinc-300 text-sm font-light">Historia breve del 1 de enero</p>
                     </div>
                   </div>
 
@@ -384,7 +487,7 @@ export const Dashboard: React.FC = () => {
                         <Activity className="h-5 w-5 text-cyan-400" />
                       </div>
                       <h2 className="text-lg font-light text-white tracking-wide">Clima Actual</h2>
-                      <span className="ml-auto text-xs text-zinc-500 font-light">Click para ver por hora</span>
+                      <span className="ml-auto text-xs text-zinc-300 font-light">Click para ver por hora</span>
                     </div>
 
                     {weather ? (
@@ -394,7 +497,7 @@ export const Dashboard: React.FC = () => {
                             <div className="text-5xl sm:text-6xl lg:text-7xl font-extralight text-white mb-3 tracking-tighter">
                               {weather.current.temperature}°
                             </div>
-                            <p className="text-zinc-400 font-light text-base sm:text-lg">
+                            <p className="text-zinc-300 font-light text-base sm:text-lg">
                               {getWeatherDescription(weather.current.weatherCode)}
                             </p>
                           </div>
@@ -407,13 +510,13 @@ export const Dashboard: React.FC = () => {
                           <div className="relative group/card">
                             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 rounded-2xl"></div>
                             <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-4 border border-zinc-800/50">
-                              <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2 font-light">
+                              <div className="flex items-center gap-2 text-zinc-300 text-sm mb-2 font-light">
                                 <Wind className="h-4 w-4" />
                                 Viento
                               </div>
                               <div className="text-white text-xl font-light">
                                 {weather.current.windSpeed}
-                                <span className="text-sm text-zinc-500"> km/h</span>
+                                <span className="text-sm text-zinc-300"> km/h</span>
                                 {weather.current.windGust !== null && (
                                   <span className="ml-2 text-xs text-amber-300">ráf. {weather.current.windGust} km/h</span>
                                 )}
@@ -423,11 +526,11 @@ export const Dashboard: React.FC = () => {
                           <div className="relative group/card">
                             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 rounded-2xl"></div>
                             <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-4 border border-zinc-800/50">
-                              <div className="flex items-center gap-2 text-zinc-500 text-sm mb-2 font-light">
+                              <div className="flex items-center gap-2 text-zinc-300 text-sm mb-2 font-light">
                                 <Umbrella className="h-4 w-4" />
                                 Humedad
                               </div>
-                              <div className="text-white text-xl font-light">{weather.current.humidity}<span className="text-sm text-zinc-500">%</span></div>
+                              <div className="text-white text-xl font-light">{weather.current.humidity}<span className="text-sm text-zinc-300">%</span></div>
                             </div>
                           </div>
                         </div>
@@ -453,7 +556,7 @@ export const Dashboard: React.FC = () => {
                         </div>
                       </>
                     ) : (
-                      <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+                      <div className="flex items-center justify-center h-64 text-zinc-300 text-sm">
                         No se pudo cargar el clima. Reintentá más tarde.
                       </div>
                     )}
@@ -471,13 +574,13 @@ export const Dashboard: React.FC = () => {
                         <Clock className="h-5 w-5 text-purple-400" />
                       </div>
                       <h2 className="text-lg font-light text-white tracking-wide">Clima por Hora</h2>
-                      <span className="ml-auto text-xs text-zinc-500 font-light">Click para volver</span>
+                      <span className="ml-auto text-xs text-zinc-300 font-light">Click para volver</span>
                     </div>
 
                     {/* Lista scrolleable de clima por hora - Solo horas futuras */}
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
                       {futureHourlyWeather.length === 0 ? (
-                        <div className="text-center text-zinc-500 py-8">
+                        <div className="text-center text-zinc-300 py-8">
                           <p>No hay pronóstico horario disponible</p>
                         </div>
                       ) : (
@@ -492,18 +595,18 @@ export const Dashboard: React.FC = () => {
                               <div className="relative bg-zinc-900/60 backdrop-blur-xl rounded-xl p-3 border border-zinc-800/30 hover:border-zinc-700/50 transition-colors">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <span className="text-zinc-400 font-light text-sm w-16">{hourStr}</span>
+                                    <span className="text-zinc-300 font-light text-sm w-16">{hourStr}</span>
                                     <span className="text-3xl">{getWeatherEmoji(hour.weatherCode, isHourNight)}</span>
                                   </div>
                                   <div className="flex items-center gap-4">
                                     <div className="text-right">
                                       <div className="text-white font-light text-lg">{hour.temperature}°</div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                    <div className="flex items-center gap-2 text-xs text-zinc-300">
                                       <Wind className="h-3 w-3" />
                                       <span>{hour.windSpeed}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                    <div className="flex items-center gap-2 text-xs text-zinc-300">
                                       <Umbrella className="h-3 w-3" />
                                       <span>{hour.humidity}%</span>
                                     </div>
@@ -543,7 +646,7 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     <div>
-                      <p className="text-sm font-light text-zinc-500 mb-2 tracking-wide">{stat.title}</p>
+                      <p className="text-sm font-light text-zinc-300 mb-2 tracking-wide">{stat.title}</p>
                       <p className="text-3xl sm:text-4xl lg:text-5xl font-extralight text-white tracking-tight">
                         {stat.value}
                       </p>
@@ -608,7 +711,7 @@ export const Dashboard: React.FC = () => {
                               <div className={`absolute top-0 left-0 right-0 h-1 ${isGoodDay ? 'bg-gradient-to-r from-emerald-500 to-green-500' : 'bg-gradient-to-r from-red-500 to-orange-500'}`}></div>
 
                               <div className="text-center">
-                                <p className="text-zinc-500 text-xs font-light mb-1 tracking-wide">
+                                <p className="text-zinc-300 text-xs font-light mb-1 tracking-wide">
                                   {index === 0 ? 'Hoy' : dayNames[date.getDay()]}
                                 </p>
                                 <p className="text-zinc-600 text-xs mb-3 font-light">
@@ -620,7 +723,7 @@ export const Dashboard: React.FC = () => {
                                 <div className="text-white font-light text-2xl mb-1">
                                   {day.maxTemp}°
                                 </div>
-                                <div className="text-zinc-500 text-sm font-light">
+                                <div className="text-zinc-300 text-sm font-light">
                                   {day.minTemp}°
                                 </div>
 
@@ -652,7 +755,7 @@ export const Dashboard: React.FC = () => {
                                 </div>
                                 <div className="flex-1 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
                                   {dayHourlyWeather.length === 0 ? (
-                                    <p className="text-zinc-500 text-xs text-center py-4">Sin datos</p>
+                                    <p className="text-zinc-300 text-xs text-center py-4">Sin datos</p>
                                   ) : (
                                     dayHourlyWeather.map((hour, hourIndex) => {
                                       const time = new Date(hour.time);
@@ -662,7 +765,7 @@ export const Dashboard: React.FC = () => {
                                       return (
                                         <div key={hourIndex} className="bg-zinc-900/60 rounded-lg p-2 border border-zinc-800/30">
                                           <div className="flex items-center justify-between">
-                                            <span className="text-zinc-400 font-light text-xs">{hourStr}</span>
+                                            <span className="text-zinc-300 font-light text-xs">{hourStr}</span>
                                             <div className="flex items-center gap-1.5">
                                               <span className="text-xl">{getWeatherEmoji(hour.weatherCode, isHourNight)}</span>
                                               <span className="text-white font-light text-xs">{hour.temperature}°</span>
@@ -709,7 +812,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-light text-white tracking-wide">Hoy</h2>
-                    <p className="text-zinc-500 text-sm font-light">La Agenda del instalador y checklist</p>
+                    <p className="text-zinc-300 text-sm font-light">La Agenda del instalador y checklist</p>
                   </div>
                 </div>
                 <Link
@@ -741,9 +844,9 @@ export const Dashboard: React.FC = () => {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="text-sm text-white font-light">{reminder.event.title}</div>
-                              <div className="text-xs text-zinc-400 mt-1">{startLabel}</div>
+                              <div className="text-xs text-zinc-300 mt-1">{startLabel}</div>
                               {reminder.event.project?.name && (
-                                <div className="text-xs text-zinc-500 mt-1">Proyecto: {reminder.event.project.name}</div>
+                                <div className="text-xs text-zinc-300 mt-1">Proyecto: {reminder.event.project.name}</div>
                               )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
@@ -785,7 +888,7 @@ export const Dashboard: React.FC = () => {
               )}
 
               {todayEvents.length === 0 ? (
-                <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 text-sm text-zinc-400">
+                <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 text-sm text-zinc-300">
                   No hay eventos para hoy. Podés crear uno desde la agenda.
                 </div>
               ) : (
@@ -806,7 +909,7 @@ export const Dashboard: React.FC = () => {
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <div className="text-sm text-white font-light">{event.title}</div>
-                            <div className="text-xs text-zinc-500 mt-1">{timeRange}</div>
+                            <div className="text-xs text-zinc-300 mt-1">{timeRange}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <span
@@ -831,7 +934,7 @@ export const Dashboard: React.FC = () => {
                         </div>
 
                         {(event.project?.name || event.location || uniqueAssignees.length > 0) && (
-                          <div className="mt-3 space-y-1 text-xs text-zinc-400">
+                          <div className="mt-3 space-y-1 text-xs text-zinc-300">
                             {event.project?.name && <div>Proyecto: {event.project.name}</div>}
                             {event.location && <div>Ubicación: {event.location}</div>}
                             {uniqueAssignees.length > 0 && (
@@ -841,13 +944,13 @@ export const Dashboard: React.FC = () => {
                         )}
 
                         <div className="mt-4 border-t border-zinc-800/60 pt-4">
-                          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-3">
+                          <div className="flex items-center gap-2 text-xs text-zinc-300 mb-3">
                             <ListTodo className="h-4 w-4" />
                             Checklist (recordatorios in-app)
                           </div>
 
                           {checklistItems.length === 0 ? (
-                            <div className="text-xs text-zinc-500">Sin ítems todavía.</div>
+                            <div className="text-xs text-zinc-300">Sin ítems todavía.</div>
                           ) : (
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
                               {checklistItems.map((item: any) => (
@@ -855,11 +958,11 @@ export const Dashboard: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => toggleChecklistItem(event.id, item)}
-                                    className="text-zinc-500 hover:text-emerald-300 transition-colors"
+                                    className="text-zinc-300 hover:text-emerald-300 transition-colors"
                                   >
                                     {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4" />}
                                   </button>
-                                  <span className={item.done ? 'line-through text-zinc-500' : ''}>{item.label}</span>
+                                  <span className={item.done ? 'line-through text-zinc-300' : ''}>{item.label}</span>
                                   <button
                                     type="button"
                                     onClick={() => removeChecklistItem(event.id, item.id)}
@@ -922,7 +1025,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-light text-white tracking-wide">La Agenda próximos 7 días</h2>
-                    <p className="text-zinc-500 text-sm font-light">Eventos y visitas planificadas</p>
+                    <p className="text-zinc-300 text-sm font-light">Eventos y visitas planificadas</p>
                   </div>
                 </div>
                 <Link
@@ -943,10 +1046,10 @@ export const Dashboard: React.FC = () => {
                         <div className="text-sm text-white font-light">
                           {day.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })}
                         </div>
-                        <span className="text-xs text-zinc-500">{dayEvents.length} eventos</span>
+                        <span className="text-xs text-zinc-300">{dayEvents.length} eventos</span>
                       </div>
                       {dayEvents.length === 0 ? (
-                        <div className="text-xs text-zinc-500">Sin eventos</div>
+                        <div className="text-xs text-zinc-300">Sin eventos</div>
                       ) : (
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
                           {dayEvents.map((event) => (
@@ -960,7 +1063,7 @@ export const Dashboard: React.FC = () => {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-light">{event.title}</span>
-                                <span className="text-[11px] text-zinc-400">
+                                <span className="text-[11px] text-zinc-300">
                                   {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
@@ -975,7 +1078,7 @@ export const Dashboard: React.FC = () => {
                                   {event.status}
                                 </span>
                                 {event.project?.name && (
-                                  <span className="text-[10px] text-zinc-500">{event.project.name}</span>
+                                  <span className="text-[10px] text-zinc-300">{event.project.name}</span>
                                 )}
                               </div>
                             </div>
@@ -1022,7 +1125,7 @@ export const Dashboard: React.FC = () => {
                 {/* Tasa de Completitud */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-zinc-400 font-light tracking-wide">Tasa de Completitud</span>
+                    <span className="text-zinc-300 font-light tracking-wide">Tasa de Completitud</span>
                     <span className="text-white text-2xl font-extralight">{completionRate.toFixed(0)}%</span>
                   </div>
                   <div className="h-4 bg-zinc-900/50 rounded-full overflow-hidden border border-zinc-800/50">
@@ -1039,7 +1142,7 @@ export const Dashboard: React.FC = () => {
                 {/* Proyectos en Progreso */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-zinc-400 font-light tracking-wide">En Progreso</span>
+                    <span className="text-zinc-300 font-light tracking-wide">En Progreso</span>
                     <span className="text-white text-2xl font-extralight">{inProgressRate.toFixed(0)}%</span>
                   </div>
                   <div className="h-4 bg-zinc-900/50 rounded-full overflow-hidden border border-zinc-800/50">
@@ -1092,7 +1195,7 @@ export const Dashboard: React.FC = () => {
                     <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center">
                       <FolderOpen className="h-10 w-10 text-zinc-700" />
                     </div>
-                    <p className="text-zinc-500 font-light">
+                    <p className="text-zinc-300 font-light">
                       Todavía no tenés proyectos creados
                     </p>
                   </div>
@@ -1117,12 +1220,12 @@ export const Dashboard: React.FC = () => {
                                     <ChevronRight className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
                                   )}
                                 </div>
-                                <p className="text-sm text-zinc-500 font-light">{project.clientName}</p>
+                                <p className="text-sm text-zinc-300 font-light">{project.clientName}</p>
                               </div>
                               <span className={`px-4 py-2 text-xs font-light rounded-xl shadow-sm flex-shrink-0 ${
                                 project.status === 'COMPLETED' ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-green-500/30' :
                                 project.status === 'IN_PROGRESS' ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-amber-500/30' :
-                                'bg-zinc-800 text-zinc-400'
+                                'bg-zinc-800 text-zinc-300'
                               }`}>
                                 {project.status === 'COMPLETED' ? 'Completado' :
                                  project.status === 'IN_PROGRESS' ? 'En progreso' : 'Borrador'}
@@ -1187,7 +1290,7 @@ export const Dashboard: React.FC = () => {
                     <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center">
                       <Waves className="h-10 w-10 text-zinc-700" />
                     </div>
-                    <p className="text-zinc-500 font-light">
+                    <p className="text-zinc-300 font-light">
                       No hay modelos de piscinas disponibles
                     </p>
                   </div>
@@ -1218,7 +1321,7 @@ export const Dashboard: React.FC = () => {
                                     <ChevronRight className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
                                   )}
                                 </div>
-                                <p className="text-sm text-zinc-500 font-light">
+                                <p className="text-sm text-zinc-300 font-light">
                                   {preset.length}m × {preset.width}m × {preset.depth}m
                                 </p>
                                 <p className="text-xs text-zinc-600 mt-1 capitalize font-light">

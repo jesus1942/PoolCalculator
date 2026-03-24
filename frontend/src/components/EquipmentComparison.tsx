@@ -3,10 +3,15 @@ import { Card } from '@/components/ui/Card';
 import { EquipmentPreset } from '@/types';
 import { CheckCircle, AlertTriangle, XCircle, ArrowRight, Info } from 'lucide-react';
 
+type ComparableEquipment = Partial<EquipmentPreset> & {
+  id: string;
+  name: string;
+};
+
 interface EquipmentComparisonProps {
   title: string;
-  selectedEquipment: EquipmentPreset | null;
-  recommendedEquipment: EquipmentPreset | null;
+  selectedEquipment: ComparableEquipment | null;
+  recommendedEquipment: ComparableEquipment | null;
   requiredSpecs?: {
     minFlowRate?: number;
     minHead?: number;

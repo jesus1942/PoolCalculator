@@ -102,18 +102,18 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
   return (
     <div className="space-y-6">
       {/* Título y descripción */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
+        <h3 className="text-xl font-semibold text-white mb-2">
           Selección de Equipos del Proyecto
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-base text-zinc-300">
           Selecciona los equipos específicos que vas a instalar en este proyecto.
           Cada equipo incluye foto, ficha técnica y datos completos para los cálculos profesionales.
         </p>
       </div>
 
       {/* Tabs de tipo de equipo */}
-      <div className="flex space-x-2 border-b">
+      <div className="flex space-x-2 border-b border-zinc-800">
         {EQUIPMENT_TYPES.map((type) => {
           const TypeIcon = type.icon;
           return (
@@ -122,8 +122,8 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
               onClick={() => setActiveType(type.value)}
               className={`px-4 py-2 font-medium text-sm flex items-center space-x-2 border-b-2 transition-colors ${
                 activeType === type.value
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-zinc-200 text-white'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               <TypeIcon className="w-4 h-4" />
@@ -136,7 +136,7 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
       {/* Equipos seleccionados */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-gray-900 flex items-center space-x-2">
+          <h4 className="font-semibold text-white text-lg flex items-center space-x-2">
             <Icon className="w-5 h-5" />
             <span>{activeTypeData?.label} Seleccionados</span>
           </h4>
@@ -150,8 +150,8 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
         </div>
 
         {getSelectedEquipmentOfType().length === 0 ? (
-          <Card className="p-6 text-center text-gray-500">
-            <Icon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+          <Card className="p-6 text-center text-zinc-400 bg-zinc-950 border border-zinc-800">
+            <Icon className="w-12 h-12 mx-auto mb-2 text-zinc-500" />
             <p>No hay {activeTypeData?.label.toLowerCase()} seleccionados</p>
             <p className="text-sm mt-1">Click en "Ver Catálogo" para agregar</p>
           </Card>
@@ -172,15 +172,15 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
       {/* Catálogo de equipos disponibles */}
       {showCatalog && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3">
+          <h4 className="font-semibold text-white text-lg mb-3">
             Catálogo de {activeTypeData?.label}
           </h4>
           {loading ? (
-            <Card className="p-6 text-center">
-              <p className="text-gray-500">Cargando equipos...</p>
+            <Card className="p-6 text-center bg-zinc-950 border border-zinc-800">
+              <p className="text-zinc-400">Cargando equipos...</p>
             </Card>
           ) : availableEquipment.length === 0 ? (
-            <Card className="p-6 text-center text-gray-500">
+            <Card className="p-6 text-center text-zinc-400 bg-zinc-950 border border-zinc-800">
               <p>No hay {activeTypeData?.label.toLowerCase()} disponibles en el catálogo</p>
             </Card>
           ) : (

@@ -27,6 +27,76 @@
   }
 }
 
+@keyframes footerDrift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-90px, 22px, 0) scale(1.04);
+  }
+}
+
+@keyframes footerPulse {
+  0%, 100% {
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes footerSweep {
+  from {
+    transform: translateX(-18%);
+  }
+  to {
+    transform: translateX(18%);
+  }
+}
+
+@keyframes dashboardRain {
+  from {
+    transform: translate3d(0, -18px, 0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.24;
+  }
+  to {
+    transform: translate3d(-8px, 42px, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes dashboardCloudDrift {
+  from {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 0, 0) scale(1.03);
+  }
+}
+
+@keyframes dashboardMist {
+  from {
+    transform: translate3d(-3%, 0, 0);
+    opacity: 0.16;
+  }
+  to {
+    transform: translate3d(3%, 0, 0);
+    opacity: 0.24;
+  }
+}
+
+@keyframes dashboardGlow {
+  0%, 100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.34;
+  }
+}
+
 @layer base {
   :root {
     --app-bg: #0b0d10;
@@ -73,8 +143,32 @@
     color: var(--app-text);
     border-color: var(--app-border);
   }
+  input,
+  select {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+    border-color: var(--app-border);
+  }
+  input::placeholder,
   textarea::placeholder {
     color: var(--app-muted);
+    opacity: 1;
+  }
+  select option {
+    background-color: var(--app-bg-strong);
+    color: var(--app-text);
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--app-border-strong);
+  }
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
   }
 }
 
@@ -142,6 +236,21 @@
   .text-slate-600 {
     color: var(--app-muted);
   }
+  .text-zinc-600 {
+    color: #a8b2c4;
+  }
+  .text-zinc-500,
+  .text-zinc-400 {
+    color: #c3cde0;
+  }
+  .text-zinc-300 {
+    color: #dbe4f3;
+  }
+  .placeholder-zinc-500::placeholder,
+  .placeholder-zinc-600::placeholder {
+    color: #b9c4d7;
+    opacity: 1;
+  }
   .text-blue-600,
   .text-blue-700,
   .text-cyan-300,
@@ -161,6 +270,18 @@
   .border-gray-300,
   .border-slate-200 {
     border-color: var(--app-border);
+  }
+  .bg-white\/5 {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+  .border-white\/10 {
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+  .border-zinc-800\/50 {
+    border-color: rgba(167, 180, 203, 0.28);
   }
   .bg-blue-600,
   .bg-blue-700,
@@ -262,5 +383,83 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .hydraulic-cad-preview__grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .footer-spacefield {
+    background-image:
+      radial-gradient(circle at 15% 22%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.8px),
+      radial-gradient(circle at 36% 68%, rgba(255, 255, 255, 0.75) 0 1px, transparent 1.7px),
+      radial-gradient(circle at 58% 28%, rgba(255, 255, 255, 0.82) 0 1.2px, transparent 1.9px),
+      radial-gradient(circle at 74% 58%, rgba(255, 255, 255, 0.78) 0 1px, transparent 1.8px),
+      radial-gradient(circle at 88% 18%, rgba(255, 255, 255, 0.9) 0 1.2px, transparent 2px),
+      radial-gradient(circle at 22% 82%, rgba(255, 255, 255, 0.72) 0 1px, transparent 1.7px),
+      radial-gradient(circle at 67% 84%, rgba(255, 255, 255, 0.82) 0 1px, transparent 1.8px),
+      radial-gradient(circle at 92% 74%, rgba(255, 255, 255, 0.68) 0 1px, transparent 1.6px);
+    background-size: 340px 220px, 390px 240px, 300px 210px, 420px 260px, 360px 220px, 410px 270px, 320px 230px, 460px 280px;
+    animation: footerDrift 26s linear infinite alternate;
+  }
+
+  .footer-nebula {
+    background:
+      radial-gradient(680px 240px at 12% 100%, rgba(73, 213, 255, 0.18), transparent 62%),
+      radial-gradient(540px 220px at 88% 92%, rgba(108, 255, 142, 0.12), transparent 58%),
+      radial-gradient(720px 280px at 50% 120%, rgba(255, 255, 255, 0.06), transparent 64%);
+    animation: footerPulse 9s ease-in-out infinite;
+  }
+
+  .footer-horizon {
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(5, 10, 18, 0.08) 42%, rgba(3, 7, 14, 0.72) 74%, rgba(2, 5, 11, 0.96) 100%);
+  }
+
+  .footer-sweep {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 48%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.05) 52%, transparent 100%);
+    animation: footerSweep 12s ease-in-out infinite alternate;
+  }
+
+  .dashboard-weather-clouds {
+    animation: dashboardCloudDrift 22s ease-in-out infinite alternate;
+  }
+
+  .dashboard-weather-mist {
+    animation: dashboardMist 16s ease-in-out infinite alternate;
+  }
+
+  .dashboard-weather-glow {
+    animation: dashboardGlow 10s ease-in-out infinite;
+  }
+
+  .dashboard-weather-rain {
+    animation: dashboardRain var(--rain-duration, 1.8s) linear infinite;
+    animation-delay: var(--rain-delay, 0s);
+  }
+
+  button[class*="text-zinc-400"],
+  button[class*="text-zinc-300"] {
+    color: #e8eef9;
+  }
+  button[class*="text-gray-500"],
+  button[class*="text-gray-600"] {
+    color: #d6e0f2;
+  }
+  button[class*="border-zinc-800"],
+  button[class*="border-zinc-700"] {
+    border-color: rgba(179, 194, 220, 0.35);
+  }
+  button[class*="bg-white/5"] {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+  button[class*="bg-white/10"] {
+    background-color: rgba(255, 255, 255, 0.17);
+  }
+  button[class*="bg-zinc-900/50"] {
+    background-color: rgba(24, 30, 42, 0.85);
   }
 }

@@ -73,7 +73,8 @@ export function calculateTileMaterials(
   const marmolina = totalPerimeterWithRows * settings.marmolinaKgPerLinealM;
 
   const wireMesh = totalSidewalkArea * settings.wireMeshM2PerM2;
-  const waterproofing = totalSidewalkArea * settings.waterproofingKgPerM2 * settings.waterproofingCoats;
+  // No corresponde impermeabilizante en instalaciones con casco de fibra de vidrio.
+  const waterproofing = 0;
 
   // Helper function to find material price
   const findPrice = (materialType: string, unit: string): number => {
@@ -88,7 +89,7 @@ export function calculateTileMaterials(
   const whiteCementMaterial = materialPrices.find(m => m.type === 'WHITE_CEMENT');
   const marmolinaMaterial = materialPrices.find(m => m.type === 'MARMOLINA');
 
-  const cementBagWeight = cementMaterial?.bagWeight || 25; // Fallback a 25kg (nuevo estándar)
+  const cementBagWeight = cementMaterial?.bagWeight || 25;
   const whiteCementBagWeight = whiteCementMaterial?.bagWeight || 25; // Fallback a 25kg
   const marmolinaBagWeight = marmolinaMaterial?.bagWeight || 30; // Fallback a 30kg
 

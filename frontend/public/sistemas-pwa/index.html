@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>PoolManager Sistemas</title>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111111;
+        --panel-2: #171717;
+        --line: #262626;
+        --line-strong: #3a3a3a;
+        --text: #f5f5f5;
+        --muted: #a3a3a3;
+        --muted-2: #737373;
+        --inverse: #0a0a0a;
+        --radius: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        width: min(100%, 760px);
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      .header {
+        padding: 8px 0 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .kicker {
+        margin: 0 0 8px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-2);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      .intro {
+        margin: 10px 0 0;
+        max-width: 46ch;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        min-height: 44px;
+        padding: 0 14px;
+        background: var(--panel);
+        color: var(--text);
+      }
+
+      .btn.primary {
+        background: #f5f5f5;
+        color: var(--inverse);
+        border-color: #f5f5f5;
+        font-weight: 600;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .section {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .section-head {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 14px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+      }
+
+      .section-head small {
+        color: var(--muted-2);
+        display: block;
+        margin-top: 3px;
+      }
+
+      .section-body {
+        padding: 0 14px 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .section-body[hidden] {
+        display: none;
+      }
+
+      .grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .grid.two {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label,
+      .note,
+      .table td,
+      .table th,
+      .helper,
+      .status-copy,
+      li {
+        color: var(--muted);
+      }
+
+      .field label {
+        font-size: 14px;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+      }
+
+      .metrics {
+        display: grid;
+        gap: 8px;
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1.3fr 1fr;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--panel-2);
+      }
+
+      .metric span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted-2);
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .status {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--panel-2);
+      }
+
+      .status-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .status.ok {
+        border-color: var(--line-strong);
+      }
+
+      .status.warn {
+        border-color: var(--line-strong);
+      }
+
+      .plain-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .plain-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px 12px;
+        background: var(--panel-2);
+      }
+
+      .plain-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .table th,
+      .table td {
+        text-align: left;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        line-height: 1.45;
+      }
+
+      .table th {
+        font-weight: 600;
+        color: var(--text);
+        background: #141414;
+      }
+
+      .table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .checklist {
+        display: grid;
+        gap: 8px;
+      }
+
+      .check {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 10px;
+        align-items: start;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: var(--panel-2);
+      }
+
+      .check input {
+        margin-top: 2px;
+      }
+
+      .footer {
+        margin: 22px 0 8px;
+        color: var(--muted-2);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .log-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .log-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--panel-2);
+      }
+
+      .log-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          padding: 12px;
+        }
+
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        .toolbar {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <p class="kicker">Sistemas</p>
+        <h1>Manual del cliente</h1>
+        <p class="intro">Filtración, calefacción, hidrojets y control básico del agua con datos guardados en este dispositivo.</p>
+        <div class="toolbar">
+          <button id="printBtn" class="btn primary" type="button">Imprimir / PDF</button>
+          <button id="resetBtn" class="btn" type="button">Resetear checklist</button>
+        </div>
+      </header>
+
+      <main class="stack">
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Datos de la piscina</h2>
+              <small>Usados para calcular recomendaciones simples.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="grid two">
+              <div class="field">
+                <label for="projectName">Proyecto</label>
+                <input id="projectName" type="text" value="Piscina cliente" />
+              </div>
+              <div class="field">
+                <label for="clientName">Cliente</label>
+                <input id="clientName" type="text" value="" placeholder="Nombre del cliente" />
+              </div>
+              <div class="field">
+                <label for="systemProfile">Sistema instalado</label>
+                <select id="systemProfile">
+                  <option value="filtration_basic">Filtración básica</option>
+                  <option value="filtration_heater">Filtración + calefacción</option>
+                  <option value="filtration_hydro_heater">Filtración + hidrojets + calefacción</option>
+                  <option value="vanesa">Vanesa · BAE050 + BAC200 + CP70</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="volume">Volumen (m³)</label>
+                <input id="volume" type="number" min="1" step="0.1" value="40" />
+              </div>
+              <div class="field">
+                <label for="filtrationPump">Bomba de filtrado</label>
+                <input id="filtrationPump" type="text" value="BAE050" />
+              </div>
+              <div class="field">
+                <label for="filterType">Filtro</label>
+                <select id="filterType">
+                  <option value="Arena">Arena</option>
+                  <option value="Cartucho">Cartucho</option>
+                  <option value="Vidrio">Vidrio</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="heaterModel">Calentador / Caldera</label>
+                <input id="heaterModel" type="text" value="Caldaia CP70" />
+              </div>
+              <div class="field">
+                <label for="targetTemp">Temperatura deseada (°C)</label>
+                <input id="targetTemp" type="number" min="20" max="35" step="1" value="28" />
+              </div>
+              <div class="field">
+                <label for="ambientTemp">Temperatura ambiente (°C)</label>
+                <input id="ambientTemp" type="number" min="0" max="45" step="1" value="15" />
+              </div>
+              <div class="field">
+                <label for="hasCover">Cobertor térmico</label>
+                <select id="hasCover">
+                  <option value="no">No</option>
+                  <option value="yes">Sí</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="poolType">Piscina</label>
+                <select id="poolType">
+                  <option value="outdoor">Exterior</option>
+                  <option value="indoor">Cubierta</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="hydroPump">Bomba de hidrojets</label>
+                <input id="hydroPump" type="text" value="BAC200" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Sistema instalado</h2>
+              <small>Resumen real de equipos y circuitos disponibles para este cliente.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="hero-grid">
+              <div class="metrics">
+                <div class="metric">
+                  <span>Proyecto</span>
+                  <strong id="systemProject">Piscina cliente</strong>
+                </div>
+                <div class="metric">
+                  <span>Cliente</span>
+                  <strong id="systemClient">No definido</strong>
+                </div>
+                <div class="metric">
+                  <span>Perfil</span>
+                  <strong id="systemProfileLabel">Filtración básica</strong>
+                </div>
+              </div>
+              <div class="status">
+                <div class="status-title">Circuitos habilitados</div>
+                <div id="systemBadges" class="badge-row"></div>
+              </div>
+            </div>
+            <div id="equipmentCards" class="plain-list" style="margin-top: 10px;"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Resumen</h2>
+              <small>Lectura rápida de operación.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="metrics">
+              <div class="metric">
+                <span>Volumen</span>
+                <strong id="summaryVolume">40,0 m³</strong>
+              </div>
+              <div class="metric">
+                <span>Caudal recomendado</span>
+                <strong id="summaryFlow">6,0 m³/h</strong>
+              </div>
+              <div class="metric">
+                <span>Filtración diaria</span>
+                <strong id="summaryHours">8 h / día</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Calefacción</h2>
+              <small>Orientación simple según volumen y clima.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="metrics">
+              <div class="metric">
+                <span>BTU requeridos</span>
+                <strong id="heatingBtu">0</strong>
+              </div>
+              <div class="metric">
+                <span>kW requeridos</span>
+                <strong id="heatingKw">0</strong>
+              </div>
+            </div>
+            <div id="heatingRecommendation" class="status" style="margin-top: 10px;"></div>
+            <div id="heatingCards" class="plain-list" style="margin-top: 10px;"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Filtración</h2>
+              <small>Datos básicos para control del sistema.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="metrics">
+              <div class="metric">
+                <span>Caudal requerido</span>
+                <strong id="filterFlow">0</strong>
+              </div>
+              <div class="metric">
+                <span>Filtro sugerido</span>
+                <strong id="filterName">-</strong>
+              </div>
+              <div class="metric">
+                <span>Bomba sugerida</span>
+                <strong id="filterPump">-</strong>
+              </div>
+            </div>
+            <div class="table-wrap" style="margin-top: 10px;">
+              <table class="table">
+                <tbody>
+                  <tr><th>Arena de sílice</th><td id="filterSand">-</td></tr>
+                  <tr><th>Grava de soporte</th><td id="filterGravel">-</td></tr>
+                  <tr><th>Filtración diaria</th><td id="filterTime">-</td></tr>
+                  <tr><th>Retrolavado</th><td>Cada 1 o 2 semanas o al subir aprox. 0,5 bar</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="plain-list" style="margin-top: 10px;">
+              <div class="plain-item">
+                <strong>Paso 1</strong>
+                Revisar nivel de agua.
+              </div>
+              <div class="plain-item">
+                <strong>Paso 2</strong>
+                Limpiar skimmer y prefiltro.
+              </div>
+              <div class="plain-item">
+                <strong>Paso 3</strong>
+                Encender y confirmar buen retorno de agua.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Operación del sistema</h2>
+              <small>Rutinas concretas para operar los equipos instalados.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div id="operationFlows" class="plain-list"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Control del agua</h2>
+              <small>pH y cloro con diagnóstico simple.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div class="grid two">
+              <div class="field">
+                <label for="currentPh">pH medido</label>
+                <input id="currentPh" type="number" min="0" max="14" step="0.1" placeholder="7.4" />
+              </div>
+              <div class="field">
+                <label for="currentChlorine">Cloro libre (ppm)</label>
+                <input id="currentChlorine" type="number" min="0" max="10" step="0.1" placeholder="1.5" />
+              </div>
+            </div>
+            <div class="toolbar" style="margin-top: 10px;">
+              <button id="analyzeWaterBtn" class="btn primary" type="button">Analizar agua</button>
+              <button id="clearWaterBtn" class="btn" type="button">Borrar</button>
+            </div>
+            <div id="waterStatus" class="status" style="margin-top: 10px;">
+              <div class="status-title">Esperando medición.</div>
+              <div class="status-copy">Cargá pH y cloro para ver una recomendación rápida.</div>
+            </div>
+            <div class="toolbar" style="margin-top: 10px;">
+              <button id="saveWaterLogBtn" class="btn" type="button">Guardar medición</button>
+            </div>
+            <div class="table-wrap" style="margin-top: 10px;">
+              <table class="table">
+                <thead>
+                  <tr><th>Parámetro</th><th>Rango ideal</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>pH</td><td>7,2 - 7,6</td></tr>
+                  <tr><td>Cloro libre</td><td>1,0 - 3,0 ppm</td></tr>
+                  <tr><td>Alcalinidad</td><td>80 - 120 ppm</td></tr>
+                  <tr><td>Dureza cálcica</td><td>200 - 400 ppm</td></tr>
+                  <tr><td>Estabilizador</td><td>30 - 50 ppm</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="waterLogList" class="log-list" style="margin-top: 10px;"></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <button class="section-head" type="button" aria-expanded="true">
+            <span>
+              <h2>Mantenimiento semanal</h2>
+              <small>Checklist guardado en este dispositivo.</small>
+            </span>
+            <span class="note">Ocultar</span>
+          </button>
+          <div class="section-body">
+            <div id="weeklyChecklist" class="checklist"></div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">Generado por poolmanager by Jesus Olguin</footer>
+    </div>
+
+    <script>
+      const volumeInput = document.getElementById('volume');
+      const projectNameInput = document.getElementById('projectName');
+      const clientNameInput = document.getElementById('clientName');
+      const systemProfileInput = document.getElementById('systemProfile');
+      const filtrationPumpInput = document.getElementById('filtrationPump');
+      const filterTypeInput = document.getElementById('filterType');
+      const heaterModelInput = document.getElementById('heaterModel');
+      const targetTempInput = document.getElementById('targetTemp');
+      const ambientTempInput = document.getElementById('ambientTemp');
+      const hasCoverInput = document.getElementById('hasCover');
+      const poolTypeInput = document.getElementById('poolType');
+      const hydroPumpInput = document.getElementById('hydroPump');
+      const printBtn = document.getElementById('printBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const analyzeWaterBtn = document.getElementById('analyzeWaterBtn');
+      const clearWaterBtn = document.getElementById('clearWaterBtn');
+      const saveWaterLogBtn = document.getElementById('saveWaterLogBtn');
+      const currentPhInput = document.getElementById('currentPh');
+      const currentChlorineInput = document.getElementById('currentChlorine');
+      const waterStatus = document.getElementById('waterStatus');
+      const STORAGE_KEY = 'poolmanager_systems_state_v2';
+      const WATER_LOG_KEY = 'poolmanager_water_log_v1';
+      const SYSTEM_PROFILES = {
+        filtration_basic: {
+          label: 'Filtración básica',
+          circuits: ['Filtración', 'Retornos', 'Aspiración', 'Toma de fondo', 'Skimmer'],
+          equipment: [
+            { title: 'Bomba de filtrado', copy: 'Equipo principal para circular el agua a través del filtro.' },
+            { title: 'Filtro', copy: 'Retiene sólidos y se mantiene con retrolavado o limpieza según el tipo.' },
+          ],
+          flows: [
+            { title: 'Filtración diaria', copy: 'Abrir líneas de skimmer, toma de fondo y aspiración según uso. Encender bomba de filtrado y mantener 8 h por día como base.' },
+            { title: 'Retrolavado / limpieza', copy: 'Apagar bomba. Cambiar válvula selectora a retrolavado, encender 2-3 minutos, apagar, pasar a enjuague y volver a filtrado.' },
+          ],
+        },
+        filtration_heater: {
+          label: 'Filtración + calefacción',
+          circuits: ['Filtración', 'Calefacción', 'Retornos', 'Aspiración', 'Toma de fondo', 'Skimmer'],
+          equipment: [
+            { title: 'Bomba de filtrado', copy: 'Impulsa el agua hacia el filtro y el sistema de calefacción.' },
+            { title: 'Filtro', copy: 'Debe trabajar antes del calentador para proteger el sistema térmico.' },
+            { title: 'Calentador / caldera', copy: 'Eleva la temperatura del agua cuando el bypass obliga el paso por el equipo.' },
+          ],
+          flows: [
+            { title: 'Filtración con calefacción', copy: 'Filtrar normalmente y abrir válvulas de entrada/salida del calentador. Cerrar o estrangular el bypass para obligar el paso por la caldera.' },
+            { title: 'Modo sin calefacción', copy: 'Mantener abiertas las válvulas del circuito principal y permitir el paso directo por bypass sin exigir circulación por la caldera.' },
+          ],
+        },
+        filtration_hydro_heater: {
+          label: 'Filtración + hidrojets + calefacción',
+          circuits: ['Filtración', 'Calefacción', 'Hidrojets', 'Retornos', 'Aspiración', 'Toma de fondo', 'Skimmer'],
+          equipment: [
+            { title: 'Bomba de filtrado', copy: 'Circuito principal de filtración, aspiración, toma de fondo y retornos.' },
+            { title: 'Filtro', copy: 'Filtra el agua antes de la calefacción y del retorno a piscina.' },
+            { title: 'Calentador / caldera', copy: 'Trabaja en bypass controlado desde el circuito de filtración.' },
+            { title: 'Bomba de hidrojets', copy: 'Circuito independiente para impulsión de hidrojets y toma propia.' },
+          ],
+          flows: [
+            { title: 'Filtrado normal', copy: 'Usar la bomba principal con succión por skimmer/toma de fondo/aspiración y retorno a la piscina.' },
+            { title: 'Hidrojets', copy: 'Encender sólo la bomba de hidrojets cuando la piscina tenga nivel correcto y la línea de succión esté habilitada.' },
+            { title: 'Calefacción', copy: 'Obligar paso por calentador regulando la válvula del bypass antes del manifold de salida.' },
+          ],
+        },
+        vanesa: {
+          label: 'Vanesa · BAE050 + BAC200 + CP70',
+          circuits: ['Filtración', 'Calefacción CP70', 'Hidrojets BAC200', 'Retornos', 'Retorno agua caliente', 'Aspiración', 'Toma de fondo', 'Skimmer'],
+          equipment: [
+            { title: 'Bomba de filtrado BAE050', copy: 'Circuito principal de skimmer, toma de fondo, toma de aspiración y retorno filtrado.' },
+            { title: 'Filtro principal', copy: 'Ubicado luego de la BAE050 para retener sólidos antes del circuito térmico.' },
+            { title: 'Caldaia CP70', copy: 'Trabaja en bypass entre salida de filtro y manifold de salida. Tiene válvula de entrada, salida y bypass central.' },
+            { title: 'Bomba BAC200', copy: 'Bomba dedicada al circuito de hidrojets con succión propia e impulsión independiente.' },
+          ],
+          flows: [
+            { title: 'Filtración diaria', copy: 'Usar BAE050 en modo filtrado con válvulas de succión abiertas según necesidad. Verificar retorno parejo en piscina.' },
+            { title: 'Calefacción CP70', copy: 'Abrir entrada y salida de caldera. Regular la válvula del bypass para forzar el paso por la CP70 antes del manifold de salida.' },
+            { title: 'Hidrojets BAC200', copy: 'Encender BAC200 sólo cuando la toma de hidrojets esté habilitada y el nivel de agua sea correcto. Es un circuito separado del filtrado.' },
+          ],
+        },
+      };
+
+      document.querySelectorAll('.section').forEach((section) => {
+        const head = section.querySelector('.section-head');
+        const body = section.querySelector('.section-body');
+        const label = section.querySelector('.note');
+        head.addEventListener('click', () => {
+          const expanded = head.getAttribute('aria-expanded') !== 'false';
+          head.setAttribute('aria-expanded', String(!expanded));
+          body.hidden = expanded;
+          label.textContent = expanded ? 'Mostrar' : 'Ocultar';
+        });
+      });
+
+      function formatNumber(value, decimals = 1) {
+        return Number(value).toLocaleString('es-AR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+      }
+
+      function saveState() {
+        const payload = {
+          projectName: projectNameInput.value,
+          clientName: clientNameInput.value,
+          systemProfile: systemProfileInput.value,
+          volume: volumeInput.value,
+          filtrationPump: filtrationPumpInput.value,
+          filterType: filterTypeInput.value,
+          heaterModel: heaterModelInput.value,
+          targetTemp: targetTempInput.value,
+          ambientTemp: ambientTempInput.value,
+          hasCover: hasCoverInput.value,
+          poolType: poolTypeInput.value,
+          hydroPump: hydroPumpInput.value,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const payload = JSON.parse(raw);
+          projectNameInput.value = payload.projectName || projectNameInput.value;
+          clientNameInput.value = payload.clientName || clientNameInput.value;
+          systemProfileInput.value = payload.systemProfile || systemProfileInput.value;
+          volumeInput.value = payload.volume || volumeInput.value;
+          filtrationPumpInput.value = payload.filtrationPump || filtrationPumpInput.value;
+          filterTypeInput.value = payload.filterType || filterTypeInput.value;
+          heaterModelInput.value = payload.heaterModel || heaterModelInput.value;
+          targetTempInput.value = payload.targetTemp || targetTempInput.value;
+          ambientTempInput.value = payload.ambientTemp || ambientTempInput.value;
+          hasCoverInput.value = payload.hasCover || hasCoverInput.value;
+          poolTypeInput.value = payload.poolType || poolTypeInput.value;
+          hydroPumpInput.value = payload.hydroPump || hydroPumpInput.value;
+        } catch (_error) {}
+      }
+
+      function renderSystemProfile() {
+        const profile = SYSTEM_PROFILES[systemProfileInput.value] || SYSTEM_PROFILES.filtration_basic;
+        document.getElementById('systemProject').textContent = projectNameInput.value || 'Piscina cliente';
+        document.getElementById('systemClient').textContent = clientNameInput.value || 'No definido';
+        document.getElementById('systemProfileLabel').textContent = profile.label;
+        document.getElementById('systemBadges').innerHTML = profile.circuits.map((item) => `<span class="badge">${item}</span>`).join('');
+
+        const equipmentItems = [
+          ...profile.equipment,
+          { title: 'Filtro configurado', copy: `${filterTypeInput.value} · bomba filtrado ${filtrationPumpInput.value || 'sin definir'}` },
+        ];
+        if ((heaterModelInput.value || '').trim()) {
+          equipmentItems.push({ title: 'Modelo térmico', copy: heaterModelInput.value.trim() });
+        }
+        if ((hydroPumpInput.value || '').trim() && (systemProfileInput.value === 'filtration_hydro_heater' || systemProfileInput.value === 'vanesa')) {
+          equipmentItems.push({ title: 'Bomba de hidrojets', copy: hydroPumpInput.value.trim() });
+        }
+        document.getElementById('equipmentCards').innerHTML = equipmentItems.map((item) => `
+          <div class="plain-item">
+            <strong>${item.title}</strong>
+            ${item.copy}
+          </div>
+        `).join('');
+
+        document.getElementById('operationFlows').innerHTML = profile.flows.map((item) => `
+          <div class="plain-item">
+            <strong>${item.title}</strong>
+            ${item.copy}
+          </div>
+        `).join('');
+      }
+
+      function getWaterLog() {
+        try {
+          return JSON.parse(localStorage.getItem(WATER_LOG_KEY) || '[]');
+        } catch (_error) {
+          return [];
+        }
+      }
+
+      function renderWaterLog() {
+        const items = getWaterLog();
+        const target = document.getElementById('waterLogList');
+        if (!items.length) {
+          target.innerHTML = '<div class="plain-item"><strong>Sin mediciones guardadas</strong>Guardá lecturas de pH y cloro para tener historial en este dispositivo.</div>';
+          return;
+        }
+        target.innerHTML = items.map((item) => `
+          <div class="log-item">
+            <strong>${item.date}</strong>
+            pH ${item.ph} · Cloro libre ${item.chlorine} ppm
+          </div>
+        `).join('');
+      }
+
+      function calculateHeating(volume, targetTemp, ambientTemp, isIndoor, hasCover) {
+        const volumeLiters = volume * 1000;
+        const tempDiff = Math.max(0, targetTemp - ambientTemp);
+        let lossFactor = 1.0;
+        if (isIndoor) lossFactor = 0.5;
+        else if (hasCover) lossFactor = 0.7;
+        const totalKcal = volumeLiters * tempDiff * lossFactor * (isIndoor ? 1.1 : 1.3);
+        const btuRequired = totalKcal * 3.96832;
+        const kwRequired = totalKcal * 0.001163;
+        return {
+          btuRequired,
+          kwRequired,
+          time: {
+            gas: btuRequired / 50000,
+            electric: kwRequired / 15,
+            heatPump: kwRequired / 12,
+            solar: (kwRequired / 8) * 1.5,
+          },
+        };
+      }
+
+      function calculateFilter(volume) {
+        const circulationTime = 8;
+        const requiredFlowRate = (volume / circulationTime) * 1.2;
+        let filter = 'Filtro de arena 18"';
+        let sand = 50;
+        let gravel = 25;
+        let pumpHp = 0.5;
+        if (requiredFlowRate > 10 && requiredFlowRate <= 15) {
+          filter = 'Filtro de arena 21"'; sand = 80; gravel = 40; pumpHp = 0.75;
+        } else if (requiredFlowRate > 15 && requiredFlowRate <= 20) {
+          filter = 'Filtro de arena 24"'; sand = 120; gravel = 60; pumpHp = 1.0;
+        } else if (requiredFlowRate > 20 && requiredFlowRate <= 30) {
+          filter = 'Filtro de arena 28"'; sand = 180; gravel = 90; pumpHp = 1.5;
+        } else if (requiredFlowRate > 30) {
+          filter = 'Filtro de arena 32"'; sand = 250; gravel = 125; pumpHp = 2.0;
+        }
+        return { requiredFlowRate, filter, sand, gravel, pumpHp, circulationTime };
+      }
+
+      function renderChecklist() {
+        const container = document.getElementById('weeklyChecklist');
+        const items = [
+          'Medir pH y cloro 2 o 3 veces por semana',
+          'Limpiar skimmers y prefiltro de bomba',
+          'Controlar nivel de agua',
+          'Verificar presión del filtro',
+          'Agregar alguicida',
+          'Observar claridad general del agua'
+        ];
+        const saved = JSON.parse(localStorage.getItem('systems_weekly') || '[]');
+        container.innerHTML = '';
+        items.forEach((item, index) => {
+          const row = document.createElement('label');
+          row.className = 'check';
+          row.innerHTML = `<input type="checkbox" ${saved[index] ? 'checked' : ''}><span>${item}</span>`;
+          row.querySelector('input').addEventListener('change', (event) => {
+            const next = JSON.parse(localStorage.getItem('systems_weekly') || '[]');
+            next[index] = event.target.checked;
+            localStorage.setItem('systems_weekly', JSON.stringify(next));
+          });
+          container.appendChild(row);
+        });
+      }
+
+      function renderWaterAnalysis() {
+        const ph = parseFloat(currentPhInput.value);
+        const chlorine = parseFloat(currentChlorineInput.value);
+        const actions = [];
+        let title = 'Lectura incompleta.';
+        let summary = 'Ingresá ambos valores para ver el estado del agua.';
+        let statusClass = 'status';
+
+        if (!Number.isNaN(ph) && !Number.isNaN(chlorine)) {
+          const phLow = ph < 7.2;
+          const phHigh = ph > 7.6;
+          const chlorineLow = chlorine < 1;
+          const chlorineHigh = chlorine > 3;
+
+          if (!phLow && !phHigh && !chlorineLow && !chlorineHigh) {
+            title = 'Parámetros dentro de rango.';
+            summary = 'El agua está equilibrada para uso normal.';
+            actions.push('Mantener la rutina habitual.');
+            actions.push('Volver a medir según el uso de la piscina.');
+            statusClass = 'status ok';
+          } else {
+            title = 'Hay valores para corregir.';
+            summary = 'Conviene ajustar el agua de manera gradual.';
+            if (phLow) actions.push('El pH está bajo. Subir con pH más.');
+            if (phHigh) actions.push('El pH está alto. Bajar con pH menos.');
+            if (chlorineLow) actions.push('El cloro está bajo. Reforzar desinfección.');
+            if (chlorineHigh) actions.push('El cloro está alto. No agregar más hasta normalizar.');
+            actions.push('Mantener la filtración en marcha.');
+            actions.push('Volver a medir antes de una nueva corrección grande.');
+            statusClass = 'status warn';
+          }
+        }
+
+        waterStatus.className = statusClass;
+        waterStatus.innerHTML = `
+          <div class="status-title">${title}</div>
+          <div class="status-copy">${summary}</div>
+          ${actions.length ? `<ul>${actions.map((item) => `<li>${item}</li>`).join('')}</ul>` : ''}
+        `;
+      }
+
+      function saveWaterLog() {
+        const ph = parseFloat(currentPhInput.value);
+        const chlorine = parseFloat(currentChlorineInput.value);
+        if (Number.isNaN(ph) || Number.isNaN(chlorine)) return;
+        const next = getWaterLog();
+        next.unshift({
+          ph: formatNumber(ph),
+          chlorine: formatNumber(chlorine),
+          date: new Date().toLocaleString('es-AR'),
+        });
+        localStorage.setItem(WATER_LOG_KEY, JSON.stringify(next.slice(0, 12)));
+        renderWaterLog();
+      }
+
+      function update() {
+        const volume = parseFloat(volumeInput.value || '0') || 0;
+        const targetTemp = parseFloat(targetTempInput.value || '28') || 28;
+        const ambientTemp = parseFloat(ambientTempInput.value || '15') || 15;
+        const filterType = filterTypeInput.value;
+        const hasCover = hasCoverInput.value === 'yes';
+        const isIndoor = poolTypeInput.value === 'indoor';
+
+        document.getElementById('summaryVolume').textContent = `${formatNumber(volume)} m³`;
+
+        const heating = calculateHeating(volume, targetTemp, ambientTemp, isIndoor, hasCover);
+        document.getElementById('heatingBtu').textContent = `${formatNumber(heating.btuRequired / 1000, 0)}k`;
+        document.getElementById('heatingKw').textContent = `${formatNumber(heating.kwRequired)} kW`;
+
+        let text = 'Para una piscina mediana, la bomba de calor suele ser la opción más equilibrada.';
+        if (volume < 30) text = 'Para una piscina chica, un calentador eléctrico o una bomba de calor compacta suelen alcanzar.';
+        if (volume >= 60) text = 'Para una piscina grande, conviene evaluar caldera a gas o sistema solar con respaldo.';
+        text += hasCover ? ' Con cobertor se conserva mucho mejor el calor.' : ' Sin cobertor, la pérdida de calor es mayor.';
+
+        document.getElementById('heatingRecommendation').innerHTML = `
+          <div class="status-title">Recomendación</div>
+          <div class="status-copy">${text}</div>
+        `;
+
+        document.getElementById('heatingCards').innerHTML = `
+          <div class="plain-item"><strong>Caldera a gas</strong>Tiempo estimado: ${formatNumber(heating.time.gas)} h</div>
+          <div class="plain-item"><strong>Calentador eléctrico</strong>Tiempo estimado: ${formatNumber(heating.time.electric)} h</div>
+          <div class="plain-item"><strong>Bomba de calor</strong>Tiempo estimado: ${formatNumber(heating.time.heatPump)} h</div>
+          <div class="plain-item"><strong>Sistema solar</strong>Tiempo estimado: ${formatNumber(heating.time.solar)} h</div>
+        `;
+
+        const filter = calculateFilter(volume);
+        document.getElementById('summaryFlow').textContent = `${formatNumber(filter.requiredFlowRate)} m³/h`;
+        document.getElementById('summaryHours').textContent = `${filter.circulationTime} h / día`;
+        document.getElementById('filterFlow').textContent = `${formatNumber(filter.requiredFlowRate)} m³/h`;
+        document.getElementById('filterName').textContent = `${filter.filter} · ${filterType}`;
+        document.getElementById('filterPump').textContent = `${formatNumber(filter.pumpHp, 2)} HP`;
+        document.getElementById('filterSand').textContent = `${formatNumber(filter.sand, 0)} kg`;
+        document.getElementById('filterGravel').textContent = `${formatNumber(filter.gravel, 0)} kg`;
+        document.getElementById('filterTime').textContent = `${filter.circulationTime} h / día`;
+        renderSystemProfile();
+        saveState();
+      }
+
+      [projectNameInput, clientNameInput, systemProfileInput, volumeInput, filtrationPumpInput, filterTypeInput, heaterModelInput, targetTempInput, ambientTempInput, hasCoverInput, poolTypeInput, hydroPumpInput].forEach((field) => {
+        field.addEventListener('input', update);
+        field.addEventListener('change', update);
+      });
+
+      printBtn.addEventListener('click', () => window.print());
+      resetBtn.addEventListener('click', () => {
+        localStorage.removeItem('systems_weekly');
+        renderChecklist();
+      });
+      analyzeWaterBtn.addEventListener('click', renderWaterAnalysis);
+      clearWaterBtn.addEventListener('click', () => {
+        currentPhInput.value = '';
+        currentChlorineInput.value = '';
+        renderWaterAnalysis();
+      });
+      saveWaterLogBtn.addEventListener('click', saveWaterLog);
+
+      loadState();
+      renderChecklist();
+      renderWaterAnalysis();
+      renderWaterLog();
+      update();
+    </script>
+  </body>
+</html>

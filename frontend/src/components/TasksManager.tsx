@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Project } from '@/types';
-import { Plus, Edit, Trash2, Clock, DollarSign, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, DollarSign, Users, ChevronDown, ChevronUp, AlertTriangle, Lock, Unlock, EyeOff, Eye } from 'lucide-react';
 import api from '@/services/api';
 
 interface ProfessionRole {
@@ -35,14 +35,81 @@ interface TaskDetail {
 interface TasksManagerProps {
   project: Project;
   onSave: (tasks: Record<string, TaskDetail[]>) => Promise<void>;
+  onUpdateProjectSettings: (exportSettings: Record<string, unknown>) => Promise<void>;
 }
 
-export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) => {
+const DEFAULT_BUDGET_LIMIT = 5_000_000;
+const LABOR_BUDGET_STORAGE_KEY = 'poolcalc:labor-budget-limit';
+const LABOR_BUDGET_HIDDEN_STORAGE_KEY = 'poolcalc:labor-budget-hidden';
+
+const normalizeTaskValue = (value?: string | number | null) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const buildTaskFingerprint = (category: string, task: TaskDetail) =>
+  [
+    category,
+    normalizeTaskValue(task.name),
+    normalizeTaskValue(task.description),
+    normalizeTaskValue(task.assignedRoleId || task.assignedRole),
+    Number(task.estimatedHours || 0).toFixed(2),
+    Number(task.quantity || 0).toFixed(2),
+    normalizeTaskValue(task.unit),
+    normalizeTaskValue(task.bocaType),
+    Number(task.laborCost || 0).toFixed(2),
+  ].join('|');
+
+const analyzeTasks = (tasks: Record<string, TaskDetail[]>) => {
+  const seenFingerprints = new Set<string>();
+  const cleanedTasks: Record<string, TaskDetail[]> = {};
+  let rawLaborCost = 0;
+  let cleanLaborCost = 0;
+  let duplicateLaborCost = 0;
+  let duplicateCount = 0;
+
+  Object.entries(tasks || {}).forEach(([category, categoryTasks]) => {
+    const safeTasks = Array.isArray(categoryTasks) ? categoryTasks : [];
+    cleanedTasks[category] = [];
+
+    safeTasks.forEach((task) => {
+      rawLaborCost += task.laborCost || 0;
+      const fingerprint = buildTaskFingerprint(category, task);
+
+      if (seenFingerprints.has(fingerprint)) {
+        duplicateCount += 1;
+        duplicateLaborCost += task.laborCost || 0;
+        return;
+      }
+
+      seenFingerprints.add(fingerprint);
+      cleanedTasks[category].push(task);
+      cleanLaborCost += task.laborCost || 0;
+    });
+  });
+
+  return {
+    cleanedTasks,
+    rawLaborCost,
+    cleanLaborCost,
+    duplicateLaborCost,
+    duplicateCount,
+  };
+};
+
+export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onUpdateProjectSettings }) => {
   const [tasks, setTasks] = useState<Record<string, TaskDetail[]>>({});
   const [roles, setRoles] = useState<ProfessionRole[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskDetail | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('excavation');
+  const [budgetWidgetCollapsed, setBudgetWidgetCollapsed] = useState(false);
+  const [budgetLimit, setBudgetLimit] = useState(DEFAULT_BUDGET_LIMIT);
+  const [budgetWidgetHidden, setBudgetWidgetHidden] = useState(false);
+  const [taskAutomationLocked, setTaskAutomationLocked] = useState(Boolean(project.exportSettings?.taskAutomationLocked));
+  const [savingAutomationSetting, setSavingAutomationSetting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -60,8 +127,21 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     if (project.tasks && typeof project.tasks === 'object') {
       setTasks(project.tasks as Record<string, TaskDetail[]>);
     }
+    setTaskAutomationLocked(Boolean(project.exportSettings?.taskAutomationLocked));
     loadRoles();
   }, [project]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storedLimit = window.localStorage.getItem(LABOR_BUDGET_STORAGE_KEY);
+    const parsedLimit = storedLimit ? Number(storedLimit) : DEFAULT_BUDGET_LIMIT;
+    if (Number.isFinite(parsedLimit) && parsedLimit > 0) {
+      setBudgetLimit(parsedLimit);
+    }
+
+    setBudgetWidgetHidden(window.localStorage.getItem(LABOR_BUDGET_HIDDEN_STORAGE_KEY) === '1');
+  }, []);
 
   const calculateLaborCost = (
     role: ProfessionRole | undefined,
@@ -104,6 +184,7 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     { id: 'floor', label: 'Solado y Cama' },
     { id: 'tiles', label: 'Colocación de Losetas' },
     { id: 'finishes', label: 'Terminaciones' },
+    { id: 'additionals', label: 'Adicionales' },
     { id: 'other', label: 'Otras Tareas' },
   ];
 
@@ -151,6 +232,13 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     setTasks(updatedTasks);
 
     try {
+      if (!taskAutomationLocked) {
+        await onUpdateProjectSettings({
+          ...(project.exportSettings || {}),
+          taskAutomationLocked: true,
+        });
+        setTaskAutomationLocked(true);
+      }
       await onSave(updatedTasks);
     } catch (error) {
       console.error('Error al guardar tareas:', error);
@@ -269,6 +357,13 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
     setShowModal(false);
 
     try {
+      if (!taskAutomationLocked) {
+        await onUpdateProjectSettings({
+          ...(project.exportSettings || {}),
+          taskAutomationLocked: true,
+        });
+        setTaskAutomationLocked(true);
+      }
       await onSave(updatedTasks);
     } catch (error) {
       console.error('Error al guardar tareas:', error);
@@ -301,16 +396,184 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave }) =
 
   const selectedRole = roles.find(r => r.id === formData.assignedRoleId);
   const selectedBillingType = selectedRole?.billingType || 'HOUR';
+  const { cleanedTasks, rawLaborCost, cleanLaborCost, duplicateLaborCost, duplicateCount } = analyzeTasks(tasks);
+  const remainingBudget = budgetLimit - cleanLaborCost;
+  const isOverBudget = remainingBudget < 0;
+
+  const persistBudgetLimit = (nextValue: number) => {
+    setBudgetLimit(nextValue);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LABOR_BUDGET_STORAGE_KEY, String(nextValue));
+    }
+  };
+
+  const handleBudgetLimitChange = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return;
+    persistBudgetLimit(value);
+  };
+
+  const handleBudgetWidgetVisibility = (hidden: boolean) => {
+    setBudgetWidgetHidden(hidden);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LABOR_BUDGET_HIDDEN_STORAGE_KEY, hidden ? '1' : '0');
+    }
+  };
+
+  const handleAutomationToggle = async () => {
+    const nextLocked = !taskAutomationLocked;
+    if (!nextLocked) {
+      const confirmed = confirm('Si activás el recálculo automático, futuros cambios en hidráulica, eléctrica o adicionales podrán volver a ajustar tareas y mano de obra. ¿Continuar?');
+      if (!confirmed) return;
+    }
+    setSavingAutomationSetting(true);
+    try {
+      await onUpdateProjectSettings({
+        ...(project.exportSettings || {}),
+        taskAutomationLocked: nextLocked,
+      });
+      setTaskAutomationLocked(nextLocked);
+    } catch (error) {
+      console.error('Error al actualizar bloqueo de recálculo:', error);
+      alert('No se pudo actualizar el bloqueo de recálculo automático');
+    } finally {
+      setSavingAutomationSetting(false);
+    }
+  };
+
+  const handleRemoveDuplicates = async () => {
+    if (duplicateCount === 0) return;
+
+    const confirmed = confirm(`Se eliminarán ${duplicateCount} tarea(s) duplicada(s) exacta(s) de la lista. ¿Continuar?`);
+    if (!confirmed) return;
+
+    const previousTasks = tasks;
+    setTasks(cleanedTasks);
+
+    try {
+      if (!taskAutomationLocked) {
+        await onUpdateProjectSettings({
+          ...(project.exportSettings || {}),
+          taskAutomationLocked: true,
+        });
+        setTaskAutomationLocked(true);
+      }
+      await onSave(cleanedTasks);
+    } catch (error) {
+      console.error('Error al limpiar tareas duplicadas:', error);
+      setTasks(previousTasks);
+      alert('No se pudieron limpiar las tareas duplicadas');
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6 pb-28">
+      {!budgetWidgetHidden && (
+        <div className="fixed bottom-6 right-6 z-40 w-[min(92vw,22rem)]">
+          <div className="overflow-hidden rounded-2xl border border-cyan-300/30 bg-zinc-950/92 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setBudgetWidgetCollapsed((current) => !current)}
+                className="flex flex-1 items-center justify-between text-left"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/75">Mano de Obra</p>
+                  <p className="text-lg font-semibold text-white">${cleanLaborCost.toLocaleString('es-AR')}</p>
+                </div>
+                {budgetWidgetCollapsed ? <ChevronUp size={18} className="text-zinc-300" /> : <ChevronDown size={18} className="text-zinc-300" />}
+              </button>
+              {duplicateCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
+                  <AlertTriangle size={12} />
+                  {duplicateCount} dup.
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => handleBudgetWidgetVisibility(true)}
+                className="rounded-full border border-white/10 p-1 text-zinc-400 transition hover:border-white/20 hover:text-white"
+                title="Ocultar atajo"
+              >
+                <EyeOff size={14} />
+              </button>
+            </div>
+
+            {!budgetWidgetCollapsed && (
+              <div className="border-t border-white/10 px-4 pb-4 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-zinc-400">Tope</p>
+                    <Input
+                      type="number"
+                      value={budgetLimit}
+                      onChange={(e) => handleBudgetLimitChange(Number(e.target.value))}
+                      min={0}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className={`rounded-xl border p-3 ${isOverBudget ? 'border-red-400/30 bg-red-500/10' : 'border-emerald-400/30 bg-emerald-500/10'}`}>
+                    <p className={`text-xs ${isOverBudget ? 'text-red-200/80' : 'text-emerald-200/80'}`}>
+                      {isOverBudget ? 'Exceso' : 'Disponible'}
+                    </p>
+                    <p className={`mt-1 text-base font-semibold ${isOverBudget ? 'text-red-100' : 'text-emerald-100'}`}>
+                      ${Math.abs(remainingBudget).toLocaleString('es-AR')}
+                    </p>
+                  </div>
+                </div>
+
+                {duplicateCount > 0 && (
+                  <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-400/10 p-3">
+                    <p className="text-sm font-medium text-amber-100">
+                      Hay {duplicateCount} tarea(s) duplicada(s) exacta(s) por ${duplicateLaborCost.toLocaleString('es-AR')}.
+                    </p>
+                    <p className="mt-1 text-xs text-amber-100/80">
+                      Total cargado: ${rawLaborCost.toLocaleString('es-AR')} · Total limpio: ${cleanLaborCost.toLocaleString('es-AR')}
+                    </p>
+                    <Button size="sm" variant="secondary" className="mt-3 w-full" onClick={handleRemoveDuplicates}>
+                      Limpiar duplicadas
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Gestión de Tareas del Proyecto</h3>
-        <Button onClick={handleAddTask}>
-          <Plus size={20} className="mr-2" />
-          Nueva Tarea
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={() => handleBudgetWidgetVisibility(!budgetWidgetHidden)}>
+            {budgetWidgetHidden ? <Eye size={18} className="mr-2" /> : <EyeOff size={18} className="mr-2" />}
+            {budgetWidgetHidden ? 'Mostrar atajo' : 'Ocultar atajo'}
+          </Button>
+          {duplicateCount > 0 && (
+            <Button variant="outline" onClick={handleRemoveDuplicates}>
+              <AlertTriangle size={18} className="mr-2" />
+              Limpiar duplicadas
+            </Button>
+          )}
+          <Button onClick={handleAddTask}>
+            <Plus size={20} className="mr-2" />
+            Nueva Tarea
+          </Button>
+        </div>
       </div>
+
+      <Card>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">Recálculo automático de tareas y mano de obra</p>
+            <p className="mt-1 text-sm text-zinc-300">
+              Al editar tareas manualmente, este proyecto queda bloqueado para que roles, horas y precios no se vuelvan a mover solos.
+            </p>
+          </div>
+          <Button variant={taskAutomationLocked ? 'secondary' : 'outline'} onClick={handleAutomationToggle} disabled={savingAutomationSetting}>
+            {taskAutomationLocked ? <Lock size={18} className="mr-2" /> : <Unlock size={18} className="mr-2" />}
+            {taskAutomationLocked ? 'Automático bloqueado' : 'Automático activo'}
+          </Button>
+        </div>
+      </Card>
 
       {categories.map(category => {
         const categoryTasks = tasks[category.id] || [];

@@ -94,7 +94,7 @@ dotenv.config();
 console.log('[INIT] Variables de entorno cargadas');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Configurar CORS para permitir acceso desde ngrok y localhost
 app.use(cors({
@@ -160,7 +160,33 @@ const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 const frontendIndexPath = path.join(frontendDistPath, 'index.html');
 
 if (fs.existsSync(frontendIndexPath)) {
-  app.use(express.static(frontendDistPath));
+  app.use(express.static(frontendDistPath, {
+    etag: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('service-worker.js') || filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return;
+      }
+
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+      }
+
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  }));
+
+  app.get('/service-worker.js', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res.sendFile(path.join(frontendDistPath, 'service-worker.js'));
+  });
+
+  app.get('/manifest.json', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    return res.sendFile(path.join(frontendDistPath, 'manifest.json'));
+  });
+
   app.get('*', (req, res, next) => {
     if (
       req.path.startsWith('/api') ||
@@ -170,6 +196,7 @@ if (fs.existsSync(frontendIndexPath)) {
       return next();
     }
 
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res.sendFile(frontendIndexPath);
   });
   console.log(`[INIT] Frontend servido desde ${frontendDistPath}`);

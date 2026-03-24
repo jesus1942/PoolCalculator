@@ -2,8 +2,10 @@ import { PoolPreset } from '@prisma/client';
 
 interface BedCalculationSettings {
   bedThicknessCm: number;
+  bedCementKgPerM3?: number;
   bedCementBagsPerM3: number;
   bedCementBagWeight: number;
+  bedSandM3PerCementBag: number;
   drainTrenchWidthCm: number;
   drainTrenchDepthCm: number;
   geomembraneM2PerM2: number;
@@ -25,6 +27,8 @@ export function calculateBedMaterials(
 ) {
   const poolArea = poolPreset.length * poolPreset.width;
   const poolPerimeter = 2 * (poolPreset.length + poolPreset.width);
+  const deepestDepth = Math.max(poolPreset.depth, poolPreset.depthEnd || 0);
+  const fillThicknessM = (settings.bedThicknessCm || 20) / 100;
 
   // 1. Geomembrana - área del piso de la piscina
   const geomembrane = poolArea * settings.geomembraneM2PerM2;
@@ -32,18 +36,29 @@ export function calculateBedMaterials(
   // 2. Malla electrosoldada - área del piso + 15% solapamiento
   const electroweldedMesh = poolArea * settings.electroweldedMeshM2PerM2;
 
-  // 3. Volumen de cama arena-cemento (10cm de espesor)
-  const bedVolume = (poolArea * settings.bedThicknessCm) / 100; // m³
+  // 3. Relleno con arena terciada:
+  //    separación uniforme lateral y de fondo, usando la profundidad más profunda como referencia.
+  const excavationLength = poolPreset.length + (fillThicknessM * 2);
+  const excavationWidth = poolPreset.width + (fillThicknessM * 2);
+  const excavationDepth = deepestDepth + fillThicknessM;
+  const sandForBed = (excavationLength * excavationWidth * excavationDepth) - (poolPreset.length * poolPreset.width * deepestDepth);
+  const roundedSandForBed = parseFloat(sandForBed.toFixed(2));
 
-  // 4. Arena para la cama
-  const sandForBed = bedVolume; // m³
+  const sandBolsOnes = Math.ceil(roundedSandForBed);
 
-  // 5. Cemento para la cama (5 bolsas por m³)
-  // Obtener el peso de bolsa desde la BD o usar el valor de settings como fallback
+  // 4. Cemento seco para la cama/relleno: el modelo vigente es kg de cemento por m³.
+  //    Los campos viejos quedan solo como compatibilidad para migrar settings existentes.
   const cementMaterial = materialPrices.find(m => m.type === 'CEMENT');
-  const bagWeight = cementMaterial?.bagWeight || settings.bedCementBagWeight;
-  const cementBags = bedVolume * settings.bedCementBagsPerM3;
-  const cementKg = cementBags * bagWeight;
+  const bagWeight = settings.bedCementBagWeight || cementMaterial?.bagWeight || 25;
+  const fallbackKgPerM3 =
+    settings.bedSandM3PerCementBag && settings.bedSandM3PerCementBag > 0
+      ? bagWeight / settings.bedSandM3PerCementBag
+      : (settings.bedCementBagsPerM3 || 0) > 0
+        ? bagWeight * settings.bedCementBagsPerM3
+        : 12.5;
+  const cementKgPerM3 = settings.bedCementKgPerM3 || fallbackKgPerM3;
+  const cementKg = roundedSandForBed * cementKgPerM3;
+  const cementBags = Math.ceil(cementKg / bagWeight);
 
   // 6. Cuneta perimetral (15x15cm alrededor del perímetro)
   const trenchVolume = (poolPerimeter * settings.drainTrenchWidthCm * settings.drainTrenchDepthCm) / 1000000; // convertir cm³ a m³
@@ -60,8 +75,7 @@ export function calculateBedMaterials(
   // Calcular costos
   const geomembraneCost = Math.ceil(geomembrane) * findPrice('GEOMEMBRANE', 'm²');
   const electroweldedMeshCost = Math.ceil(electroweldedMesh) * findPrice('ELECTROWELDED_MESH', 'm²');
-  const sandForBedCost = parseFloat(sandForBed.toFixed(2)) * findPrice('SAND', 'm³');
-  // CORREGIDO: Calcular costo por BOLSAS, no por kg
+  const sandForBedCost = roundedSandForBed * findPrice('SAND', 'm³');
   const cementCost = Math.ceil(cementBags) * findPrice('CEMENT', 'bolsa');
   const drainStoneCost = parseFloat(drainStone.toFixed(2)) * findPrice('STONE', 'm³');
 
@@ -70,13 +84,17 @@ export function calculateBedMaterials(
 
   return {
     poolArea,
+    deepestDepth,
     bedMaterials: {
       geomembrane: { quantity: Math.ceil(geomembrane), unit: 'm²', cost: geomembraneCost },
       electroweldedMesh: { quantity: Math.ceil(electroweldedMesh), unit: 'm²', cost: electroweldedMeshCost },
-      sandForBed: { quantity: sandForBed.toFixed(2), unit: 'm³', cost: sandForBedCost },
+      sandForBed: { quantity: roundedSandForBed.toFixed(2), unit: 'm³', cost: sandForBedCost },
+      sandForBedBulkBags: { quantity: sandBolsOnes, unit: 'bolsones de 1m³', cost: sandForBedCost },
       cementBags: { quantity: Math.ceil(cementBags), unit: `bolsas de ${bagWeight}kg`, cost: cementCost },
       cementKg: { quantity: Math.ceil(cementKg), unit: 'kg', cost: cementCost }, // mismo costo, solo para referencia en kg
       drainStone: { quantity: drainStone.toFixed(2), unit: 'm³', cost: drainStoneCost },
+      fillReference: { quantity: deepestDepth.toFixed(2), unit: 'm', cost: 0 },
+      fillThickness: { quantity: settings.bedThicknessCm || 20, unit: 'cm', cost: 0 },
     },
     totalBedMaterialCost,
   };

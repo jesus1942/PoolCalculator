@@ -203,7 +203,7 @@ export const CatalogManager: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Gestor de Catálogos</h1>
-          <p className="text-zinc-400">
+          <p className="text-zinc-300">
             Importa catálogos de piscinas desde URLs o contenido manual
           </p>
         </div>
@@ -215,7 +215,7 @@ export const CatalogManager: React.FC = () => {
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'scrape'
                 ? 'bg-blue-500/20 border border-blue-500/50 text-blue-300'
-                : 'bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10'
+                : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
             <Globe className="w-5 h-5" />
@@ -226,7 +226,7 @@ export const CatalogManager: React.FC = () => {
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'manual'
                 ? 'bg-purple-500/20 border border-purple-500/50 text-purple-300'
-                : 'bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10'
+                : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
             <FileText className="w-5 h-5" />
@@ -237,7 +237,7 @@ export const CatalogManager: React.FC = () => {
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
               activeTab === 'jobs'
                 ? 'bg-green-500/20 border border-green-500/50 text-green-300'
-                : 'bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10'
+                : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
             <Database className="w-5 h-5" />
@@ -247,7 +247,7 @@ export const CatalogManager: React.FC = () => {
 
         {/* Scraping desde URL */}
         {activeTab === 'scrape' && (
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-6">
               <Globe className="w-6 h-6 text-blue-400" />
               <h2 className="text-2xl font-bold text-white">Scraping Automático</h2>
@@ -263,7 +263,7 @@ export const CatalogManager: React.FC = () => {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://ejemplo.com/catalogo-piscinas"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                 />
               </div>
 
@@ -276,7 +276,7 @@ export const CatalogManager: React.FC = () => {
                   value={vendorName}
                   onChange={(e) => setVendorName(e.target.value)}
                   placeholder="ACQUAM, IGUI, MAYTRONICS, etc."
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                 />
               </div>
 
@@ -318,7 +318,7 @@ export const CatalogManager: React.FC = () => {
 
         {/* Contenido Manual */}
         {activeTab === 'manual' && (
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-6">
               <FileText className="w-6 h-6 text-purple-400" />
               <h2 className="text-2xl font-bold text-white">Parseo Manual</h2>
@@ -334,7 +334,7 @@ export const CatalogManager: React.FC = () => {
                   value={vendorName}
                   onChange={(e) => setVendorName(e.target.value)}
                   placeholder="ACQUAM, IGUI, etc."
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
                 />
               </div>
 
@@ -349,7 +349,7 @@ export const CatalogManager: React.FC = () => {
                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
                         contentType === 'html'
                           ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
-                          : 'bg-white/5 text-zinc-400 border border-white/10'
+                          : 'bg-white/10 text-zinc-300 border border-white/20'
                       }`}
                     >
                       <Code className="w-4 h-4 inline mr-1" />
@@ -360,7 +360,7 @@ export const CatalogManager: React.FC = () => {
                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
                         contentType === 'text'
                           ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
-                          : 'bg-white/5 text-zinc-400 border border-white/10'
+                          : 'bg-white/10 text-zinc-300 border border-white/20'
                       }`}
                     >
                       <FileText className="w-4 h-4 inline mr-1" />
@@ -373,7 +373,7 @@ export const CatalogManager: React.FC = () => {
                   onChange={(e) => setManualContent(e.target.value)}
                   placeholder={contentType === 'html' ? 'Pega aquí el código HTML...' : 'Pega aquí el contenido de texto...'}
                   rows={12}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all font-mono text-sm"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all font-mono text-sm"
                 />
               </div>
 
@@ -424,10 +424,10 @@ export const CatalogManager: React.FC = () => {
                     {parsedPools.map((pool, index) => (
                       <div
                         key={index}
-                        className="bg-white/5 border border-white/10 rounded-lg p-3"
+                        className="bg-white/10 border border-white/20 rounded-lg p-3"
                       >
                         <p className="font-medium text-white text-sm mb-1">{pool.name}</p>
-                        <p className="text-zinc-400 text-xs">
+                        <p className="text-zinc-300 text-xs">
                           {pool.length}m × {pool.width}m × {pool.depth}m
                         </p>
                         {pool.shape && (
@@ -446,7 +446,7 @@ export const CatalogManager: React.FC = () => {
 
         {/* Lista de Trabajos */}
         {activeTab === 'jobs' && (
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Database className="w-6 h-6 text-green-400" />
@@ -454,7 +454,7 @@ export const CatalogManager: React.FC = () => {
               </div>
               <button
                 onClick={loadJobs}
-                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-zinc-300 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/10 border border-white/20 rounded-lg text-zinc-300 transition-all"
               >
                 <RefreshCw className="w-4 h-4" />
                 Actualizar
@@ -464,17 +464,17 @@ export const CatalogManager: React.FC = () => {
             {jobs.length === 0 ? (
               <div className="text-center py-12">
                 <Database className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
-                <p className="text-zinc-400">No hay trabajos de scraping registrados</p>
+                <p className="text-zinc-300">No hay trabajos de scraping registrados</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {jobs.map((job) => (
                   <div
                     key={job.jobId}
-                    className={`bg-white/5 border rounded-lg p-4 transition-all ${
+                    className={`bg-white/10 border rounded-lg p-4 transition-all ${
                       job.jobId === currentJob
                         ? 'border-blue-500/50 ring-2 ring-blue-500/20'
-                        : 'border-white/10'
+                        : 'border-white/20'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -496,8 +496,8 @@ export const CatalogManager: React.FC = () => {
                             {job.status}
                           </span>
                         </div>
-                        <p className="text-zinc-400 text-sm mb-1 truncate">{job.url}</p>
-                        <div className="flex items-center gap-4 text-xs text-zinc-500">
+                        <p className="text-zinc-300 text-sm mb-1 truncate">{job.url}</p>
+                        <div className="flex items-center gap-4 text-xs text-zinc-300">
                           <span>Iniciado: {new Date(job.startedAt).toLocaleString('es-AR')}</span>
                           {job.completedAt && (
                             <span>Completado: {new Date(job.completedAt).toLocaleString('es-AR')}</span>
@@ -510,14 +510,14 @@ export const CatalogManager: React.FC = () => {
                       {job.status === 'completed' && (
                         <div className="text-right">
                           <div className="text-2xl font-bold text-green-400">{job.poolsFound}</div>
-                          <div className="text-xs text-zinc-500">modelos</div>
+                          <div className="text-xs text-zinc-300">modelos</div>
                         </div>
                       )}
                     </div>
 
                     {/* Mostrar modelos encontrados y botones de guardado */}
                     {job.status === 'completed' && job.pools && job.pools.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-white/10">
+                      <div className="mt-4 pt-4 border-t border-white/20">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-medium text-zinc-300">
                             {job.pools.length} Modelos Encontrados
@@ -543,10 +543,10 @@ export const CatalogManager: React.FC = () => {
                           {job.pools.slice(0, 10).map((pool, index) => (
                             <div
                               key={index}
-                              className="bg-white/5 border border-white/10 rounded p-2"
+                              className="bg-white/10 border border-white/20 rounded p-2"
                             >
                               <p className="font-medium text-white text-xs mb-0.5 truncate">{pool.name}</p>
-                              <p className="text-zinc-400 text-xs">
+                              <p className="text-zinc-300 text-xs">
                                 {pool.length}m × {pool.width}m × {pool.depth}m
                               </p>
                               {pool.shape && (
@@ -558,7 +558,7 @@ export const CatalogManager: React.FC = () => {
                           ))}
                         </div>
                         {job.pools.length > 10 && (
-                          <p className="text-xs text-zinc-500 mt-2 text-center">
+                          <p className="text-xs text-zinc-300 mt-2 text-center">
                             ... y {job.pools.length - 10} modelos más
                           </p>
                         )}

@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manual de Usuario - PoolManager</title>
+    <style>
+      :root {
+        --bg: #f3f7fb;
+        --bg-2: #eaf1f8;
+        --ink: #162033;
+        --muted: #58657a;
+        --line: #d7e0ea;
+        --brand: #0d6efd;
+        --brand-2: #0ea5e9;
+        --accent: #0f766e;
+        --warn: #b45309;
+        --danger: #b91c1c;
+        --panel: rgba(255, 255, 255, 0.92);
+        --shadow: 0 18px 50px rgba(24, 42, 68, 0.1);
+        --radius: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Inter, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 30%),
+          radial-gradient(circle at top right, rgba(13, 110, 253, 0.08), transparent 28%),
+          linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        max-width: 1420px;
+        margin: 0 auto;
+        padding: 24px;
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      .side {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: var(--shadow);
+        border-radius: var(--radius);
+        overflow: hidden;
+        backdrop-filter: blur(14px);
+      }
+
+      .side-top {
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.11), rgba(14, 165, 233, 0.08));
+        border-bottom: 1px solid var(--line);
+      }
+
+      .side-top h1 {
+        margin: 0 0 10px;
+        font-size: 1.35rem;
+        line-height: 1.15;
+      }
+
+      .side-top p,
+      .small,
+      .muted,
+      .section p,
+      .section li,
+      td,
+      th {
+        color: var(--muted);
+      }
+
+      .side-body {
+        padding: 18px;
+      }
+
+      .search {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+        font: inherit;
+        background: #fff;
+      }
+
+      .toc {
+        margin-top: 16px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .toc a {
+        text-decoration: none;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: rgba(13, 110, 253, 0.04);
+        transition: 0.18s ease;
+      }
+
+      .toc a:hover,
+      .toc a.active {
+        background: rgba(13, 110, 253, 0.1);
+        border-color: rgba(13, 110, 253, 0.16);
+        color: #0b4fb4;
+      }
+
+      .content {
+        min-width: 0;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #0f2749 0%, #13335e 40%, #0d6efd 100%);
+        color: #fff;
+        border-radius: 34px;
+        padding: 34px;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        width: 360px;
+        height: 360px;
+        right: -110px;
+        bottom: -160px;
+        background: radial-gradient(circle, rgba(255,255,255,0.14), transparent 68%);
+      }
+
+      .hero h2 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 0.95;
+      }
+
+      .hero p {
+        max-width: 920px;
+        line-height: 1.75;
+        color: rgba(255, 255, 255, 0.88);
+      }
+
+      .hero-actions,
+      .chip-row,
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button,
+      button.button {
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 12px 18px;
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.18s ease;
+        font: inherit;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button-primary {
+        background: #fff;
+        color: #12315c;
+      }
+
+      .button-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+
+      .stats {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .stat {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 18px;
+        padding: 14px 16px;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 6px;
+        color: #fff;
+        font-size: 1.08rem;
+      }
+
+      .notice {
+        margin-top: 18px;
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 20px;
+        padding: 16px 18px;
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.9);
+      }
+
+      .sections {
+        display: grid;
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .section {
+        background: var(--panel);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(255,255,255,0.75);
+        overflow: hidden;
+      }
+
+      .section[hidden] {
+        display: none;
+      }
+
+      .section-head {
+        width: 100%;
+        background: none;
+        border: 0;
+        text-align: left;
+        padding: 22px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        color: inherit;
+      }
+
+      .section-head:hover {
+        background: rgba(13, 110, 253, 0.03);
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .badge {
+        flex: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: rgba(13, 110, 253, 0.1);
+        color: var(--brand);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+      }
+
+      .section-title h3 {
+        margin: 0 0 5px;
+        font-size: 1.24rem;
+        color: var(--ink);
+      }
+
+      .section-body {
+        padding: 0 24px 24px;
+      }
+
+      .section-body[hidden] {
+        display: none;
+      }
+
+      .section p {
+        line-height: 1.78;
+      }
+
+      .section ul,
+      .section ol {
+        margin: 14px 0 0;
+        padding-left: 20px;
+      }
+
+      .section li {
+        margin: 0 0 12px;
+        line-height: 1.72;
+      }
+
+      .callout,
+      .grid-card,
+      .table-wrap,
+      .routine {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(13, 110, 253, 0.03);
+      }
+
+      .callout {
+        padding: 16px 18px;
+        margin-top: 16px;
+      }
+
+      .callout strong {
+        color: var(--ink);
+      }
+
+      .grid-two,
+      .grid-three {
+        display: grid;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .grid-two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-card,
+      .routine {
+        padding: 16px;
+      }
+
+      .grid-card h4,
+      .routine h4 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: 1.03rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        margin-top: 16px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        line-height: 1.55;
+      }
+
+      th {
+        color: var(--ink);
+        background: rgba(13, 110, 253, 0.06);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: #fff;
+        color: var(--muted);
+      }
+
+      .mockup,
+      .diagram {
+        margin-top: 16px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(241,247,253,0.95));
+        overflow: hidden;
+      }
+
+      .mockup-header,
+      .diagram-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(13, 110, 253, 0.05);
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .mockup-body,
+      .diagram-body {
+        padding: 16px;
+      }
+
+      .wireframe {
+        display: grid;
+        gap: 12px;
+      }
+
+      .wire-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .box {
+        border: 1px dashed #9cb5d3;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.8);
+        min-height: 58px;
+        padding: 12px;
+        color: var(--ink);
+      }
+
+      .box strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .flow {
+        display: grid;
+        gap: 10px;
+      }
+
+      .flow-step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .flow-index {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        background: rgba(13, 110, 253, 0.12);
+        color: var(--brand);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        flex: none;
+      }
+
+      .flow-card {
+        flex: 1;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+        padding: 10px 12px;
+        color: var(--ink);
+      }
+
+      .ascii {
+        margin: 0;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fff;
+        overflow: auto;
+        color: #24354f;
+        font: 13px/1.45 "Courier New", Consolas, monospace;
+      }
+
+      .footer-box {
+        margin-top: 24px;
+        background: var(--panel);
+        border-radius: 22px;
+        border: 1px solid rgba(255,255,255,0.75);
+        box-shadow: var(--shadow);
+        padding: 22px 24px;
+      }
+
+      .screen-footer {
+        margin-top: 12px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .print-footer {
+        display: none;
+      }
+
+      @media (max-width: 1100px) {
+        .page {
+          grid-template-columns: 1fr;
+        }
+
+        .side {
+          position: static;
+        }
+
+        .stats,
+        .grid-three {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 680px) {
+        .page {
+          padding: 12px;
+        }
+
+        .hero,
+        .section-body,
+        .section-head,
+        .side-top,
+        .side-body,
+        .footer-box {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .stats,
+        .grid-two,
+        .grid-three {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 16mm 12mm 22mm;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        .page {
+          display: block;
+          max-width: none;
+          padding: 0;
+        }
+
+        .side,
+        .hero-actions,
+        .button-row,
+        .screen-footer {
+          display: none !important;
+        }
+
+        .hero,
+        .section,
+        .footer-box {
+          box-shadow: none;
+          border: 1px solid #d0d7df;
+          background: #fff;
+          color: #111827;
+        }
+
+        .section[hidden] {
+          display: block;
+        }
+
+        .section-body[hidden] {
+          display: block;
+        }
+
+        .print-footer {
+          display: block;
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          font-size: 10px;
+          text-align: center;
+          color: #5b6472;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="side">
+        <div class="side-top">
+          <h1>Manual de Usuario</h1>
+          <p>PoolManager para clientes, propietarios y usuarios finales de piscina.</p>
+          <p class="small">Incluye uso del sistema, operación de equipos y mantenimiento correcto.</p>
+        </div>
+        <div class="side-body">
+          <input id="search" class="search" type="search" placeholder="Buscar tema..." />
+          <nav id="toc" class="toc">
+            <a href="#objetivo">Objetivo del manual</a>
+            <a href="#acceso">Acceso al sistema</a>
+            <a href="#navegacion">Pantallas y navegación</a>
+            <a href="#timeline">Timeline del cliente</a>
+            <a href="#operacion">Operación básica de la piscina</a>
+            <a href="#filtracion">Bomba y filtración</a>
+            <a href="#calefaccion">Calefacción</a>
+            <a href="#quimicos">Tratamiento del agua</a>
+            <a href="#rutina">Rutina semanal y mensual</a>
+            <a href="#estacional">Mantenimiento estacional</a>
+            <a href="#seguridad">Seguridad y buenas prácticas</a>
+            <a href="#fallas">Problemas frecuentes</a>
+            <a href="#glosario">Glosario y soporte</a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="hero">
+          <p class="small">Documento para entrega al cliente final</p>
+          <h2>Manual completo de uso del sistema y mantenimiento de piscina</h2>
+          <p>
+            Este manual explica cómo ingresar al sistema, qué información puede consultar el cliente,
+            cómo seguir el avance del proyecto y, sobre todo, cómo operar correctamente los equipos
+            y mantener el agua de la piscina en condiciones seguras y estables.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="http://localhost:5173/client-login" target="_blank" rel="noreferrer">Abrir acceso cliente</a>
+            <button id="expandAll" class="button button-secondary" type="button">Expandir todo</button>
+            <button id="collapseAll" class="button button-secondary" type="button">Colapsar todo</button>
+            <button class="button button-secondary" type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <span class="small">Enfoque</span>
+              <strong>Cliente final</strong>
+            </div>
+            <div class="stat">
+              <span class="small">Cobertura</span>
+              <strong>Sistema + equipos</strong>
+            </div>
+            <div class="stat">
+              <span class="small">Rutinas</span>
+              <strong>Semanal / mensual / estacional</strong>
+            </div>
+            <div class="stat">
+              <span class="small">Entrega</span>
+              <strong>HTML y PDF</strong>
+            </div>
+          </div>
+
+          <div class="notice">
+            El sistema puede mostrar información técnica más amplia para el instalador o administrador.
+            Este manual está redactado para que el cliente comprenda lo que necesita usar, controlar y mantener en su piscina.
+          </div>
+        </section>
+
+        <div class="button-row" style="margin-top: 20px;">
+          <span class="chip">Uso del sistema</span>
+          <span class="chip">Operación de bomba, filtro y calefacción</span>
+          <span class="chip">Parámetros químicos del agua</span>
+          <span class="chip">Mantenimiento preventivo</span>
+          <span class="chip">Seguridad</span>
+        </div>
+
+        <section class="sections" id="sections">
+          <article class="section" id="objetivo" data-keywords="objetivo alcance cliente final manual uso sistema">
+            <button class="section-head" type="button" aria-expanded="true">
+              <span class="section-title">
+                <span class="badge">01</span>
+                <span>
+                  <h3>Objetivo del manual</h3>
+                  <span class="muted">Qué cubre este documento y para quién está pensado</span>
+                </span>
+              </span>
+              <span class="muted">Ocultar</span>
+            </button>
+            <div class="section-body">
+              <p>Este manual fue preparado para el propietario o usuario final de la piscina. Su objetivo es que la persona pueda usar correctamente el sistema de PoolManager, entender el avance de su proyecto cuando se le comparta acceso y, una vez la piscina esté operativa, conservar el agua y los equipos en condiciones correctas.</p>
+              <p>El contenido está escrito en español argentino y busca ser práctico: qué mirar, qué hacer, cuándo hacerlo y qué no conviene hacer. No reemplaza la puesta en marcha técnica hecha por el instalador, pero sí sirve como guía diaria y de mantenimiento preventivo.</p>
+              <div class="callout">
+                <strong>Importante:</strong> ante una falla eléctrica, pérdidas de agua, olor a quemado, vibraciones extrañas, baja fuerte de caudal o dudas sobre manipulación de químicos, se debe detener el equipo y consultar al instalador o servicio técnico.
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="acceso" data-keywords="acceso login cliente usuario contraseña ingreso">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">02</span>
+                <span>
+                  <h3>Acceso al sistema</h3>
+                  <span class="muted">Cómo iniciar sesión y entrar como cliente</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>El cliente accede a través del módulo de ingreso público. Allí debe cargar el usuario y la contraseña entregados por el constructor o administrador del proyecto.</p>
+              <ol>
+                <li>Abrir el enlace de acceso al cliente.</li>
+                <li>Ingresar usuario.</li>
+                <li>Ingresar contraseña.</li>
+                <li>Presionar <strong>Ingresar</strong>.</li>
+                <li>El sistema valida las credenciales y redirige al timeline del proyecto.</li>
+              </ol>
+              <div class="grid-two">
+                <div class="grid-card">
+                  <h4>Qué pasa si la clave es incorrecta</h4>
+                  <p>El sistema informa que el usuario o la contraseña no coinciden. En ese caso se debe revisar el dato cargado o pedir confirmación al responsable que generó el acceso.</p>
+                </div>
+                <div class="grid-card">
+                  <h4>Qué pasa si el acceso venció</h4>
+                  <p>El sistema puede indicar que el acceso expiró. Eso significa que el link o las credenciales ya no están vigentes y deben reactivarse desde administración.</p>
+                </div>
+              </div>
+              <div class="mockup">
+                <div class="mockup-header">Mockup simple de acceso cliente</div>
+                <div class="mockup-body">
+                  <div class="wireframe">
+                    <div class="box"><strong>PoolManager</strong>Pantalla de acceso al timeline del proyecto</div>
+                    <div class="box"><strong>Usuario</strong>Campo para usuario entregado por el constructor</div>
+                    <div class="box"><strong>Contraseña</strong>Campo seguro para contraseña del cliente</div>
+                    <div class="box"><strong>Botón Ingresar</strong>Valida acceso y redirige al timeline</div>
+                  </div>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>Recomendación:</strong> no compartir credenciales en grupos abiertos. Si el acceso debe circular entre varias personas de una familia, conviene que lo gestione un referente claro.
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="navegacion" data-keywords="navegacion panel proyectos pantallas sistema">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">03</span>
+                <span>
+                  <h3>Pantallas y navegación</h3>
+                  <span class="muted">Qué módulos existen y para qué sirven</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>PoolManager contiene módulos de uso interno y módulos visibles para cliente. No todos los usuarios ven lo mismo. Para el cliente, el foco principal suele estar en el acceso compartido del proyecto y la documentación que el instalador decida mostrar.</p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Pantalla</th>
+                      <th>Uso principal</th>
+                      <th>Quién la usa normalmente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Login principal</td>
+                      <td>Ingreso de usuarios internos al sistema.</td>
+                      <td>Administrador, instalador, operador.</td>
+                    </tr>
+                    <tr>
+                      <td>Panel / Dashboard</td>
+                      <td>Resumen general, proyectos, clima, agenda y actividad.</td>
+                      <td>Equipo interno.</td>
+                    </tr>
+                    <tr>
+                      <td>Proyectos</td>
+                      <td>Listado y administración de obras.</td>
+                      <td>Equipo interno.</td>
+                    </tr>
+                    <tr>
+                      <td>Detalle de proyecto</td>
+                      <td>Configuración técnica, materiales, sistemas, tareas, adicionales y exportación.</td>
+                      <td>Equipo interno.</td>
+                    </tr>
+                    <tr>
+                      <td>Client Login</td>
+                      <td>Ingreso del cliente con usuario y contraseña.</td>
+                      <td>Cliente final.</td>
+                    </tr>
+                    <tr>
+                      <td>Timeline público</td>
+                      <td>Consulta del avance del proyecto, mensajes, eventos e imágenes.</td>
+                      <td>Cliente final.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>En términos prácticos, el cliente final no necesita operar las pantallas internas para mantener la piscina. Lo que sí necesita es entender la lógica del sistema y usar la información que reciba para operar los equipos instalados y seguir el mantenimiento correcto.</p>
+            </div>
+          </article>
+
+          <article class="section" id="timeline" data-keywords="timeline cliente actualizaciones proyecto imagenes mensajes agenda">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">04</span>
+                <span>
+                  <h3>Timeline del cliente</h3>
+                  <span class="muted">Cómo seguir el proyecto y qué información aparece</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>El timeline es la pantalla que el cliente usa para seguir el proyecto. Allí se ven actualizaciones ordenadas cronológicamente, con fecha, tipo de evento, descripciones, fotos, mensajes y referencias de agenda.</p>
+              <ul>
+                <li><strong>Progreso:</strong> indica avances normales de obra.</li>
+                <li><strong>Hito:</strong> marca un momento importante, por ejemplo una instalación terminada o una entrega.</li>
+                <li><strong>Problema:</strong> informa un inconveniente detectado y, si corresponde, la acción tomada.</li>
+                <li><strong>Inspección:</strong> registra verificaciones o revisiones técnicas.</li>
+                <li><strong>Entrega:</strong> comunica entregas de materiales, equipos o etapas cerradas.</li>
+                <li><strong>Mensaje:</strong> muestra mensajes vinculados al proyecto.</li>
+                <li><strong>Agenda:</strong> deja ver eventos programados, fechas y horarios.</li>
+              </ul>
+              <div class="callout">
+                <strong>Uso recomendado:</strong> el cliente debería revisar el timeline para seguir el avance, leer indicaciones del instalador y consultar imágenes de respaldo. No reemplaza una visita técnica, pero sí ayuda a mantener trazabilidad.
+              </div>
+              <div class="grid-two">
+                <div class="grid-card">
+                  <h4>Buenas prácticas al usar el timeline</h4>
+                  <ul>
+                    <li>Leer cada actualización completa antes de responder.</li>
+                    <li>Revisar las imágenes si se adjuntaron.</li>
+                    <li>Guardar exportaciones o reportes si fueron compartidos.</li>
+                  </ul>
+                </div>
+                <div class="grid-card">
+                  <h4>Qué no hacer</h4>
+                  <ul>
+                    <li>No asumir que una imagen reemplaza una indicación técnica formal.</li>
+                    <li>No compartir el acceso fuera del círculo autorizado.</li>
+                    <li>No usar el timeline como única fuente para intervenir equipos.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="mockup">
+                <div class="mockup-header">Mockup simple del timeline</div>
+                <div class="mockup-body">
+                  <div class="wireframe">
+                    <div class="box"><strong>Encabezado del proyecto</strong>Nombre del proyecto y nombre del cliente</div>
+                    <div class="wire-row">
+                      <div class="box"><strong>Actualización</strong>Título, categoría, fecha y descripción</div>
+                      <div class="box"><strong>Imágenes / mensajes</strong>Fotos de avance, mensajes y referencias de agenda</div>
+                    </div>
+                    <div class="box"><strong>Secuencia cronológica</strong>Los eventos más recientes aparecen primero para facilitar el seguimiento</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="operacion" data-keywords="operacion basica piscina encendido apagado uso diario circulacion agua">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">05</span>
+                <span>
+                  <h3>Operación básica de la piscina</h3>
+                  <span class="muted">Qué revisar todos los días o antes de usarla</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>Una piscina funciona bien cuando el agua circula, se filtra, se desinfecta y se mantiene dentro de parámetros estables. El usuario final no tiene que recalcular el sistema, pero sí debe controlar su funcionamiento general.</p>
+              <div class="grid-three">
+                <div class="grid-card">
+                  <h4>Nivel de agua</h4>
+                  <p>Debe mantenerse en una altura correcta para que el skimmer pueda aspirar sin tomar aire. Si baja demasiado, la bomba puede cavitar y dañarse.</p>
+                </div>
+                <div class="grid-card">
+                  <h4>Claridad del agua</h4>
+                  <p>El agua debe verse cristalina. Si aparece turbiedad, espuma, color verdoso o sedimento, hay que revisar filtración y tratamiento químico.</p>
+                </div>
+                <div class="grid-card">
+                  <h4>Ruido y caudal</h4>
+                  <p>La bomba no debería hacer ruidos anormales ni perder caudal bruscamente. Una caída fuerte de retorno suele indicar aire, obstrucción o filtro saturado.</p>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>Secuencia básica de operación:</strong> nivel de agua correcto, cesta del skimmer libre, prefiltro de bomba limpio, válvulas en posición correcta, bomba encendida, retorno visible y presión del filtro controlada.
+              </div>
+              <div class="diagram">
+                <div class="diagram-header">Diagrama simple de control diario</div>
+                <div class="diagram-body">
+                  <div class="flow">
+                    <div class="flow-step"><span class="flow-index">1</span><div class="flow-card">Verificar nivel de agua y limpieza superficial</div></div>
+                    <div class="flow-step"><span class="flow-index">2</span><div class="flow-card">Revisar cesta de skimmer y prefiltro de bomba</div></div>
+                    <div class="flow-step"><span class="flow-index">3</span><div class="flow-card">Encender filtración y controlar retorno visible</div></div>
+                    <div class="flow-step"><span class="flow-index">4</span><div class="flow-card">Corroborar presión del filtro y aspecto general del agua</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="filtracion" data-keywords="filtracion bomba filtro arena retrolavado presion caudal">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">06</span>
+                <span>
+                  <h3>Bomba y sistema de filtración</h3>
+                  <span class="muted">Cómo opera y cómo mantenerlo correctamente</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>El sistema de filtración es el corazón operativo de la piscina. Su función es mover el agua, hacerla pasar por el filtro y devolverla limpia al vaso.</p>
+              <h4>Qué hace la bomba</h4>
+              <ul>
+                <li>Aspira agua desde skimmers, barrefondo o drenajes según el diseño.</li>
+                <li>Impulsa el agua hacia el filtro.</li>
+                <li>Permite que el tratamiento químico se distribuya mejor al circular el agua.</li>
+              </ul>
+              <h4>Qué hace el filtro</h4>
+              <ul>
+                <li>Retiene partículas suspendidas.</li>
+                <li>Mejora transparencia del agua.</li>
+                <li>Reduce carga de suciedad que podría afectar bomba, calefacción o accesorios.</li>
+              </ul>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Control</th>
+                      <th>Qué mirar</th>
+                      <th>Acción recomendada</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Prefiltro de bomba</td>
+                      <td>Hojas, cabello, residuos</td>
+                      <td>Limpiar semanalmente o antes si baja el caudal.</td>
+                    </tr>
+                    <tr>
+                      <td>Manómetro del filtro</td>
+                      <td>Presión respecto de la presión limpia</td>
+                      <td>Hacer retrolavado cuando aumente aproximadamente 0,5 bar.</td>
+                    </tr>
+                    <tr>
+                      <td>Retorno de agua</td>
+                      <td>Fuerza del chorro de retorno</td>
+                      <td>Si cae mucho, revisar obstrucción, aire o saturación del filtro.</td>
+                    </tr>
+                    <tr>
+                      <td>Nivel de agua</td>
+                      <td>Que el skimmer no aspire aire</td>
+                      <td>Reponer agua antes de volver a usar la bomba.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="grid-two">
+                <div class="routine">
+                  <h4>Retrolavado del filtro</h4>
+                  <ol>
+                    <li>Apagar la bomba.</li>
+                    <li>Poner la válvula en posición de retrolavado según el equipo instalado.</li>
+                    <li>Encender la bomba durante el tiempo indicado por el instalador o hasta que el agua salga limpia.</li>
+                    <li>Volver a apagar la bomba.</li>
+                    <li>Pasar por enjuague si el filtro lo requiere.</li>
+                    <li>Retornar a posición de filtrado y encender nuevamente.</li>
+                  </ol>
+                </div>
+                <div class="routine">
+                  <h4>Errores que hay que evitar</h4>
+                  <ul>
+                    <li>No cambiar posiciones de válvula con la bomba encendida.</li>
+                    <li>No dejar funcionar la bomba sin agua suficiente.</li>
+                    <li>No ignorar vibraciones, olor a quemado o ruidos anormales.</li>
+                    <li>No hacer funcionar el sistema con cestas colapsadas de suciedad.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>Tiempo orientativo de filtración:</strong> el sistema usa como referencia de diseño entre 6 y 10 horas según uso, y en recomendaciones profesionales se toma 8 horas diarias como valor estándar de circulación. En verano o con uso intenso puede requerirse más tiempo.
+              </div>
+              <pre class="ascii">[Superficie de agua]
+        |
+        v
+   [Skimmer / toma]
+        |
+        v
+ [Prefiltro de bomba]
+        |
+        v
+      [Bomba]
+        |
+        v
+      [Filtro]
+        |
+        v
+ [Calefacción / equipo opcional]
+        |
+        v
+ [Boquillas de retorno]
+        |
+        v
+   Vuelve a la piscina</pre>
+            </div>
+          </article>
+
+          <article class="section" id="calefaccion" data-keywords="calefaccion caldera electrico bomba de calor solar temperatura cobertor">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">07</span>
+                <span>
+                  <h3>Calefacción de la piscina</h3>
+                  <span class="muted">Qué tipos de sistemas puede usar y cómo operarlos</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>El sistema contempla distintos modos de calefacción: caldera a gas, calentador eléctrico, bomba de calor y sistema solar. La recomendación depende del volumen, la temperatura deseada, la temperatura ambiente y si la piscina tiene cobertor o está cubierta.</p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Sistema</th>
+                      <th>Ventajas</th>
+                      <th>Limitaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Caldera a gas</td>
+                      <td>Calienta rápido, alta potencia, menos dependiente del clima.</td>
+                      <td>Costo operativo más alto, requiere instalación de gas.</td>
+                    </tr>
+                    <tr>
+                      <td>Calentador eléctrico</td>
+                      <td>Instalación simple, compacto, sin mantenimiento complejo.</td>
+                      <td>Consumo alto, menos conveniente para climas fríos o grandes volúmenes.</td>
+                    </tr>
+                    <tr>
+                      <td>Bomba de calor</td>
+                      <td>Muy eficiente, bajo costo operativo relativo, opción muy recomendada.</td>
+                      <td>Depende de temperatura ambiente, inversión inicial más alta.</td>
+                    </tr>
+                    <tr>
+                      <td>Sistema solar</td>
+                      <td>Costo operativo muy bajo, ecológico.</td>
+                      <td>Depende del sol, respuesta más lenta, necesita superficie disponible.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="grid-two">
+                <div class="grid-card">
+                  <h4>Uso correcto</h4>
+                  <ul>
+                    <li>Definir una temperatura objetivo razonable, por ejemplo 28 °C.</li>
+                    <li>Hacer circular agua mientras el sistema calienta.</li>
+                    <li>Usar cobertor térmico para reducir pérdidas.</li>
+                    <li>No exigir calentamiento extremo en poco tiempo si la temperatura ambiente es baja.</li>
+                  </ul>
+                </div>
+                <div class="grid-card">
+                  <h4>Recomendación práctica</h4>
+                  <p>Un cobertor térmico reduce fuertemente las pérdidas de calor. En una piscina exterior, el ahorro operativo y la estabilidad térmica mejoran mucho cuando se tapa fuera del horario de uso.</p>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>Advertencia:</strong> si el calefactor no enciende, corta, hace ruido extraño o el agua no circula correctamente por el sistema, no se debe forzar la operación. Revisar primero filtración y caudal.
+              </div>
+              <div class="diagram">
+                <div class="diagram-header">Esquema simple de decisión para calefacción</div>
+                <div class="diagram-body">
+                  <div class="flow">
+                    <div class="flow-step"><span class="flow-index">1</span><div class="flow-card">Definir temperatura deseada</div></div>
+                    <div class="flow-step"><span class="flow-index">2</span><div class="flow-card">Confirmar que la bomba y la filtración estén funcionando bien</div></div>
+                    <div class="flow-step"><span class="flow-index">3</span><div class="flow-card">Encender calefacción según el tipo de equipo instalado</div></div>
+                    <div class="flow-step"><span class="flow-index">4</span><div class="flow-card">Usar cobertor térmico cuando la piscina no esté en uso</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="quimicos" data-keywords="quimicos agua ph cloro alcalinidad dureza estabilizador alguicida clarificante">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">08</span>
+                <span>
+                  <h3>Tratamiento del agua</h3>
+                  <span class="muted">Parámetros correctos y productos habituales</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>El agua debe mantenerse equilibrada. Eso significa que no alcanza con “poner cloro”: también hay que controlar pH, alcalinidad, dureza, estabilizador y claridad general.</p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Parámetro</th>
+                      <th>Rango ideal</th>
+                      <th>Frecuencia de control</th>
+                      <th>Cómo corregir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>pH</td>
+                      <td>7,2 a 7,6</td>
+                      <td>2 a 3 veces por semana</td>
+                      <td>pH menos si supera 7,6. pH más si baja de 7,2.</td>
+                    </tr>
+                    <tr>
+                      <td>Cloro libre</td>
+                      <td>1,0 a 3,0 ppm</td>
+                      <td>2 a 3 veces por semana</td>
+                      <td>Agregar cloro granulado o pastillas según medición.</td>
+                    </tr>
+                    <tr>
+                      <td>Alcalinidad total</td>
+                      <td>80 a 120 ppm</td>
+                      <td>Semanal</td>
+                      <td>Bicarbonato para subir. Ácido para bajar.</td>
+                    </tr>
+                    <tr>
+                      <td>Dureza cálcica</td>
+                      <td>200 a 400 ppm</td>
+                      <td>Mensual</td>
+                      <td>Cloruro de calcio para subir. Dilución con agua blanda para bajar.</td>
+                    </tr>
+                    <tr>
+                      <td>Estabilizador</td>
+                      <td>30 a 50 ppm</td>
+                      <td>Mensual</td>
+                      <td>Ácido cianúrico para subir. Dilución para bajar.</td>
+                    </tr>
+                    <tr>
+                      <td>Turbidez</td>
+                      <td>Agua cristalina</td>
+                      <td>Control visual diario</td>
+                      <td>Clarificante, ajuste químico y retrolavado del filtro.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <h4>Productos más comunes</h4>
+              <ul>
+                <li><strong>Cloro:</strong> desinfecta y elimina microorganismos.</li>
+                <li><strong>pH menos:</strong> baja el pH si está alto.</li>
+                <li><strong>pH más:</strong> sube el pH si está bajo.</li>
+                <li><strong>Alguicida:</strong> previene formación de algas.</li>
+                <li><strong>Clarificante:</strong> ayuda a juntar partículas finas para que el filtro las retenga.</li>
+                <li><strong>Estabilizador:</strong> protege al cloro frente a la radiación UV.</li>
+                <li><strong>Anticalcáreo:</strong> ayuda a prevenir incrustaciones en superficies y equipos.</li>
+              </ul>
+              <div class="routine">
+                <h4>Orden recomendado de ajuste químico</h4>
+                <ol>
+                  <li>Ajustar alcalinidad total.</li>
+                  <li>Ajustar pH.</li>
+                  <li>Ajustar dureza cálcica si corresponde.</li>
+                  <li>Agregar estabilizador si hace falta.</li>
+                  <li>Por último, ajustar cloro.</li>
+                </ol>
+              </div>
+              <div class="callout">
+                <strong>Regla de oro:</strong> nunca mezclar químicos entre sí en seco y no agregarlos todos juntos sin criterio. Siempre conviene dosificar con la bomba en funcionamiento y respetar tiempos entre ajustes.
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="rutina" data-keywords="rutina semanal mensual checklist limpieza mantenimiento">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">09</span>
+                <span>
+                  <h3>Rutina semanal y mensual</h3>
+                  <span class="muted">Qué hacer para mantener la piscina estable</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <div class="grid-two">
+                <div class="routine">
+                  <h4>Checklist semanal</h4>
+                  <ul>
+                    <li>Medir pH y cloro 2 o 3 veces por semana.</li>
+                    <li>Agregar cloro según la lectura.</li>
+                    <li>Limpiar skimmers y prefiltro de la bomba.</li>
+                    <li>Aspirar fondo si hay suciedad.</li>
+                    <li>Cepillar paredes.</li>
+                    <li>Agregar alguicida.</li>
+                    <li>Controlar nivel de agua.</li>
+                    <li>Verificar presión del filtro.</li>
+                    <li>Revisar visualmente la claridad del agua.</li>
+                  </ul>
+                </div>
+                <div class="routine">
+                  <h4>Checklist mensual</h4>
+                  <ul>
+                    <li>Hacer test completo de agua.</li>
+                    <li>Realizar retrolavado del filtro según necesidad.</li>
+                    <li>Hacer limpieza profunda del filtro.</li>
+                    <li>Aplicar choque de cloro si corresponde.</li>
+                    <li>Revisar drenajes, boquillas y aspiraciones.</li>
+                    <li>Limpiar línea de flotación.</li>
+                    <li>Revisar funcionamiento de bomba y calefacción.</li>
+                    <li>Agregar anticalcáreo.</li>
+                    <li>Registrar insumos y comportamiento general del sistema.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="callout">
+                <strong>Consejo práctico:</strong> si la piscina tiene mucho uso, niños, eventos o días de mucho calor, la rutina semanal puede necesitar más frecuencia de testeo, limpieza y cloración.
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="estacional" data-keywords="estacional verano otono invierno primavera hibernacion mantenimiento">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">10</span>
+                <span>
+                  <h3>Mantenimiento estacional</h3>
+                  <span class="muted">Qué cambia a lo largo del año</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <div class="grid-two">
+                <div class="grid-card">
+                  <h4>Verano</h4>
+                  <ul>
+                    <li>Aumentar frecuencia de control de cloro.</li>
+                    <li>Filtrar más horas por día.</li>
+                    <li>Controlar evaporación y reponer agua.</li>
+                    <li>Limpiar skimmers con mayor frecuencia.</li>
+                  </ul>
+                </div>
+                <div class="grid-card">
+                  <h4>Otoño</h4>
+                  <ul>
+                    <li>Reducir gradualmente la cloración.</li>
+                    <li>Retirar hojas y residuos del entorno.</li>
+                    <li>Dejar el sistema limpio antes del invierno.</li>
+                    <li>Evaluar uso de cobertor.</li>
+                  </ul>
+                </div>
+                <div class="grid-card">
+                  <h4>Invierno</h4>
+                  <ul>
+                    <li>Reducir filtración si la piscina está fuera de uso.</li>
+                    <li>Controlar químicos cada dos semanas o según recomendación técnica.</li>
+                    <li>Proteger equipos de heladas si corresponde a la zona.</li>
+                    <li>Evaluar hibernación si no se usará la piscina.</li>
+                  </ul>
+                </div>
+                <div class="grid-card">
+                  <h4>Primavera</h4>
+                  <ul>
+                    <li>Reactivar el sistema de forma gradual.</li>
+                    <li>Hacer limpieza profunda y revisión general.</li>
+                    <li>Balancear agua antes de la temporada.</li>
+                    <li>Verificar que todos los equipos operen correctamente.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="seguridad" data-keywords="seguridad quimicos electrica bomba riesgo proteccion">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">11</span>
+                <span>
+                  <h3>Seguridad y buenas prácticas</h3>
+                  <span class="muted">Lo que siempre conviene respetar</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Manipular químicos con guantes y, si es posible, protección ocular.</li>
+                <li>Guardar los productos en lugar seco, ventilado y fuera del alcance de niños y mascotas.</li>
+                <li>No mezclar químicos directamente entre sí.</li>
+                <li>No tocar conexiones eléctricas ni abrir equipos energizados.</li>
+                <li>No cambiar válvulas del filtro con la bomba encendida.</li>
+                <li>No dejar la bomba trabajando sin agua o con aire.</li>
+                <li>No forzar la calefacción si no hay buena circulación.</li>
+                <li>Ante duda, parar el sistema y consultar.</li>
+              </ul>
+              <div class="callout">
+                <strong>Recordatorio:</strong> el objetivo del mantenimiento no es solo tener agua linda. También es proteger la salud de los usuarios y alargar la vida útil de la bomba, el filtro, la calefacción y los accesorios.
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="fallas" data-keywords="problemas frecuentes agua turbia algas baja presion bomba no enciende ph">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">12</span>
+                <span>
+                  <h3>Problemas frecuentes y respuesta inicial</h3>
+                  <span class="muted">Qué revisar antes de llamar al técnico</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Síntoma</th>
+                      <th>Causas habituales</th>
+                      <th>Primera respuesta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Agua turbia</td>
+                      <td>pH fuera de rango, filtro saturado, falta de clarificación o cloro insuficiente</td>
+                      <td>Medir agua, corregir pH, revisar filtro, hacer limpieza y ajustar desinfección.</td>
+                    </tr>
+                    <tr>
+                      <td>Agua verdosa</td>
+                      <td>Algas por falta de cloro o circulación deficiente</td>
+                      <td>Aplicar tratamiento correctivo, cepillar, filtrar y revisar rutina de mantenimiento.</td>
+                    </tr>
+                    <tr>
+                      <td>Baja presión de retorno</td>
+                      <td>Obstrucción, aire, prefiltro sucio, nivel bajo, filtro colapsado</td>
+                      <td>Revisar cestas, nivel de agua, posibles entradas de aire y estado del filtro.</td>
+                    </tr>
+                    <tr>
+                      <td>Presión alta en filtro</td>
+                      <td>Suciedad acumulada en medio filtrante</td>
+                      <td>Hacer retrolavado y volver a medir presión.</td>
+                    </tr>
+                    <tr>
+                      <td>Bomba no arranca</td>
+                      <td>Falla eléctrica, protección disparada, problema interno</td>
+                      <td>No insistir; cortar energía y llamar a técnico.</td>
+                    </tr>
+                    <tr>
+                      <td>Calefacción no rinde</td>
+                      <td>Caudal insuficiente, temperatura ambiente baja, pérdida de calor</td>
+                      <td>Revisar filtración, usar cobertor y verificar parámetros de operación.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="glosario" data-keywords="glosario soporte ayuda skimmer retrolavado tdh prefiltro">
+            <button class="section-head" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">13</span>
+                <span>
+                  <h3>Glosario y soporte</h3>
+                  <span class="muted">Términos útiles para entender mejor el sistema</span>
+                </span>
+              </span>
+              <span class="muted">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li><strong>Skimmer:</strong> boca de superficie que recoge suciedad flotante.</li>
+                <li><strong>Prefiltro:</strong> cesta ubicada antes de la bomba que retiene residuos grandes.</li>
+                <li><strong>Retrolavado:</strong> limpieza del filtro invirtiendo el flujo del agua.</li>
+                <li><strong>TDH:</strong> altura dinámica total. Es una referencia técnica de exigencia hidráulica del sistema.</li>
+                <li><strong>ppm:</strong> partes por millón. Se usa para medir concentración química en el agua.</li>
+                <li><strong>Cobertor térmico:</strong> cubierta que reduce pérdida de calor y evaporación.</li>
+              </ul>
+              <div class="callout">
+                <strong>Soporte recomendado:</strong> conservar este manual junto con las credenciales del cliente, la ficha de equipos instalados, el instructivo de la bomba/filtro y el contacto del instalador o servicio técnico.
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div class="footer-box">
+          <p class="muted">
+            Manual preparado para acompañar la entrega del sistema y servir como referencia operativa para el uso normal de la piscina y sus equipos.
+          </p>
+          <p class="screen-footer">Generado por poolmanager by Jesus Olguin</p>
+        </div>
+      </main>
+    </div>
+
+    <div class="print-footer">Generado por poolmanager by Jesus Olguin</div>
+
+    <script>
+      const sections = document.querySelectorAll('.section');
+      const heads = document.querySelectorAll('.section-head');
+      const links = document.querySelectorAll('#toc a');
+      const search = document.getElementById('search');
+
+      function setExpanded(section, expanded) {
+        const head = section.querySelector('.section-head');
+        const body = section.querySelector('.section-body');
+        const state = head.querySelector('.muted:last-child');
+        head.setAttribute('aria-expanded', String(expanded));
+        body.hidden = !expanded;
+        state.textContent = expanded ? 'Ocultar' : 'Mostrar';
+      }
+
+      heads.forEach((head) => {
+        head.addEventListener('click', () => {
+          const section = head.closest('.section');
+          const isExpanded = head.getAttribute('aria-expanded') === 'true';
+          setExpanded(section, !isExpanded);
+        });
+      });
+
+      document.getElementById('expandAll').addEventListener('click', () => {
+        sections.forEach((section) => setExpanded(section, true));
+      });
+
+      document.getElementById('collapseAll').addEventListener('click', () => {
+        sections.forEach((section) => setExpanded(section, false));
+      });
+
+      search.addEventListener('input', (event) => {
+        const q = event.target.value.trim().toLowerCase();
+        sections.forEach((section) => {
+          const text = section.textContent.toLowerCase();
+          const keys = (section.dataset.keywords || '').toLowerCase();
+          const visible = !q || text.includes(q) || keys.includes(q);
+          section.hidden = !visible;
+          if (visible && q) setExpanded(section, true);
+        });
+      });
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const link = document.querySelector(`#toc a[href="#${entry.target.id}"]`);
+          if (!link) return;
+          links.forEach((item) => item.classList.remove('active'));
+          link.classList.add('active');
+        });
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: 0.1 });
+
+      sections.forEach((section) => observer.observe(section));
+    </script>
+  </body>
+</html>

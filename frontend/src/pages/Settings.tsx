@@ -17,17 +17,56 @@ import {
   AccessoryType,
   TileType,
   EquipmentType,
-  MaterialType
+  MaterialType,
+  MaterialCategory
 } from '@/types';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Save, Search, Filter } from 'lucide-react';
 import { PlumbingManager } from '@/components/PlumbingManager';
 import { HybridImageManager } from '@/components/HybridImageManager';
 import { ProductCard } from '@/components/ProductCard';
+import { useAuth } from '@/context/AuthContext';
 
 type TabType = 'tiles' | 'accessories' | 'equipment' | 'materials' | 'plumbing' | 'calculations';
 
 export const Settings: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('tiles');
+
+  const formatDimensionCm = (value?: number | null) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return '-';
+    return `${Number(value).toLocaleString('es-AR', { maximumFractionDigits: 2 })} cm`;
+  };
+
+  const formatTileDimensions = (width?: number | null, length?: number | null) => {
+    return `${formatDimensionCm(width)} x ${formatDimensionCm(length)}`;
+  };
+
+  const hasSuspiciousTileUnits = (width?: number | null, length?: number | null) => {
+    const values = [width, length].filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
+    return values.some((value) => value > 0 && value < 10);
+  };
+
+  const getDefaultMaterialCategory = (type: MaterialType): MaterialCategory => {
+    switch (type) {
+      case 'SAND':
+        return 'BED';
+      case 'WHITE_CEMENT':
+      case 'MARMOLINA':
+        return 'JOINT';
+      case 'WATERPROOFING':
+        return 'WATERPROOFING';
+      case 'GEOTEXTILE':
+        return 'DRAINAGE';
+      case 'WIRE_MESH':
+      case 'WIRE':
+      case 'NAILS':
+        return 'REINFORCEMENT';
+      case 'TILE':
+        return 'TILES';
+      default:
+        return 'STRUCTURE';
+    }
+  };
   
   // Estados para configuración de cálculos
   const [calcSettings, setCalcSettings] = useState<CalculationSettings | null>(null);
@@ -92,17 +131,30 @@ export const Settings: React.FC = () => {
   const [materials, setMaterials] = useState<ConstructionMaterialPreset[]>([]);
   const [filteredMaterials, setFilteredMaterials] = useState<ConstructionMaterialPreset[]>([]);
   const [materialSearchTerm, setMaterialSearchTerm] = useState('');
+  const [materialCategoryFilter, setMaterialCategoryFilter] = useState('');
   const [materialTypeFilter, setMaterialTypeFilter] = useState('');
   const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<ConstructionMaterialPreset | null>(null);
   const [materialFormData, setMaterialFormData] = useState({
     name: '',
+    category: getDefaultMaterialCategory('CEMENT') as MaterialCategory,
     type: 'CEMENT' as MaterialType,
     unit: '',
     pricePerUnit: 0,
     brand: '',
     description: '',
   });
+
+  const catalogPermissionMessage = 'Solo administradores pueden crear, editar o eliminar presets e imágenes de catálogo.';
+
+  const getErrorMessage = (error: any, fallback: string) => {
+    return (
+      error?.response?.data?.details ||
+      error?.response?.data?.error ||
+      error?.message ||
+      fallback
+    );
+  };
 
   useEffect(() => {
     loadData();
@@ -170,11 +222,14 @@ export const Settings: React.FC = () => {
         item.description?.toLowerCase().includes(term)
       );
     }
+    if (materialCategoryFilter) {
+      filtered = filtered.filter(item => item.category === materialCategoryFilter);
+    }
     if (materialTypeFilter) {
       filtered = filtered.filter(item => item.type === materialTypeFilter);
     }
     setFilteredMaterials(filtered);
-  }, [materials, materialSearchTerm, materialTypeFilter]);
+  }, [materials, materialSearchTerm, materialCategoryFilter, materialTypeFilter]);
 
   const loadData = async () => {
     try {
@@ -191,6 +246,19 @@ export const Settings: React.FC = () => {
       setMaterials(materialsData);
       setCalcSettings(calcData);
       setCalcFormData(calcData);
+
+      if (editingTile) {
+        setEditingTile(tilesData.find((item) => item.id === editingTile.id) || null);
+      }
+      if (editingAccessory) {
+        setEditingAccessory(accessoriesData.find((item) => item.id === editingAccessory.id) || null);
+      }
+      if (editingEquipment) {
+        setEditingEquipment(equipmentData.find((item) => item.id === editingEquipment.id) || null);
+      }
+      if (editingMaterial) {
+        setEditingMaterial(materialsData.find((item) => item.id === editingMaterial.id) || null);
+      }
     } catch (error) {
       console.error('Error al cargar datos:', error);
     }
@@ -211,17 +279,27 @@ export const Settings: React.FC = () => {
   // Handlers de Losetas
   const handleTileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     try {
       if (editingTile) {
         await tilePresetService.update(editingTile.id, tileFormData);
+        await loadData();
+        setShowTileModal(false);
+        resetTileForm();
+        alert('Loseta actualizada exitosamente');
       } else {
-        await tilePresetService.create(tileFormData);
+        const createdTile = await tilePresetService.create(tileFormData);
+        await loadData();
+        handleEditTile(createdTile);
+        alert('Loseta creada. Ahora ya podés cargar imágenes en esta misma ventana.');
       }
-      setShowTileModal(false);
-      resetTileForm();
-      loadData();
     } catch (error) {
       console.error('Error al guardar loseta:', error);
+      alert(getErrorMessage(error, 'No se pudo guardar la loseta'));
     }
   };
 
@@ -244,12 +322,18 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteTile = async (id: string) => {
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     if (confirm('¿Estás seguro de eliminar esta loseta?')) {
       try {
         await tilePresetService.delete(id);
         loadData();
       } catch (error) {
         console.error('Error al eliminar loseta:', error);
+        alert(getErrorMessage(error, 'No se pudo eliminar la loseta'));
       }
     }
   };
@@ -279,17 +363,27 @@ export const Settings: React.FC = () => {
   // Handlers de Accesorios
   const handleAccessorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     try {
       if (editingAccessory) {
         await accessoryPresetService.update(editingAccessory.id, accessoryFormData);
+        await loadData();
+        setShowAccessoryModal(false);
+        resetAccessoryForm();
+        alert('Accesorio actualizado exitosamente');
       } else {
-        await accessoryPresetService.create(accessoryFormData);
+        const createdAccessory = await accessoryPresetService.create(accessoryFormData);
+        await loadData();
+        handleEditAccessory(createdAccessory);
+        alert('Accesorio creado. Ahora ya podés cargar imágenes en esta misma ventana.');
       }
-      setShowAccessoryModal(false);
-      resetAccessoryForm();
-      loadData();
     } catch (error) {
       console.error('Error al guardar accesorio:', error);
+      alert(getErrorMessage(error, 'No se pudo guardar el accesorio'));
     }
   };
 
@@ -306,12 +400,18 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteAccessory = async (id: string) => {
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     if (confirm('¿Estás seguro de eliminar este accesorio?')) {
       try {
         await accessoryPresetService.delete(id);
         loadData();
       } catch (error) {
         console.error('Error al eliminar accesorio:', error);
+        alert(getErrorMessage(error, 'No se pudo eliminar el accesorio'));
       }
     }
   };
@@ -335,17 +435,27 @@ export const Settings: React.FC = () => {
   // Handlers de Equipos
   const handleEquipmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     try {
       if (editingEquipment) {
         await equipmentPresetService.update(editingEquipment.id, equipmentFormData);
+        await loadData();
+        setShowEquipmentModal(false);
+        resetEquipmentForm();
+        alert('Equipo actualizado exitosamente');
       } else {
-        await equipmentPresetService.create(equipmentFormData);
+        const createdEquipment = await equipmentPresetService.create(equipmentFormData);
+        await loadData();
+        handleEditEquipment(createdEquipment);
+        alert('Equipo creado. Ahora ya podés cargar imágenes en esta misma ventana.');
       }
-      setShowEquipmentModal(false);
-      resetEquipmentForm();
-      loadData();
     } catch (error) {
       console.error('Error al guardar equipo:', error);
+      alert(getErrorMessage(error, 'No se pudo guardar el equipo'));
     }
   };
 
@@ -366,12 +476,18 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteEquipment = async (id: string) => {
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     if (confirm('¿Estás seguro de eliminar este equipo?')) {
       try {
         await equipmentPresetService.delete(id);
         loadData();
       } catch (error) {
         console.error('Error al eliminar equipo:', error);
+        alert(getErrorMessage(error, 'No se pudo eliminar el equipo'));
       }
     }
   };
@@ -399,17 +515,27 @@ export const Settings: React.FC = () => {
   // Handlers de Materiales
   const handleMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     try {
       if (editingMaterial) {
         await constructionMaterialService.update(editingMaterial.id, materialFormData);
+        await loadData();
+        setShowMaterialModal(false);
+        resetMaterialForm();
+        alert('Material actualizado exitosamente');
       } else {
-        await constructionMaterialService.create(materialFormData);
+        const createdMaterial = await constructionMaterialService.create(materialFormData);
+        await loadData();
+        handleEditMaterial(createdMaterial);
+        alert('Material creado. Ahora ya podés cargar imágenes en esta misma ventana.');
       }
-      setShowMaterialModal(false);
-      resetMaterialForm();
-      loadData();
     } catch (error) {
       console.error('Error al guardar material:', error);
+      alert(getErrorMessage(error, 'No se pudo guardar el material'));
     }
   };
 
@@ -417,6 +543,7 @@ export const Settings: React.FC = () => {
     setEditingMaterial(material);
     setMaterialFormData({
       name: material.name,
+      category: material.category,
       type: material.type,
       unit: material.unit,
       pricePerUnit: material.pricePerUnit,
@@ -427,12 +554,18 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteMaterial = async (id: string) => {
+    if (!isAdmin) {
+      alert(catalogPermissionMessage);
+      return;
+    }
+
     if (confirm('¿Estás seguro de eliminar este material?')) {
       try {
         await constructionMaterialService.delete(id);
         loadData();
       } catch (error) {
         console.error('Error al eliminar material:', error);
+        alert(getErrorMessage(error, 'No se pudo eliminar el material'));
       }
     }
   };
@@ -441,6 +574,7 @@ export const Settings: React.FC = () => {
     setEditingMaterial(null);
     setMaterialFormData({
       name: '',
+      category: getDefaultMaterialCategory('CEMENT'),
       type: 'CEMENT',
       unit: '',
       pricePerUnit: 0,
@@ -451,6 +585,7 @@ export const Settings: React.FC = () => {
 
   const clearMaterialFilters = () => {
     setMaterialSearchTerm('');
+    setMaterialCategoryFilter('');
     setMaterialTypeFilter('');
   };
 
@@ -469,7 +604,6 @@ export const Settings: React.FC = () => {
     { value: 'LOMO_BALLENA', label: 'Lomo de Ballena' },
     { value: 'L_FINISH', label: 'Terminación L' },
     { value: 'PERIMETER', label: 'Perímetro' },
-    { value: 'OTHER', label: 'Otro' },
   ];
 
   const accessoryTypeOptions = [
@@ -494,6 +628,19 @@ export const Settings: React.FC = () => {
     { value: 'OTHER', label: 'Otro' },
   ];
 
+  const materialCategoryOptions = [
+    { value: '', label: 'Todas las categorías' },
+    { value: 'STRUCTURE', label: 'Estructura' },
+    { value: 'BED', label: 'Cama / Relleno' },
+    { value: 'JOINT', label: 'Juntas / Pastina' },
+    { value: 'FINISH', label: 'Terminación' },
+    { value: 'WATERPROOFING', label: 'Impermeabilización' },
+    { value: 'DRAINAGE', label: 'Drenaje / Separación' },
+    { value: 'REINFORCEMENT', label: 'Refuerzo' },
+    { value: 'TILES', label: 'Losetas / Revestimientos' },
+    { value: 'OTHER', label: 'Otra' },
+  ];
+
   const materialTypeOptions = [
     { value: '', label: 'Todos los tipos' },
     { value: 'CEMENT', label: 'Cemento' },
@@ -507,12 +654,14 @@ export const Settings: React.FC = () => {
     { value: 'NAILS', label: 'Clavos' },
     { value: 'WATERPROOFING', label: 'Impermeabilizante' },
     { value: 'GEOTEXTILE', label: 'Geotextil' },
+    { value: 'TILE', label: 'Loseta / Revestimiento' },
     { value: 'OTHER', label: 'Otro' },
   ];
 
   const formTileTypeOptions = tileTypeOptions.filter(opt => opt.value !== '');
   const formAccessoryTypeOptions = accessoryTypeOptions.filter(opt => opt.value !== '');
   const formEquipmentTypeOptions = equipmentTypeOptions.filter(opt => opt.value !== '');
+  const formMaterialCategoryOptions = materialCategoryOptions.filter(opt => opt.value !== '');
   const formMaterialTypeOptions = materialTypeOptions.filter(opt => opt.value !== '');
 
   return (
@@ -533,6 +682,12 @@ export const Settings: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {!isAdmin && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+              Estás viendo el catálogo en modo lectura. Para crear, editar, eliminar o subir imágenes necesitás un usuario administrador.
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -561,7 +716,7 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-900">Losetas y Venecitas</h2>
                 <p className="text-sm text-gray-700 mt-1">Administra los tipos de losetas disponibles</p>
               </div>
-              <Button onClick={() => setShowTileModal(true)}>
+              <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
                 <Plus size={16} className="mr-2" />
                 Nueva Loseta
               </Button>
@@ -622,7 +777,7 @@ export const Settings: React.FC = () => {
                     }
                   </p>
                   {tiles.length === 0 && (
-                    <Button onClick={() => setShowTileModal(true)}>
+                    <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
                       Crear Primera Loseta
                     </Button>
                   )}
@@ -639,18 +794,22 @@ export const Settings: React.FC = () => {
                     additionalImages={tile.additionalImages || []}
                     price={tile.pricePerUnit}
                     details={[
-                      { label: 'Dimensiones', value: `${tile.width}m x ${tile.length}m` },
+                      { label: 'Dimensiones', value: formatTileDimensions(tile.width, tile.length) },
                       { label: 'Marca', value: tile.brand },
+                      ...(hasSuspiciousTileUnits(tile.width, tile.length)
+                        ? [{ label: 'Observación', value: 'Medida menor a 10 cm. Revisar si fue cargada en metros por error.' }]
+                        : []),
                       ...(tile.hasCorner ? [
                         { label: 'Esquineros', value: `${tile.cornersPerTile} x $${tile.cornerPricePerUnit?.toLocaleString('es-AR')}` }
                       ] : [])
                     ]}
                     badges={[
                       tile.isForFirstRing && '1er Anillo',
-                      tile.hasCorner && 'Con Esquineros'
+                      tile.hasCorner && 'Con Esquineros',
+                      hasSuspiciousTileUnits(tile.width, tile.length) && 'Revisar unidad'
                     ]}
-                    onEdit={() => handleEditTile(tile)}
-                    onDelete={() => handleDeleteTile(tile.id)}
+                    onEdit={() => isAdmin ? handleEditTile(tile) : alert(catalogPermissionMessage)}
+                    onDelete={() => isAdmin ? handleDeleteTile(tile.id) : alert(catalogPermissionMessage)}
                   />
                 ))}
               </div>
@@ -681,21 +840,30 @@ export const Settings: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="Ancho (metros)"
+                  label="Ancho (cm)"
                   type="number"
                   step="0.01"
                   value={tileFormData.width}
                   onChange={(e) => setTileFormData({ ...tileFormData, width: parseFloat(e.target.value) })}
+                  placeholder="Ej: 50"
                   required
                 />
                 <Input
-                  label="Largo (metros)"
+                  label="Largo (cm)"
                   type="number"
                   step="0.01"
                   value={tileFormData.length}
                   onChange={(e) => setTileFormData({ ...tileFormData, length: parseFloat(e.target.value) })}
+                  placeholder="Ej: 50 o 120"
                   required
                 />
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-medium text-amber-900">Cómo cargar dimensiones</p>
+                <p className="mt-1 text-sm text-amber-800">
+                  Ingresar siempre en centímetros. Ejemplos: `50` para 50 cm, `120` para 1,20 m. No usar `0.5` para 50 cm ni `1.2` para 1,20 m.
+                </p>
               </div>
 
               <Input
@@ -826,7 +994,7 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-900">Accesorios</h2>
                 <p className="text-sm text-gray-700 mt-1">Administra los accesorios y complementos</p>
               </div>
-              <Button onClick={() => setShowAccessoryModal(true)}>
+              <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
                 <Plus size={16} className="mr-2" />
                 Nuevo Accesorio
               </Button>
@@ -887,7 +1055,7 @@ export const Settings: React.FC = () => {
                     }
                   </p>
                   {accessories.length === 0 && (
-                    <Button onClick={() => setShowAccessoryModal(true)}>
+                    <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
                       Crear Primer Accesorio
                     </Button>
                   )}
@@ -908,8 +1076,8 @@ export const Settings: React.FC = () => {
                       { label: 'Descripción', value: acc.description }
                     ]}
                     badges={[]}
-                    onEdit={() => handleEditAccessory(acc)}
-                    onDelete={() => handleDeleteAccessory(acc.id)}
+                    onEdit={() => isAdmin ? handleEditAccessory(acc) : alert(catalogPermissionMessage)}
+                    onDelete={() => isAdmin ? handleDeleteAccessory(acc.id) : alert(catalogPermissionMessage)}
                   />
                 ))}
               </div>
@@ -1011,7 +1179,7 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-900">Equipos</h2>
                 <p className="text-sm text-gray-700 mt-1">Administra bombas, filtros, calentadores y mas</p>
               </div>
-            <Button onClick={() => setShowEquipmentModal(true)}>
+            <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
               <Plus size={16} className="mr-2" />
               Nuevo Equipo
             </Button>
@@ -1072,7 +1240,7 @@ export const Settings: React.FC = () => {
                     }
                   </p>
                   {equipment.length === 0 && (
-                    <Button onClick={() => setShowEquipmentModal(true)}>
+                    <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
                       Crear Primer Equipo
                     </Button>
                   )}
@@ -1094,8 +1262,8 @@ export const Settings: React.FC = () => {
                       { label: 'Potencia', value: equip.power ? `${equip.power} HP` : null }
                     ]}
                     badges={[]}
-                    onEdit={() => handleEditEquipment(equip)}
-                    onDelete={() => handleDeleteEquipment(equip.id)}
+                    onEdit={() => isAdmin ? handleEditEquipment(equip) : alert(catalogPermissionMessage)}
+                    onDelete={() => isAdmin ? handleDeleteEquipment(equip.id) : alert(catalogPermissionMessage)}
                   />
                 ))}
               </div>
@@ -1222,9 +1390,9 @@ export const Settings: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Materiales de Construcción</h2>
-                <p className="text-sm text-gray-700 mt-1">Administra cemento, arena, piedra y mas</p>
+                <p className="text-sm text-gray-700 mt-1">Administra materiales, consumibles y revestimientos como losetas</p>
               </div>
-            <Button onClick={() => setShowMaterialModal(true)}>
+            <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
               <Plus size={16} className="mr-2" />
               Nuevo Material
             </Button>
@@ -1239,7 +1407,7 @@ export const Settings: React.FC = () => {
                     <h3 className="font-semibold text-gray-900">Filtros de Búsqueda</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2">
                       <Input
                         placeholder="Buscar por nombre, marca..."
@@ -1249,13 +1417,19 @@ export const Settings: React.FC = () => {
                     </div>
 
                     <Select
+                      options={materialCategoryOptions}
+                      value={materialCategoryFilter}
+                      onChange={(e) => setMaterialCategoryFilter(e.target.value)}
+                    />
+
+                    <Select
                       options={materialTypeOptions}
                       value={materialTypeFilter}
                       onChange={(e) => setMaterialTypeFilter(e.target.value)}
                     />
                   </div>
 
-                  {(materialSearchTerm || materialTypeFilter) && (
+                  {(materialSearchTerm || materialCategoryFilter || materialTypeFilter) && (
                     <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                       <p className="text-sm text-gray-700">
                         Mostrando {filteredMaterials.length} de {materials.length} materiales
@@ -1285,7 +1459,7 @@ export const Settings: React.FC = () => {
                     }
                   </p>
                   {materials.length === 0 && (
-                    <Button onClick={() => setShowMaterialModal(true)}>
+                    <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
                       Crear Primer Material
                     </Button>
                   )}
@@ -1302,13 +1476,15 @@ export const Settings: React.FC = () => {
                     additionalImages={mat.additionalImages || []}
                     price={mat.pricePerUnit}
                     details={[
+                      { label: 'Categoría', value: materialCategoryOptions.find((option) => option.value === mat.category)?.label || mat.category },
+                      { label: 'Tipo', value: materialTypeOptions.find((option) => option.value === mat.type)?.label || mat.type },
                       { label: 'Unidad', value: mat.unit },
                       { label: 'Marca', value: mat.brand },
                       { label: 'Descripción', value: mat.description }
                     ]}
-                    badges={[]}
-                    onEdit={() => handleEditMaterial(mat)}
-                    onDelete={() => handleDeleteMaterial(mat.id)}
+                    badges={[mat.category === 'TILES' && 'Revestimiento', mat.type === 'TILE' && 'Loseta']}
+                    onEdit={() => isAdmin ? handleEditMaterial(mat) : alert(catalogPermissionMessage)}
+                    onDelete={() => isAdmin ? handleDeleteMaterial(mat.id) : alert(catalogPermissionMessage)}
                   />
                 ))}
               </div>
@@ -1330,10 +1506,23 @@ export const Settings: React.FC = () => {
                 required
               />
               <Select
+                label="Categoría"
+                options={formMaterialCategoryOptions}
+                value={materialFormData.category}
+                onChange={(e) => setMaterialFormData({ ...materialFormData, category: e.target.value as MaterialCategory })}
+              />
+              <Select
                 label="Tipo"
                 options={formMaterialTypeOptions}
                 value={materialFormData.type}
-                onChange={(e) => setMaterialFormData({ ...materialFormData, type: e.target.value as MaterialType })}
+                onChange={(e) => {
+                  const nextType = e.target.value as MaterialType;
+                  setMaterialFormData({
+                    ...materialFormData,
+                    type: nextType,
+                    category: getDefaultMaterialCategory(nextType),
+                  });
+                }}
               />
               <Input
                 label="Unidad"
@@ -1537,38 +1726,38 @@ export const Settings: React.FC = () => {
                   </div>
                 </div>
 
-                {/* SECCIÓN 2: CAMA INTERNA DE PISCINA */}
+                {/* SECCIÓN 2: RELLENO Y FONDO */}
                 <div className="space-y-6 pt-6 border-t border-gray-200">
                   <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg">
-                    <h4 className="font-bold text-xl text-gray-900 mb-1">CAMA INTERNA DE PISCINA</h4>
-                    <p className="text-sm text-gray-700 mb-4">Configuración para el calculo de la cama de arena-cemento debajo del casco</p>
+                    <h4 className="font-bold text-xl text-gray-900 mb-1">RELLENO Y FONDO DE PISCINA</h4>
+                    <p className="text-sm text-gray-700 mb-4">Estos valores alimentan el cálculo automático del relleno con arena terciada, el fondo y la mezcla seca con cemento.</p>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Dimensiones de Cama</h5>
+                    <h5 className="font-semibold mb-3 text-gray-900">Separación de Relleno</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     type="number"
                     step="0.5"
-                    label="Espesor de Cama (cm)"
+                    label="Separación lateral y fondo (cm)"
                     value={calcFormData.bedThicknessCm}
                     onChange={(e) => setCalcFormData({...calcFormData, bedThicknessCm: parseFloat(e.target.value)})}
                   />
                       <div className="flex items-end pb-2">
-                        <p className="text-xs text-gray-700">Tipicamente 10cm de cama arena-cemento</p>
+                        <p className="text-xs text-gray-700">Se usa igual en laterales y fondo. Valor recomendado actual: 20 cm.</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Cemento para Cama</h5>
+                    <h5 className="font-semibold mb-3 text-gray-900">Dosificación de Cemento</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input
                     type="number"
                     step="0.5"
-                    label="Bolsas de Cemento por m³ de arena"
-                    value={calcFormData.bedCementBagsPerM3}
-                    onChange={(e) => setCalcFormData({...calcFormData, bedCementBagsPerM3: parseFloat(e.target.value)})}
+                    label="Kg de cemento por m³"
+                    value={calcFormData.bedCementKgPerM3}
+                    onChange={(e) => setCalcFormData({...calcFormData, bedCementKgPerM3: parseFloat(e.target.value)})}
                   />
                   <Input
                     type="number"
@@ -1578,8 +1767,20 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, bedCementBagWeight: parseFloat(e.target.value)})}
                   />
                       <div className="flex items-end pb-2">
-                        <p className="text-xs text-gray-700">Dosificacion tipica: 5 bolsas por m³</p>
+                        <p className="text-xs text-gray-700">La cantidad de bolsas surge de dividir los kg totales requeridos por el peso real de cada bolsa.</p>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <h5 className="font-semibold text-gray-900 mb-2">Fórmula aplicada hoy</h5>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>Profundidad tomada: la más profunda de la pileta.</p>
+                      <p>Excavación de cálculo: largo + 2 separaciones, ancho + 2 separaciones, profundidad + separación de fondo.</p>
+                      <p>Arena terciada: volumen de excavación menos volumen del casco.</p>
+                      <p>Bolsones: se muestran como referencia en unidades de 1 m³.</p>
+                      <p>Cemento total: `m³ de arena × kg de cemento por m³`.</p>
+                      <p>Bolsas de cemento: `ceil(kg totales / peso de bolsa)`.</p>
                     </div>
                   </div>
 

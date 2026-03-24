@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'USER' | 'SUPERADMIN' | 'INSTALLER';
+  role: 'ADMIN' | 'USER' | 'SUPERADMIN' | 'INSTALLER' | 'VIEWER';
   currentOrgId?: string | null;
 }
 
@@ -16,9 +16,11 @@ export type PoolShape = 'RECTANGULAR' | 'CIRCULAR' | 'OVAL' | 'JACUZZI';
 export type ProjectStatus = 'DRAFT' | 'BUDGETED' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type AccessoryType = 'CORNER' | 'TRIM' | 'GRILL' | 'BASEBOARD' | 'SKIMMER_ITEM' | 'RETURN_ITEM' | 'DRAIN_ITEM' | 'OTHER';
 export type TileType = 'COMMON' | 'LOMO_BALLENA' | 'L_FINISH' | 'PERIMETER' | 'OTHER';
-export type EquipmentType = 'PUMP' | 'FILTER' | 'HEATER' | 'CHLORINATOR' | 'LIGHTING' | 'OTHER';
+export type EquipmentType = 'PUMP' | 'FILTER' | 'HEATER' | 'HEAT_PUMP' | 'CHLORINATOR' | 'LIGHTING' | 'OTHER';
+export type EquipmentCategory = 'REQUIRED' | 'HEATING' | 'ACCESSORIES' | 'OPTIONAL';
 export type MaterialType = 'CEMENT' | 'WHITE_CEMENT' | 'SAND' | 'STONE' | 'GRAVEL' | 'MARMOLINA' | 
-  'WIRE_MESH' | 'WIRE' | 'NAILS' | 'WATERPROOFING' | 'GEOTEXTILE' | 'OTHER';
+  'WIRE_MESH' | 'WIRE' | 'NAILS' | 'WATERPROOFING' | 'GEOTEXTILE' | 'TILE' | 'OTHER';
+export type MaterialCategory = 'STRUCTURE' | 'BED' | 'JOINT' | 'FINISH' | 'WATERPROOFING' | 'DRAINAGE' | 'REINFORCEMENT' | 'TILES' | 'OTHER';
 
 export interface TileConfig {
   rows: number;
@@ -39,10 +41,13 @@ export interface PoolPreset {
   depth: number;
   depthEnd?: number;
   shape: PoolShape;
+  perimeter?: number;
   lateralCushionSpace: number;
   floorCushionDepth: number;
   hasWetDeck: boolean;
   hasStairsOnly: boolean;
+  stairsCount: number;
+  canaletasCount: number;
   returnsCount: number;
   hasHotWaterReturn: boolean;
   hasHydroJets: boolean;
@@ -55,6 +60,10 @@ export interface PoolPreset {
   hasLighting: boolean;
   lightingCount: number;
   lightingType?: string;
+  defaultPumpId?: string;
+  defaultFilterId?: string;
+  defaultPump?: EquipmentPreset;
+  defaultFilter?: EquipmentPreset;
   tileConfig?: {
     north: TileConfig;
     south: TileConfig;
@@ -109,11 +118,24 @@ export interface EquipmentPreset {
   id: string;
   name: string;
   type: EquipmentType;
+  category?: EquipmentCategory;
   brand?: string;
   model?: string;
   power?: number;
   capacity?: number;
+  consumption?: number;
   voltage?: number;
+  flowRate?: number;
+  maxHead?: number;
+  maxTdh?: number;
+  filterArea?: number;
+  filterDiameter?: number;
+  thermalPower?: number;
+  sandRequired?: number;
+  connectionSize?: string;
+  minPoolVolume?: number;
+  maxPoolVolume?: number;
+  isActive?: boolean;
   pricePerUnit: number;
   description?: string;
   imageUrl?: string;
@@ -128,6 +150,7 @@ export interface ConstructionMaterialPreset {
   id: string;
   name: string;
   type: MaterialType;
+  category: MaterialCategory;
   unit: string;
   mixRatio?: any;
   pricePerUnit: number;
@@ -148,6 +171,25 @@ export interface Material {
   price?: number;
 }
 
+export interface ProjectAdditional {
+  id: string;
+  accessoryId?: string;
+  materialId?: string;
+  equipmentId?: string;
+  customName?: string;
+  customCategory?: string;
+  customUnit?: string;
+  customPricePerUnit?: number;
+  customLaborCost?: number;
+  baseQuantity: number;
+  newQuantity: number;
+  dependencies: any[];
+  notes?: string;
+  accessory?: any;
+  material?: any;
+  equipment?: any;
+}
+
 export interface TaskDetail {
   name: string;
   description: string;
@@ -158,6 +200,7 @@ export interface TaskDetail {
 
 export interface Project {
   id: string;
+  projectCode?: string;
   name: string;
   clientName: string;
   clientEmail?: string;
@@ -172,11 +215,14 @@ export interface Project {
   waterMirrorArea: number;
   volume: number;
   tileCalculation: any;
+  tileQuantities?: any[];
   totalTileArea: number;
   sidewalkArea: number;
   plumbingConfig?: any;
   electricalConfig?: any;
   materials: any;
+  additionals?: ProjectAdditional[];
+  projectAdditionals?: ProjectAdditional[];
   tasks: {
     excavation?: TaskDetail;
     hydraulic?: TaskDetail;
@@ -250,21 +296,20 @@ export interface HydraulicAnalysis {
   flowRate: number;
   staticLift: number;
   distanceToEquipment: number;
+  parameters?: {
+    distanceToEquipment: number;
+    staticLift: number;
+  };
+  analysis?: any;
   suctionPipeLoss: PipeLoss;
   returnPipeLoss: PipeLoss;
   fittingLosses: FittingLoss[];
   totalFrictionLoss: number;
   totalSingularLoss: number;
   tdh: number;
-  recommendedPump?: {
+  recommendedPump?: Partial<EquipmentPreset> & {
     id: string;
     name: string;
-    brand: string;
-    model: string;
-    power: number;
-    maxTdh: number;
-    flowRate: number;
-    imageUrl?: string;
   };
   warnings: string[];
   errors: string[];

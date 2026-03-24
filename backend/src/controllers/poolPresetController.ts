@@ -43,8 +43,8 @@ const parseFormData = (body: any) => {
     const value = body[key];
     
     // Números
-    if (['length', 'width', 'depth', 'depthEnd', 'lateralCushionSpace', 'floorCushionDepth', 
-         'returnsCount', 'hydroJetsCount', 'vacuumIntakeCount', 'skimmerCount', 'lightingCount'].includes(key)) {
+    if (['length', 'width', 'depth', 'depthEnd', 'lateralCushionSpace', 'floorCushionDepth',
+         'stairsCount', 'canaletasCount', 'returnsCount', 'hydroJetsCount', 'vacuumIntakeCount', 'skimmerCount', 'lightingCount'].includes(key)) {
       parsed[key] = value ? parseFloat(value) : 0;
     }
     // Booleanos
@@ -57,6 +57,12 @@ const parseFormData = (body: any) => {
       parsed[key] = value;
     }
   }
+
+  ['defaultPumpId', 'defaultFilterId'].forEach((key) => {
+    if (parsed[key] === '') {
+      parsed[key] = null;
+    }
+  });
   
   return parsed;
 };
@@ -111,6 +117,8 @@ export const getPoolPresets = async (req: AuthRequest, res: Response) => {
   try {
     const poolPresets = await prisma.poolPreset.findMany({
       include: {
+        defaultPump: true,
+        defaultFilter: true,
         user: {
           select: {
             id: true,
@@ -138,6 +146,8 @@ export const getPoolPresetById = async (req: AuthRequest, res: Response) => {
     const poolPreset = await prisma.poolPreset.findUnique({
       where: { id },
       include: {
+        defaultPump: true,
+        defaultFilter: true,
         user: {
           select: {
             id: true,

@@ -411,9 +411,10 @@ model CalculationSettings {
 
   // Cama interna de la piscina
   bedThicknessCm           Float @default(10.0)
-  bedCementBagsPerM3       Float @default(4.0)   // 4 bolsas por m³ de arena (1 bolsa : 0.25 m³)
-  bedCementBagWeight       Float @default(50.0)
-  bedSandM3PerCementBag    Float @default(0.25)  // 0.25 m³ de arena por bolsa de cemento
+  bedCementKgPerM3         Float @default(12.5)  // kg de cemento por m³ de arena de relleno/cama
+  bedCementBagsPerM3       Float @default(0.5)   // 0.5 bolsas por m³ de arena (1 bolsa : 2 m³)
+  bedCementBagWeight       Float @default(25.0)
+  bedSandM3PerCementBag    Float @default(2.0)   // 2 m³ de arena por bolsa de cemento
   drainTrenchWidthCm       Float @default(15.0)
   drainTrenchDepthCm       Float @default(15.0)
   geomembraneM2PerM2       Float @default(1.0)
@@ -445,6 +446,8 @@ model PoolPreset {
   
   hasWetDeck        Boolean @default(false)
   hasStairsOnly     Boolean @default(false)
+  stairsCount       Int     @default(0)
+  canaletasCount    Int     @default(0)
   
   returnsCount      Int     @default(2)
   hasHotWaterReturn Boolean @default(false)
@@ -461,6 +464,11 @@ model PoolPreset {
   hasLighting       Boolean @default(false)
   lightingCount     Int     @default(0)
   lightingType      String?
+
+  defaultPumpId     String?
+  defaultFilterId   String?
+  defaultPump       EquipmentPreset? @relation("PoolPresetDefaultPump", fields: [defaultPumpId], references: [id], onDelete: SetNull)
+  defaultFilter     EquipmentPreset? @relation("PoolPresetDefaultFilter", fields: [defaultFilterId], references: [id], onDelete: SetNull)
   
   tileConfig        Json?
   
@@ -588,6 +596,8 @@ model EquipmentPreset {
   updatedAt   DateTime @updatedAt
 
   projectAdditionals ProjectAdditional[]
+  defaultPumpForPresets PoolPreset[] @relation("PoolPresetDefaultPump")
+  defaultFilterForPresets PoolPreset[] @relation("PoolPresetDefaultFilter")
 }
 
 enum EquipmentType {
@@ -616,6 +626,7 @@ model ConstructionMaterialPreset {
   id          String         @id @default(uuid())
   name        String
   type        MaterialType
+  category    MaterialCategory @default(STRUCTURE)
   unit        String
   bagWeight   Float?         // Peso de la bolsa en kg (25, 30, 50, etc) - null si no es bolsa
   mixRatio    Json?
@@ -644,11 +655,25 @@ enum MaterialType {
   NAILS
   WATERPROOFING
   GEOTEXTILE
+  TILE
+  OTHER
+}
+
+enum MaterialCategory {
+  STRUCTURE
+  BED
+  JOINT
+  FINISH
+  WATERPROOFING
+  DRAINAGE
+  REINFORCEMENT
+  TILES
   OTHER
 }
 
 model Project {
   id              String   @id @default(uuid())
+  projectCode     String   @unique
   name            String
   clientName      String
   clientEmail     String?

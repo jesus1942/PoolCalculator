@@ -4,6 +4,105 @@
 
 import { PoolPreset } from '@/types';
 
+const DEFAULT_DISTANCE_TO_PANEL = 15;
+const DEFAULT_DISTANCE_TO_EQUIPMENT = 8;
+
+type ElectricalItemType = 'lighting' | 'pump' | 'heating' | 'automation' | 'cable' | 'breaker' | 'other';
+
+interface AutoElectricalItem {
+  id: string;
+  type: ElectricalItemType;
+  name: string;
+  watts: number;
+  voltage: number;
+  quantity: number;
+  notes?: string;
+}
+
+const calculateRecommendedCableSection = (totalWatts: number, distanceToPanel: number) => {
+  const totalAmps = totalWatts / 220;
+
+  if (distanceToPanel <= 15) {
+    return totalAmps <= 20 ? '2.5mm²' : totalAmps <= 30 ? '4mm²' : '6mm²';
+  }
+  if (distanceToPanel <= 30) {
+    return totalAmps <= 20 ? '4mm²' : totalAmps <= 30 ? '6mm²' : '10mm²';
+  }
+  return totalAmps <= 20 ? '6mm²' : totalAmps <= 30 ? '10mm²' : '16mm²';
+};
+
+const syncElectricalDerivedFields = (config: any) => {
+  const items: AutoElectricalItem[] = [];
+
+  (config.lights || []).forEach((light: any, index: number) => {
+    items.push({
+      id: light.id || `lighting-${index + 1}`,
+      type: 'lighting',
+      name: light.name || `Luz ${index + 1}`,
+      watts: Number(light.power || light.watts || 0),
+      voltage: Number(light.voltage || 12),
+      quantity: Number(light.quantity || 1),
+      notes: light.notes,
+    });
+  });
+
+  (config.pumps || []).forEach((pump: any, index: number) => {
+    items.push({
+      id: pump.id || `pump-${index + 1}`,
+      type: 'pump',
+      name: pump.name || `Bomba ${index + 1}`,
+      watts: Number(pump.power || pump.watts || 0),
+      voltage: Number(pump.voltage || 220),
+      quantity: Number(pump.quantity || 1),
+      notes: pump.notes,
+    });
+  });
+
+  (config.heaters || []).forEach((heater: any, index: number) => {
+    items.push({
+      id: heater.id || `heater-${index + 1}`,
+      type: 'heating',
+      name: heater.name || `Calefactor ${index + 1}`,
+      watts: Number(heater.power || heater.watts || 0),
+      voltage: Number(heater.voltage || 220),
+      quantity: Number(heater.quantity || 1),
+      notes: heater.notes,
+    });
+  });
+
+  (config.other || []).forEach((item: any, index: number) => {
+    items.push({
+      id: item.id || `other-${index + 1}`,
+      type: 'other',
+      name: item.name || `Item ${index + 1}`,
+      watts: Number(item.power || item.watts || 0),
+      voltage: Number(item.voltage || 220),
+      quantity: Number(item.quantity || 1),
+      notes: item.notes,
+    });
+  });
+
+  const totalWatts = items.reduce((sum, item) => sum + (item.watts * item.quantity), 0);
+  const distanceToPanel = Number(config.distanceToPanel || DEFAULT_DISTANCE_TO_PANEL);
+
+  config.items = items;
+  config.totalWatts = totalWatts;
+  config.totalPower = totalWatts;
+  config.distanceToPanel = distanceToPanel;
+  config.mainBreaker = Number(config.mainBreaker || Math.max(16, Math.ceil((totalWatts / 220) * 1.25)));
+  config.recommendedCableSection = calculateRecommendedCableSection(totalWatts, distanceToPanel);
+
+  return config;
+};
+
+const syncPlumbingDerivedFields = (config: any) => {
+  config.distanceToEquipment = Number(config.distanceToEquipment || DEFAULT_DISTANCE_TO_EQUIPMENT);
+  if (!Array.isArray(config.selectedItems)) {
+    config.selectedItems = [];
+  }
+  return config;
+};
+
 /**
  * Genera configuración eléctrica automática basándose en el preset y adicionales
  */
@@ -98,13 +197,6 @@ export function generateElectricalConfigFromPresetWithAdditionals(
     }
   });
 
-  // Recalcular potencia total
-  config.totalPower =
-    config.lights.reduce((sum: number, light: any) => sum + (light.power * light.quantity), 0) +
-    config.pumps.reduce((sum: number, pump: any) => sum + (pump.power * pump.quantity), 0) +
-    config.heaters.reduce((sum: number, heater: any) => sum + (heater.power * heater.quantity), 0) +
-    config.other.reduce((sum: number, item: any) => sum + (item.power * item.quantity), 0);
-
   // Recalcular costos
   const circuitsNeeded = config.lights.length + config.pumps.length + config.heaters.length + config.other.length;
   config.estimatedInstallationCost =
@@ -113,7 +205,7 @@ export function generateElectricalConfigFromPresetWithAdditionals(
     config.pumps.length * 80000 + // $80k por bomba instalada
     config.heaters.length * 100000; // $100k por calentador instalado
 
-  return config;
+  return syncElectricalDerivedFields(config);
 }
 
 /**
@@ -125,7 +217,12 @@ export function generateElectricalConfigFromPreset(preset: PoolPreset): any {
     pumps: [],
     heaters: [],
     other: [],
+    items: [],
     totalPower: 0,
+    totalWatts: 0,
+    mainBreaker: 30,
+    distanceToPanel: DEFAULT_DISTANCE_TO_PANEL,
+    recommendedCableSection: '',
     estimatedInstallationCost: 0
   };
 
@@ -173,17 +270,13 @@ export function generateElectricalConfigFromPreset(preset: PoolPreset): any {
     });
   }
 
-  // Calcular potencia total
-  config.totalPower = config.lights.reduce((sum: number, light: any) => sum + (light.power * light.quantity), 0) +
-                      config.pumps.reduce((sum: number, pump: any) => sum + pump.power, 0);
-
   // Estimación de costo de instalación (ARS)
   const circuitsNeeded = config.lights.length + config.pumps.length;
   config.estimatedInstallationCost = circuitsNeeded * 50000 + // $50k por circuito
                                      config.lights.length * 15000 + // $15k por luz instalada
                                      config.pumps.length * 80000; // $80k por bomba instalada
 
-  return config;
+  return syncElectricalDerivedFields(config);
 }
 
 /**
@@ -310,7 +403,7 @@ export function generatePlumbingConfigFromPresetWithAdditionals(
     `Longitud estimada de tuberías: ${config.pipes.reduce((sum: any, pipe: any) => sum + (pipe.length || 0), 0)}m`
   ];
 
-  return config;
+  return syncPlumbingDerivedFields(config);
 }
 
 /**
@@ -325,6 +418,8 @@ export function generatePlumbingConfigFromPreset(preset: PoolPreset): any {
     jets: [],
     pipes: [],
     valves: [],
+    selectedItems: [],
+    distanceToEquipment: DEFAULT_DISTANCE_TO_EQUIPMENT,
     estimatedMaterialCost: 0,
     notes: []
   };
@@ -484,7 +579,7 @@ export function generatePlumbingConfigFromPreset(preset: PoolPreset): any {
   config.notes.push(`Total de componentes hidráulicos: ${totalComponents}`);
   config.notes.push(`Longitud estimada de tuberías: ${config.pipes.reduce((sum: any, pipe: any) => sum + pipe.length, 0)}m`);
 
-  return config;
+  return syncPlumbingDerivedFields(config);
 }
 
 /**
@@ -550,6 +645,21 @@ export function generateTileConfigFromPreset(preset: PoolPreset): any {
   };
 
   return defaultTileConfig;
+}
+
+export function buildProjectAutoConfigurations(
+  preset: PoolPreset,
+  additionals: any[] = []
+): {
+  tileCalculation: any;
+  plumbingConfig: any;
+  electricalConfig: any;
+} {
+  return {
+    tileCalculation: generateTileConfigFromPreset(preset),
+    plumbingConfig: generatePlumbingConfigFromPresetWithAdditionals(preset, additionals),
+    electricalConfig: generateElectricalConfigFromPresetWithAdditionals(preset, additionals),
+  };
 }
 
 /**

@@ -47,7 +47,7 @@ export const OpsManager: React.FC = () => {
       <div className="min-h-screen px-6 py-10 text-zinc-200">
         <div className="max-w-3xl mx-auto bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-8 shadow-xl">
           <h1 className="text-xl font-semibold">Acceso restringido</h1>
-          <p className="mt-3 text-zinc-400">Solo SUPERADMIN puede ver esta sección.</p>
+          <p className="mt-3 text-zinc-300">Solo SUPERADMIN puede ver esta sección.</p>
         </div>
       </div>
     );
@@ -63,7 +63,7 @@ export const OpsManager: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-white">Backend & Base de datos</h1>
-              <p className="text-sm text-zinc-400">Observabilidad y logs operativos.</p>
+              <p className="text-sm text-zinc-300">Observabilidad y logs operativos.</p>
             </div>
           </div>
           <button
@@ -84,34 +84,34 @@ export const OpsManager: React.FC = () => {
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-4">
-            <div className="text-xs uppercase tracking-wider text-zinc-500">Base de datos</div>
+            <div className="text-xs uppercase tracking-wider text-zinc-300">Base de datos</div>
             <div className="mt-2 text-lg text-white">
               {status?.db.ok ? 'Conectada' : 'Sin conexión'}
             </div>
             {!status?.db.ok && status?.db.error && (
               <div className="mt-2 text-xs text-red-300">{status.db.error}</div>
             )}
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-zinc-300">
               Uptime: {status ? `${Math.floor(status.uptimeSeconds / 60)} min` : '-'}
             </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-4">
-            <div className="text-xs uppercase tracking-wider text-zinc-500">SMTP</div>
+            <div className="text-xs uppercase tracking-wider text-zinc-300">SMTP</div>
             <div className="mt-2 text-lg text-white">
               {status?.smtp.configured ? 'Configurado' : 'No configurado'}
             </div>
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-zinc-300">
               Intervalo: {status ? `${Math.round(status.reminders.intervalMs / 60000)} min` : '-'}
             </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-4">
-            <div className="text-xs uppercase tracking-wider text-zinc-500">Recordatorios</div>
+            <div className="text-xs uppercase tracking-wider text-zinc-300">Recordatorios</div>
             <div className="mt-2 text-lg text-white">
               {status ? status.reminders.pendingCount : '-'} pendientes
             </div>
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-zinc-300">
               En cola: {status ? status.reminders.dueCount : '-'} · Último email: {status?.reminders.lastEmailSentAt ? new Date(status.reminders.lastEmailSentAt).toLocaleString('es-AR') : 'N/A'}
             </div>
           </div>
@@ -147,7 +147,7 @@ export const OpsManager: React.FC = () => {
 
           <div className="mt-4 overflow-auto">
             <table className="w-full text-sm text-left text-zinc-200">
-              <thead className="text-xs uppercase tracking-wider text-zinc-500">
+              <thead className="text-xs uppercase tracking-wider text-zinc-300">
                 <tr>
                   <th className="py-2 pr-4">Hora</th>
                   <th className="py-2 pr-4">Nivel</th>
@@ -159,7 +159,7 @@ export const OpsManager: React.FC = () => {
               <tbody className="text-zinc-300">
                 {logs.map((log) => (
                   <tr key={log.id} className="border-t border-zinc-800/60">
-                    <td className="py-3 pr-4 text-xs text-zinc-400">
+                    <td className="py-3 pr-4 text-xs text-zinc-300">
                       {new Date(log.createdAt).toLocaleString('es-AR')}
                     </td>
                     <td className="py-3 pr-4">
@@ -175,21 +175,21 @@ export const OpsManager: React.FC = () => {
                         {log.level}
                       </span>
                     </td>
-                    <td className="py-3 pr-4 text-xs text-zinc-400">{log.category}</td>
+                    <td className="py-3 pr-4 text-xs text-zinc-300">{log.category}</td>
                     <td className="py-3 pr-4">
                       <div className="text-sm text-zinc-200">{log.message}</div>
                       {log.meta && (
-                        <div className="text-xs text-zinc-500 mt-1">{JSON.stringify(log.meta)}</div>
+                        <div className="text-xs text-zinc-300 mt-1">{JSON.stringify(log.meta)}</div>
                       )}
                     </td>
-                    <td className="py-3 pr-4 text-xs text-zinc-400">
+                    <td className="py-3 pr-4 text-xs text-zinc-300">
                       {log.user ? `${log.user.name || '-'} (${log.user.email})` : '-'}
                     </td>
                   </tr>
                 ))}
                 {!loading && logs.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-4 text-zinc-500 text-center">
+                    <td colSpan={5} className="py-4 text-zinc-300 text-center">
                       No hay logs disponibles.
                     </td>
                   </tr>

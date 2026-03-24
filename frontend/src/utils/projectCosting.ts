@@ -54,6 +54,31 @@ export const calculateAdditionalCosts = (additionals: any[]) =>
     { materialCost: 0, laborCost: 0 }
   );
 
+const getConfigItemName = (item: any) =>
+  item?.itemName ||
+  item?.name ||
+  item?.label ||
+  item?.description ||
+  '';
+
+const isAdditionalRepresentedInConfig = (additional: any, configNames: string[]) => {
+  const additionalName = normalize(getAdditionalName(additional));
+  if (!additionalName) return false;
+
+  const directMatch = configNames.some((name) => name === additionalName);
+  if (directMatch) return true;
+
+  const additionalTokens = additionalName
+    .split(/[^a-z0-9]+/i)
+    .filter((token) => token.length >= 4);
+
+  if (additionalTokens.length === 0) return false;
+
+  return configNames.some((configName) =>
+    additionalTokens.every((token) => configName.includes(token))
+  );
+};
+
 export const getTasksLaborCost = (tasks: any, options?: { excludeAdditionals?: boolean }) => {
   const excludeAdditionals = options?.excludeAdditionals ?? false;
   return Object.entries(tasks || {}).reduce((sum: number, [category, categoryTasks]: [string, any]) => {
@@ -64,16 +89,6 @@ export const getTasksLaborCost = (tasks: any, options?: { excludeAdditionals?: b
 };
 
 export const calculateProjectFinancials = (project: Project | any, additionalsInput?: any[]) => {
-  const additionals = (additionalsInput || getProjectAdditionals(project)).filter(
-    (additional) => !isBaseModelAdditional(project, additional)
-  );
-  const additionalsCosts = calculateAdditionalCosts(additionals);
-  const tasks = (project.tasks as any) || {};
-  const tasksLaborCost = getTasksLaborCost(tasks, { excludeAdditionals: true });
-  const additionalsTaskLaborCost = getTasksLaborCost(tasks) - tasksLaborCost;
-  const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
-  const effectiveAdditionalsLaborCost = Math.max(additionalsCosts.laborCost, additionalsTaskLaborCost, 0);
-
   const plumbingConfig = (project.plumbingConfig as any) || {};
   const plumbingCosts = plumbingConfig?.selectedItems
     ? plumbingConfig.selectedItems.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.pricePerUnit || 0)), 0)
@@ -84,16 +99,39 @@ export const calculateProjectFinancials = (project: Project | any, additionalsIn
     ? electricalConfig.items.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.pricePerUnit || 0)), 0)
     : 0;
 
+  const configNames = [
+    ...(Array.isArray(plumbingConfig?.selectedItems) ? plumbingConfig.selectedItems : []),
+    ...(Array.isArray(electricalConfig?.items) ? electricalConfig.items : []),
+  ]
+    .map((item) => normalize(getConfigItemName(item)))
+    .filter(Boolean);
+
+  const rawAdditionals = (additionalsInput || getProjectAdditionals(project)).filter(
+    (additional) => !isBaseModelAdditional(project, additional)
+  );
+  const dedupedAdditionals = rawAdditionals.filter((additional) => !isAdditionalRepresentedInConfig(additional, configNames));
+  const duplicatedAdditionals = rawAdditionals.filter((additional) => isAdditionalRepresentedInConfig(additional, configNames));
+  const additionalsCosts = calculateAdditionalCosts(dedupedAdditionals);
+  const duplicatedAdditionalsCosts = calculateAdditionalCosts(duplicatedAdditionals);
+  const tasks = (project.tasks as any) || {};
+  const tasksLaborCost = getTasksLaborCost(tasks, { excludeAdditionals: true });
+  const additionalsTaskLaborCost = getTasksLaborCost(tasks) - tasksLaborCost;
+  const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
+  const effectiveAdditionalsLaborCost = Math.max(additionalsCosts.laborCost, additionalsTaskLaborCost, 0);
+
   const baseMaterialCost = (project.materialCost || 0) + plumbingCosts + electricalCosts;
   const totalMaterialCost = baseMaterialCost + additionalsCosts.materialCost;
   const totalLaborCost = baseLaborCost + effectiveAdditionalsLaborCost;
 
   return {
-    additionals,
+    additionals: dedupedAdditionals,
+    rawAdditionals,
+    duplicatedAdditionals,
     additionalsCosts: {
       ...additionalsCosts,
       laborCost: effectiveAdditionalsLaborCost,
     },
+    duplicatedAdditionalsCosts,
     plumbingCosts,
     electricalCosts,
     baseMaterialCost,

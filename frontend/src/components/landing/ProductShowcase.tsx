@@ -6,9 +6,158 @@ interface ShowcaseFeature {
   title: string;
   description: string;
   icon: React.ReactNode;
-  image: string;
   highlights: string[];
 }
+
+const ShowcasePreview: React.FC<{ featureId: string; title: string }> = ({ featureId, title }) => {
+  if (featureId === 'dashboard') {
+    return (
+      <div className="grid h-full grid-cols-[1.2fr_0.8fr] gap-4 bg-[#07111f] p-5 text-white">
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-200/70">Panel</p>
+          <p className="mt-3 text-2xl font-semibold">Proyectos activos</p>
+          <div className="mt-5 grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-zinc-400">Activos</p>
+              <p className="mt-2 text-2xl font-bold">12</p>
+            </div>
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-zinc-400">Presupuestos</p>
+              <p className="mt-2 text-2xl font-bold">6</p>
+            </div>
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-zinc-400">Alertas</p>
+              <p className="mt-2 text-2xl font-bold">3</p>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm text-zinc-400">Actividad reciente</p>
+            <div className="mt-3 space-y-2">
+              <div className="rounded-lg bg-white/5 px-3 py-2 text-sm">Excavación completada</div>
+              <div className="rounded-lg bg-white/5 px-3 py-2 text-sm">Presupuesto exportado</div>
+              <div className="rounded-lg bg-white/5 px-3 py-2 text-sm">Cliente aprobó proyecto</div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm text-zinc-400">Accesos rápidos</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-cyan-300 px-3 py-1 text-xs font-semibold text-slate-950">Nuevo proyecto</span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs">Exportar</span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs">Agenda</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureId === 'projects') {
+    return (
+      <div className="h-full bg-[#0b1220] p-5 text-white">
+        <div className="grid gap-3">
+          {['Casa Figueroa', 'Club del Lago', 'Barrio Norte'].map((name, index) => (
+            <div key={name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">{name}</p>
+                  <p className="text-sm text-zinc-400">Modelo {index === 0 ? 'Jade' : index === 1 ? 'Citrino' : 'Alejandrita'}</p>
+                </div>
+                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs text-emerald-200">Activo</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (featureId === 'calculator') {
+    return (
+      <div className="grid h-full grid-cols-2 gap-4 bg-[#0d1117] p-5 text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Entrada</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-xl bg-zinc-950 p-3">Modelo: Jade</div>
+            <div className="rounded-xl bg-zinc-950 p-3">Distancia cabecera: 8 m</div>
+            <div className="rounded-xl bg-zinc-950 p-3">Iluminación: 2 luces</div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">Salida</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-xl bg-black/20 p-3">Volumen: 36.9 m³</div>
+            <div className="rounded-xl bg-black/20 p-3">Cañería: 47 m</div>
+            <div className="rounded-xl bg-black/20 p-3">Potencia: 1.130 W</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureId === 'reports') {
+    return (
+      <div className="h-full bg-[#f7f7f5] p-5 text-zinc-900">
+        <div className="mx-auto h-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl">
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Reporte</p>
+          <p className="mt-2 text-xl font-semibold">{title}</p>
+          <div className="mt-5 space-y-3">
+            <div className="h-3 rounded-full bg-zinc-200" />
+            <div className="h-3 w-5/6 rounded-full bg-zinc-200" />
+            <div className="h-24 rounded-2xl bg-cyan-100" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-16 rounded-xl bg-zinc-100" />
+              <div className="h-16 rounded-xl bg-zinc-100" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (featureId === 'analytics') {
+    return (
+      <div className="grid h-full grid-cols-[1.1fr_0.9fr] gap-4 bg-[#111827] p-5 text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-sm text-zinc-400">Costos por etapa</p>
+          <div className="mt-4 flex h-48 items-end gap-3">
+            {[45, 68, 58, 82, 61].map((height, index) => (
+              <div key={index} className="flex-1 rounded-t-xl bg-gradient-to-t from-cyan-500 to-blue-400" style={{ height: `${height}%` }} />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm text-zinc-400">Rentabilidad</p>
+            <p className="mt-3 text-3xl font-bold">23%</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-sm text-zinc-400">Promedio por obra</p>
+            <p className="mt-3 text-3xl font-bold">$4.8M</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full bg-[#0f172a] p-5 text-white">
+      <div className="grid h-full gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+        <div className="rounded-2xl bg-cyan-400/10 p-4">
+          <p className="text-sm text-cyan-100">Portal del cliente</p>
+          <p className="mt-2 text-2xl font-semibold">Seguimiento compartido</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl bg-white/5 p-4">Línea de tiempo</div>
+          <div className="rounded-xl bg-white/5 p-4">Fotos y avances</div>
+          <div className="rounded-xl bg-white/5 p-4">Estado de tareas</div>
+          <div className="rounded-xl bg-white/5 p-4">Documentación</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const ProductShowcase: React.FC = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -19,7 +168,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Panel de Control',
       description: 'Vista general de todos tus proyectos, estadísticas y acceso rápido a las funciones principales.',
       icon: <LayoutDashboard className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=500&fit=crop',
       highlights: [
         'Resumen de proyectos activos',
         'Estadísticas en tiempo real',
@@ -32,7 +180,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Gestión de Proyectos',
       description: 'Crea, edita y gestiona múltiples proyectos de piscinas simultáneamente con total control.',
       icon: <FolderOpen className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=500&fit=crop',
       highlights: [
         'Lista completa de proyectos',
         'Filtros y búsqueda avanzada',
@@ -45,7 +192,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Calculadora de Materiales',
       description: 'Calcula automáticamente todos los materiales necesarios basándose en el modelo de piscina seleccionado.',
       icon: <Calculator className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&h=500&fit=crop',
       highlights: [
         'Cálculos automáticos precisos',
         'Excavación y movimiento de tierra',
@@ -58,7 +204,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Reportes y Exportación',
       description: 'Genera reportes profesionales y exporta toda la información a Excel con un solo click.',
       icon: <FileText className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop',
       highlights: [
         'Exportación a Excel personalizada',
         'Reportes de materiales detallados',
@@ -71,7 +216,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Análisis y Estadísticas',
       description: 'Visualiza el rendimiento de tus proyectos con gráficos y métricas clave.',
       icon: <BarChart3 className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=500&fit=crop',
       highlights: [
         'Gráficos interactivos',
         'Comparación de proyectos',
@@ -84,7 +228,6 @@ export const ProductShowcase: React.FC = () => {
       title: 'Portal del Cliente',
       description: 'Comparte el progreso del proyecto con tus clientes mediante un portal seguro y personalizado.',
       icon: <Share2 className="w-6 h-6" />,
-      image: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=500&fit=crop',
       highlights: [
         'Acceso compartido seguro',
         'Actualizaciones en tiempo real',
@@ -164,20 +307,18 @@ export const ProductShowcase: React.FC = () => {
           <div className="relative bg-gradient-to-br from-blue-50 to-cyan-50 p-8 flex items-center justify-center">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-cyan-600/10"></div>
             <div className="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden shadow-2xl border-4 border-white transform transition-all duration-500 hover:scale-105">
-              <img
-                src={features[activeFeature].image}
-                alt={features[activeFeature].title}
-                className="w-full h-full object-cover"
+              <ShowcasePreview
+                featureId={features[activeFeature].id}
+                title={features[activeFeature].title}
               />
-              {/* Overlay para simular interfaz */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-6">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-6">
                 <div className="text-white">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
                     <span className="text-sm font-medium">En vivo</span>
                   </div>
                   <p className="text-sm opacity-90">
-                    Captura del panel de Pool Installer
+                    Vista representativa del flujo real de la app
                   </p>
                 </div>
               </div>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ImageHoverZoomProps {
@@ -7,6 +8,9 @@ interface ImageHoverZoomProps {
   className?: string;
   containerClassName?: string;
   images?: string[]; // Array de imágenes para navegación
+  fullscreenImages?: string[];
+  fullscreenLabels?: string[];
+  fullscreenIndex?: number;
   currentIndex?: number;
   onNavigate?: (index: number) => void;
 }
@@ -17,16 +21,42 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
   className = '',
   containerClassName = '',
   images = [],
+  fullscreenImages = [],
+  fullscreenLabels = [],
+  fullscreenIndex,
   currentIndex = 0,
   onNavigate,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(currentIndex);
+  const [originRect, setOriginRect] = useState<DOMRect | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
-  const hasMultipleImages = images.length > 1;
-  const displayImages = images.length > 0 ? images : [src];
-  const currentSrc = displayImages[currentImageIndex] || src;
+  const inlineImages = images.length > 0 ? images : [src];
+  const modalImages = fullscreenImages.length > 0 ? fullscreenImages : inlineImages;
+  const initialIndex = fullscreenIndex ?? currentIndex;
+  const hasMultipleImages = modalImages.length > 1;
+  const currentSrc = src;
+  const currentModalSrc = modalImages[currentImageIndex] || src;
+  const currentModalLabel = fullscreenLabels[currentImageIndex] || alt;
+
+  React.useEffect(() => {
+    setCurrentImageIndex(initialIndex);
+  }, [initialIndex, isFullscreen]);
+
+  React.useEffect(() => {
+    if (!isFullscreen || typeof document === 'undefined') {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFullscreen]);
 
   // Hook para cerrar con ESC y navegar con flechas
   React.useEffect(() => {
@@ -34,7 +64,7 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsFullscreen(false);
+        closeFullscreen();
       } else if (e.key === 'ArrowLeft' && hasMultipleImages) {
         navigatePrevious();
       } else if (e.key === 'ArrowRight' && hasMultipleImages) {
@@ -47,24 +77,50 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
   }, [isFullscreen, currentImageIndex, hasMultipleImages]);
 
   const navigateNext = () => {
-    const newIndex = (currentImageIndex + 1) % displayImages.length;
+    const newIndex = (currentImageIndex + 1) % modalImages.length;
     setCurrentImageIndex(newIndex);
     if (onNavigate) onNavigate(newIndex);
   };
 
   const navigatePrevious = () => {
-    const newIndex = (currentImageIndex - 1 + displayImages.length) % displayImages.length;
+    const newIndex = (currentImageIndex - 1 + modalImages.length) % modalImages.length;
     setCurrentImageIndex(newIndex);
     if (onNavigate) onNavigate(newIndex);
   };
 
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (imageRef.current) {
+      setOriginRect(imageRef.current.getBoundingClientRect());
+    }
     setIsFullscreen(true);
   };
 
   const closeFullscreen = () => {
     setIsFullscreen(false);
+    setOriginRect(null);
+  };
+
+  const getLightboxAnimationStyle = (): React.CSSProperties | undefined => {
+    if (!originRect || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const targetWidth = Math.min(viewportWidth * 0.9, viewportHeight * 1.25, 1200);
+    const targetHeight = Math.min(viewportHeight * 0.88, viewportWidth * 0.8, 900);
+    const scaleX = originRect.width / targetWidth;
+    const scaleY = originRect.height / targetHeight;
+    const translateX = originRect.left + originRect.width / 2 - viewportWidth / 2;
+    const translateY = originRect.top + originRect.height / 2 - viewportHeight / 2;
+
+    return {
+      '--lightbox-origin-x': `${translateX}px`,
+      '--lightbox-origin-y': `${translateY}px`,
+      '--lightbox-scale-x': `${scaleX}`,
+      '--lightbox-scale-y': `${scaleY}`,
+    } as React.CSSProperties;
   };
 
   return (
@@ -76,6 +132,7 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
         onMouseLeave={() => setIsHovered(false)}
       >
         <img
+          ref={imageRef}
           src={currentSrc}
           alt={alt}
           loading="lazy"
@@ -101,9 +158,10 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
       </div>
 
       {/* Modal fullscreen con animación suave */}
-      {isFullscreen && (
+      {isFullscreen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[10000] bg-black bg-opacity-95 flex items-center justify-center p-8 animate-fade-in"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-8 animate-fade-in backdrop-blur-md"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.58)' }}
           onClick={closeFullscreen}
         >
           {/* Botón cerrar */}
@@ -144,11 +202,14 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
           )}
 
           {/* Imagen centrada con animación suave */}
-          <div className="relative max-w-[85vw] max-h-[85vh] flex items-center justify-center">
+          <div
+            className="relative flex max-w-[90vw] max-h-[88vh] items-center justify-center"
+            style={getLightboxAnimationStyle()}
+          >
             <img
-              src={currentSrc}
-              alt={alt}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-zoom-in-smooth"
+              src={currentModalSrc}
+              alt={currentModalLabel}
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl ring-1 ring-white/20 animate-lightbox-in-from-origin"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -156,31 +217,34 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
           {/* Indicador de imagen actual */}
           {hasMultipleImages && (
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm">
-              {currentImageIndex + 1} / {displayImages.length}
+              {currentImageIndex + 1} / {modalImages.length}
             </div>
           )}
 
           {/* Nombre de la imagen */}
           <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-full text-base backdrop-blur-sm max-w-[80vw] truncate">
-            {alt}
+            {currentModalLabel}
           </div>
 
           {/* Hints de navegación */}
           <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-full text-xs backdrop-blur-sm">
             {hasMultipleImages ? '← → para navegar • ' : ''}ESC para cerrar
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <style>{`
-        @keyframes zoom-in-smooth {
+        @keyframes lightbox-in-from-origin {
           from {
             opacity: 0;
-            transform: scale(0.9);
+            transform:
+              translate(var(--lightbox-origin-x, 0), var(--lightbox-origin-y, 24px))
+              scale(var(--lightbox-scale-x, 0.88), var(--lightbox-scale-y, 0.88));
           }
           to {
             opacity: 1;
-            transform: scale(1);
+            transform: translate(0, 0) scale(1, 1);
           }
         }
 
@@ -193,8 +257,9 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
           }
         }
 
-        .animate-zoom-in-smooth {
-          animation: zoom-in-smooth 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .animate-lightbox-in-from-origin {
+          transform-origin: center center;
+          animation: lightbox-in-from-origin 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .animate-fade-in {

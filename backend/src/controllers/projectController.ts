@@ -974,6 +974,37 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       updateData.exportSettings = requestedExportSettings;
     }
     let recalculatedTasks: Record<string, any[]> | null = null;
+    const poolPresetChanged = Boolean(req.body.poolPresetId && req.body.poolPresetId !== existingProject.poolPresetId);
+    let effectivePoolPreset = existingProject.poolPreset;
+
+    if (poolPresetChanged) {
+      const nextPoolPreset = await prisma.poolPreset.findUnique({
+        where: { id: req.body.poolPresetId },
+      });
+
+      if (!nextPoolPreset) {
+        return res.status(404).json({ error: 'Preset de piscina no encontrado' });
+      }
+
+      effectivePoolPreset = nextPoolPreset;
+
+      const dimensions = {
+        length: nextPoolPreset.length,
+        width: nextPoolPreset.width,
+        depth: nextPoolPreset.depth,
+        depthEnd: nextPoolPreset.depthEnd || undefined,
+        shape: nextPoolPreset.shape,
+      };
+
+      const deepestDepth = Math.max(nextPoolPreset.depth, nextPoolPreset.depthEnd || nextPoolPreset.depth);
+      updateData.perimeter = parseFloat(calculatePerimeter(dimensions).toFixed(2));
+      updateData.waterMirrorArea = parseFloat(calculateWaterMirrorArea(dimensions).toFixed(2));
+      updateData.volume = parseFloat(calculateVolume(dimensions).toFixed(2));
+      updateData.excavationLength = parseFloat((nextPoolPreset.length + (nextPoolPreset.lateralCushionSpace * 2)).toFixed(2));
+      updateData.excavationWidth = parseFloat((nextPoolPreset.width + (nextPoolPreset.lateralCushionSpace * 2)).toFixed(2));
+      updateData.excavationDepth = parseFloat((deepestDepth + nextPoolPreset.floorCushionDepth).toFixed(2));
+    }
+
     const taskAutomationLocked = requestedExportSettings !== undefined
       ? Boolean(requestedExportSettings.taskAutomationLocked)
       : getProjectTaskAutomationLocked(existingProject);
@@ -1070,9 +1101,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     );
 
     if (shouldRegenerateAutomaticTasks) {
-      const poolPreset = req.body.poolPresetId && req.body.poolPresetId !== existingProject.poolPresetId
-        ? await prisma.poolPreset.findUnique({ where: { id: req.body.poolPresetId } })
-        : existingProject.poolPreset;
+      const poolPreset = effectivePoolPreset;
 
       if (poolPreset) {
         const dimensions = {

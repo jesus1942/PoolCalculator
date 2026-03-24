@@ -25,7 +25,7 @@ router.use(authenticate);
 
 const agendaUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -34,6 +34,20 @@ const agendaUpload = multer({
     cb(new Error('Solo se permiten imágenes (jpeg, jpg, png, gif, webp)'));
   },
 });
+
+const handleAgendaUpload: express.RequestHandler = (req, res, next) => {
+  agendaUpload.array('images', 6)(req, res, (error: any) => {
+    if (!error) return next();
+
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Cada imagen debe pesar menos de 12 MB.' });
+    }
+
+    return res.status(400).json({
+      error: error?.message || 'No se pudieron procesar las imágenes adjuntas.',
+    });
+  });
+};
 
 router.get('/', listAgendaEvents);
 router.get('/reminders', listAgendaReminders);
@@ -48,6 +62,6 @@ router.post('/:id/checklist', addAgendaChecklistItem);
 router.patch('/:id/checklist/:itemId', updateAgendaChecklistItem);
 router.delete('/:id/checklist/:itemId', deleteAgendaChecklistItem);
 router.get('/:id/messages', listAgendaMessages);
-router.post('/:id/messages', agendaUpload.array('images', 6), addAgendaMessage);
+router.post('/:id/messages', handleAgendaUpload, addAgendaMessage);
 
 export default router;

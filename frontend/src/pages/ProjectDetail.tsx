@@ -20,9 +20,7 @@ import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
 import type { Project, ProjectStatus as ProjectStatusType, PoolPreset } from '@/types';
 import {
-  generateElectricalConfigFromPresetWithAdditionals,
-  generatePlumbingConfigFromPresetWithAdditionals,
-  generateTileConfigFromPreset
+  buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
 import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity, Cpu } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -96,27 +94,34 @@ export const ProjectDetail: React.FC = () => {
         let needsUpdate = false;
         const updates: any = {};
         const additionals = (data as any).additionals || [];
+        const autoConfigs = buildProjectAutoConfigurations(data.poolPreset, additionals);
 
-        if (!data.electricalConfig || Object.keys(data.electricalConfig).length === 0) {
-          updates.electricalConfig = generateElectricalConfigFromPresetWithAdditionals(
-            data.poolPreset,
-            additionals
-          );
+        const electricalConfig = data.electricalConfig as any;
+        if (
+          !electricalConfig ||
+          Object.keys(electricalConfig).length === 0 ||
+          !Array.isArray(electricalConfig.items) ||
+          electricalConfig.items.length === 0 ||
+          Number(electricalConfig.totalWatts ?? electricalConfig.totalPower ?? 0) <= 0
+        ) {
+          updates.electricalConfig = autoConfigs.electricalConfig;
           needsUpdate = true;
           console.log('[Auto-config] Configuración eléctrica generada desde modelo', data.poolPreset.name, 'con', additionals.length, 'adicionales');
         }
 
-        if (!data.plumbingConfig || Object.keys(data.plumbingConfig).length === 0) {
-          updates.plumbingConfig = generatePlumbingConfigFromPresetWithAdditionals(
-            data.poolPreset,
-            additionals
-          );
+        const plumbingConfig = data.plumbingConfig as any;
+        if (
+          !plumbingConfig ||
+          Object.keys(plumbingConfig).length === 0 ||
+          typeof plumbingConfig.distanceToEquipment !== 'number'
+        ) {
+          updates.plumbingConfig = autoConfigs.plumbingConfig;
           needsUpdate = true;
           console.log('[Auto-config] Configuración hidráulica generada desde modelo', data.poolPreset.name, 'con', additionals.length, 'adicionales');
         }
 
         if (!data.tileCalculation || Object.keys(data.tileCalculation).length === 0) {
-          updates.tileCalculation = generateTileConfigFromPreset(data.poolPreset);
+          updates.tileCalculation = autoConfigs.tileCalculation;
           needsUpdate = true;
           console.log('[Auto-config] Configuración de losetas generada desde modelo', data.poolPreset.name);
         }
@@ -215,6 +220,10 @@ export const ProjectDetail: React.FC = () => {
 
       if (editFormData.poolPresetId && editFormData.poolPresetId !== project.poolPresetId) {
         payload.poolPresetId = editFormData.poolPresetId;
+        const selectedPreset = poolPresets.find((preset) => preset.id === editFormData.poolPresetId);
+        if (selectedPreset) {
+          Object.assign(payload, buildProjectAutoConfigurations(selectedPreset, (project as any).additionals || []));
+        }
       }
 
       await projectService.update(id, payload as Partial<Project>);

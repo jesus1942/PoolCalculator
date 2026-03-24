@@ -5,7 +5,8 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { poolPresetService } from '@/services/poolPresetService';
-import { PoolPreset, PoolShape } from '@/types';
+import { equipmentPresetService } from '@/services/equipmentPresetService';
+import { EquipmentPreset, PoolPreset, PoolShape } from '@/types';
 import { Plus, Edit, Trash2, Upload, X, Waves, Layers, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import FlipCard from '@/components/ui/FlipCard';
 import { getImageUrl } from '@/utils/imageUtils';
@@ -15,9 +16,12 @@ import { publicAssetUrl } from '@/utils/publicAssetUrl';
 // Componente de Card individual con FlipCard
 const PoolPresetCard: React.FC<{
   preset: PoolPreset;
+  presetIndex: number;
+  galleryImages: string[];
+  galleryLabels: string[];
   onEdit: (preset: PoolPreset) => void;
   onDelete: (id: string) => void;
-}> = ({ preset, onEdit, onDelete }) => {
+}> = ({ preset, presetIndex, galleryImages, galleryLabels, onEdit, onDelete }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Logo por defecto si no hay imágenes adicionales
@@ -39,20 +43,23 @@ const PoolPresetCard: React.FC<{
   };
 
   return (
-    <div className="h-[560px] sm:h-[600px]">
+    <div className="h-[640px] sm:h-[680px]">
       <FlipCard
         disabled={!hasAdditionalContent}
         className="h-full"
         front={
-          <div className="group relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 h-full">
+          <div className="group relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 h-full flex flex-col">
             {/* Imagen con zoom hover */}
-            <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
+            <div className="relative w-full aspect-[16/10] bg-gray-100 overflow-hidden">
               {preset.imageUrl ? (
                 <ImageHoverZoom
                   src={getImageUrl(preset.imageUrl) || ''}
                   alt={preset.name}
                   className="w-full h-full object-cover"
                   containerClassName="w-full h-full"
+                  fullscreenImages={galleryImages}
+                  fullscreenLabels={galleryLabels}
+                  fullscreenIndex={presetIndex}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-gray-400">
@@ -66,24 +73,24 @@ const PoolPresetCard: React.FC<{
               )}
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 flex-1 flex flex-col min-h-0">
               {/* Header */}
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 min-h-[68px]">
                 <div className="p-2 rounded-lg bg-blue-100 flex-shrink-0">
                   <Layers className="h-5 w-5 text-blue-600" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
                     {preset.name}
                   </h3>
                   {preset.description && (
-                    <p className="text-sm text-gray-700 mt-1">{preset.description}</p>
+                    <p className="text-sm text-gray-700 mt-1 line-clamp-2">{preset.description}</p>
                   )}
                 </div>
               </div>
 
               {/* Dimensiones */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <p className="text-gray-600 text-xs mb-1 font-medium">Dimensiones</p>
                   <p className="text-gray-900 font-bold text-sm">
@@ -98,42 +105,70 @@ const PoolPresetCard: React.FC<{
                 </div>
               </div>
 
-              {/* Features Tags */}
-              <div className="flex flex-wrap gap-2">
-                {preset.hasWetDeck && (
-                  <span className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-full font-semibold">
-                    Playa humeda
-                  </span>
+              <div className="mt-4 flex-1 space-y-3">
+                {(preset.defaultPump || preset.defaultFilter) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Bomba base</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-800 leading-tight break-words line-clamp-2">
+                        {preset.defaultPump?.model || preset.defaultPump?.name || 'Sin bomba'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Filtro base</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-800 leading-tight break-words line-clamp-2">
+                        {preset.defaultFilter?.model || preset.defaultFilter?.name || 'Sin filtro'}
+                      </p>
+                    </div>
+                  </div>
                 )}
-                {preset.hasSkimmer && (
-                  <span className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 text-xs rounded-full font-semibold">
-                    Skimmer x{preset.skimmerCount}
-                  </span>
-                )}
-                {preset.hasBottomDrain && (
-                  <span className="px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 text-xs rounded-full font-semibold">
-                    Toma de fondo
-                  </span>
-                )}
-                {preset.hasVacuumIntake && (
-                  <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-full font-semibold">
-                    Barrefondo x{preset.vacuumIntakeCount}
-                  </span>
-                )}
-                {preset.hasHydroJets && (
-                  <span className="px-2.5 py-1 bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs rounded-full font-semibold">
-                    Hidrojets x{preset.hydroJetsCount}
-                  </span>
-                )}
-                {preset.hasLighting && (
-                  <span className="px-2.5 py-1 bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs rounded-full font-semibold">
-                    Luces x{preset.lightingCount}
-                  </span>
-                )}
+
+                <div className="flex flex-wrap content-start gap-2">
+                  {preset.hasWetDeck && (
+                    <span className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-full font-semibold">
+                      Playa humeda
+                    </span>
+                  )}
+                  {preset.hasSkimmer && (
+                    <span className="px-2.5 py-1 bg-green-50 border border-green-200 text-green-700 text-xs rounded-full font-semibold">
+                      Skimmer x{preset.skimmerCount}
+                    </span>
+                  )}
+                  {preset.hasBottomDrain && (
+                    <span className="px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 text-xs rounded-full font-semibold">
+                      Toma de fondo
+                    </span>
+                  )}
+                  {preset.hasVacuumIntake && (
+                    <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-full font-semibold">
+                      Barrefondo x{preset.vacuumIntakeCount}
+                    </span>
+                  )}
+                  {preset.hasHydroJets && (
+                    <span className="px-2.5 py-1 bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs rounded-full font-semibold">
+                      Hidrojets x{preset.hydroJetsCount}
+                    </span>
+                  )}
+                  {preset.stairsCount > 0 && (
+                    <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-full font-semibold">
+                      Escalones x{preset.stairsCount}
+                    </span>
+                  )}
+                  {preset.canaletasCount > 0 && (
+                    <span className="px-2.5 py-1 bg-sky-50 border border-sky-200 text-sky-700 text-xs rounded-full font-semibold">
+                      Canaletas x{preset.canaletasCount}
+                    </span>
+                  )}
+                  {preset.hasLighting && (
+                    <span className="px-2.5 py-1 bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs rounded-full font-semibold">
+                      Luces x{preset.lightingCount}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
+              <div className="flex gap-2 pt-4 mt-auto border-t border-gray-200">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -160,7 +195,7 @@ const PoolPresetCard: React.FC<{
       back={
         <div className="relative overflow-hidden rounded-lg bg-white border border-gray-200 shadow-md h-full flex flex-col">
           {/* Carrusel de imágenes */}
-          <div className="relative w-full aspect-[4/3] bg-gray-100">
+          <div className="relative w-full aspect-[16/10] bg-gray-100">
             {additionalImages[currentImageIndex] && (
               <img
                 src={getImageUrl(additionalImages[currentImageIndex]) || additionalImages[currentImageIndex]}
@@ -236,6 +271,7 @@ const PoolPresetCard: React.FC<{
 
 export const PoolModels: React.FC = () => {
   const [presets, setPresets] = useState<PoolPreset[]>([]);
+  const [equipmentPresets, setEquipmentPresets] = useState<EquipmentPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPreset, setEditingPreset] = useState<PoolPreset | null>(null);
@@ -258,6 +294,8 @@ export const PoolModels: React.FC = () => {
     floorCushionDepth: 0.10,
     hasWetDeck: false,
     hasStairsOnly: false,
+    stairsCount: 0,
+    canaletasCount: 0,
     returnsCount: 2,
     hasHotWaterReturn: false,
     hasHydroJets: false,
@@ -270,6 +308,8 @@ export const PoolModels: React.FC = () => {
     hasLighting: false,
     lightingCount: 0,
     lightingType: '',
+    defaultPumpId: '',
+    defaultFilterId: '',
   });
 
   useEffect(() => {
@@ -278,8 +318,12 @@ export const PoolModels: React.FC = () => {
 
   const loadPresets = async () => {
     try {
-      const data = await poolPresetService.getAll();
-      setPresets(data);
+      const [presetsData, equipmentData] = await Promise.all([
+        poolPresetService.getAll(),
+        equipmentPresetService.getAll(),
+      ]);
+      setPresets(presetsData);
+      setEquipmentPresets(equipmentData);
     } catch (error) {
       console.error('Error al cargar modelos:', error);
     } finally {
@@ -358,6 +402,8 @@ export const PoolModels: React.FC = () => {
       floorCushionDepth: preset.floorCushionDepth,
       hasWetDeck: preset.hasWetDeck,
       hasStairsOnly: preset.hasStairsOnly,
+      stairsCount: preset.stairsCount,
+      canaletasCount: preset.canaletasCount,
       returnsCount: preset.returnsCount,
       hasHotWaterReturn: preset.hasHotWaterReturn,
       hasHydroJets: preset.hasHydroJets,
@@ -370,6 +416,8 @@ export const PoolModels: React.FC = () => {
       hasLighting: preset.hasLighting,
       lightingCount: preset.lightingCount,
       lightingType: preset.lightingType || '',
+      defaultPumpId: preset.defaultPumpId || '',
+      defaultFilterId: preset.defaultFilterId || '',
     });
     if (preset.imageUrl) {
       setImagePreview(getImageUrl(preset.imageUrl) || '');
@@ -414,6 +462,8 @@ export const PoolModels: React.FC = () => {
       floorCushionDepth: 0.10,
       hasWetDeck: false,
       hasStairsOnly: false,
+      stairsCount: 0,
+      canaletasCount: 0,
       returnsCount: 2,
       hasHotWaterReturn: false,
       hasHydroJets: false,
@@ -426,6 +476,8 @@ export const PoolModels: React.FC = () => {
       hasLighting: false,
       lightingCount: 0,
       lightingType: '',
+      defaultPumpId: '',
+      defaultFilterId: '',
     });
   };
 
@@ -435,6 +487,12 @@ export const PoolModels: React.FC = () => {
     { value: 'OVAL', label: 'Ovalada' },
     { value: 'JACUZZI', label: 'Jacuzzi' },
   ];
+  const availablePumps = equipmentPresets.filter((item) => item.type === 'PUMP' && item.isActive !== false);
+  const availableFilters = equipmentPresets.filter((item) => item.type === 'FILTER' && item.isActive !== false);
+
+  const galleryFallbackImage = publicAssetUrl('logo-isotipo.png');
+  const galleryImages = presets.map((preset) => getImageUrl(preset.imageUrl || '') || galleryFallbackImage);
+  const galleryLabels = presets.map((preset) => preset.name);
 
   if (loading) {
     return (
@@ -478,10 +536,13 @@ export const PoolModels: React.FC = () => {
 
         {/* Grid de Modelos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {presets.map((preset) => (
+          {presets.map((preset, index) => (
             <PoolPresetCard
               key={preset.id}
               preset={preset}
+              presetIndex={index}
+              galleryImages={galleryImages}
+              galleryLabels={galleryLabels}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
@@ -732,6 +793,22 @@ export const PoolModels: React.FC = () => {
                 />
                 <span className="text-sm text-gray-700">Solo escaleras</span>
               </label>
+
+              <Input
+                label="Cantidad de escalones"
+                type="number"
+                value={formData.stairsCount}
+                onChange={(e) => setFormData({ ...formData, stairsCount: parseInt(e.target.value) || 0 })}
+                min="0"
+              />
+
+              <Input
+                label="Cantidad de canaletas"
+                type="number"
+                value={formData.canaletasCount}
+                onChange={(e) => setFormData({ ...formData, canaletasCount: parseInt(e.target.value) || 0 })}
+                min="0"
+              />
             </div>
           </div>
 
@@ -869,6 +946,40 @@ export const PoolModels: React.FC = () => {
                   />
                 </>
               )}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Equipamiento base del modelo</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Opcional. Si lo dejás vacío, el modelo queda disponible para vender casco solo.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Bomba base"
+                options={[
+                  { value: '', label: 'Sin bomba base' },
+                  ...availablePumps.map((pump) => ({
+                    value: pump.id,
+                    label: `${pump.name}${pump.flowRate ? ` · ${pump.flowRate} m³/h` : ''}${pump.power ? ` · ${pump.power} HP` : ''}`,
+                  })),
+                ]}
+                value={formData.defaultPumpId}
+                onChange={(e) => setFormData({ ...formData, defaultPumpId: e.target.value })}
+              />
+
+              <Select
+                label="Filtro base"
+                options={[
+                  { value: '', label: 'Sin filtro base' },
+                  ...availableFilters.map((filter) => ({
+                    value: filter.id,
+                    label: `${filter.name}${filter.capacity ? ` · ${filter.capacity} m³/h` : ''}${filter.filterDiameter ? ` · Ø${filter.filterDiameter} mm` : ''}`,
+                  })),
+                ]}
+                value={formData.defaultFilterId}
+                onChange={(e) => setFormData({ ...formData, defaultFilterId: e.target.value })}
+              />
             </div>
           </div>
 

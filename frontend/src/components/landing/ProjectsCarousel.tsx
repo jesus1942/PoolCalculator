@@ -4,7 +4,7 @@ import { MapPin, Calendar, Waves } from 'lucide-react';
 import { projectService } from '@/services/projectService';
 import { getImageUrl } from '@/utils/imageUtils';
 
-interface Project {
+interface LandingProject {
   id: string;
   name: string;
   clientName: string;
@@ -20,7 +20,7 @@ interface Project {
 }
 
 export const ProjectsCarousel: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<LandingProject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,9 +32,9 @@ export const ProjectsCarousel: React.FC = () => {
       // Obtener proyectos públicos o en progreso (sin autenticación)
       const response = await projectService.getAll();
       // Filtrar solo proyectos activos/en progreso
-      const activeProjects = response.filter((p: Project) =>
-        p.status === 'IN_PROGRESS' || p.status === 'APPROVED'
-      ).slice(0, 10); // Mostrar máximo 10
+      const activeProjects = (response as any[]).filter((p: any) =>
+        (p.status === 'IN_PROGRESS' || p.status === 'APPROVED') && p.poolPreset
+      ).slice(0, 10) as LandingProject[]; // Mostrar máximo 10
 
       setProjects(activeProjects);
     } catch (error) {

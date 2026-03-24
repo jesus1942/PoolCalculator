@@ -10,10 +10,11 @@ interface PoolVisualizationCanvasProps {
   height?: number;
   showMeasurements?: boolean;
   viewMode?: ViewMode;
+  renderQuality?: number;
 }
 
 export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolVisualizationCanvasProps>(
-  ({ project, tileConfig, width = 800, height = 600, showMeasurements = true, viewMode = 'planta' }, ref) => {
+  ({ project, tileConfig, width = 800, height = 600, showMeasurements = true, viewMode = 'planta', renderQuality = 2 }, ref) => {
     const internalRef = useRef<HTMLCanvasElement>(null);
     const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) || internalRef;
 
@@ -21,18 +22,23 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      // Setup HD Canvas
+      // Setup high-density canvas for sharper on-screen and exported drawings.
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      const density = Math.max(1, Math.min(4, dpr * renderQuality));
+      canvas.width = Math.round(width * density);
+      canvas.height = Math.round(height * density);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(density, density);
       ctx.translate(0.5, 0.5); // Líneas más nítidas
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       try {
         if (viewMode === 'cad') {
@@ -43,7 +49,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       } catch (error) {
         console.error('Error al dibujar canvas:', error);
       }
-    }, [project, tileConfig, width, height, showMeasurements, viewMode]);
+    }, [project, tileConfig, width, height, showMeasurements, viewMode, renderQuality]);
 
     // ============================================
     // CÁLCULO DE LOSETAS CON CENTRO AJUSTABLE

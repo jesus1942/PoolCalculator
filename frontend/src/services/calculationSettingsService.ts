@@ -13,6 +13,15 @@ export interface CalculationSettings {
   wireMeshM2PerM2: number;
   waterproofingKgPerM2: number;
   waterproofingCoats: number;
+  bedThicknessCm: number;
+  bedCementKgPerM3: number;
+  bedCementBagsPerM3: number;
+  bedCementBagWeight: number;
+  bedSandM3PerCementBag: number;
+  drainTrenchWidthCm: number;
+  drainTrenchDepthCm: number;
+  geomembraneM2PerM2: number;
+  electroweldedMeshM2PerM2: number;
 }
 
 export const calculationSettingsService = {

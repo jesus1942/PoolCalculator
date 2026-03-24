@@ -127,9 +127,27 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
     { value: 'PERIMETER', label: 'Perímetro estándar' },
   ];
 
+  const formatDimensionCm = (value?: number | null) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return '-';
+    return `${Number(value).toLocaleString('es-AR', { maximumFractionDigits: 2 })} cm`;
+  };
+
+  const formatTileDimensions = (width?: number | null, length?: number | null) =>
+    `${formatDimensionCm(width)} x ${formatDimensionCm(length)}`;
+
+  const hasSuspiciousTileUnits = (width?: number | null, length?: number | null) => {
+    const values = [width, length].filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
+    return values.some((value) => value > 0 && value < 10);
+  };
+
+  const selectableCommonTiles = tilePresets.filter((tile) => tile.type === 'COMMON' && !tile.isForFirstRing);
+
   const tileOptions = [
     { value: '', label: 'Seleccionar loseta' },
-    ...tilePresets.map(t => ({ value: t.id, label: `${t.name} (${t.width}x${t.length}cm)` })),
+    ...selectableCommonTiles.map((t) => ({
+      value: t.id,
+      label: `${t.name} (${formatTileDimensions(t.width, t.length)}${hasSuspiciousTileUnits(t.width, t.length) ? ' · revisar unidad' : ''})`,
+    })),
   ];
 
   const getSideColor = (side: keyof typeof config) => {
@@ -140,14 +158,17 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
   return (
     <div className="space-y-6">
       {/* Header informativo */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
         <div className="flex items-start gap-3">
-          <Calculator size={24} className="text-blue-600 flex-shrink-0 mt-1" />
+          <Calculator size={24} className="text-zinc-200 flex-shrink-0 mt-1" />
           <div>
-            <h3 className="font-semibold text-blue-900 mb-1">Configurador Visual de Losetas</h3>
-            <p className="text-sm text-blue-700">
+            <h3 className="text-xl font-semibold text-white mb-1">Configurador Visual de Losetas</h3>
+            <p className="text-base text-zinc-300">
               Configure cada lateral de la piscina seleccionando el tipo de primer anillo y la cantidad de filas adicionales.
               Los cálculos se realizan automáticamente considerando las dimensiones reales de cada loseta.
+            </p>
+            <p className="mt-2 text-sm text-amber-300">
+              Las dimensiones del catálogo están expresadas en centímetros. Ejemplo: 50 = 50 cm, 120 = 1,20 m.
             </p>
           </div>
         </div>
@@ -157,9 +178,9 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
       {/* Configurador Visual */}
       <>
           {/* Vista de Configuración Simple o Detallada */}
-          <Card>
+          <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Vista de la Piscina con Losetas</h3>
+          <h3 className="text-xl font-semibold text-white">Vista de la Piscina con Losetas</h3>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -195,16 +216,17 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
           </div>
         </div>
 
-        <div className="flex justify-center p-4 bg-gray-50 rounded-lg">
+        <div className="flex justify-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
           {showDetailedView ? (
             <PoolVisualizationCanvas
               ref={canvasRef}
               project={project}
               tileConfig={config}
-              width={900}
-              height={600}
+              width={1120}
+              height={760}
               showMeasurements={true}
               viewMode={viewMode}
+              renderQuality={2.25}
             />
           ) : (
             <div className="relative" style={{
@@ -360,8 +382,17 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
                         {tilePresets.find(t => t.id === config[side].selectedTileId)?.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {tilePresets.find(t => t.id === config[side].selectedTileId)?.width}m x {tilePresets.find(t => t.id === config[side].selectedTileId)?.length}m
+                        {formatTileDimensions(
+                          tilePresets.find(t => t.id === config[side].selectedTileId)?.width,
+                          tilePresets.find(t => t.id === config[side].selectedTileId)?.length
+                        )}
                       </p>
+                      {hasSuspiciousTileUnits(
+                        tilePresets.find(t => t.id === config[side].selectedTileId)?.width,
+                        tilePresets.find(t => t.id === config[side].selectedTileId)?.length
+                      ) && (
+                        <p className="text-xs text-amber-600">Revisar unidad: parece una medida cargada en metros.</p>
+                      )}
                     </div>
                   </div>
                 </div>

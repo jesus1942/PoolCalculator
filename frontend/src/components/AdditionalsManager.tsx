@@ -33,9 +33,10 @@ interface ProjectAdditional {
 
 interface AdditionalsManagerProps {
   project: Project;
+  onUpdate?: () => Promise<void> | void;
 }
 
-export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project }) => {
+export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project, onUpdate }) => {
   const [additionals, setAdditionals] = useState<ProjectAdditional[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -127,17 +128,19 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project 
         modification.customCategory = formData.customCategory;
         modification.customUnit = formData.customUnit;
         modification.customPricePerUnit = formData.customPricePerUnit;
-        modification.customLaborCost = formData.customLaborCost;
       } else {
         // Item de preset
         modification[`${formData.type}Id`] = formData.itemId;
       }
+
+      modification.customLaborCost = formData.customLaborCost;
 
       await additionalsService.processAdditionals(project.id, {
         modifications: [modification]
       });
 
       await loadData();
+      await onUpdate?.();
       setShowModal(false);
       alert('Adicional agregado exitosamente');
     } catch (error) {
@@ -152,6 +155,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project 
     try {
       await additionalsService.deleteAdditional(id);
       await loadData();
+      await onUpdate?.();
       alert('Adicional eliminado exitosamente');
     } catch (error) {
       console.error('Error deleting additional:', error);
@@ -193,15 +197,18 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project 
     let materialCost = 0;
     let laborCost = 0;
 
-    if (additional.customPricePerUnit) {
+    if (typeof additional.customPricePerUnit === 'number' && additional.customPricePerUnit > 0) {
       materialCost = additional.customPricePerUnit * quantity;
-      laborCost = (additional.customLaborCost || 0) * quantity;
     } else if (additional.accessory) {
       materialCost = additional.accessory.pricePerUnit * quantity;
     } else if (additional.equipment) {
       materialCost = additional.equipment.pricePerUnit * quantity;
     } else if (additional.material) {
       materialCost = additional.material.pricePerUnit * quantity;
+    }
+
+    if (typeof additional.customLaborCost === 'number' && additional.customLaborCost > 0) {
+      laborCost = additional.customLaborCost * quantity;
     }
 
     return { materialCost, laborCost, total: materialCost + laborCost };
@@ -423,15 +430,21 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project 
                 />
               </div>
 
-              <Input
-                label="Costo Mano de Obra por Unidad"
-                type="number"
-                value={formData.customLaborCost}
-                onChange={(e) => setFormData({ ...formData, customLaborCost: parseFloat(e.target.value) || 0 })}
-                min={0}
-                step={0.01}
-              />
             </>
+          )}
+
+          <Input
+            label={useCustom ? 'Costo Mano de Obra por Unidad' : 'Costo Mano de Obra adicional por Unidad'}
+            type="number"
+            value={formData.customLaborCost}
+            onChange={(e) => setFormData({ ...formData, customLaborCost: parseFloat(e.target.value) || 0 })}
+            min={0}
+            step={0.01}
+          />
+          {!useCustom && (
+            <p className="text-xs text-gray-500 -mt-2">
+              Si este adicional requiere descarga, izaje, montaje o instalación extra real, cargala acá aunque el item venga de un preset.
+            </p>
           )}
 
           {/* Campos comunes */}

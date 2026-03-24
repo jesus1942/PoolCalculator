@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manual Interactivo - Detalle de Proyecto</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --bg-soft: #121c2f;
+        --panel: rgba(10, 16, 28, 0.82);
+        --panel-2: rgba(18, 28, 47, 0.94);
+        --border: rgba(148, 163, 184, 0.18);
+        --text: #e5edf8;
+        --muted: #a6b5cc;
+        --accent: #52d3ff;
+        --accent-2: #7af0a7;
+        --warn: #ffd166;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(82, 211, 255, 0.16), transparent 35%),
+          radial-gradient(circle at top right, rgba(122, 240, 167, 0.12), transparent 30%),
+          linear-gradient(180deg, #09101b 0%, #0b1220 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 24px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        backdrop-filter: blur(16px);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .sidebar-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(135deg, rgba(82, 211, 255, 0.12), rgba(122, 240, 167, 0.1));
+      }
+
+      .sidebar-header h1 {
+        margin: 0 0 10px;
+        font-size: 1.25rem;
+        line-height: 1.2;
+      }
+
+      .sidebar-header p,
+      .meta,
+      .note,
+      .section p,
+      .chip,
+      .status {
+        color: var(--muted);
+      }
+
+      .sidebar-body {
+        padding: 18px;
+      }
+
+      .search {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        outline: none;
+      }
+
+      .search::placeholder {
+        color: #89a0c2;
+      }
+
+      .toc {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .toc a {
+        padding: 10px 12px;
+        text-decoration: none;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        transition: 0.18s ease;
+      }
+
+      .toc a:hover,
+      .toc a.active {
+        border-color: rgba(82, 211, 255, 0.35);
+        background: rgba(82, 211, 255, 0.08);
+        color: #ffffff;
+      }
+
+      .main {
+        min-width: 0;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, rgba(20, 56, 102, 0.9), rgba(14, 28, 56, 0.92));
+        border: 1px solid rgba(82, 211, 255, 0.18);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -120px -120px auto;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(circle, rgba(122, 240, 167, 0.26), transparent 65%);
+      }
+
+      .hero h2 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 5vw, 3.3rem);
+        line-height: 0.98;
+      }
+
+      .hero p {
+        max-width: 880px;
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: #d5e3f9;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 12px 18px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.18s ease;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), #79e2ff);
+        color: #08131d;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: var(--border);
+        color: var(--text);
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .summary-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 16px;
+      }
+
+      .summary-card strong {
+        display: block;
+        margin-top: 6px;
+        color: #ffffff;
+        font-size: 1.1rem;
+      }
+
+      .banner {
+        margin-top: 22px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255, 209, 102, 0.1);
+        border: 1px solid rgba(255, 209, 102, 0.24);
+        color: #ffe9b2;
+      }
+
+      .sections {
+        display: grid;
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .section {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .section[hidden] {
+        display: none;
+      }
+
+      .section-header {
+        width: 100%;
+        border: 0;
+        background: none;
+        color: inherit;
+        text-align: left;
+        padding: 22px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .section-header:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: rgba(82, 211, 255, 0.12);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .section-title h3 {
+        margin: 0 0 4px;
+        font-size: 1.2rem;
+      }
+
+      .section-body {
+        padding: 0 24px 24px;
+      }
+
+      .section-body[hidden] {
+        display: none;
+      }
+
+      .section ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+      }
+
+      .section li {
+        margin: 0 0 12px;
+        line-height: 1.65;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        font-size: 0.92rem;
+      }
+
+      .tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .tools button {
+        appearance: none;
+      }
+
+      .footer {
+        margin-top: 26px;
+        padding: 20px 24px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+      }
+
+      .hidden-print {
+        display: inline-flex;
+      }
+
+      @media (max-width: 1080px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .layout {
+          padding: 14px;
+        }
+
+        .hero,
+        .section-body,
+        .section-header,
+        .sidebar-header,
+        .sidebar-body {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+          color: #111827;
+        }
+
+        .layout {
+          display: block;
+          max-width: none;
+          padding: 0;
+        }
+
+        .sidebar,
+        .actions,
+        .tools,
+        .hidden-print {
+          display: none !important;
+        }
+
+        .hero,
+        .section,
+        .footer {
+          box-shadow: none;
+          border: 1px solid #d1d5db;
+          color: #111827;
+          background: #ffffff;
+        }
+
+        .section-body {
+          display: block !important;
+        }
+
+        .section[hidden] {
+          display: block;
+        }
+
+        .section-header {
+          padding-bottom: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar hidden-print">
+        <div class="sidebar-header">
+          <h1>Manual interactivo</h1>
+          <p>Detalle completo del proyecto ACQUAM en español argentino.</p>
+          <p class="meta">Base funcional: ruta local del proyecto y comportamiento implementado en la app.</p>
+        </div>
+        <div class="sidebar-body">
+          <input id="search" class="search" type="search" placeholder="Buscar pestaña, cálculo o acción..." />
+          <nav id="toc" class="toc">
+            <a href="#que-es">Qué es esta pantalla</a>
+            <a href="#flujo">Flujo recomendado</a>
+            <a href="#encabezado">Encabezado y navegación</a>
+            <a href="#vista-general">Vista general</a>
+            <a href="#estado">Estado</a>
+            <a href="#losetas">Losetas</a>
+            <a href="#hidraulica">Hidráulica</a>
+            <a href="#electrica">Eléctrica</a>
+            <a href="#analisis-hidraulico">Análisis hidráulico</a>
+            <a href="#analisis-electrico">Análisis eléctrico</a>
+            <a href="#tareas">Tareas</a>
+            <a href="#roles">Roles</a>
+            <a href="#sistemas">Sistemas</a>
+            <a href="#adicionales">Adicionales</a>
+            <a href="#exportar">Exportar</a>
+            <a href="#buenas-practicas">Buenas prácticas</a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="hero">
+          <p class="status">Proyecto objetivo: <strong>ef3c75c2-6bfd-4f9c-95f3-f2790ed6e963</strong></p>
+          <h2>Manual standalone del detalle de proyecto</h2>
+          <p>
+            Esta versión no depende del backend, del login ni de que el frontend esté corriendo.
+            Podés abrirla como archivo local, navegar por secciones, filtrar contenido, imprimirla o usarla como base de capacitación.
+          </p>
+
+          <div class="actions">
+            <a class="btn btn-primary" href="./manual-funcionamiento-proyecto-es-ar-interactivo.pdf" target="_blank" rel="noreferrer">Abrir PDF</a>
+            <a class="btn btn-secondary" href="http://localhost:5173/projects/ef3c75c2-6bfd-4f9c-95f3-f2790ed6e963" target="_blank" rel="noreferrer">Abrir proyecto local</a>
+            <button id="expandAll" class="btn btn-secondary hidden-print" type="button">Expandir todo</button>
+            <button id="collapseAll" class="btn btn-secondary hidden-print" type="button">Colapsar todo</button>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-card">
+              <span class="note">Formato</span>
+              <strong>HTML autónomo</strong>
+            </div>
+            <div class="summary-card">
+              <span class="note">Pestañas cubiertas</span>
+              <strong>11 + exportación</strong>
+            </div>
+            <div class="summary-card">
+              <span class="note">Dependencia de login</span>
+              <strong>No</strong>
+            </div>
+            <div class="summary-card">
+              <span class="note">Última actualización</span>
+              <strong>18/03/2026</strong>
+            </div>
+          </div>
+
+          <div class="banner">
+            Validación en vivo: la URL local respondió <strong>200 OK</strong>, pero la vista pública redirigió a login.
+            Por eso este manual quedó preparado para usarse de manera independiente.
+          </div>
+        </section>
+
+        <div class="tools hidden-print">
+          <button class="btn btn-secondary" type="button" onclick="window.print()">Imprimir o guardar PDF</button>
+          <button class="btn btn-secondary" type="button" id="copyLink">Copiar link local del proyecto</button>
+        </div>
+
+        <section class="sections" id="sections">
+          <article class="section" id="que-es" data-keywords="detalle proyecto overview pantalla autoconfiguracion">
+            <button class="section-header" type="button" aria-expanded="true">
+              <span class="section-title">
+                <span class="badge">01</span>
+                <span>
+                  <h3>Qué es esta pantalla</h3>
+                  <span class="note">Centro operativo del proyecto</span>
+                </span>
+              </span>
+              <span class="note">Ocultar</span>
+            </button>
+            <div class="section-body">
+              <p>La vista de detalle del proyecto concentra la operación técnica, comercial y documental de una obra de piscina. Desde acá se revisa el modelo, se calculan materiales, se seleccionan equipos, se asigna mano de obra y se generan entregables.</p>
+              <p>Si al abrir el proyecto faltan configuraciones base y existe un modelo de pileta asociado, la pantalla puede autogenerar configuración eléctrica, hidráulica y de losetas y guardarla de forma automática.</p>
+              <div class="chips">
+                <span class="chip">Autoconfiguración inicial</span>
+                <span class="chip">Persistencia automática</span>
+                <span class="chip">Punto único de control</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="section" id="flujo" data-keywords="flujo recomendado orden uso pasos">
+            <button class="section-header" type="button" aria-expanded="true">
+              <span class="section-title">
+                <span class="badge">02</span>
+                <span>
+                  <h3>Flujo recomendado</h3>
+                  <span class="note">Orden práctico de trabajo</span>
+                </span>
+              </span>
+              <span class="note">Ocultar</span>
+            </button>
+            <div class="section-body">
+              <ul>
+                <li>Arrancar por Vista General para validar modelo, volumen, costos y composición general.</li>
+                <li>Revisar Estado para detectar faltantes antes de cotizar o ejecutar.</li>
+                <li>Configurar Losetas y guardar para recalcular materiales.</li>
+                <li>Definir Hidráulica con distancia al equipo y selección automática o manual.</li>
+                <li>Seleccionar equipos reales en Eléctrica.</li>
+                <li>Cargar Roles y después cerrar Tareas para que la mano de obra tenga criterio consistente.</li>
+                <li>Agregar Adicionales al final, cuando ya sabés qué cambió respecto del preset base.</li>
+                <li>Usar Exportar recién cuando el bloque técnico y comercial esté coherente.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="encabezado" data-keywords="encabezado navegacion tabs cliente estado">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">03</span>
+                <span>
+                  <h3>Encabezado y navegación</h3>
+                  <span class="note">Nombre, cliente, estado y tabs</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Arriba muestra nombre del proyecto, cliente y estado visible.</li>
+                <li>La navegación horizontal contiene: Vista General, Estado, Losetas, Hidráulica, Eléctrica, Análisis Hidráulico, Análisis Eléctrico, Tareas, Roles, Sistemas, Adicionales y Exportar.</li>
+                <li>El botón de volver lleva a la lista de proyectos.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="vista-general" data-keywords="vista general resumen costos materiales canvas bomba recomendada">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">04</span>
+                <span>
+                  <h3>Vista general</h3>
+                  <span class="note">Resumen ejecutivo y financiero</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Muestra datos principales del proyecto, cliente, ubicación y total global.</li>
+                <li>El total puede ocultarse o revelarse desde un botón de visibilidad.</li>
+                <li>Integra visualización de la pileta y exportación de imagen del canvas cuando aplica.</li>
+                <li>Resume materiales base, costos de hidráulica, eléctrica, adicionales y mano de obra.</li>
+                <li>Puede comparar bomba seleccionada vs bomba recomendada desde el análisis hidráulico.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="estado" data-keywords="estado progreso checklist financiero timeline">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">05</span>
+                <span>
+                  <h3>Estado</h3>
+                  <span class="note">Seguimiento general del proyecto</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Informa fecha de creación, última actualización y progreso consolidado.</li>
+                <li>Calcula avance en base al estado de las tareas cargadas.</li>
+                <li>Muestra barras, métricas por categoría y checklist de configuración.</li>
+                <li>Suma un resumen financiero para control rápido.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="losetas" data-keywords="losetas configurador visual filas primer anillo cad planta exportar imagen">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">06</span>
+                <span>
+                  <h3>Losetas</h3>
+                  <span class="note">Configuración visual por lateral</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Trabaja por lateral con orientación fija: oeste para skimmer y este para escalera.</li>
+                <li>En cada lado se define primer anillo, filas adicionales y loseta común.</li>
+                <li>La vista puede alternar entre simple y detallada; la detallada permite modo Planta o CAD.</li>
+                <li>Admite exportar la visualización como imagen.</li>
+                <li>Al guardar, recalcula materiales automáticamente.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="hidraulica" data-keywords="hidraulica canos calculo automatico distancia equipo catalogo seleccion manual">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">07</span>
+                <span>
+                  <h3>Hidráulica</h3>
+                  <span class="note">Cañerías, accesorios y longitud estimada</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Calcula cañerías según el proyecto y la distancia al equipo.</li>
+                <li>Permite trabajar con selección automática sugerida o selección manual desde catálogo.</li>
+                <li>El catálogo filtra por nombre, diámetro y categoría.</li>
+                <li>La lógica automática arma caños, codos, tees, uniones, válvulas y adhesivo.</li>
+                <li>Guardar esta pestaña deja la configuración lista para los análisis profesionales.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="electrica" data-keywords="electrica selector equipos bombas filtros cloradores calefactores">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">08</span>
+                <span>
+                  <h3>Eléctrica</h3>
+                  <span class="note">Selección real del equipamiento del proyecto</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Funciona como selector de equipos y no solo como panel de cables o tableros.</li>
+                <li>Organiza catálogo por bombas, filtros, cloradores, calefactores y bombas de calor.</li>
+                <li>Cada equipo puede incluir imagen, marca, modelo, potencia, caudal, altura, voltaje y ficha técnica.</li>
+                <li>Agregar o quitar equipos impacta en costos y análisis posteriores.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="analisis-hidraulico" data-keywords="analisis hidraulico tdh caudal perdidas recomendacion bomba">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">09</span>
+                <span>
+                  <h3>Análisis hidráulico</h3>
+                  <span class="note">TDH, caudal y bomba recomendada</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Permite recalcular según distancia al equipo y altura estática.</li>
+                <li>Entrega TDH total, caudal requerido y pérdidas acumuladas.</li>
+                <li>Compara la bomba seleccionada con la recomendada por el sistema.</li>
+                <li>Sirve para detectar subdimensionamiento, sobredimensionamiento o inconsistencias de instalación.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="analisis-electrico" data-keywords="analisis electrico potencia corriente tension consumo costo energia">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">10</span>
+                <span>
+                  <h3>Análisis eléctrico</h3>
+                  <span class="note">Potencia, corriente y costo operativo</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Recalcula con voltaje, distancia al tablero, tipo de instalación, temperatura ambiente y costo energético.</li>
+                <li>Entrega potencia instalada, potencia demandada, corriente total y tensión de diseño.</li>
+                <li>Lista los equipos considerados en el cálculo.</li>
+                <li>Incluye costos operativos estimados diario, mensual y anual.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="tareas" data-keywords="tareas categorias horas costo mano de obra estado rol">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">11</span>
+                <span>
+                  <h3>Tareas</h3>
+                  <span class="note">Planificación operativa y avance</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Agrupa tareas por categoría: excavación, hidráulica, eléctrica, piso, losetas, terminaciones y adicionales.</li>
+                <li>Cada tarea puede tener horas, cantidad, unidad, rol asignado, costo y estado.</li>
+                <li>El avance de estas tareas alimenta la pestaña Estado.</li>
+                <li>Si el rol tiene tarifa, el costo puede calcularse automáticamente.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="roles" data-keywords="roles oficios tarifa hora dia m2 ml boca referencia puerto madryn">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">12</span>
+                <span>
+                  <h3>Roles</h3>
+                  <span class="note">Oficios y tarifas reutilizables</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <p>La pantalla administra tarifas base por oficio y trae una referencia editable de Puerto Madryn, Chubut, como punto de partida operativo.</p>
+              <ul>
+                <li>Soporta cobro por hora, por día, por m2, por metro lineal y por boca.</li>
+                <li>En tipo boca se pueden cargar valores específicos por clase de boca eléctrica.</li>
+                <li>Estos valores se reutilizan después en Tareas.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="sistemas" data-keywords="sistemas recomendaciones calefaccion filtracion mantenimiento">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">13</span>
+                <span>
+                  <h3>Sistemas</h3>
+                  <span class="note">Recomendaciones inteligentes</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Reúne calefacción, filtración y mantenimiento del agua en una sola pestaña.</li>
+                <li>Usa el volumen del proyecto para sugerir capacidades y rutinas.</li>
+                <li>Es una ayuda de dimensionamiento, no una aprobación técnica automática.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="adicionales" data-keywords="adicionales custom equipamiento material accesorio dependencias">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">14</span>
+                <span>
+                  <h3>Adicionales</h3>
+                  <span class="note">Cambios reales de obra respecto del preset</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Permite sumar accesorios, equipos, materiales o items totalmente personalizados.</li>
+                <li>Cada adicional puede tener cantidad base, cantidad nueva, costo unitario, mano de obra y notas.</li>
+                <li>El sistema puede detectar dependencias automáticas según reglas de negocio.</li>
+                <li>Los adicionales afectan costos, exportaciones y resumen técnico.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="exportar" data-keywords="exportar pdf html excel plantillas auditoria vista previa">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">15</span>
+                <span>
+                  <h3>Exportar</h3>
+                  <span class="note">Documentación comercial y técnica</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>Incluye seis plantillas: cliente, profesional, materiales, presupuesto detallado, reporte completo y vista general.</li>
+                <li>Cada plantilla tiene vista previa real, auditoría de datos y editor de contenido.</li>
+                <li>Las salidas rápidas disponibles son PDF, HTML e impresión.</li>
+                <li>Además hay exportación a Excel con selección de secciones y comprobación previa.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="section" id="buenas-practicas" data-keywords="buenas practicas recomendaciones uso final">
+            <button class="section-header" type="button" aria-expanded="false">
+              <span class="section-title">
+                <span class="badge">16</span>
+                <span>
+                  <h3>Buenas prácticas</h3>
+                  <span class="note">Para evitar errores de presupuesto o montaje</span>
+                </span>
+              </span>
+              <span class="note">Mostrar</span>
+            </button>
+            <div class="section-body" hidden>
+              <ul>
+                <li>No exportar ni presupuestar sin revisar antes Estado, Roles y coherencia de costos.</li>
+                <li>Si cambiás equipos, recalculá análisis hidráulico y eléctrico.</li>
+                <li>Usá Adicionales para modificaciones reales de obra y no para deformar el preset base.</li>
+                <li>Tomá las recomendaciones inteligentes como apoyo, no como cierre técnico automático.</li>
+              </ul>
+            </div>
+          </article>
+        </section>
+
+        <div class="footer">
+          <strong>Nota operativa</strong>
+          <p class="note">
+            Este archivo fue diseñado para abrirse directo desde disco o desde cualquier servidor estático.
+            Si después querés una versión todavía más fuerte, el siguiente paso correcto es generar una mini app de ayuda offline con capturas, videos cortos o tours guiados embebidos.
+          </p>
+          <p class="note"><strong>Generado por poolmanager by Jesus Olguin</strong></p>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const headers = document.querySelectorAll('.section-header');
+      const sections = document.querySelectorAll('.section');
+      const tocLinks = document.querySelectorAll('#toc a');
+      const searchInput = document.getElementById('search');
+      const expandAll = document.getElementById('expandAll');
+      const collapseAll = document.getElementById('collapseAll');
+      const copyLink = document.getElementById('copyLink');
+      const projectUrl = 'http://localhost:5173/projects/ef3c75c2-6bfd-4f9c-95f3-f2790ed6e963';
+
+      function setExpanded(section, expanded) {
+        const header = section.querySelector('.section-header');
+        const body = section.querySelector('.section-body');
+        const state = header.querySelector('.note:last-child');
+        header.setAttribute('aria-expanded', String(expanded));
+        body.hidden = !expanded;
+        state.textContent = expanded ? 'Ocultar' : 'Mostrar';
+      }
+
+      headers.forEach((header) => {
+        header.addEventListener('click', () => {
+          const section = header.closest('.section');
+          const expanded = header.getAttribute('aria-expanded') === 'true';
+          setExpanded(section, !expanded);
+        });
+      });
+
+      expandAll.addEventListener('click', () => sections.forEach((section) => setExpanded(section, true)));
+      collapseAll.addEventListener('click', () => sections.forEach((section) => setExpanded(section, false)));
+
+      searchInput.addEventListener('input', (event) => {
+        const query = event.target.value.trim().toLowerCase();
+        sections.forEach((section) => {
+          const text = section.textContent.toLowerCase();
+          const keywords = (section.dataset.keywords || '').toLowerCase();
+          const match = !query || text.includes(query) || keywords.includes(query);
+          section.hidden = !match;
+          if (match && query) setExpanded(section, true);
+        });
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const id = entry.target.id;
+            const link = document.querySelector(`#toc a[href="#${id}"]`);
+            if (!link) return;
+            if (entry.isIntersecting) {
+              tocLinks.forEach((item) => item.classList.remove('active'));
+              link.classList.add('active');
+            }
+          });
+        },
+        { rootMargin: '-20% 0px -65% 0px', threshold: 0.1 }
+      );
+
+      sections.forEach((section) => observer.observe(section));
+
+      copyLink.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(projectUrl);
+          copyLink.textContent = 'Link copiado';
+          setTimeout(() => (copyLink.textContent = 'Copiar link local del proyecto'), 1400);
+        } catch {
+          window.prompt('Copiá este link:', projectUrl);
+        }
+      });
+    </script>
+  </body>
+</html>
