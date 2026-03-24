@@ -28,12 +28,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install
-        working-directory: frontend
-        run: npm ci --ignore-scripts
+        run: npm --prefix frontend ci --ignore-scripts
 
       - name: Build
-        working-directory: frontend
-        run: npm run build
+        run: npm --prefix frontend run build
         env:
           VITE_API_URL: https://poolcalculator-production.up.railway.app/api
 
