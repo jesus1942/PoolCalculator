@@ -192,6 +192,12 @@ export const Agenda: React.FC = () => {
     return map;
   }, [reminders]);
 
+  const mobileVisibleDays = useMemo(() => {
+    if (viewMode === 'day') return [anchorDate];
+    if (viewMode === 'week') return weekDays;
+    return monthMatrix.flat().filter((day) => day.getMonth() === anchorDate.getMonth());
+  }, [anchorDate, monthMatrix, viewMode, weekDays]);
+
   const getRangeForView = () => {
     if (viewMode === 'day') {
       return { start: startOfDay(anchorDate), end: endOfDay(anchorDate) };
@@ -431,23 +437,23 @@ export const Agenda: React.FC = () => {
       <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-black pointer-events-none -z-10" />
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-transparent to-transparent pointer-events-none -z-10" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4">
+      <div className="relative max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50" />
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-              <Calendar className="h-7 w-7 text-white" />
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 sm:h-14 sm:w-14">
+                <Calendar className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+              </div>
             </div>
-          </div>
-          <div>
-            <h1 className="text-4xl font-extralight text-white tracking-tight">
-                La Agenda
-              </h1>
-              <p className="text-zinc-300 mt-1 font-light tracking-wide">
-                Gestión de visitas, instalaciones y mantenimiento
-              </p>
-            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-extralight tracking-tight text-white sm:text-4xl">
+                  La Agenda
+                </h1>
+                <p className="mt-1 max-w-2xl text-sm font-light tracking-wide text-zinc-300 sm:text-base">
+                  Gestión de visitas, instalaciones y mantenimiento
+                </p>
+              </div>
           </div>
 
           {canManage && activeTab === 'events' && (
@@ -456,7 +462,7 @@ export const Agenda: React.FC = () => {
                 setEditingEvent(null);
                 setShowCreate(true);
               }}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 transition-all hover:bg-cyan-500/20 sm:w-auto sm:px-5"
             >
               <Plus className="h-5 w-5" />
               Nuevo evento
@@ -465,7 +471,7 @@ export const Agenda: React.FC = () => {
           {canManage && activeTab === 'crews' && (
             <button
               onClick={() => setShowCrewCreate(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 transition-all hover:bg-cyan-500/20 sm:w-auto sm:px-5"
             >
               <Plus className="h-5 w-5" />
               Nuevo crew
@@ -473,33 +479,36 @@ export const Agenda: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-6 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              onClick={() => setActiveTab('events')}
-              className={`px-4 py-2 rounded-xl text-sm font-light transition-all ${
-                activeTab === 'events'
-                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
-                  : 'text-zinc-300 hover:text-white border border-transparent'
-              }`}
-            >
-              Eventos
-            </button>
-            <button
-              onClick={() => setActiveTab('crews')}
-              className={`px-4 py-2 rounded-xl text-sm font-light transition-all ${
-                activeTab === 'crews'
-                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
-                  : 'text-zinc-300 hover:text-white border border-transparent'
-              }`}
-            >
-              Crews
-            </button>
+        <div className="mb-6 rounded-2xl border border-zinc-800/60 bg-zinc-950/80 p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`rounded-xl px-4 py-2 text-sm font-light transition-all ${
+                  activeTab === 'events'
+                    ? 'border border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+                    : 'border border-transparent text-zinc-300 hover:text-white'
+                }`}
+              >
+                Eventos
+              </button>
+              <button
+                onClick={() => setActiveTab('crews')}
+                className={`rounded-xl px-4 py-2 text-sm font-light transition-all ${
+                  activeTab === 'crews'
+                    ? 'border border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+                    : 'border border-transparent text-zinc-300 hover:text-white'
+                }`}
+              >
+                Crews
+              </button>
+            </div>
             {activeTab === 'events' && (
-              <>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-2">
                 <button
                   onClick={() => setViewMode('month')}
-                  className={`px-3 py-2 rounded-lg text-xs font-light border transition-all ${
+                  className={`rounded-lg border px-3 py-2 text-xs font-light transition-all ${
                     viewMode === 'month'
                       ? 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'
                       : 'border-zinc-800 text-zinc-300 hover:text-white'
@@ -519,7 +528,7 @@ export const Agenda: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setViewMode('day')}
-                  className={`px-3 py-2 rounded-lg text-xs font-light border transition-all ${
+                  className={`rounded-lg border px-3 py-2 text-xs font-light transition-all ${
                     viewMode === 'day'
                       ? 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10'
                       : 'border-zinc-800 text-zinc-300 hover:text-white'
@@ -527,14 +536,15 @@ export const Agenda: React.FC = () => {
                 >
                   Día
                 </button>
+                </div>
                 <button
                   onClick={() => setFiltersOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 text-sm text-zinc-300 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
                 >
                   <Filter className="h-4 w-4" />
                   Filtros
                 </button>
-              </>
+              </div>
             )}
           </div>
 
@@ -617,27 +627,27 @@ export const Agenda: React.FC = () => {
         {loading ? (
           <div className="text-center text-zinc-300 py-16">Cargando agenda...</div>
         ) : activeTab === 'events' ? (
-          <div className="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-zinc-300">
+          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-950/80 p-3 sm:p-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-zinc-300 capitalize">
                 {anchorDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   onClick={() => setAnchorDate(addDays(anchorDate, viewMode === 'day' ? -1 : viewMode === 'week' ? -7 : -30))}
-                  className="px-3 py-2 text-xs rounded-lg border border-zinc-800 text-zinc-300 hover:text-white"
+                  className="rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => setAnchorDate(new Date())}
-                  className="px-3 py-2 text-xs rounded-lg border border-zinc-800 text-zinc-300 hover:text-white"
+                  className="rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
                 >
                   Hoy
                 </button>
                 <button
                   onClick={() => setAnchorDate(addDays(anchorDate, viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : 30))}
-                  className="px-3 py-2 text-xs rounded-lg border border-zinc-800 text-zinc-300 hover:text-white"
+                  className="rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:text-white"
                 >
                   Siguiente
                 </button>
@@ -645,7 +655,8 @@ export const Agenda: React.FC = () => {
             </div>
 
             {viewMode === 'month' && (
-              <div className="grid grid-cols-7 gap-2">
+              <>
+              <div className="hidden grid-cols-7 gap-2 md:grid">
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((label) => (
                   <div key={label} className="text-xs text-zinc-300 text-center">
                     {label}
@@ -696,10 +707,70 @@ export const Agenda: React.FC = () => {
                   );
                 })}
               </div>
+              <div className="space-y-3 md:hidden">
+                {mobileVisibleDays.map((day) => {
+                  const key = formatDateKey(day);
+                  const dayEvents = eventsByDay.get(key) || [];
+                  return (
+                    <div
+                      key={`mobile-month-${key}`}
+                      className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm text-white">
+                            {day.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
+                          </div>
+                          <div className="text-xs text-zinc-400">{dayEvents.length} evento(s)</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openCreateForSlot(day)}
+                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                        >
+                          Agregar
+                        </button>
+                      </div>
+                      {dayEvents.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
+                          Sin eventos para este día.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {dayEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => openEditEvent(event)}
+                              className="w-full rounded-xl border px-3 py-3 text-left"
+                              style={{
+                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                                  <div className="mt-1 text-xs text-zinc-300">
+                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              </>
             )}
 
             {viewMode === 'week' && (
-              <div className="grid grid-cols-8 gap-2">
+              <>
+              <div className="hidden grid-cols-8 gap-2 md:grid">
                 <div className="text-xs text-zinc-300">Hora</div>
                 {weekDays.map((day) => (
                   <div key={formatDateKey(day)} className="text-xs text-zinc-300 text-center">
@@ -750,10 +821,69 @@ export const Agenda: React.FC = () => {
                   </React.Fragment>
                 ))}
               </div>
+              <div className="space-y-3 md:hidden">
+                {weekDays.map((day) => {
+                  const slotKey = formatDateKey(day);
+                  const dayEvents = (eventsByDay.get(slotKey) || []).sort((a, b) => (
+                    new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+                  ));
+                  return (
+                    <div key={`mobile-week-${slotKey}`} className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm text-white">
+                            {day.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
+                          </div>
+                          <div className="text-xs text-zinc-400">{dayEvents.length} evento(s)</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openCreateForSlot(day)}
+                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                        >
+                          Agregar
+                        </button>
+                      </div>
+                      {dayEvents.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
+                          Sin eventos para este día.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {dayEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => openEditEvent(event)}
+                              className="w-full rounded-xl border px-3 py-3 text-left"
+                              style={{
+                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                                  <div className="mt-1 text-xs text-zinc-300">
+                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              </>
             )}
 
             {viewMode === 'day' && (
-              <div className="grid grid-cols-2 gap-2">
+              <>
+              <div className="hidden grid-cols-2 gap-2 md:grid">
                 <div className="text-xs text-zinc-300">Hora</div>
                 <div className="text-xs text-zinc-300">
                   {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
@@ -799,6 +929,60 @@ export const Agenda: React.FC = () => {
                   );
                 })}
               </div>
+              <div className="space-y-3 md:hidden">
+                {dayHours.map((hour) => {
+                  const slotKey = formatDateKey(anchorDate);
+                  const slotEvents = (eventsByDay.get(slotKey) || []).filter((event) => {
+                    const start = new Date(event.startAt);
+                    return start.getHours() === hour;
+                  });
+                  return (
+                    <div key={`mobile-day-${hour}`} className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="text-sm text-white">{String(hour).padStart(2, '0')}:00</div>
+                        <button
+                          type="button"
+                          onClick={() => openCreateForSlot(anchorDate, hour)}
+                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                        >
+                          Agregar
+                        </button>
+                      </div>
+                      {slotEvents.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
+                          Sin eventos en esta franja.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {slotEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => openEditEvent(event)}
+                              className="w-full rounded-xl border px-3 py-3 text-left"
+                              style={{
+                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                                  <div className="mt-1 text-xs text-zinc-300">
+                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              </>
             )}
           </div>
         ) : (
@@ -873,9 +1057,9 @@ export const Agenda: React.FC = () => {
               setEditingEvent(null);
             }}
           />
-          <div className="relative w-full max-w-4xl bg-zinc-900/80 border border-white/20 rounded-3xl p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)] max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+          <div className="relative max-h-[calc(100vh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-[1.75rem] border border-white/20 bg-zinc-900/80 p-4 shadow-[0_30px_120px_rgba(0,0,0,0.55)] overscroll-contain scrollbar-hide sm:max-h-[calc(100vh-3rem)] sm:p-6">
             <div className="absolute inset-0 rounded-3xl pointer-events-none bg-gradient-to-br from-white/[0.06] via-transparent to-white/[0.02]" />
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between gap-4">
               <h2 className="text-xl text-white font-light">
                 {editingEvent ? 'Editar evento' : 'Nuevo evento'}
               </h2>
@@ -1017,12 +1201,12 @@ export const Agenda: React.FC = () => {
               </div>
               <div>
                 <label className="block text-xs text-zinc-300 mb-1">Inicio</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <input
                     type="date"
                     value={splitDateTime(form.startAt).datePart}
                     onChange={(e) => setForm({ ...form, startAt: updateDateTime(form.startAt, e.target.value) })}
-                    className="col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 sm:col-span-2"
                     disabled={!canManage && !!editingEvent}
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -1059,12 +1243,12 @@ export const Agenda: React.FC = () => {
               </div>
               <div>
                 <label className="block text-xs text-zinc-300 mb-1">Fin</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <input
                     type="date"
                     value={splitDateTime(form.endAt).datePart}
                     onChange={(e) => setForm({ ...form, endAt: updateDateTime(form.endAt, e.target.value) })}
-                    className="col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                    className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 sm:col-span-2"
                     disabled={!canManage && !!editingEvent}
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -1287,11 +1471,11 @@ export const Agenda: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               {editingEvent && canManage && (
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-2 rounded-lg border border-red-500/40 text-red-300 hover:text-red-200 hover:border-red-500/70 transition-all"
+                  className="rounded-lg border border-red-500/40 px-4 py-2 text-red-300 transition-all hover:border-red-500/70 hover:text-red-200"
                 >
                   Eliminar
                 </button>
