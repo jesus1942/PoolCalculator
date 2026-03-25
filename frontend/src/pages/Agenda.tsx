@@ -172,6 +172,7 @@ export const Agenda: React.FC = () => {
   }, [anchorDate]);
 
   const dayHours = useMemo(() => Array.from({ length: 24 }).map((_, idx) => idx), []);
+  const todayKey = useMemo(() => formatDateKey(now), [now]);
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, AgendaEvent[]>();
@@ -197,6 +198,13 @@ export const Agenda: React.FC = () => {
     if (viewMode === 'week') return weekDays;
     return monthMatrix.flat().filter((day) => day.getMonth() === anchorDate.getMonth());
   }, [anchorDate, monthMatrix, viewMode, weekDays]);
+
+  const mobileSelectedDateKey = useMemo(() => formatDateKey(anchorDate), [anchorDate]);
+  const mobileSelectedEvents = useMemo(() => (
+    (eventsByDay.get(mobileSelectedDateKey) || []).slice().sort((a, b) => (
+      new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+    ))
+  ), [eventsByDay, mobileSelectedDateKey]);
 
   const getRangeForView = () => {
     if (viewMode === 'day') {
@@ -270,6 +278,14 @@ export const Agenda: React.FC = () => {
   }, [showCreate, editingEvent]);
 
   const handleCreate = async () => {
+    const startDate = new Date(form.startAt);
+    const currentDate = new Date();
+
+    if (!editingEvent && startDate.getTime() < currentDate.getTime()) {
+      window.alert('No se pueden crear eventos en una fecha u hora pasada.');
+      return;
+    }
+
     try {
       if (editingEvent) {
         await agendaService.update(editingEvent.id, {
@@ -325,6 +341,12 @@ export const Agenda: React.FC = () => {
     } else {
       start.setHours(9, 0, 0, 0);
     }
+
+    if (start.getTime() < Date.now()) {
+      window.alert('No se pueden crear eventos en una fecha u hora pasada.');
+      return;
+    }
+
     const end = new Date(start);
     end.setHours(start.getHours() + 1);
     const key = formatDateKey(start);
@@ -666,17 +688,25 @@ export const Agenda: React.FC = () => {
                   const key = formatDateKey(day);
                   const dayEvents = eventsByDay.get(key) || [];
                   const isCurrentMonth = day.getMonth() === anchorDate.getMonth();
+                  const isToday = key === todayKey;
                   return (
                     <div
                       key={key}
                       className={`min-h-[110px] rounded-xl border border-zinc-800/70 p-2 ${
                         isCurrentMonth ? 'bg-zinc-900/50' : 'bg-zinc-900/20 text-zinc-600'
-                      }`}
+                      } ${isToday ? 'ring-1 ring-cyan-400/70 border-cyan-500/60' : ''}`}
                       onClick={() => openCreateForSlot(day)}
                       role="button"
                       tabIndex={0}
                     >
-                      <div className="text-xs text-zinc-300 mb-2">{day.getDate()}</div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className={`text-xs ${isToday ? 'text-cyan-200' : 'text-zinc-300'}`}>{day.getDate()}</div>
+                        {isToday && (
+                          <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] text-cyan-200">
+                            Hoy
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-1">
                         {dayEvents.slice(0, 3).map((event) => (
                           <div
@@ -707,63 +737,82 @@ export const Agenda: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="space-y-3 md:hidden">
-                {mobileVisibleDays.map((day) => {
-                  const key = formatDateKey(day);
-                  const dayEvents = eventsByDay.get(key) || [];
-                  return (
-                    <div
-                      key={`mobile-month-${key}`}
-                      className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-sm text-white">
-                            {day.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
-                          </div>
-                          <div className="text-xs text-zinc-400">{dayEvents.length} evento(s)</div>
-                        </div>
+              <div className="space-y-4 md:hidden">
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div className="flex min-w-max gap-2">
+                    {mobileVisibleDays.map((day) => {
+                      const key = formatDateKey(day);
+                      const isActive = key === mobileSelectedDateKey;
+                      const isToday = key === todayKey;
+                      const dayEvents = eventsByDay.get(key) || [];
+                      return (
                         <button
+                          key={`mobile-month-chip-${key}`}
                           type="button"
-                          onClick={() => openCreateForSlot(day)}
-                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                          onClick={() => setAnchorDate(day)}
+                          className={`min-w-[4.5rem] rounded-2xl border px-3 py-2 text-left transition-all ${
+                            isActive
+                              ? 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200'
+                              : 'border-zinc-800 bg-zinc-900/60 text-zinc-300'
+                          } ${isToday ? 'ring-1 ring-cyan-400/60' : ''}`}
                         >
-                          Agregar
+                          <div className="text-[10px] uppercase tracking-wide">
+                            {day.toLocaleDateString('es-AR', { weekday: 'short' })}
+                          </div>
+                          <div className="mt-1 text-lg leading-none">{day.getDate()}</div>
+                          <div className="mt-1 text-[10px] text-zinc-400">{isToday ? 'Hoy' : `${dayEvents.length} ev.`}</div>
                         </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-white">
+                        {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
                       </div>
-                      {dayEvents.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
-                          Sin eventos para este día.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {dayEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              type="button"
-                              onClick={() => openEditEvent(event)}
-                              className="w-full rounded-xl border px-3 py-3 text-left"
-                              style={{
-                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
-                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
-                                  <div className="mt-1 text-xs text-zinc-300">
-                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                </div>
-                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="text-xs text-zinc-400">{mobileSelectedEvents.length} evento(s)</div>
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => openCreateForSlot(anchorDate)}
+                      className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                  {mobileSelectedEvents.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-sm text-zinc-400">
+                      Sin eventos para este día.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {mobileSelectedEvents.map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          onClick={() => openEditEvent(event)}
+                          className="w-full rounded-xl border px-3 py-3 text-left"
+                          style={{
+                            backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                            borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                              <div className="mt-1 text-xs text-zinc-300">
+                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               </>
             )}
@@ -772,11 +821,17 @@ export const Agenda: React.FC = () => {
               <>
               <div className="hidden grid-cols-8 gap-2 md:grid">
                 <div className="text-xs text-zinc-300">Hora</div>
-                {weekDays.map((day) => (
-                  <div key={formatDateKey(day)} className="text-xs text-zinc-300 text-center">
-                    {day.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit' })}
-                  </div>
-                ))}
+                {weekDays.map((day) => {
+                  const isToday = formatDateKey(day) === todayKey;
+                  return (
+                    <div
+                      key={formatDateKey(day)}
+                      className={`rounded-lg px-2 py-1 text-center text-xs ${isToday ? 'border border-cyan-500/40 bg-cyan-500/10 text-cyan-200' : 'text-zinc-300'}`}
+                    >
+                      {day.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit' })}
+                    </div>
+                  );
+                })}
                 {dayHours.map((hour) => (
                   <React.Fragment key={`hour-${hour}`}>
                     <div className="text-xs text-zinc-300 py-3">{String(hour).padStart(2, '0')}:00</div>
@@ -821,62 +876,82 @@ export const Agenda: React.FC = () => {
                   </React.Fragment>
                 ))}
               </div>
-              <div className="space-y-3 md:hidden">
-                {weekDays.map((day) => {
-                  const slotKey = formatDateKey(day);
-                  const dayEvents = (eventsByDay.get(slotKey) || []).sort((a, b) => (
-                    new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
-                  ));
-                  return (
-                    <div key={`mobile-week-${slotKey}`} className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-sm text-white">
-                            {day.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
-                          </div>
-                          <div className="text-xs text-zinc-400">{dayEvents.length} evento(s)</div>
-                        </div>
+              <div className="space-y-4 md:hidden">
+                <div className="overflow-x-auto pb-1 scrollbar-hide">
+                  <div className="flex min-w-max gap-2">
+                    {weekDays.map((day) => {
+                      const key = formatDateKey(day);
+                      const isToday = key === todayKey;
+                      const isActive = key === mobileSelectedDateKey;
+                      const dayEvents = eventsByDay.get(key) || [];
+                      return (
                         <button
+                          key={`mobile-week-chip-${key}`}
                           type="button"
-                          onClick={() => openCreateForSlot(day)}
-                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                          onClick={() => setAnchorDate(day)}
+                          className={`min-w-[4.75rem] rounded-2xl border px-3 py-2 text-left transition-all ${
+                            isActive
+                              ? 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200'
+                              : 'border-zinc-800 bg-zinc-900/60 text-zinc-300'
+                          } ${isToday ? 'ring-1 ring-cyan-400/60' : ''}`}
                         >
-                          Agregar
+                          <div className="text-[10px] uppercase tracking-wide">
+                            {day.toLocaleDateString('es-AR', { weekday: 'short' })}
+                          </div>
+                          <div className="mt-1 text-lg leading-none">{day.getDate()}</div>
+                          <div className="mt-1 text-[10px] text-zinc-400">{isToday ? 'Hoy' : `${dayEvents.length} ev.`}</div>
                         </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-white">
+                        {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
                       </div>
-                      {dayEvents.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
-                          Sin eventos para este día.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {dayEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              type="button"
-                              onClick={() => openEditEvent(event)}
-                              className="w-full rounded-xl border px-3 py-3 text-left"
-                              style={{
-                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
-                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
-                                  <div className="mt-1 text-xs text-zinc-300">
-                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                </div>
-                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="text-xs text-zinc-400">{mobileSelectedEvents.length} evento(s)</div>
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => openCreateForSlot(anchorDate)}
+                      className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                  {mobileSelectedEvents.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-sm text-zinc-400">
+                      Sin eventos para este día.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {mobileSelectedEvents.map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          onClick={() => openEditEvent(event)}
+                          className="w-full rounded-xl border px-3 py-3 text-left"
+                          style={{
+                            backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                            borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                              <div className="mt-1 text-xs text-zinc-300">
+                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               </>
             )}
@@ -885,7 +960,7 @@ export const Agenda: React.FC = () => {
               <>
               <div className="hidden grid-cols-2 gap-2 md:grid">
                 <div className="text-xs text-zinc-300">Hora</div>
-                <div className="text-xs text-zinc-300">
+                <div className={`text-xs ${formatDateKey(anchorDate) === todayKey ? 'text-cyan-200' : 'text-zinc-300'}`}>
                   {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
                 </div>
                 {dayHours.map((hour) => {
@@ -929,58 +1004,54 @@ export const Agenda: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="space-y-3 md:hidden">
-                {dayHours.map((hour) => {
-                  const slotKey = formatDateKey(anchorDate);
-                  const slotEvents = (eventsByDay.get(slotKey) || []).filter((event) => {
-                    const start = new Date(event.startAt);
-                    return start.getHours() === hour;
-                  });
-                  return (
-                    <div key={`mobile-day-${hour}`} className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div className="text-sm text-white">{String(hour).padStart(2, '0')}:00</div>
-                        <button
-                          type="button"
-                          onClick={() => openCreateForSlot(anchorDate, hour)}
-                          className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
-                        >
-                          Agregar
-                        </button>
+              <div className="space-y-4 md:hidden">
+                <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/40 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-white">
+                        {anchorDate.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' })}
                       </div>
-                      {slotEvents.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400">
-                          Sin eventos en esta franja.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {slotEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              type="button"
-                              onClick={() => openEditEvent(event)}
-                              className="w-full rounded-xl border px-3 py-3 text-left"
-                              style={{
-                                backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
-                                borderColor: `${event.typeColor || '#0ea5e9'}55`,
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="truncate text-sm text-zinc-100">{event.title}</div>
-                                  <div className="mt-1 text-xs text-zinc-300">
-                                    {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                </div>
-                                {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <div className="text-xs text-zinc-400">{mobileSelectedEvents.length} evento(s)</div>
                     </div>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={() => openCreateForSlot(anchorDate)}
+                      className="rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-300"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                  {mobileSelectedEvents.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-sm text-zinc-400">
+                      Sin eventos para este día.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {mobileSelectedEvents.map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          onClick={() => openEditEvent(event)}
+                          className="w-full rounded-xl border px-3 py-3 text-left"
+                          style={{
+                            backgroundColor: `${event.typeColor || '#0ea5e9'}14`,
+                            borderColor: `${event.typeColor || '#0ea5e9'}55`,
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm text-zinc-100">{event.title}</div>
+                              <div className="mt-1 text-xs text-zinc-300">
+                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               </>
             )}
