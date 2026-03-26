@@ -41,8 +41,8 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-950 via-black to-zinc-900 px-4 py-6 sm:py-10">
+      <div className="w-full max-w-md">
         {/* Botón para volver a la landing */}
         <div className="mb-4">
           <Link
@@ -54,18 +54,18 @@ export const Login: React.FC = () => {
           </Link>
         </div>
 
-        <div className="bg-white/5 rounded-2xl border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl">
-          <div className="p-8">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+          <div className="p-5 sm:p-8">
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-black border border-black/80 flex items-center justify-center shadow-lg">
                 <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-9 w-auto" />
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold text-center mb-2 text-white">
+            <h2 className="mb-2 text-center text-2xl font-bold text-white sm:text-3xl">
               Pool Installer
             </h2>
-            <p className="text-center text-zinc-400 mb-8">
+            <p className="mb-6 text-center text-sm text-zinc-400 sm:mb-8 sm:text-base">
               Ingresá a tu cuenta para continuar
             </p>
 

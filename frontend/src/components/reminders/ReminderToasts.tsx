@@ -12,7 +12,7 @@ export const ReminderToasts: React.FC = () => {
   if (visibleReminders.length === 0) return null;
 
   return (
-    <div className="fixed top-6 right-6 z-[60] w-[360px] max-w-[90vw] space-y-3">
+    <div className="fixed inset-x-4 top-20 z-[60] w-auto max-w-[calc(100vw-2rem)] space-y-3 sm:inset-x-auto sm:right-6 sm:top-6 sm:w-[360px] sm:max-w-[90vw]">
       {visibleReminders.map((reminder) => {
         const startAt = new Date(reminder.event.startAt);
         const startLabel = startAt.toLocaleString('es-AR', {

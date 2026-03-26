@@ -242,25 +242,25 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
     : `${project.poolPreset?.depth}m`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* RESUMEN EJECUTIVO - HEADER */}
       <Card className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">{project.name}</h2>
-            <p className="text-zinc-50 text-xl">Cliente: {project.clientName}</p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="mb-2 break-words text-2xl font-bold sm:text-3xl">{project.name}</h2>
+            <p className="break-words text-base text-zinc-50 sm:text-xl">Cliente: {project.clientName}</p>
             {project.location && (
-              <div className="flex items-center gap-1 mt-1">
-                <svg className="w-3 h-3 text-zinc-200" fill="currentColor" viewBox="0 0 20 20">
+              <div className="mt-1 flex items-start gap-1">
+                <svg className="mt-0.5 h-3 w-3 shrink-0 text-zinc-200" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
                 </svg>
-                <p className="text-zinc-100 text-base">{project.location}</p>
+                <p className="break-words text-sm text-zinc-100 sm:text-base">{project.location}</p>
               </div>
             )}
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2 mb-1">
-              <p className="text-zinc-100 text-base">TOTAL DEL PROYECTO</p>
+          <div className="min-w-0 lg:max-w-[28rem] lg:text-right">
+            <div className="mb-1 flex items-center gap-2 lg:justify-end">
+              <p className="text-sm text-zinc-100 sm:text-base">TOTAL DEL PROYECTO</p>
               <button
                 type="button"
                 onClick={() => setShowGrandTotal((prev) => !prev)}
@@ -271,17 +271,17 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 {showGrandTotal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="min-h-[60px] min-w-[260px] text-5xl font-bold tracking-tight">
+            <p className="min-h-[48px] break-words text-3xl font-bold tracking-tight sm:min-h-[60px] sm:text-5xl">
               {showGrandTotal ? `$${grandTotal.toLocaleString('es-AR')}` : '••••••••••'}
             </p>
-            <div className="flex gap-4 mt-2 text-base text-zinc-50">
-              <span className="flex items-center gap-1">
+            <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-50 sm:text-base lg:items-end">
+              <span className="flex min-w-0 items-center gap-1">
                 <Package className="w-4 h-4" />
-                Materiales: ${totalMaterialCost.toLocaleString('es-AR')}
+                <span className="break-words">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex min-w-0 items-center gap-1">
                 <Users className="w-4 h-4" />
-                M.O.: ${totalLaborCost.toLocaleString('es-AR')}
+                <span className="break-words">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
               </span>
             </div>
           </div>
@@ -295,7 +295,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           <h3 className="text-2xl font-bold text-white">Especificaciones de la Piscina</h3>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
           <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
             <p className="text-base text-zinc-300 mb-1">Modelo</p>
             <p className="font-bold text-xl text-white">{project.poolPreset?.name}</p>
@@ -568,12 +568,12 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                   <CheckCircle2 size={18} className="text-zinc-300" />
                   Losetas y Cerámicos
                 </h4>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     variant={viewMode === 'cad' ? 'primary' : 'secondary'}
                     onClick={() => setViewMode(viewMode === 'planta' ? 'cad' : 'planta')}
-                    className="flex items-center gap-2"
+                    className="flex w-full items-center justify-center gap-2 sm:w-auto"
                   >
                     <Grid3x3 size={16} />
                     {viewMode === 'planta' ? 'Vista CAD' : 'Vista Planta'}
@@ -582,7 +582,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                     size="sm"
                     variant="secondary"
                     onClick={() => canvasRef.current && exportCanvasToImage(canvasRef.current, `pool-${project.name.replace(/\s+/g, '-')}-visualization.png`)}
-                    className="flex items-center gap-2"
+                    className="flex w-full items-center justify-center gap-2 sm:w-auto"
                   >
                     <Download size={16} />
                     Exportar Dibujo
@@ -591,14 +591,14 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
               </div>
 
               {/* Visualización de la Piscina */}
-              <div className="mb-4 bg-zinc-900 border border-zinc-800 rounded-lg p-6 flex items-center justify-center">
+              <div className="mb-4 flex items-center justify-center overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 p-2 sm:p-6">
                 <div className="w-full max-w-4xl">
                   <PoolVisualizationCanvas
                     ref={canvasRef}
                     project={project}
                     tileConfig={project.tileCalculation}
-                    width={1080}
-                    height={680}
+                    width={840}
+                    height={520}
                     showMeasurements={true}
                     viewMode={viewMode}
                     renderQuality={2.25}
@@ -634,7 +634,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           )}
 
           {/* Materiales de Vereda y Cama */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             {materials.adhesive && materials.adhesive.quantity > 0 && (
               <div className="bg-zinc-900 p-3 rounded-lg border border-zinc-800">
                 <p className="text-xs text-zinc-400 mb-1">Pegamento</p>

@@ -118,7 +118,7 @@ export const Landing: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 text-zinc-100">
+    <div className="landing-surface min-h-screen overflow-x-hidden bg-gradient-to-br from-zinc-950 via-black to-zinc-900 text-zinc-100">
       {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
@@ -129,14 +129,14 @@ export const Landing: React.FC = () => {
         scrolled ? 'shadow-2xl py-2' : 'shadow-sm py-0'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-4 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <div className="h-12 w-12 rounded-2xl bg-black border border-white/10 flex items-center justify-center">
-                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-7 w-auto" />
+          <div className="flex h-16 items-center justify-between sm:h-20">
+            <div className="flex min-w-0 cursor-pointer items-center gap-3 sm:gap-4" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black sm:h-12 sm:w-12">
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-6 w-auto sm:h-7" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Pool Installer</h1>
-                <p className="text-sm text-zinc-400">by Domotics & IoT Solutions</p>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold text-white sm:text-2xl">Pool Installer</h1>
+                <p className="truncate text-xs text-zinc-400 sm:text-sm">by Domotics & IoT Solutions</p>
               </div>
             </div>
 
@@ -242,7 +242,7 @@ export const Landing: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div
             ref={heroRef.ref}
@@ -252,31 +252,31 @@ export const Landing: React.FC = () => {
                 : 'opacity-0 translate-y-10'
             }`}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 text-cyan-200 rounded-full mb-6 animate-pulse border border-white/10">
-              <Waves className="w-5 h-5" />
-              <span className="font-semibold">Sistema Profesional de Cálculo</span>
+            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-cyan-200 animate-pulse sm:mb-6 sm:px-4">
+              <Waves className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
+              <span className="truncate text-sm font-semibold sm:text-base">Sistema Profesional de Cálculo</span>
             </div>
-            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
+            <h2 className="mb-5 text-3xl font-bold leading-tight text-white sm:text-4xl md:text-6xl">
               Calcula Materiales para<br />
               <span className="text-cyan-300">Piscinas de Fibra</span> en Minutos
             </h2>
-            <p className="text-xl text-zinc-300 max-w-3xl mx-auto mb-10">
+            <p className="mx-auto mb-8 max-w-3xl text-base leading-relaxed text-zinc-300 sm:mb-10 sm:text-xl">
               Sistema completo para calcular materiales, presupuestar y gestionar proyectos
               de montaje de piscinas de fibra de vidrio con precisión profesional.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
               {isAuthenticated ? (
                 <>
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="px-8 py-4 bg-cyan-400 text-zinc-950 text-lg font-semibold rounded-lg hover:bg-cyan-300 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-6 py-3.5 text-base font-semibold text-zinc-950 shadow-lg transition-all hover:bg-cyan-300 hover:shadow-xl sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                   >
                     Ir al Panel
                     <ArrowRight className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => navigate('/projects')}
-                    className="px-8 py-4 bg-white/5 text-zinc-200 text-lg font-semibold rounded-lg hover:bg-white/10 transition-all shadow-md border-2 border-white/10"
+                    className="w-full rounded-lg border-2 border-white/10 bg-white/5 px-6 py-3.5 text-base font-semibold text-zinc-200 shadow-md transition-all hover:bg-white/10 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                   >
                     Ver Proyectos
                   </button>
@@ -285,14 +285,14 @@ export const Landing: React.FC = () => {
                 <>
                   <button
                     onClick={() => navigate('/register')}
-                    className="px-8 py-4 bg-cyan-400 text-zinc-950 text-lg font-semibold rounded-lg hover:bg-cyan-300 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-6 py-3.5 text-base font-semibold text-zinc-950 shadow-lg transition-all hover:bg-cyan-300 hover:shadow-xl sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                   >
                     Comenzar Gratis
                     <ArrowRight className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="px-8 py-4 bg-white/5 text-zinc-200 text-lg font-semibold rounded-lg hover:bg-white/10 transition-all shadow-md border-2 border-white/10"
+                    className="w-full rounded-lg border-2 border-white/10 bg-white/5 px-6 py-3.5 text-base font-semibold text-zinc-200 shadow-md transition-all hover:bg-white/10 sm:w-auto sm:px-8 sm:py-4 sm:text-lg"
                   >
                     Probar Calculador
                   </button>
@@ -304,27 +304,27 @@ export const Landing: React.FC = () => {
           {/* Stats */}
           <div
             ref={statsRef.ref}
-            className={`grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto transition-all duration-1000 delay-300 ${
+            className={`mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 md:gap-8 transition-all duration-1000 delay-300 ${
               statsRef.isVisible
                 ? 'opacity-100 translate-y-0'
                 : 'opacity-0 translate-y-10'
             }`}
           >
             <div className="text-center">
-              <div className="text-4xl font-bold text-cyan-300 mb-2">24</div>
-              <div className="text-zinc-400">Modelos ACQUAM</div>
+              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">24</div>
+              <div className="text-sm text-zinc-400 sm:text-base">Modelos ACQUAM</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-cyan-300 mb-2">60%</div>
-              <div className="text-zinc-400">Ahorro de Tiempo</div>
+              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">60%</div>
+              <div className="text-sm text-zinc-400 sm:text-base">Ahorro de Tiempo</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-cyan-300 mb-2">100+</div>
-              <div className="text-zinc-400">Materiales</div>
+              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">100+</div>
+              <div className="text-sm text-zinc-400 sm:text-base">Materiales</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-cyan-300 mb-2">2025</div>
-              <div className="text-zinc-400">Precios Actualizados</div>
+              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">2025</div>
+              <div className="text-sm text-zinc-400 sm:text-base">Precios Actualizados</div>
             </div>
           </div>
         </div>

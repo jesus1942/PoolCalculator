@@ -28,14 +28,14 @@ export const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-6 sm:py-10">
       {/* Fixed gradient backgrounds */}
       <div className="fixed inset-0 bg-gradient-to-br from-zinc-900 via-black to-black pointer-events-none -z-10"></div>
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-950/20 via-transparent to-transparent pointer-events-none -z-10"></div>
 
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="mb-6 text-center sm:mb-8">
           <div className="inline-flex items-center space-x-3 mb-6">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
               <div className="w-7 h-7 rounded-full border-2 border-white"></div>
@@ -44,14 +44,14 @@ export const ForgotPassword: React.FC = () => {
               Pool <span className="font-semibold">Calculator</span>
             </span>
           </div>
-          <h1 className="text-3xl font-light text-white mb-2">Recuperar Contraseña</h1>
-          <p className="text-zinc-400 font-light">
+          <h1 className="mb-2 text-2xl font-light text-white sm:text-3xl">Recuperar Contraseña</h1>
+          <p className="text-sm font-light text-zinc-400 sm:text-base">
             Ingresa tu email y te enviaremos un link para resetear tu contraseña
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-zinc-950/50 backdrop-blur-xl border border-zinc-800/50 rounded-2xl p-8 shadow-2xl">
+        <div className="rounded-2xl border border-zinc-800/50 bg-zinc-950/50 p-5 shadow-2xl backdrop-blur-xl sm:p-8">
           {message ? (
             <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-6">
               <p className="text-cyan-400 text-sm font-light">{message}</p>

@@ -98,6 +98,12 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   :root {
     --app-bg: #0b0d10;
     --app-bg-strong: #0f1216;
@@ -110,6 +116,13 @@
     --app-accent: #6cff8e;
     --app-accent-strong: #49d5ff;
     --app-accent-warm: #ffd166;
+  }
+
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -183,6 +196,54 @@
     .grid-cols-8,
     .grid-cols-9 {
       grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+
+    .p-8,
+    .p-10 {
+      padding: 1rem !important;
+    }
+
+    .px-6,
+    .px-8,
+    .px-10 {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+
+    .py-8,
+    .py-10 {
+      padding-top: 1rem !important;
+      padding-bottom: 1rem !important;
+    }
+
+    .gap-8 {
+      gap: 1rem !important;
+    }
+
+    .text-4xl {
+      font-size: 2rem !important;
+      line-height: 2.25rem !important;
+    }
+
+    .text-3xl {
+      font-size: 1.75rem !important;
+      line-height: 2rem !important;
+    }
+
+    .rounded-3xl {
+      border-radius: 1.25rem !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .text-2xl {
+      font-size: 1.35rem !important;
+      line-height: 1.8rem !important;
+    }
+
+    .text-xl {
+      font-size: 1.125rem !important;
+      line-height: 1.6rem !important;
     }
   }
 
@@ -461,5 +522,21 @@
   }
   button[class*="bg-zinc-900/50"] {
     background-color: rgba(24, 30, 42, 0.85);
+  }
+}
+
+@layer base {
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea,
+    button {
+      font-size: 16px;
+    }
+
+    [class*="overflow-x-auto"],
+    [class*="overflow-auto"] {
+      -webkit-overflow-scrolling: touch;
+    }
   }
 }

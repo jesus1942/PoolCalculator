@@ -271,16 +271,16 @@ export const ProductShowcase: React.FC = () => {
       <div className="overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="grid md:grid-cols-2 gap-0">
           {/* Left side - Description */}
-          <div className="flex flex-col justify-center p-6 md:p-12">
+          <div className="flex min-w-0 flex-col justify-center p-5 sm:p-6 md:p-12">
             <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 sm:mb-6 sm:h-16 sm:w-16">
               {features[activeFeature].icon}
             </div>
 
-            <h3 className="mb-4 text-2xl font-bold text-gray-900 sm:text-3xl">
+            <h3 className="mb-4 text-xl font-bold text-gray-900 sm:text-3xl">
               {features[activeFeature].title}
             </h3>
 
-            <p className="mb-6 text-base text-gray-600 sm:text-lg">
+            <p className="mb-6 text-sm leading-relaxed text-gray-600 sm:text-lg">
               {features[activeFeature].description}
             </p>
 
@@ -304,20 +304,20 @@ export const ProductShowcase: React.FC = () => {
           </div>
 
           {/* Right side - Screenshot/Image */}
-          <div className="relative flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50 p-4 sm:p-6 md:p-8">
+          <div className="relative flex min-w-0 items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 to-cyan-50 p-3 sm:p-6 md:p-8">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-cyan-600/10"></div>
-            <div className="relative w-[82vw] max-w-[16.5rem] max-h-[30rem] overflow-hidden rounded-[1.9rem] border-[10px] border-white shadow-2xl transition-all duration-500 sm:w-full sm:max-w-[22rem] sm:rounded-[2rem] md:max-w-none md:max-h-none md:rounded-xl md:border-4 md:hover:scale-[1.02] md:aspect-auto md:min-h-[400px] aspect-[9/17]">
+            <div className="relative aspect-[9/18] w-full max-w-[13.5rem] overflow-hidden rounded-[1.6rem] border-[8px] border-white shadow-2xl transition-all duration-500 sm:max-w-[17rem] sm:rounded-[1.9rem] sm:border-[10px] md:min-h-[400px] md:max-w-none md:rounded-xl md:border-4 md:aspect-auto md:hover:scale-[1.02]">
               <ShowcasePreview
                 featureId={features[activeFeature].id}
                 title={features[activeFeature].title}
               />
-              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/55 via-transparent to-transparent p-3.5 sm:p-5 md:p-6">
+              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/55 via-transparent to-transparent p-3 sm:p-5 md:p-6">
                 <div className="text-white">
                   <div className="mb-2 flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-green-400 animate-pulse sm:h-3 sm:w-3"></div>
                     <span className="text-xs font-medium sm:text-sm">En vivo</span>
                   </div>
-                  <p className="max-w-[13rem] text-[11px] leading-snug opacity-90 sm:max-w-none sm:text-sm">
+                  <p className="max-w-[11rem] text-[10px] leading-snug opacity-90 sm:max-w-none sm:text-sm">
                     Vista representativa del flujo real de la app
                   </p>
                 </div>
@@ -331,19 +331,19 @@ export const ProductShowcase: React.FC = () => {
       <div className="mt-10 grid grid-cols-2 gap-3 sm:mt-12 sm:gap-4 md:grid-cols-4 md:gap-6">
         <div className="rounded-xl bg-white p-4 text-center shadow-md sm:p-5 md:p-6">
           <div className="mb-2 text-2xl font-bold text-blue-600 sm:text-3xl">100+</div>
-          <div className="text-sm text-gray-600">Instaladores Activos</div>
+          <div className="text-xs text-gray-600 sm:text-sm">Instaladores Activos</div>
         </div>
         <div className="rounded-xl bg-white p-4 text-center shadow-md sm:p-5 md:p-6">
           <div className="mb-2 text-2xl font-bold text-blue-600 sm:text-3xl">500+</div>
-          <div className="text-sm text-gray-600">Proyectos Completados</div>
+          <div className="text-xs text-gray-600 sm:text-sm">Proyectos Completados</div>
         </div>
         <div className="rounded-xl bg-white p-4 text-center shadow-md sm:p-5 md:p-6">
           <div className="mb-2 text-2xl font-bold text-blue-600 sm:text-3xl">60%</div>
-          <div className="text-sm text-gray-600">Ahorro de Tiempo</div>
+          <div className="text-xs text-gray-600 sm:text-sm">Ahorro de Tiempo</div>
         </div>
         <div className="rounded-xl bg-white p-4 text-center shadow-md sm:p-5 md:p-6">
           <div className="mb-2 text-2xl font-bold text-blue-600 sm:text-3xl">24/7</div>
-          <div className="text-sm text-gray-600">Soporte Técnico</div>
+          <div className="text-xs text-gray-600 sm:text-sm">Soporte Técnico</div>
         </div>
       </div>
     </div>

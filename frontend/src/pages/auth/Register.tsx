@@ -50,8 +50,8 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-950 via-black to-zinc-900 px-4 py-6 sm:py-10">
+      <div className="w-full max-w-md">
         {/* Botón para volver a la landing */}
         <div className="mb-4">
           <Link
@@ -66,17 +66,17 @@ export const Register: React.FC = () => {
         <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10"></div>
 
-          <div className="relative p-8">
+          <div className="relative p-5 sm:p-8">
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 flex items-center justify-center shadow-xl">
                 <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-9 w-auto" />
               </div>
             </div>
 
-            <h2 className="text-3xl font-bold text-center mb-2 text-white">
+            <h2 className="mb-2 text-center text-2xl font-bold text-white sm:text-3xl">
               Crear Cuenta
             </h2>
-            <p className="text-center text-zinc-400 mb-8 font-medium">
+            <p className="mb-6 text-center text-sm font-medium text-zinc-400 sm:mb-8 sm:text-base">
               Completá tus datos para registrarte
             </p>
 

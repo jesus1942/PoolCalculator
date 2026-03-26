@@ -55,21 +55,21 @@ export const ClientLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:py-8">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Home size={48} className="text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Pool Installer</h1>
+        <div className="mb-6 text-center sm:mb-8">
+          <div className="mb-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Home size={42} className="text-blue-600 sm:h-12 sm:w-12" />
+            <h1 className="text-center text-3xl font-bold text-gray-900 sm:text-4xl">Pool Installer</h1>
           </div>
-          <p className="text-gray-600">Acceso al Timeline del Proyecto</p>
+          <p className="text-sm text-gray-600 sm:text-base">Acceso al Timeline del Proyecto</p>
         </div>
 
         {/* Login Card */}
         <Card className="shadow-2xl">
-          <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Iniciar Sesión</h2>
+          <div className="p-5 sm:p-8">
+            <h2 className="mb-2 text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
             <p className="text-sm text-gray-600 mb-6">
               Ingresa las credenciales que te proporcionó tu constructor
             </p>

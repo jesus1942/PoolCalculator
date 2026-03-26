@@ -185,29 +185,29 @@ export const PublicTimeline: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900">
       {/* Header */}
-      <header className="bg-zinc-950/80 border-b border-white/10 shadow-2xl backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white">{projectName}</h1>
-              <p className="text-zinc-400 mt-1">Cliente: {clientName}</p>
+      <header className="border-b border-white/10 bg-zinc-950/80 shadow-2xl backdrop-blur-xl">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8 sm:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="break-words text-2xl font-bold text-white sm:text-3xl">{projectName}</h1>
+              <p className="mt-1 text-sm text-zinc-400 sm:text-base">Cliente: {clientName}</p>
             </div>
-            <div className="flex items-center gap-3 text-cyan-300">
-              <div className="h-9 w-9 rounded-xl bg-black border border-white/10 flex items-center justify-center">
+            <div className="flex items-center gap-3 text-cyan-300 sm:justify-end">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black">
                 <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-5 w-auto" />
               </div>
-              <span className="font-semibold text-lg text-white">Pool Installer</span>
+              <span className="text-base font-semibold text-white sm:text-lg">Pool Installer</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Timeline Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white/5 rounded-lg shadow-2xl p-8 border border-white/10 backdrop-blur-xl">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Timeline del Proyecto</h2>
-            <p className="text-zinc-400">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 sm:py-12">
+        <div className="rounded-lg border border-white/10 bg-white/5 p-4 shadow-2xl backdrop-blur-xl sm:p-8">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="mb-2 text-2xl font-bold text-white">Timeline del Proyecto</h2>
+            <p className="text-sm text-zinc-400 sm:text-base">
               Registro cronológico de actualizaciones y eventos del proyecto
             </p>
             {timelineItems.length > 0 && (
@@ -228,7 +228,7 @@ export const PublicTimeline: React.FC = () => {
           ) : (
             <div className="relative">
               {/* Línea vertical del timeline */}
-              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-500/40 via-blue-500/30 to-transparent"></div>
+              <div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gradient-to-b from-cyan-500/40 via-blue-500/30 to-transparent sm:left-8"></div>
 
               {/* Lista de actualizaciones */}
               <div className="space-y-8">
@@ -238,10 +238,10 @@ export const PublicTimeline: React.FC = () => {
                   const isFirst = index === 0;
 
                   return (
-                    <div key={item.id} className="relative pl-20">
+                    <div key={item.id} className="relative pl-12 sm:pl-20">
                       {/* Icono en la línea del timeline */}
                       <div
-                        className={`absolute left-4 w-8 h-8 rounded-full border-4 border-zinc-950 flex items-center justify-center shadow-md ${
+                        className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-zinc-950 shadow-md sm:left-4 ${
                           categoryInfo.color === 'blue' ? 'bg-blue-500/20' :
                           categoryInfo.color === 'green' ? 'bg-emerald-500/20' :
                           categoryInfo.color === 'red' ? 'bg-rose-500/20' :
@@ -264,15 +264,15 @@ export const PublicTimeline: React.FC = () => {
                       </div>
 
                       {/* Contenido de la actualización */}
-                      <div className={`bg-white/5 border rounded-lg p-6 shadow-md hover:shadow-xl transition-all ${
+                      <div className={`rounded-lg border bg-white/5 p-4 shadow-md transition-all hover:shadow-xl sm:p-6 ${
                         isFirst ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10'
                       }`}>
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-bold text-white text-lg">{item.title}</h3>
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                              <h3 className="text-base font-bold text-white sm:text-lg">{item.title}</h3>
                               <span
-                                className={`px-3 py-1 text-xs rounded-full font-semibold ${
+                                className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
                                   categoryInfo.color === 'blue' ? 'bg-blue-500/15 text-blue-200' :
                                   categoryInfo.color === 'green' ? 'bg-emerald-500/15 text-emerald-200' :
                                   categoryInfo.color === 'red' ? 'bg-rose-500/15 text-rose-200' :
@@ -322,7 +322,7 @@ export const PublicTimeline: React.FC = () => {
 
                         {/* Galería de imágenes */}
                         {item.images && item.images.length > 0 && (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
                             {(item.images as string[]).map((image, imgIndex) => (
                               <div
                                 key={imgIndex}
@@ -346,12 +346,12 @@ export const PublicTimeline: React.FC = () => {
             </div>
           )}
           {exportUrl && timelineItems.length > 0 && (
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex justify-stretch sm:justify-end">
               <button
                 onClick={() => {
                   window.location.href = exportUrl;
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-300 transition font-semibold"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-zinc-950 transition hover:bg-cyan-300 sm:w-auto"
               >
                 <Download size={16} />
                 Descargar CSV

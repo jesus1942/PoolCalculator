@@ -192,7 +192,7 @@ export const Header: React.FC = () => {
 
           {/* Mobile Menu Panel */}
           <nav
-            className={`fixed top-16 right-0 w-80 max-w-[85vw] h-[calc(100vh-4rem)] bg-zinc-950/98 backdrop-blur-xl border-l border-zinc-800/50 shadow-2xl z-40 transform transition-all duration-300 ease-in-out lg:hidden ${
+            className={`fixed top-16 right-0 w-full max-w-[22rem] h-[calc(100vh-4rem)] bg-zinc-950/98 backdrop-blur-xl border-l border-zinc-800/50 shadow-2xl z-40 transform transition-all duration-300 ease-in-out lg:hidden ${
               isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
             }`}
           >
@@ -201,7 +201,7 @@ export const Header: React.FC = () => {
               isMobileMenuOpen ? 'opacity-100' : 'opacity-0'
             }`}></div>
 
-            <div className="relative h-full flex flex-col p-6 space-y-4">
+            <div className="relative flex h-full flex-col space-y-4 overflow-y-auto p-4 sm:p-6">
               {/* User Info */}
               <div className="flex items-center space-x-3 pb-4 border-b border-zinc-800/50">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">

@@ -2003,12 +2003,12 @@ const HydraulicLayoutPreview: React.FC<{
         </div>
 
         <div className="space-y-4">
-          <div className="overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950">
-            <canvas ref={planCanvasRef} className="block min-w-[920px]" />
+          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+            <canvas ref={planCanvasRef} className="block w-full" />
           </div>
 
-          <div className="overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950">
-            <canvas ref={profileCanvasRef} className="block min-w-[920px]" />
+          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+            <canvas ref={profileCanvasRef} className="block w-full" />
           </div>
         </div>
       </div>
