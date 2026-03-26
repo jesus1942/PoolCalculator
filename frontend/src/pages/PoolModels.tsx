@@ -507,26 +507,26 @@ export const PoolModels: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
               <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
                 <Waves className="h-7 w-7 text-white" />
               </div>
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900">
+              <div className="min-w-0">
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
                   Modelos de Piscinas
                 </h1>
-                <p className="text-gray-700 mt-1 font-medium">
+                <p className="mt-1 text-sm sm:text-base font-medium text-gray-700">
                   Administra los modelos completos de piscinas
                 </p>
               </div>
             </div>
             <button
               onClick={() => setShowModal(true)}
-              className="px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition-all duration-200 hover:shadow-lg flex items-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-700 hover:shadow-lg sm:w-auto"
             >
               <Plus size={20} />
               <span>Nuevo Modelo</span>
@@ -565,7 +565,7 @@ export const PoolModels: React.FC = () => {
             <label className="block text-sm font-medium text-gray-900 mb-2">
               Imagen del modelo
             </label>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:space-x-4">
               {imagePreview ? (
                 <div className="relative">
                   <img
@@ -611,7 +611,7 @@ export const PoolModels: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Nombre del modelo"
               value={formData.name}
@@ -717,7 +717,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Dimensiones</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Largo (m)"
                 type="number"
@@ -773,7 +773,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Caracteristicas generales</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -814,7 +814,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Retornos e impulsion</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Cantidad de retornos"
                 type="number"
@@ -857,7 +857,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Desagues y limpieza</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -892,7 +892,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Skimmers</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -917,7 +917,7 @@ export const PoolModels: React.FC = () => {
 
           <div className="border-t border-gray-200 pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Iluminacion</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -983,7 +983,7 @@ export const PoolModels: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex flex-col-reverse gap-3 pt-4 border-t border-gray-200 sm:flex-row">
             <button
               type="submit"
               className="flex-1 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md"

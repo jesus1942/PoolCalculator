@@ -666,18 +666,18 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="mb-6 flex items-start gap-3">
             <div className="w-14 h-14 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
               <SettingsIcon className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
                 Configuración
               </h1>
-              <p className="text-gray-700 mt-1 font-medium">
+              <p className="mt-1 text-sm sm:text-base font-medium text-gray-700">
                 Gestiona presets, materiales y configuraciones del sistema
               </p>
             </div>
@@ -691,21 +691,23 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2 border-b border-gray-200 mb-8 overflow-x-auto bg-white rounded-t-lg">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center space-x-2 px-6 py-3 border-b-2 transition-all duration-200 whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 bg-blue-50'
-                  : 'border-transparent text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-              }`}
-            >
-              {tab.icon && <tab.icon size={18} />}
-              <span className="font-medium">{tab.label}</span>
-            </button>
-          ))}
+        <div className="mb-8 overflow-x-auto rounded-t-lg border-b border-gray-200 bg-white scrollbar-hide">
+          <div className="flex min-w-max space-x-2 px-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as TabType)}
+                className={`flex items-center space-x-2 rounded-t-lg px-4 py-3 border-b-2 transition-all duration-200 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                }`}
+              >
+                {tab.icon && <tab.icon size={18} />}
+                <span className="font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content - Losetas */}

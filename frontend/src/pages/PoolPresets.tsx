@@ -174,13 +174,13 @@ export const PoolPresets: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Presets de Piscinas</h1>
-          <p className="text-gray-600 mt-2">Administrá los modelos de piscinas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Presets de Piscinas</h1>
+          <p className="mt-2 text-sm sm:text-base text-gray-600">Administrá los modelos de piscinas</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="flex items-center space-x-2">
+        <Button onClick={() => setShowModal(true)} className="flex w-full items-center justify-center space-x-2 sm:w-auto">
           <Plus size={20} />
           <span>Nuevo Preset</span>
         </Button>
@@ -188,7 +188,7 @@ export const PoolPresets: React.FC = () => {
 
       {/* Filtro por fabricante */}
       {vendors.length > 0 && (
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
           <Filter size={20} className="text-gray-500" />
           <div className="flex flex-wrap gap-2">
             <button
@@ -235,7 +235,7 @@ export const PoolPresets: React.FC = () => {
               )}
 
               <div>
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <h3 className="text-xl font-semibold text-gray-900">{preset.name}</h3>
                   {preset.vendor && (
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
@@ -301,7 +301,7 @@ export const PoolPresets: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex space-x-2 pt-4 border-t">
+              <div className="flex flex-col gap-2 pt-4 border-t sm:flex-row">
                 <Button
                   size="sm"
                   variant="secondary"
@@ -348,7 +348,7 @@ export const PoolPresets: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Largo (m)"
               type="number"
@@ -368,7 +368,7 @@ export const PoolPresets: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Profundidad inicial (m)"
               type="number"
@@ -394,7 +394,7 @@ export const PoolPresets: React.FC = () => {
             onChange={(e) => setFormData({ ...formData, shape: e.target.value as PoolShape })}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -482,7 +482,7 @@ export const PoolPresets: React.FC = () => {
             />
           </div>
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row">
             <Button type="submit" className="flex-1">
               {editingPreset ? 'Actualizar' : 'Crear'}
             </Button>

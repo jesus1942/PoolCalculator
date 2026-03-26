@@ -192,25 +192,25 @@ export const Projects: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
                 <FolderOpen className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                   Proyectos
                 </h1>
-                <p className="text-gray-600 mt-1">Administra todos tus proyectos de piscinas</p>
+                <p className="mt-1 text-sm sm:text-base text-gray-600">Administra todos tus proyectos de piscinas</p>
               </div>
             </div>
             {canWriteProjects && (
               <button
                 onClick={() => setShowModal(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-3 text-white font-medium shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 sm:w-auto"
               >
                 <Plus size={20} />
                 <span>Nuevo Proyecto</span>
@@ -259,7 +259,7 @@ export const Projects: React.FC = () => {
                   key={project.id}
                   className="group relative bg-white/10 rounded-xl border border-white/15 hover:border-cyan-400/40 shadow-2xl transition-all duration-200"
                 >
-                  <div className="p-6 space-y-4">
+                  <div className="p-4 sm:p-6 space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -320,7 +320,7 @@ export const Projects: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 pt-4 border-t border-white/20">
+                    <div className="flex flex-col gap-2 pt-4 border-t border-white/20 sm:flex-row">
                       <button
                         onClick={() => handleView(project.id)}
                         className="flex-1 px-4 py-2 bg-cyan-400 text-zinc-950 font-semibold rounded-lg hover:bg-cyan-300 transition-colors duration-200 flex items-center justify-center gap-2"
@@ -430,7 +430,7 @@ export const Projects: React.FC = () => {
                   placeholder="Nombre completo"
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Input
                     label="Email (opcional)"
                     type="email"
@@ -457,7 +457,7 @@ export const Projects: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex space-x-3 pt-4">
+            <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row">
               <Button type="submit" className="flex-1">
                 {editingProject ? 'Actualizar' : 'Crear Proyecto'}
               </Button>
