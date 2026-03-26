@@ -11,5 +11,5 @@ cmds = [
 ]
 
 [start]
-cmd = "node backend/dist/index.js"
+cmd = "npm --prefix backend run start:deploy"
 providers = ["node"]
