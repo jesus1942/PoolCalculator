@@ -156,6 +156,106 @@ const ensureTargetOrgId = async (sourceOrgId?: string | null) => {
   return targetOrg.id;
 };
 
+const ensureTargetEquipmentId = async (sourceEquipmentId?: string | null) => {
+  if (!sourceEquipmentId) return null;
+
+  const exact = await prismaTarget.equipmentPreset.findUnique({ where: { id: sourceEquipmentId } });
+  if (exact) return exact.id;
+
+  const sourceEquipment = await prismaSource.equipmentPreset.findUnique({ where: { id: sourceEquipmentId } });
+  if (!sourceEquipment) {
+    throw new Error(`No existe el equipo origen ${sourceEquipmentId}`);
+  }
+
+  const targetEquipment = await prismaTarget.equipmentPreset.findFirst({
+    where: {
+      name: sourceEquipment.name,
+      ...(sourceEquipment.type ? { type: sourceEquipment.type } : {}),
+      ...(sourceEquipment.brand ? { brand: sourceEquipment.brand } : {}),
+    },
+  });
+
+  if (!targetEquipment) {
+    const created = await prismaTarget.equipmentPreset.create({
+      data: {
+        ...sourceEquipment,
+        id: sourceEquipment.id,
+        createdAt: sourceEquipment.createdAt,
+        updatedAt: sourceEquipment.updatedAt,
+      },
+    });
+    return created.id;
+  }
+
+  return targetEquipment.id;
+};
+
+const ensureTargetAccessoryId = async (sourceAccessoryId?: string | null) => {
+  if (!sourceAccessoryId) return null;
+
+  const exact = await prismaTarget.accessoryPreset.findUnique({ where: { id: sourceAccessoryId } });
+  if (exact) return exact.id;
+
+  const sourceAccessory = await prismaSource.accessoryPreset.findUnique({ where: { id: sourceAccessoryId } });
+  if (!sourceAccessory) {
+    throw new Error(`No existe el accesorio origen ${sourceAccessoryId}`);
+  }
+
+  const targetAccessory = await prismaTarget.accessoryPreset.findFirst({
+    where: {
+      name: sourceAccessory.name,
+      ...(sourceAccessory.type ? { type: sourceAccessory.type } : {}),
+    },
+  });
+
+  if (!targetAccessory) {
+    const created = await prismaTarget.accessoryPreset.create({
+      data: {
+        ...sourceAccessory,
+        id: sourceAccessory.id,
+        createdAt: sourceAccessory.createdAt,
+        updatedAt: sourceAccessory.updatedAt,
+      },
+    });
+    return created.id;
+  }
+
+  return targetAccessory.id;
+};
+
+const ensureTargetMaterialId = async (sourceMaterialId?: string | null) => {
+  if (!sourceMaterialId) return null;
+
+  const exact = await prismaTarget.constructionMaterialPreset.findUnique({ where: { id: sourceMaterialId } });
+  if (exact) return exact.id;
+
+  const sourceMaterial = await prismaSource.constructionMaterialPreset.findUnique({ where: { id: sourceMaterialId } });
+  if (!sourceMaterial) {
+    throw new Error(`No existe el material origen ${sourceMaterialId}`);
+  }
+
+  const targetMaterial = await prismaTarget.constructionMaterialPreset.findFirst({
+    where: {
+      name: sourceMaterial.name,
+      ...(sourceMaterial.type ? { type: sourceMaterial.type } : {}),
+    },
+  });
+
+  if (!targetMaterial) {
+    const created = await prismaTarget.constructionMaterialPreset.create({
+      data: {
+        ...sourceMaterial,
+        id: sourceMaterial.id,
+        createdAt: sourceMaterial.createdAt,
+        updatedAt: sourceMaterial.updatedAt,
+      },
+    });
+    return created.id;
+  }
+
+  return targetMaterial.id;
+};
+
 const listConversationsForProject = async (projectId: string, agendaEventIds: string[]) => {
   return prismaSource.conversation.findMany({
     where: {
@@ -201,143 +301,144 @@ const run = async () => {
     throw new Error(`Ya existe en destino un proyecto con id ${project.id}`);
   }
 
-  await prismaTarget.$transaction(async (tx: any) => {
-    await tx.project.create({
+  await prismaTarget.project.create({
+    data: {
+      ...project,
+      poolPresetId: targetPoolPresetId,
+      userId: targetUserId,
+      organizationId: targetOrgId,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      poolPreset: undefined,
+      projectAdditionals: undefined,
+      projectUpdates: undefined,
+      projectShare: undefined,
+      agendaEvents: undefined,
+    },
+  });
+
+  for (const additional of project.projectAdditionals) {
+    await prismaTarget.projectAdditional.create({
       data: {
-        ...project,
-        poolPresetId: targetPoolPresetId,
-        userId: targetUserId,
+        ...additional,
+        accessoryId: await ensureTargetAccessoryId(additional.accessoryId),
+        materialId: await ensureTargetMaterialId(additional.materialId),
+        equipmentId: await ensureTargetEquipmentId(additional.equipmentId),
+        createdAt: additional.createdAt,
+        updatedAt: additional.updatedAt,
+      },
+    });
+  }
+
+  for (const update of project.projectUpdates) {
+    await prismaTarget.projectUpdate.create({
+      data: {
+        ...update,
+        createdAt: update.createdAt,
+        updatedAt: update.updatedAt,
+      },
+    });
+  }
+
+  if (project.projectShare) {
+    await prismaTarget.projectShare.create({
+      data: {
+        ...project.projectShare,
+        createdAt: project.projectShare.createdAt,
+        updatedAt: project.projectShare.updatedAt,
+      },
+    });
+  }
+
+  for (const event of project.agendaEvents) {
+    const targetEventOwnerId = await ensureTargetUserId(event.ownerId);
+
+    await prismaTarget.agendaEvent.create({
+      data: {
+        ...event,
+        ownerId: targetEventOwnerId,
         organizationId: targetOrgId,
-        createdAt: project.createdAt,
-        updatedAt: project.updatedAt,
-        poolPreset: undefined,
-        projectAdditionals: undefined,
-        projectUpdates: undefined,
-        projectShare: undefined,
-        agendaEvents: undefined,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
+        assignees: undefined,
+        checklist: undefined,
+        reminders: undefined,
+        messages: undefined,
       },
     });
 
-    for (const additional of project.projectAdditionals) {
-      await tx.projectAdditional.create({
+    for (const assignee of event.assignees) {
+      await prismaTarget.agendaAssignment.create({
         data: {
-          ...additional,
-          createdAt: additional.createdAt,
-          updatedAt: additional.updatedAt,
+          ...assignee,
+          userId: await ensureTargetUserId(assignee.userId),
+          createdAt: assignee.createdAt,
+          updatedAt: assignee.updatedAt,
         },
       });
     }
 
-    for (const update of project.projectUpdates) {
-      await tx.projectUpdate.create({
+    for (const item of event.checklist) {
+      await prismaTarget.agendaChecklistItem.create({ data: item });
+    }
+
+    for (const reminder of event.reminders) {
+      await prismaTarget.agendaReminder.create({
         data: {
-          ...update,
-          createdAt: update.createdAt,
-          updatedAt: update.updatedAt,
+          ...reminder,
+          userId: await ensureTargetUserId(reminder.userId),
+          createdAt: reminder.createdAt,
         },
       });
     }
 
-    if (project.projectShare) {
-      await tx.projectShare.create({
+    for (const message of event.messages) {
+      await prismaTarget.agendaMessage.create({
         data: {
-          ...project.projectShare,
-          createdAt: project.projectShare.createdAt,
-          updatedAt: project.projectShare.updatedAt,
+          ...message,
+          userId: await ensureTargetUserId(message.userId),
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        },
+      });
+    }
+  }
+
+  for (const conversation of conversations) {
+    await prismaTarget.conversation.create({
+      data: {
+        ...conversation,
+        organizationId: targetOrgId,
+        createdById: conversation.createdById ? await ensureTargetUserId(conversation.createdById) : null,
+        participants: undefined,
+        messages: undefined,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      },
+    });
+
+    for (const participant of conversation.participants) {
+      await prismaTarget.conversationParticipant.create({
+        data: {
+          ...participant,
+          userId: participant.userId ? await ensureTargetUserId(participant.userId) : null,
+          createdAt: participant.createdAt,
+          updatedAt: participant.updatedAt,
         },
       });
     }
 
-    for (const event of project.agendaEvents) {
-      const targetEventOwnerId = await ensureTargetUserId(event.ownerId);
-
-      await tx.agendaEvent.create({
+    for (const message of conversation.messages) {
+      await prismaTarget.conversationMessage.create({
         data: {
-          ...event,
-          ownerId: targetEventOwnerId,
-          organizationId: targetOrgId,
-          createdAt: event.createdAt,
-          updatedAt: event.updatedAt,
-          assignees: undefined,
-          checklist: undefined,
-          reminders: undefined,
-          messages: undefined,
+          ...message,
+          senderUserId: message.senderUserId ? await ensureTargetUserId(message.senderUserId) : null,
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
         },
       });
-
-      for (const assignee of event.assignees) {
-        await tx.agendaAssignment.create({
-          data: {
-            ...assignee,
-            userId: await ensureTargetUserId(assignee.userId),
-            createdAt: assignee.createdAt,
-            updatedAt: assignee.updatedAt,
-          },
-        });
-      }
-
-      for (const item of event.checklist) {
-        await tx.agendaChecklistItem.create({ data: item });
-      }
-
-      for (const reminder of event.reminders) {
-        await tx.agendaReminder.create({
-          data: {
-            ...reminder,
-            userId: await ensureTargetUserId(reminder.userId),
-            createdAt: reminder.createdAt,
-          },
-        });
-      }
-
-      for (const message of event.messages) {
-        await tx.agendaMessage.create({
-          data: {
-            ...message,
-            userId: await ensureTargetUserId(message.userId),
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
-          },
-        });
-      }
     }
-
-    for (const conversation of conversations) {
-      await tx.conversation.create({
-        data: {
-          ...conversation,
-          organizationId: targetOrgId,
-          createdById: conversation.createdById ? await ensureTargetUserId(conversation.createdById) : null,
-          participants: undefined,
-          messages: undefined,
-          createdAt: conversation.createdAt,
-          updatedAt: conversation.updatedAt,
-        },
-      });
-
-      for (const participant of conversation.participants) {
-        await tx.conversationParticipant.create({
-          data: {
-            ...participant,
-            userId: participant.userId ? await ensureTargetUserId(participant.userId) : null,
-            createdAt: participant.createdAt,
-            updatedAt: participant.updatedAt,
-          },
-        });
-      }
-
-      for (const message of conversation.messages) {
-        await tx.conversationMessage.create({
-          data: {
-            ...message,
-            senderUserId: message.senderUserId ? await ensureTargetUserId(message.senderUserId) : null,
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
-          },
-        });
-      }
-    }
-  });
+  }
 
   console.log('Proyecto migrado correctamente');
 };
