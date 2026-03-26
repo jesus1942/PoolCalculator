@@ -240,25 +240,25 @@ export const ProductShowcase: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Feature Tabs */}
-      <div className="mb-10 grid grid-cols-2 gap-3 md:mb-12 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
+      <div className="mb-8 grid grid-cols-2 gap-2.5 md:mb-12 md:grid-cols-3 md:gap-4 lg:grid-cols-6">
         {features.map((feature, index) => (
           <button
             key={feature.id}
             onClick={() => setActiveFeature(index)}
-            className={`group relative rounded-xl p-3 transition-all duration-300 hover:-translate-y-0.5 sm:p-4 ${
+            className={`group relative rounded-xl p-2.5 transition-all duration-300 hover:-translate-y-0.5 sm:p-4 ${
               activeFeature === index
                 ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-xl sm:scale-[1.02]'
                 : 'bg-white text-gray-700 hover:bg-gray-50 shadow-md'
             }`}
           >
-            <div className={`mb-2 inline-flex h-10 w-10 items-center justify-center rounded-lg sm:mb-3 sm:h-12 sm:w-12 ${
+            <div className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-lg sm:mb-3 sm:h-12 sm:w-12 ${
               activeFeature === index
                 ? 'bg-white/20'
                 : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'
             } transition-colors`}>
               {feature.icon}
             </div>
-            <h4 className={`text-xs font-semibold leading-tight sm:text-sm ${
+            <h4 className={`text-[11px] font-semibold leading-tight sm:text-sm ${
               activeFeature === index ? 'text-white' : 'text-gray-900'
             }`}>
               {feature.title}
@@ -304,20 +304,20 @@ export const ProductShowcase: React.FC = () => {
           </div>
 
           {/* Right side - Screenshot/Image */}
-          <div className="relative flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50 p-5 sm:p-6 md:p-8">
+          <div className="relative flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50 p-4 sm:p-6 md:p-8">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-cyan-600/10"></div>
-            <div className="relative w-full max-w-[20rem] overflow-hidden rounded-[1.75rem] border-[10px] border-white shadow-2xl transition-all duration-500 sm:max-w-[24rem] sm:rounded-[2rem] md:max-w-none md:rounded-xl md:border-4 md:hover:scale-[1.02] md:aspect-auto md:min-h-[400px] aspect-[10/13]">
+            <div className="relative w-[82vw] max-w-[16.5rem] max-h-[30rem] overflow-hidden rounded-[1.9rem] border-[10px] border-white shadow-2xl transition-all duration-500 sm:w-full sm:max-w-[22rem] sm:rounded-[2rem] md:max-w-none md:max-h-none md:rounded-xl md:border-4 md:hover:scale-[1.02] md:aspect-auto md:min-h-[400px] aspect-[9/17]">
               <ShowcasePreview
                 featureId={features[activeFeature].id}
                 title={features[activeFeature].title}
               />
-              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/50 via-transparent to-transparent p-4 sm:p-5 md:p-6">
+              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/55 via-transparent to-transparent p-3.5 sm:p-5 md:p-6">
                 <div className="text-white">
                   <div className="mb-2 flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-green-400 animate-pulse sm:h-3 sm:w-3"></div>
-                    <span className="text-sm font-medium">En vivo</span>
+                    <span className="text-xs font-medium sm:text-sm">En vivo</span>
                   </div>
-                  <p className="max-w-[16rem] text-xs opacity-90 sm:max-w-none sm:text-sm">
+                  <p className="max-w-[13rem] text-[11px] leading-snug opacity-90 sm:max-w-none sm:text-sm">
                     Vista representativa del flujo real de la app
                   </p>
                 </div>
