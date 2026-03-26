@@ -38,6 +38,9 @@ model User {
   agendaMessages      AgendaMessage[]
   organizationMemberships OrganizationMember[]
   organizationsOwned       Organization[] @relation("OrgOwner")
+  conversationsCreated     Conversation[] @relation("ConversationCreatedBy")
+  conversationParticipants ConversationParticipant[]
+  conversationMessages     ConversationMessage[] @relation("ConversationMessageSender")
 }
 
 enum AuthProvider {
@@ -77,6 +80,7 @@ model Organization {
   projects    Project[]
   agendaEvents AgendaEvent[]
   crews       Crew[]
+  conversations Conversation[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -177,6 +181,7 @@ model AgendaEvent {
   checklist        AgendaChecklistItem[]
   reminders        AgendaReminder[]
   messages         AgendaMessage[]
+  conversations    Conversation[]
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -321,6 +326,123 @@ model AgendaMessage {
 enum AgendaMessageVisibility {
   ALL
   ADMIN_ONLY
+}
+
+model Conversation {
+  id             String                 @id @default(uuid())
+  kind           ConversationKind       @default(GROUP)
+  title          String?
+  topic          String?
+  visibility     ConversationVisibility @default(INTERNAL)
+  metadata       Json?
+
+  organizationId String?
+  organization   Organization?          @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  projectId      String?
+  project        Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  agendaEventId  String?
+  agendaEvent    AgendaEvent?           @relation(fields: [agendaEventId], references: [id], onDelete: SetNull)
+
+  createdById    String?
+  createdBy      User?                  @relation("ConversationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  participants   ConversationParticipant[]
+  messages       ConversationMessage[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([agendaEventId, createdAt])
+}
+
+enum ConversationKind {
+  DIRECT
+  GROUP
+  PROJECT
+  AGENDA
+  CLIENT_PORTAL
+  MAINTENANCE
+  DISPATCH
+}
+
+enum ConversationVisibility {
+  INTERNAL
+  SHARED
+  CLIENT_PORTAL
+}
+
+model ConversationParticipant {
+  id             String                          @id @default(uuid())
+  conversationId String
+  userId         String?
+  audience       ConversationParticipantAudience @default(INTERNAL)
+  role           ConversationParticipantRole     @default(MEMBER)
+  label          String?
+  email          String?
+  phone          String?
+  isActive       Boolean                         @default(true)
+  metadata       Json?
+
+  conversation   Conversation                    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User?                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([conversationId, userId])
+  @@index([conversationId, audience])
+  @@index([userId])
+}
+
+enum ConversationParticipantAudience {
+  ADMIN
+  SALES
+  CLIENT
+  INSTALLER
+  MAINTENANCE
+  INTERNAL
+}
+
+enum ConversationParticipantRole {
+  OWNER
+  MEMBER
+  OBSERVER
+}
+
+model ConversationMessage {
+  id             String                        @id @default(uuid())
+  conversationId String
+  senderUserId   String?
+  senderType     ConversationMessageSenderType @default(USER)
+  body           String
+  images         Json                          @default("[]")
+  visibility     ConversationMessageVisibility @default(ALL)
+  metadata       Json?
+
+  conversation   Conversation                  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderUser     User?                         @relation("ConversationMessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderUserId])
+}
+
+enum ConversationMessageSenderType {
+  USER
+  SYSTEM
+  EXTERNAL
+}
+
+enum ConversationMessageVisibility {
+  ALL
+  INTERNAL_ONLY
+  CLIENT_SAFE
 }
 
 model ProfessionRole {
@@ -721,6 +843,7 @@ model Project {
   projectUpdates     ProjectUpdate[]
   projectShare       ProjectShare?
   agendaEvents       AgendaEvent[]
+  conversations      Conversation[]
 }
 
 enum ProjectStatus {
