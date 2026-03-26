@@ -18,6 +18,7 @@ import os from 'os';
 import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
+import { listConversationSummaries, syncProjectConversation } from '../services/conversationService';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -510,6 +511,18 @@ const withCommercialProfile = <T extends { plumbingConfig?: any; projectAddition
   commercialProfile: buildProjectCommercialProfile(project),
 });
 
+const appendProjectConversations = async (project: any) => {
+  if (!project?.id) return project;
+  const conversations = await listConversationSummaries({
+    organizationId: project.organizationId || null,
+    projectId: project.id,
+  });
+  return {
+    ...project,
+    conversations,
+  };
+};
+
 export const createProject = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -613,6 +626,15 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    await syncProjectConversation({
+      projectId: project.id,
+      organizationId: orgId,
+      createdById: userId,
+      title: name,
+      clientName,
+      location: location || null,
+    });
+
     const defaultEquipmentAdditionals = includeBaseEquipment ? [
       poolPreset.defaultPump ? {
         projectId: project.id,
@@ -663,7 +685,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       ? await ensureProjectCode(createdProject)
       : await ensureProjectCode(project as any);
 
-    res.status(201).json(withCommercialProfile(normalizedCreatedProject as any));
+    res.status(201).json(withCommercialProfile(await appendProjectConversations(normalizedCreatedProject as any)));
   } catch (error) {
     console.error('Error al crear proyecto:', error);
     res.status(500).json({ error: 'Error al crear proyecto' });
@@ -834,7 +856,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       if (correctedProject) {
         correctedProject = await ensureProjectCode(correctedProject);
       }
-      res.json(correctedProject ? withCommercialProfile(correctedProject as any) : correctedProject);
+      res.json(correctedProject ? withCommercialProfile(await appendProjectConversations(correctedProject as any)) : correctedProject);
       return;
     }
 
@@ -909,14 +931,14 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         if (refreshedProject) {
           refreshedProject = await ensureProjectCode(refreshedProject);
         }
-        res.json(refreshedProject ? withCommercialProfile(refreshedProject as any) : refreshedProject);
+        res.json(refreshedProject ? withCommercialProfile(await appendProjectConversations(refreshedProject as any)) : refreshedProject);
         return;
       } catch (refreshError) {
         console.error('Error al refrescar materiales del proyecto:', refreshError);
       }
     }
 
-    res.json(project ? withCommercialProfile(project as any) : project);
+    res.json(project ? withCommercialProfile(await appendProjectConversations(project as any)) : project);
   } catch (error) {
     console.error('Error al obtener proyecto:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -1182,10 +1204,19 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    await syncProjectConversation({
+      projectId: project.id,
+      organizationId: project.organizationId || orgId,
+      createdById: project.userId,
+      title: project.name,
+      clientName: project.clientName,
+      location: project.location || null,
+    });
+
     const normalizedProject = await ensureProjectCode(project);
 
     console.log('Proyecto actualizado exitosamente');
-    res.json(withCommercialProfile(normalizedProject as any));
+    res.json(withCommercialProfile(await appendProjectConversations(normalizedProject as any)));
   } catch (error) {
     console.error('Error al actualizar proyecto:', error);
     res.status(500).json({ error: 'Error al actualizar proyecto' });

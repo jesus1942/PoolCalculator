@@ -4,6 +4,7 @@ import { sendEmail } from '../utils/mailer';
 import { logSystemEvent } from '../utils/systemLog';
 import { AuthRequest } from '../middleware/auth';
 import { storeImageFile } from '../utils/imageStorage';
+import { listConversationSummaries, syncAgendaConversation } from '../services/conversationService';
 
 const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 
@@ -29,6 +30,18 @@ const getStatusColor = (status?: string) => STATUS_COLORS[status || 'PLANNED'] |
 const REMINDER_OFFSET_MS = 12 * 60 * 60 * 1000;
 const ADMIN_ORG_ROLES = ['OWNER', 'ADMIN'];
 const ADMIN_USER_ROLES = ['ADMIN', 'SUPERADMIN'];
+
+const appendAgendaConversations = async (event: any) => {
+  if (!event?.id) return event;
+  const conversations = await listConversationSummaries({
+    organizationId: event.organizationId || null,
+    agendaEventId: event.id,
+  });
+  return {
+    ...event,
+    conversations,
+  };
+};
 
 const getAdminUsersForOrg = async (orgId?: string | null) => {
   if (orgId) {
@@ -419,7 +432,7 @@ export const getAgendaEventById = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'No tenés permiso para ver este evento' });
     }
 
-    res.json(event);
+    res.json(await appendAgendaConversations(event));
   } catch (error) {
     console.error('Error al obtener evento:', error);
     res.status(500).json({ error: 'Error al obtener evento' });
@@ -487,6 +500,24 @@ export const createAgendaEvent = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    const crewMemberIds = crewId
+      ? (await prisma.crewMember.findMany({
+          where: { crewId },
+          select: { userId: true },
+        })).map((member) => member.userId)
+      : [];
+
+    await syncAgendaConversation({
+      agendaEventId: event.id,
+      projectId: projectId || null,
+      organizationId: orgId,
+      createdById: userId,
+      title,
+      location: location || null,
+      assigneeIds: Array.isArray(assigneeIds) ? assigneeIds : [],
+      crewMemberIds,
+    });
+
     await syncAgendaReminders(event.id);
     void sendAgendaNotification({
       eventId: event.id,
@@ -504,7 +535,7 @@ export const createAgendaEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json(fullEvent);
+    res.status(201).json(await appendAgendaConversations(fullEvent));
   } catch (error) {
     console.error('Error al crear evento:', error);
     res.status(500).json({ error: 'Error al crear evento' });
@@ -612,6 +643,20 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    const nextAssigneeIds = updated.assignees?.map((assignee: any) => assignee.userId) || [];
+    const nextCrewMemberIds = updated.crew?.members?.map((member: any) => member.userId) || [];
+
+    await syncAgendaConversation({
+      agendaEventId: updated.id,
+      projectId: updated.projectId || null,
+      organizationId: updated.organizationId || orgId,
+      createdById: updated.ownerId,
+      title: updated.title,
+      location: updated.location || null,
+      assigneeIds: nextAssigneeIds,
+      crewMemberIds: nextCrewMemberIds,
+    });
+
     if (isOwner || isAdmin) {
       await syncAgendaReminders(id);
     }
@@ -622,7 +667,7 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       actorId: userId || undefined,
     });
 
-    res.json(updated);
+    res.json(await appendAgendaConversations(updated));
   } catch (error) {
     console.error('Error al actualizar evento:', error);
     res.status(500).json({ error: 'Error al actualizar evento' });

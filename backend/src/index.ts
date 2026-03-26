@@ -88,6 +88,9 @@ console.log('[INIT] organizationRoutes cargado');
 import opsRoutes from './routes/opsRoutes';
 console.log('[INIT] opsRoutes cargado');
 
+import conversationRoutes from './routes/conversationRoutes';
+console.log('[INIT] conversationRoutes cargado');
+
 import { startAgendaReminderEmailService } from './services/agendaReminderEmailService';
 
 dotenv.config();
@@ -153,6 +156,7 @@ app.use('/api', userRoutes); // Usuarios
 app.use('/api/docs', docsRoutes); // Documentación interna
 app.use('/api/organizations', organizationRoutes); // Organizaciones
 app.use('/api/admin/ops', opsRoutes); // Observabilidad backend/db
+app.use('/api/conversations', conversationRoutes); // Conversaciones internas reutilizables
 
 console.log('[INIT] Configurando middlewares y rutas...');
 

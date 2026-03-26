@@ -41,6 +41,15 @@ Tambien se agrego la migracion:
 - portal cliente con mensajes filtrados
 - despacho tecnico y mantenimiento con historial por caso
 
+## Regla de acceso
+
+- `ADMIN` y `SUPERADMIN` ven todas las conversaciones internas de su alcance.
+- Usuarios internos ven las conversaciones en las que participan.
+- `INSTALLER` no crea canales nuevos; trabaja sobre los que le asignan.
+- `VIEWER` solo lectura.
+- El cliente no entra a la app interna de servicio.
+- El cliente solo accede por portal o pagina publica filtrada.
+
 ## Encaje con lo actual
 
 - `AgendaMessage` sigue siendo el chat activo hoy.
