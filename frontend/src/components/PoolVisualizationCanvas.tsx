@@ -1,6 +1,25 @@
 import React, { useRef, useEffect } from 'react';
 import { Project } from '@/types';
 
+const isRomanArchPool = (project: Project) => {
+  const preset = project.poolPreset;
+  const romanSignals = [preset?.name, preset?.description, (preset as any)?.backDescription]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return romanSignals.includes('arco romano') || romanSignals.includes('escalera romana');
+};
+
+const getPoolShellMode = (project: Project) => {
+  const shape = project.poolPreset?.shape;
+
+  if (isRomanArchPool(project)) return 'roman_arch';
+  if (shape === 'OVAL') return 'oval';
+  if (shape === 'CIRCULAR' || shape === 'JACUZZI') return 'radial';
+  return 'linear';
+};
+
 type ViewMode = 'planta' | 'cad';
 
 interface PoolVisualizationCanvasProps {
@@ -140,6 +159,61 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       const poolBottom = poolTop + ancho * scale;
 
       const rectPool = { left: poolLeft, top: poolTop, right: poolRight, bottom: poolBottom };
+      const shellMode = getPoolShellMode(project);
+      const shellCenterX = (poolLeft + poolRight) / 2;
+      const shellCenterY = (poolTop + poolBottom) / 2;
+      const shellRadiusX = (poolRight - poolLeft) / 2;
+      const shellRadiusY = (poolBottom - poolTop) / 2;
+      const romanNoseDepth = (poolRight - poolLeft) * 0.28;
+      const romanNoseStartX = poolRight - romanNoseDepth;
+
+      const traceShellPath = (inset = 0) => {
+        if (shellMode === 'roman_arch') {
+          const left = poolLeft + inset;
+          const top = poolTop + inset;
+          const right = poolRight - inset;
+          const bottom = poolBottom - inset;
+          const noseStart = romanNoseStartX - inset * 0.35;
+          const midY = (top + bottom) / 2;
+          ctx.beginPath();
+          ctx.moveTo(left, top);
+          ctx.lineTo(noseStart, top);
+          ctx.quadraticCurveTo(right, top, right, midY);
+          ctx.quadraticCurveTo(right, bottom, noseStart, bottom);
+          ctx.lineTo(left, bottom);
+          ctx.closePath();
+          return;
+        }
+
+        if (shellMode === 'oval') {
+          const left = poolLeft + inset;
+          const top = poolTop + inset;
+          const width = Math.max((poolRight - poolLeft) - inset * 2, 12);
+          const height = Math.max((poolBottom - poolTop) - inset * 2, 12);
+          const radius = Math.max(Math.min(height / 2, width / 4), 8);
+          const right = left + width;
+          const bottom = top + height;
+          ctx.beginPath();
+          ctx.moveTo(left + radius, top);
+          ctx.lineTo(right - radius, top);
+          ctx.arcTo(right, top, right, bottom, radius);
+          ctx.arcTo(right, bottom, left, bottom, radius);
+          ctx.lineTo(left + radius, bottom);
+          ctx.arcTo(left, bottom, left, top, radius);
+          ctx.arcTo(left, top, right, top, radius);
+          ctx.closePath();
+          return;
+        }
+
+        if (shellMode === 'radial') {
+          ctx.beginPath();
+          ctx.ellipse(shellCenterX, shellCenterY, Math.max(shellRadiusX - inset, 12), Math.max(shellRadiusY - inset, 12), 0, 0, Math.PI * 2);
+          return;
+        }
+
+        ctx.beginPath();
+        ctx.rect(poolLeft + inset, poolTop + inset, Math.max(poolRight - poolLeft - inset * 2, 12), Math.max(poolBottom - poolTop - inset * 2, 12));
+      };
 
       const distH = calculateTiles(largo);
       const distV = calculateTiles(ancho);
@@ -259,12 +333,14 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       poolGrad.addColorStop(0.5, '#22d3ee');
       poolGrad.addColorStop(1, '#0891b2');
 
+      ctx.save();
+      traceShellPath();
       ctx.fillStyle = poolGrad;
-      ctx.fillRect(Math.round(poolLeft), Math.round(poolTop), Math.round(largo * scale), Math.round(ancho * scale));
-
+      ctx.fill();
       ctx.strokeStyle = '#0e7490';
       ctx.lineWidth = 2.5;
-      ctx.strokeRect(Math.round(poolLeft), Math.round(poolTop), Math.round(largo * scale), Math.round(ancho * scale));
+      ctx.stroke();
+      ctx.restore();
 
       // Reflejo
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -442,10 +518,56 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
           drawRect(poolRight + col * baseTile, poolBottom + row * baseTile, baseTile, baseTile, cornerColor);
       }
 
+      const shellMode = getPoolShellMode(project);
+      const shellCenterX = (poolLeft + poolRight) / 2;
+      const shellCenterY = (poolTop + poolBottom) / 2;
+      const shellRadiusX = (poolRight - poolLeft) / 2;
+      const shellRadiusY = (poolBottom - poolTop) / 2;
+      const romanNoseDepth = (poolRight - poolLeft) * 0.28;
+      const romanNoseStartX = poolRight - romanNoseDepth;
+
+      const traceShellPath = () => {
+        if (shellMode === 'roman_arch') {
+          const midY = (poolTop + poolBottom) / 2;
+          ctx.beginPath();
+          ctx.moveTo(poolLeft, poolTop);
+          ctx.lineTo(romanNoseStartX, poolTop);
+          ctx.quadraticCurveTo(poolRight, poolTop, poolRight, midY);
+          ctx.quadraticCurveTo(poolRight, poolBottom, romanNoseStartX, poolBottom);
+          ctx.lineTo(poolLeft, poolBottom);
+          ctx.closePath();
+          return;
+        }
+
+        if (shellMode === 'oval') {
+          const radius = Math.max(Math.min((poolBottom - poolTop) / 2, (poolRight - poolLeft) / 4), 8);
+          ctx.beginPath();
+          ctx.moveTo(poolLeft + radius, poolTop);
+          ctx.lineTo(poolRight - radius, poolTop);
+          ctx.arcTo(poolRight, poolTop, poolRight, poolBottom, radius);
+          ctx.arcTo(poolRight, poolBottom, poolLeft, poolBottom, radius);
+          ctx.lineTo(poolLeft + radius, poolBottom);
+          ctx.arcTo(poolLeft, poolBottom, poolLeft, poolTop, radius);
+          ctx.arcTo(poolLeft, poolTop, poolRight, poolTop, radius);
+          ctx.closePath();
+          return;
+        }
+
+        if (shellMode === 'radial') {
+          ctx.beginPath();
+          ctx.ellipse(shellCenterX, shellCenterY, shellRadiusX, shellRadiusY, 0, 0, Math.PI * 2);
+          return;
+        }
+
+        ctx.beginPath();
+        ctx.rect(poolLeft, poolTop, largo * scale, ancho * scale);
+      };
+
       // Pileta
       ctx.strokeStyle = '#22d3ee';
       ctx.lineWidth = 2.5;
-      ctx.strokeRect(Math.round(poolLeft), Math.round(poolTop), Math.round(largo * scale), Math.round(ancho * scale));
+      traceShellPath();
+      ctx.stroke();
 
       // Cruz central
       ctx.setLineDash([3, 3]);
