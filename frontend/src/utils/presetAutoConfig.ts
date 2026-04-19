@@ -103,6 +103,46 @@ const syncPlumbingDerivedFields = (config: any) => {
   return config;
 };
 
+const isRomanArchPool = (preset: PoolPreset) => {
+  const romanSignals = [preset.name, preset.description, preset.backDescription]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return romanSignals.includes('arco romano') || romanSignals.includes('escalera romana');
+};
+
+const getReturnLocationByShape = (preset: PoolPreset, index: number, total: number) => {
+  if (isRomanArchPool(preset)) {
+    if (total === 1) return 'Cabecera arco romano (centro)';
+    if (index === 0) return 'Cabecera arco romano (izquierda)';
+    if (index === total - 1) return 'Cabecera arco romano (derecha)';
+    return `Cabecera arco romano (${index + 1})`;
+  }
+
+  if (preset.shape === 'OVAL') {
+    if (total === 1) return 'Extremo ovalado curvo (centro)';
+    if (index === 0) return 'Extremo ovalado curvo (izquierda)';
+    if (index === total - 1) return 'Extremo ovalado curvo (derecha)';
+    return `Extremo ovalado curvo (${index + 1})`;
+  }
+
+  if (preset.shape === 'CIRCULAR' || preset.shape === 'JACUZZI') {
+    return `Perimetro curvo (sector ${index + 1})`;
+  }
+
+  if (index === 0) return 'Pared frontal';
+  if (index === 1) return 'Pared lateral derecha';
+  return `Posicion ${index + 1}`;
+};
+
+const getHotWaterReturnLocationByShape = (preset: PoolPreset) => {
+  if (isRomanArchPool(preset)) return 'Cabecera arco romano (inferior)';
+  if (preset.shape === 'OVAL') return 'Extremo ovalado curvo (inferior)';
+  if (preset.shape === 'CIRCULAR' || preset.shape === 'JACUZZI') return 'Perimetro curvo (sector termico)';
+  return 'Pared frontal (inferior)';
+};
+
 /**
  * Genera configuración eléctrica automática basándose en el preset y adicionales
  */
@@ -424,6 +464,8 @@ export function generatePlumbingConfigFromPreset(preset: PoolPreset): any {
     notes: []
   };
 
+  const shapeAwareReturns = isRomanArchPool(preset) || preset.shape === 'OVAL' || preset.shape === 'CIRCULAR' || preset.shape === 'JACUZZI';
+
   // Auto-configurar retornos
   if (preset.returnsCount > 0) {
     for (let i = 0; i < preset.returnsCount; i++) {
@@ -432,10 +474,12 @@ export function generatePlumbingConfigFromPreset(preset: PoolPreset): any {
         name: `Retorno ${i + 1}`,
         type: 'Retorno de impulsión',
         diameter: '50mm', // 2" típico
-        location: i === 0 ? 'Pared frontal' : i === 1 ? 'Pared lateral derecha' : `Posición ${i + 1}`,
+        location: getReturnLocationByShape(preset, i, preset.returnsCount),
         depth: preset.depth - 0.3, // 30cm bajo superficie
         quantity: 1,
-        notes: `Retorno configurado desde modelo ${preset.name}`
+        notes: shapeAwareReturns
+          ? `Retorno configurado segun geometria ${preset.shape} de ${preset.name}`
+          : `Retorno configurado desde modelo ${preset.name}`
       });
     }
   }
@@ -447,10 +491,10 @@ export function generatePlumbingConfigFromPreset(preset: PoolPreset): any {
       name: 'Retorno de agua caliente',
       type: 'Retorno térmico',
       diameter: '50mm',
-      location: 'Pared frontal (inferior)',
+      location: getHotWaterReturnLocationByShape(preset),
       depth: preset.depth - 0.2,
       quantity: 1,
-      notes: 'Para sistema de calefacción'
+      notes: shapeAwareReturns ? 'Para sistema de calefacción sobre geometría curva' : 'Para sistema de calefacción'
     });
   }
 

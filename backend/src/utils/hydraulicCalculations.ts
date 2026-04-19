@@ -207,29 +207,53 @@ export function extractProjectPipingData(
 function parseDiameter(diameterStr: string): number {
   if (!diameterStr) return 0;
 
+  const normalized = diameterStr
+    .trim()
+    .replace(',', '.')
+    .replace(/[″”]/g, '"')
+    .replace(/[′’]/g, "'");
+
+  // Fracciones mixtas de pulgada (ej: "1 1/2")
+  const mixedFractionMatch = normalized.match(/(\d+)\s+(\d+)\/(\d+)\s*"/);
+  if (mixedFractionMatch) {
+    const whole = parseInt(mixedFractionMatch[1], 10);
+    const numerator = parseInt(mixedFractionMatch[2], 10);
+    const denominator = parseInt(mixedFractionMatch[3], 10);
+
+    if (denominator !== 0) {
+      return (whole + numerator / denominator) * 25.4;
+    }
+  }
+
+  // Fracciones simples de pulgada (ej: "1/2")
+  const simpleFractionMatch = normalized.match(/(\d+)\/(\d+)\s*"/);
+  if (simpleFractionMatch) {
+    const numerator = parseInt(simpleFractionMatch[1], 10);
+    const denominator = parseInt(simpleFractionMatch[2], 10);
+
+    if (denominator !== 0) {
+      return (numerator / denominator) * 25.4;
+    }
+  }
+
   // Buscar número seguido de "mm"
-  const mmMatch = diameterStr.match(/(\d+\.?\d*)\s*mm/i);
+  const mmMatch = normalized.match(/(\d+\.?\d*)\s*mm/i);
   if (mmMatch) {
     return parseFloat(mmMatch[1]);
   }
 
   // Convertir pulgadas a mm (1" = 25.4mm)
-  const inchMatch = diameterStr.match(/(\d+\.?\d*)\s*"/);
+  const inchMatch = normalized.match(/(\d+\.?\d*)\s*"/);
   if (inchMatch) {
     return parseFloat(inchMatch[1]) * 25.4;
   }
 
-  // Fracciones de pulgada (ej: "1 1/2")
-  const fractionMatch = diameterStr.match(/(\d+)\s+(\d+)\/(\d+)\s*"/);
-  if (fractionMatch) {
-    const whole = parseInt(fractionMatch[1]);
-    const num = parseInt(fractionMatch[2]);
-    const den = parseInt(fractionMatch[3]);
-    return (whole + num / den) * 25.4;
-  }
-
   return 0;
 }
+
+export const __testables = {
+  parseDiameter
+};
 
 /**
  * Calcula la pérdida de carga por fricción usando la fórmula de Hazen-Williams

@@ -128,12 +128,32 @@ const buildDefaultEquipmentWorkspaceLayout = (): EquipmentWorkspaceLayout => ({
   hydro_pump: { x: 650, y: 610 },
 });
 
+const isRomanArchPool = (project: Project) => {
+  const preset = project.poolPreset;
+  const romanSignals = [preset?.name, preset?.description, (preset as any)?.backDescription]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return romanSignals.includes('arco romano') || romanSignals.includes('escalera romana');
+};
+
+const getCurvedShellMode = (project: Project) => {
+  const shape = project.poolPreset?.shape;
+
+  if (isRomanArchPool(project)) return 'roman_arch';
+  if (shape === 'OVAL') return 'oval';
+  if (shape === 'CIRCULAR' || shape === 'JACUZZI') return 'radial';
+  return 'linear';
+};
+
 const buildDefaultHydraulicLayout = (project: Project, hydraulicSummary: ReturnType<typeof summarizeHydraulicSystem>): HydraulicLayoutDraft => {
   const preset = project.poolPreset;
   const poolLength = preset?.length || 0;
   const poolWidth = preset?.width || 0;
   const depthStart = preset?.depth || 1.4;
   const depthEnd = preset?.depthEnd || depthStart;
+  const curvedShellMode = getCurvedShellMode(project);
   const points: HydraulicPointDraft[] = [];
 
   const pushPoints = (
@@ -156,6 +176,54 @@ const buildDefaultHydraulicLayout = (project: Project, hydraulicSummary: ReturnT
         depthMeters: Number(depthMeters.toFixed(2)),
       });
     }
+  };
+
+  const pushCurvedReturnPattern = (count: number) => {
+    if (count <= 0) return;
+
+    const returnDepth = Number(Math.min(0.45, depthStart * 0.35).toFixed(2));
+
+    if (curvedShellMode === 'roman_arch' || curvedShellMode === 'oval') {
+      const curvedOffsets = count === 1
+        ? [0.5]
+        : Array.from({ length: count }, (_, index) => Number((((index + 1) / (count + 1)) * 0.84 + 0.08).toFixed(2)));
+
+      curvedOffsets.forEach((offset, index) => {
+        points.push({
+          id: `return-${index + 1}`,
+          kind: 'return',
+          label: `Retorno ${index + 1}`,
+          side: 'internal_wall' as HydraulicPointSide,
+          offsetMeters: offset,
+          depthMeters: returnDepth,
+        });
+      });
+      return;
+    }
+
+    if (curvedShellMode === 'radial') {
+      const radialTemplate: Array<{ side: HydraulicReferenceSide; offsetRatio: number }> = [
+        { side: 'east', offsetRatio: 0.25 },
+        { side: 'south', offsetRatio: 0.3 },
+        { side: 'south', offsetRatio: 0.7 },
+        { side: 'west', offsetRatio: 0.75 },
+      ];
+
+      Array.from({ length: count }, (_, index) => radialTemplate[index % radialTemplate.length]).forEach((entry, index) => {
+        const span = entry.side === 'north' || entry.side === 'south' ? poolWidth : poolLength;
+        points.push({
+          id: `return-${index + 1}`,
+          kind: 'return',
+          label: `Retorno ${index + 1}`,
+          side: entry.side,
+          offsetMeters: Number((span * entry.offsetRatio).toFixed(2)),
+          depthMeters: returnDepth,
+        });
+      });
+      return;
+    }
+
+    pushPoints(count, 'return', 'Retorno', RETURNS_SIDE, poolWidth, returnDepth);
   };
 
   const pushHydrojetPattern = (count: number) => {
@@ -196,7 +264,9 @@ const buildDefaultHydraulicLayout = (project: Project, hydraulicSummary: ReturnT
   // - Retornos e hidrojets del lado contrario al skimmer
   // - Aspiradora en un lateral longitudinal independiente
   pushPoints(hydraulicSummary.total.skimmers, 'skimmer', 'Skimmer', EQUIPMENT_SIDE, poolWidth, 0.12);
-  pushPoints(hydraulicSummary.total.returns, 'return', 'Retorno', RETURNS_SIDE, poolWidth, Math.min(0.45, depthStart * 0.35));
+
+  pushCurvedReturnPattern(hydraulicSummary.total.returns);
+
   pushHydrojetPattern(hydraulicSummary.total.hydrojets);
   if (hydraulicSummary.total.hydrojets > 0) {
     points.push(buildHydrojetSuctionPoint(poolWidth, depthStart));
@@ -277,6 +347,23 @@ const HydraulicCssPreview: React.FC<{
   const internalWallXStart = poolX + poolW - oppositeSideDepth;
   const internalWallXEnd = poolX + poolW;
   const internalWallY = poolY + oppositeSideHalfH;
+  const shellMode = getCurvedShellMode(project);
+  const shellCenterX = poolX + poolW / 2;
+  const shellCenterY = poolY + poolH / 2;
+  const shellRadiusX = poolW / 2;
+  const shellRadiusY = poolH / 2;
+  const shellOuterPath = shellMode === 'roman_arch'
+    ? `M ${poolX} ${poolY} H ${internalWallXStart} Q ${internalWallXEnd} ${poolY} ${internalWallXEnd} ${shellCenterY} Q ${internalWallXEnd} ${poolY + poolH} ${internalWallXStart} ${poolY + poolH} H ${poolX} Z`
+    : shellMode === 'oval'
+      ? `M ${poolX + shellRadiusY} ${poolY} H ${poolX + poolW - shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH} H ${poolX + shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + shellRadiusY} ${poolY} Z`
+      : null;
+  const shellInset = 14;
+  const shellInnerPath = shellMode === 'roman_arch'
+    ? `M ${poolX + shellInset} ${poolY + shellInset} H ${internalWallXStart - shellInset * 0.5} Q ${internalWallXEnd - shellInset} ${poolY + shellInset} ${internalWallXEnd - shellInset} ${shellCenterY} Q ${internalWallXEnd - shellInset} ${poolY + poolH - shellInset} ${internalWallXStart - shellInset * 0.5} ${poolY + poolH - shellInset} H ${poolX + shellInset} Z`
+    : shellMode === 'oval'
+      ? `M ${poolX + shellRadiusY} ${poolY + shellInset} H ${poolX + poolW - shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH - shellInset} H ${poolX + shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + shellRadiusY} ${poolY + shellInset} Z`
+      : null;
+  const showRomanAmenities = shellMode === 'roman_arch';
   const workspaceMarginX = Math.max(metersToSvg(4.8), 280);
   const workspaceMarginY = Math.max(metersToSvg(3.4), 220);
   const workspaceMinX = -workspaceMarginX;
@@ -325,11 +412,28 @@ const HydraulicCssPreview: React.FC<{
       1
     );
 
+    if (shellMode === 'radial') {
+      if (point.side === 'north') {
+        const angle = -Math.PI / 2 + Math.PI * ratio;
+        return { x: shellCenterX - shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+      }
+      if (point.side === 'south') {
+        const angle = -Math.PI / 2 + Math.PI * ratio;
+        return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+      }
+      if (point.side === 'east') {
+        const angle = Math.PI - Math.PI * ratio;
+        return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY - shellRadiusY * Math.sin(angle) };
+      }
+      const angle = Math.PI * ratio;
+      return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+    }
+
     if (point.side === 'north') return { x: poolX, y: poolY + poolH * ratio };
     if (point.side === 'south') return { x: poolX + poolW, y: poolY + poolH * ratio };
     if (point.side === 'east') return { x: poolX + poolW * ratio, y: poolY };
     return { x: poolX + poolW * ratio, y: poolY + poolH };
-  }, [internalWallSpanMeters, internalWallXEnd, internalWallY, oppositeSideDepth, poolH, poolW, poolX, poolY, poolLength, poolWidth]);
+  }, [internalWallSpanMeters, internalWallXEnd, internalWallY, oppositeSideDepth, poolH, poolW, poolX, poolY, poolLength, poolWidth, shellMode, shellCenterX, shellCenterY, shellRadiusX, shellRadiusY]);
 
   const equipmentDistanceSvg = Math.max(metersToSvg(distanceToEquipment), metersToSvg(0.8));
   const equipmentAnchor = hydraulicLayout.referenceSide === 'north'
@@ -513,7 +617,7 @@ const HydraulicCssPreview: React.FC<{
     return { referenceSide: nearest.side, equipmentOffsetMeters: offsetMeters, distanceToEquipment: distanceMeters };
   }, [poolH, poolLength, poolW, poolWidth, poolX, poolY, scale, viewBoxH, viewBoxW, viewBoxX, viewBoxY]);
 
-  const projectPointerToPoint = React.useCallback((clientX: number, clientY: number) => {
+  const projectPointerToPoint = React.useCallback((clientX: number, clientY: number): Pick<HydraulicPointDraft, 'side' | 'offsetMeters'> | null => {
     const shell = shellRef.current;
     if (!shell) return null;
 
@@ -528,7 +632,7 @@ const HydraulicCssPreview: React.FC<{
     if (isNearInternalWall) {
       const clampedX = clamp(x, internalWallXStart, internalWallXEnd);
       return {
-        side: 'internal_wall',
+        side: 'internal_wall' as HydraulicPointSide,
         offsetMeters: Number((((internalWallXEnd - clampedX) / Math.max(oppositeSideDepth, 1)) * internalWallSpanMeters).toFixed(2)),
       };
     }
@@ -549,7 +653,7 @@ const HydraulicCssPreview: React.FC<{
 
     if (nearest.side === 'north' || nearest.side === 'south') {
       return {
-        side: nearest.side,
+        side: nearest.side as HydraulicPointSide,
         offsetMeters: Number((((y - poolY) / Math.max(poolH, 1)) * poolWidth).toFixed(2)),
       };
     }
@@ -563,7 +667,7 @@ const HydraulicCssPreview: React.FC<{
     }
 
     return {
-      side: nearest.side,
+      side: nearest.side as HydraulicPointSide,
       offsetMeters: Number((((x - poolX) / Math.max(poolW, 1)) * poolLength).toFixed(2)),
     };
   }, [internalWallSpanMeters, internalWallXEnd, internalWallXStart, internalWallY, oppositeSideDepth, poolH, poolLength, poolW, poolWidth, poolX, poolY, viewBoxH, viewBoxW, viewBoxX, viewBoxY]);
@@ -743,77 +847,103 @@ const HydraulicCssPreview: React.FC<{
               OESTE
             </text>
 
-            <rect x={poolX} y={poolY} width={poolW} height={poolH} fill="url(#pool-water)" stroke="rgba(224,242,254,0.9)" strokeWidth="3" />
-            <rect x={poolX + 14} y={poolY + 14} width={poolW - 28} height={poolH - 28} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+            {shellMode === 'radial' ? (
+              <>
+                <ellipse cx={shellCenterX} cy={shellCenterY} rx={shellRadiusX} ry={shellRadiusY} fill="url(#pool-water)" stroke="rgba(224,242,254,0.9)" strokeWidth="3" />
+                <ellipse cx={shellCenterX} cy={shellCenterY} rx={Math.max(shellRadiusX - 14, 12)} ry={Math.max(shellRadiusY - 14, 12)} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+                <text x={shellCenterX} y={poolY + 24} fill="#e0f2fe" fontSize="12" fontWeight="700" textAnchor="middle">
+                  GEOMETRIA RADIAL
+                </text>
+              </>
+            ) : shellOuterPath && shellInnerPath ? (
+              <>
+                <path d={shellOuterPath} fill="url(#pool-water)" stroke="rgba(224,242,254,0.9)" strokeWidth="3" />
+                <path d={shellInnerPath} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+                {shellMode === 'oval' && (
+                  <text x={shellCenterX} y={poolY + 24} fill="#e0f2fe" fontSize="12" fontWeight="700" textAnchor="middle">
+                    EXTREMO OVALADO CURVO
+                  </text>
+                )}
+              </>
+            ) : (
+              <>
+                <rect x={poolX} y={poolY} width={poolW} height={poolH} fill="url(#pool-water)" stroke="rgba(224,242,254,0.9)" strokeWidth="3" />
+                <rect x={poolX + 14} y={poolY + 14} width={poolW - 28} height={poolH - 28} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+              </>
+            )}
 
-            <rect
-              x={poolX + poolW - oppositeSideDepth}
-              y={poolY + oppositeSideHalfH}
-              width={oppositeSideDepth}
-              height={oppositeSideHalfH}
-              fill="rgba(224,242,254,0.18)"
-              stroke="rgba(224,242,254,0.4)"
-              strokeWidth="1.5"
-            />
-            <text x={poolX + poolW - oppositeSideDepth + 12} y={poolY + oppositeSideHalfH + 24} fill="#e0f2fe" fontSize="12" fontWeight="700">
-              PLAYA HUMEDA
-            </text>
+            {showRomanAmenities && (
+              <>
+                <rect
+                  x={poolX + poolW - oppositeSideDepth}
+                  y={poolY + oppositeSideHalfH}
+                  width={oppositeSideDepth}
+                  height={oppositeSideHalfH}
+                  fill="rgba(224,242,254,0.18)"
+                  stroke="rgba(224,242,254,0.4)"
+                  strokeWidth="1.5"
+                />
+                <text x={poolX + poolW - oppositeSideDepth + 12} y={poolY + oppositeSideHalfH + 24} fill="#e0f2fe" fontSize="12" fontWeight="700">
+                  PLAYA HUMEDA
+                </text>
 
-            <rect
-              x={poolX + poolW - oppositeSideDepth}
-              y={poolY}
-              width={oppositeSideDepth}
-              height={oppositeSideHalfH}
-              fill="rgba(240,249,255,0.16)"
-              stroke="rgba(224,242,254,0.4)"
-              strokeWidth="1.5"
-            />
-            <line
-              x1={internalWallXStart}
-              y1={internalWallY}
-              x2={internalWallXEnd}
-              y2={internalWallY}
-              stroke="rgba(224,242,254,0.95)"
-              strokeWidth="2.4"
-              strokeDasharray="10 6"
-            />
-            {[0, 1, 2].map((step) => {
-              const treadInset = (2 - step) * 14;
-              const stepX = poolX + poolW - oppositeSideDepth + treadInset;
-              const stepW = oppositeSideDepth - treadInset;
-              return (
-                <g key={step}>
-                  <rect
-                    x={stepX}
-                    y={poolY}
-                    width={stepW}
-                    height={oppositeSideHalfH}
-                    rx="2"
-                    fill="rgba(255,255,255,0.16)"
-                    stroke="rgba(224,242,254,0.68)"
-                    strokeWidth="1.6"
-                  />
-                  <line
-                    x1={stepX}
-                    y1={poolY}
-                    x2={stepX}
-                    y2={poolY + oppositeSideHalfH}
-                    stroke="rgba(224,242,254,0.9)"
-                    strokeWidth="1.8"
-                  />
-                  <rect
-                    x={stepX}
-                    y={poolY}
-                    width="5"
-                    height={oppositeSideHalfH}
-                    fill="rgba(8,47,73,0.32)"
-                  />
-                </g>
-              );
-            })}
-            <text x={poolX + poolW - oppositeSideDepth + 12} y={poolY + 24} fill="#e0f2fe" fontSize="12" fontWeight="700">
-              ESCALERAS
-            </text>
+                <rect
+                  x={poolX + poolW - oppositeSideDepth}
+                  y={poolY}
+                  width={oppositeSideDepth}
+                  height={oppositeSideHalfH}
+                  fill="rgba(240,249,255,0.16)"
+                  stroke="rgba(224,242,254,0.4)"
+                  strokeWidth="1.5"
+                />
+                <line
+                  x1={internalWallXStart}
+                  y1={internalWallY}
+                  x2={internalWallXEnd}
+                  y2={internalWallY}
+                  stroke="rgba(224,242,254,0.95)"
+                  strokeWidth="2.4"
+                  strokeDasharray="10 6"
+                />
+                {[0, 1, 2].map((step) => {
+                  const treadInset = (2 - step) * 14;
+                  const stepX = poolX + poolW - oppositeSideDepth + treadInset;
+                  const stepW = oppositeSideDepth - treadInset;
+                  return (
+                    <g key={step}>
+                      <rect
+                        x={stepX}
+                        y={poolY}
+                        width={stepW}
+                        height={oppositeSideHalfH}
+                        rx="2"
+                        fill="rgba(255,255,255,0.16)"
+                        stroke="rgba(224,242,254,0.68)"
+                        strokeWidth="1.6"
+                      />
+                      <line
+                        x1={stepX}
+                        y1={poolY}
+                        x2={stepX}
+                        y2={poolY + oppositeSideHalfH}
+                        stroke="rgba(224,242,254,0.9)"
+                        strokeWidth="1.8"
+                      />
+                      <rect
+                        x={stepX}
+                        y={poolY}
+                        width="5"
+                        height={oppositeSideHalfH}
+                        fill="rgba(8,47,73,0.32)"
+                      />
+                    </g>
+                  );
+                })}
+                <text x={poolX + poolW - oppositeSideDepth + 12} y={poolY + 24} fill="#e0f2fe" fontSize="12" fontWeight="700">
+                  ESCALERAS
+                </text>
+              </>
+            )}
 
             <line x1={hydraulicLayout.referenceSide === 'north' ? poolX : hydraulicLayout.referenceSide === 'south' ? poolX + poolW : equipmentAnchor.x}
               y1={hydraulicLayout.referenceSide === 'east' ? poolY : hydraulicLayout.referenceSide === 'west' ? poolY + poolH : equipmentAnchor.y}
@@ -1148,6 +1278,13 @@ const HydraulicLayoutPreview: React.FC<{
     const poolLeft = drawLeft + (drawW - poolW) / 2;
     const poolTop = drawTop + (drawH - poolH) / 2;
     const poolRight = poolLeft + poolW, poolBottom = poolTop + poolH;
+    const shellMode = getCurvedShellMode(project);
+    const shellCenterX = poolLeft + poolW / 2;
+    const shellCenterY = poolTop + poolH / 2;
+    const shellRadiusX = poolW / 2;
+    const shellRadiusY = poolH / 2;
+    const romanNoseDepth = poolW * 0.28;
+    const romanNoseStartX = poolRight - romanNoseDepth;
     const wetDeckWidth = poolW * 0.24;
     const stairsWidth = poolW * 0.18;
     const lowerBandHeight = poolH * 0.22;
@@ -1196,6 +1333,77 @@ const HydraulicLayoutPreview: React.FC<{
       ctx.font = `700 10px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = '#94a3b8';
       ctx.fillText(label, 0, 0);
       ctx.restore();
+    };
+
+    const drawRomanShellPath = (inset = 0) => {
+      const left = poolLeft + inset;
+      const top = poolTop + inset;
+      const right = poolRight - inset;
+      const bottom = poolBottom - inset;
+      const noseStart = romanNoseStartX - inset * 0.35;
+      const midY = (top + bottom) / 2;
+
+      ctx.beginPath();
+      ctx.moveTo(left, top);
+      ctx.lineTo(noseStart, top);
+      ctx.quadraticCurveTo(right, top, right, midY);
+      ctx.quadraticCurveTo(right, bottom, noseStart, bottom);
+      ctx.lineTo(left, bottom);
+      ctx.closePath();
+    };
+
+    const drawOvalShellPath = (inset = 0) => {
+      const left = poolLeft + inset;
+      const top = poolTop + inset;
+      const width = Math.max(poolW - inset * 2, 12);
+      const height = Math.max(poolH - inset * 2, 12);
+      const radius = Math.max(Math.min(height / 2, width / 4), 8);
+      const right = left + width;
+      const bottom = top + height;
+
+      ctx.beginPath();
+      ctx.moveTo(left + radius, top);
+      ctx.lineTo(right - radius, top);
+      ctx.arcTo(right, top, right, bottom, radius);
+      ctx.arcTo(right, bottom, left, bottom, radius);
+      ctx.lineTo(left + radius, bottom);
+      ctx.arcTo(left, bottom, left, top, radius);
+      ctx.arcTo(left, top, right, top, radius);
+      ctx.closePath();
+    };
+
+    const plotPlanPoint = (point: HydraulicPointDraft) => {
+      if (point.side === 'internal_wall') {
+        const ratio = Math.max(0, Math.min(1, point.offsetMeters));
+        return { x: poolRight - romanNoseDepth * ratio, y: shellCenterY };
+      }
+
+      const ratio = (point.side === 'north' || point.side === 'south')
+        ? point.offsetMeters / Math.max(poolWidth, 0.01)
+        : point.offsetMeters / Math.max(poolLength, 0.01);
+      const clampedRatio = Math.max(0, Math.min(1, ratio));
+
+      if (shellMode === 'radial') {
+        if (point.side === 'north') {
+          const angle = -Math.PI / 2 + Math.PI * clampedRatio;
+          return { x: shellCenterX - shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+        }
+        if (point.side === 'south') {
+          const angle = -Math.PI / 2 + Math.PI * clampedRatio;
+          return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+        }
+        if (point.side === 'east') {
+          const angle = Math.PI - Math.PI * clampedRatio;
+          return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY - shellRadiusY * Math.sin(angle) };
+        }
+        const angle = Math.PI * clampedRatio;
+        return { x: shellCenterX + shellRadiusX * Math.cos(angle), y: shellCenterY + shellRadiusY * Math.sin(angle) };
+      }
+
+      if (point.side === 'north') return { x: poolLeft, y: poolTop + poolH * clampedRatio };
+      if (point.side === 'south') return { x: poolRight, y: poolTop + poolH * clampedRatio };
+      if (point.side === 'east') return { x: poolLeft + poolW * clampedRatio, y: poolTop };
+      return { x: poolLeft + poolW * clampedRatio, y: poolBottom };
     };
 
     ctx.fillStyle = '#070c18'; ctx.fillRect(0, 0, W, H);
@@ -1248,40 +1456,73 @@ const HydraulicLayoutPreview: React.FC<{
     const waterGrad = ctx.createLinearGradient(poolLeft, poolTop, poolRight, poolBottom);
     waterGrad.addColorStop(0, 'rgba(14,165,233,0.32)');
     waterGrad.addColorStop(1, 'rgba(30,64,175,0.24)');
+
+    ctx.save();
+    if (shellMode === 'roman_arch') drawRomanShellPath();
+    else if (shellMode === 'oval') drawOvalShellPath();
+    else if (shellMode === 'radial') { ctx.beginPath(); ctx.ellipse(shellCenterX, shellCenterY, shellRadiusX, shellRadiusY, 0, 0, Math.PI * 2); }
+    else { ctx.beginPath(); ctx.rect(poolLeft, poolTop, poolW, poolH); }
     ctx.fillStyle = waterGrad;
-    ctx.fillRect(poolLeft, poolTop, poolW, poolH);
-    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
-    ctx.strokeRect(poolLeft, poolTop, poolW, poolH);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.clip();
     ctx.strokeStyle = 'rgba(56,189,248,0.10)'; ctx.lineWidth = 1;
     for (let i = 0; i < poolW + poolH; i += 18) {
       ctx.beginPath(); ctx.moveTo(poolLeft + i, poolTop); ctx.lineTo(poolLeft, poolTop + i); ctx.stroke();
     }
+    ctx.restore();
 
-    ctx.fillStyle = 'rgba(224,242,254,0.18)';
-    ctx.strokeStyle = 'rgba(224,242,254,0.35)';
-    ctx.lineWidth = 1;
-    ctx.fillRect(poolLeft, poolBottom - lowerBandHeight, wetDeckWidth, lowerBandHeight);
-    ctx.strokeRect(poolLeft, poolBottom - lowerBandHeight, wetDeckWidth, lowerBandHeight);
-    ctx.fillStyle = '#e0f2fe';
-    ctx.font = `700 9px ${MONO}`;
-    ctx.fillText('PLAYA HUMEDA', poolLeft + 10, poolBottom - lowerBandHeight + 16);
+    ctx.save();
+    if (shellMode === 'roman_arch') drawRomanShellPath(14);
+    else if (shellMode === 'oval') drawOvalShellPath(14);
+    else if (shellMode === 'radial') { ctx.beginPath(); ctx.ellipse(shellCenterX, shellCenterY, Math.max(shellRadiusX - 14, 12), Math.max(shellRadiusY - 14, 12), 0, 0, Math.PI * 2); }
+    else { ctx.beginPath(); ctx.rect(poolLeft + 14, poolTop + 14, poolW - 28, poolH - 28); }
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1.2;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
 
-    const stairsX = poolRight - stairsWidth;
-    ctx.fillStyle = 'rgba(240,249,255,0.18)';
-    ctx.strokeStyle = 'rgba(224,242,254,0.35)';
-    ctx.fillRect(stairsX, poolBottom - lowerBandHeight, stairsWidth, lowerBandHeight);
-    ctx.strokeRect(stairsX, poolBottom - lowerBandHeight, stairsWidth, lowerBandHeight);
-    [0, 1, 2].forEach((step) => {
-      const stepInset = step * (stairsWidth * 0.18);
-      const stepHeight = lowerBandHeight * 0.28;
-      const y = poolBottom - lowerBandHeight + step * stepHeight;
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.fillRect(stairsX + stepInset, y, stairsWidth - stepInset, stepHeight);
-      ctx.strokeStyle = 'rgba(224,242,254,0.3)';
-      ctx.strokeRect(stairsX + stepInset, y, stairsWidth - stepInset, stepHeight);
-    });
-    ctx.fillStyle = '#e0f2fe';
-    ctx.fillText('ESCALERAS', stairsX + 8, poolBottom - lowerBandHeight + 16);
+    if (shellMode === 'roman_arch') {
+      ctx.fillStyle = 'rgba(224,242,254,0.18)';
+      ctx.strokeStyle = 'rgba(224,242,254,0.35)';
+      ctx.lineWidth = 1;
+      ctx.fillRect(poolRight - romanNoseDepth, shellCenterY, romanNoseDepth, lowerBandHeight);
+      ctx.strokeRect(poolRight - romanNoseDepth, shellCenterY, romanNoseDepth, lowerBandHeight);
+      ctx.fillStyle = '#e0f2fe';
+      ctx.font = `700 9px ${MONO}`;
+      ctx.fillText('PLAYA HUMEDA', poolRight - romanNoseDepth + 10, shellCenterY + 16);
+
+      const stairsX = poolRight - romanNoseDepth;
+      ctx.fillStyle = 'rgba(240,249,255,0.18)';
+      ctx.strokeStyle = 'rgba(224,242,254,0.35)';
+      ctx.fillRect(stairsX, poolTop, romanNoseDepth, lowerBandHeight);
+      ctx.strokeRect(stairsX, poolTop, romanNoseDepth, lowerBandHeight);
+      [0, 1, 2].forEach((step) => {
+        const stepInset = step * (romanNoseDepth * 0.18);
+        const stepHeight = lowerBandHeight * 0.28;
+        const y = poolTop + step * stepHeight;
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(stairsX + stepInset, y, romanNoseDepth - stepInset, stepHeight);
+        ctx.strokeStyle = 'rgba(224,242,254,0.3)';
+        ctx.strokeRect(stairsX + stepInset, y, romanNoseDepth - stepInset, stepHeight);
+      });
+      ctx.fillStyle = '#e0f2fe';
+      ctx.fillText('ESCALERAS', stairsX + 8, poolTop + 16);
+    } else if (shellMode === 'oval') {
+      ctx.fillStyle = '#e0f2fe';
+      ctx.font = `700 9px ${MONO}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('EXTREMO OVALADO CURVO', shellCenterX, poolTop + 16);
+      ctx.textAlign = 'left';
+    } else if (shellMode === 'radial') {
+      ctx.fillStyle = '#e0f2fe';
+      ctx.font = `700 9px ${MONO}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('GEOMETRIA RADIAL', shellCenterX, poolTop + 16);
+      ctx.textAlign = 'left';
+    }
 
     dimH(poolLeft, poolRight, poolTop - WALL_T, `${poolLength.toFixed(2)} m`, true);
     dimV(poolLeft - WALL_T, poolTop, poolBottom, `${poolWidth.toFixed(2)} m`, true);
@@ -1343,14 +1584,8 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.textAlign = 'left';
 
     hydraulicLayout.points.forEach((point) => {
-      const ratio = (point.side === 'north' || point.side === 'south')
-        ? point.offsetMeters / Math.max(poolWidth, 0.01)
-        : point.offsetMeters / Math.max(poolLength, 0.01);
-      let px = 0, py = 0;
-      if (point.side === 'north') { px = poolLeft; py = poolTop + poolH * ratio; }
-      if (point.side === 'south') { px = poolRight; py = poolTop + poolH * ratio; }
-      if (point.side === 'east') { px = poolLeft + poolW * ratio; py = poolTop; }
-      if (point.side === 'west') { px = poolLeft + poolW * ratio; py = poolBottom; }
+      const pos = plotPlanPoint(point);
+      const px = pos.x, py = pos.y;
       const col = colors[point.kind];
       const isSel = point.id === selectedPointId;
       const r = isSel ? 6 : 4;
@@ -3046,7 +3281,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                   onChange={(e) => updateHydraulicPoint(point.id, {
                     side: e.target.value as HydraulicPointSide,
                     offsetMeters: e.target.value === 'internal_wall'
-                      ? Number((internalWallSpanMeters / 2).toFixed(2))
+                      ? 0.5
                       : point.offsetMeters,
                   })}
                 />
