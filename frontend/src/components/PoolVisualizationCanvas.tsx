@@ -173,13 +173,16 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
           const top = poolTop + inset;
           const right = poolRight - inset;
           const bottom = poolBottom - inset;
-          const noseStart = romanNoseStartX - inset * 0.35;
-          const midY = (top + bottom) / 2;
+          const noseStart = romanNoseStartX + inset * 0.35;
+          const archShoulder = Math.max((bottom - top) * 0.22, 18);
+          const archTop = top + archShoulder;
+          const archBottom = bottom - archShoulder;
           ctx.beginPath();
           ctx.moveTo(left, top);
           ctx.lineTo(noseStart, top);
-          ctx.quadraticCurveTo(right, top, right, midY);
-          ctx.quadraticCurveTo(right, bottom, noseStart, bottom);
+          ctx.lineTo(noseStart, archTop);
+          ctx.bezierCurveTo(right, archTop, right, archBottom, noseStart, archBottom);
+          ctx.lineTo(noseStart, bottom);
           ctx.lineTo(left, bottom);
           ctx.closePath();
           return;
@@ -528,12 +531,15 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
 
       const traceShellPath = () => {
         if (shellMode === 'roman_arch') {
-          const midY = (poolTop + poolBottom) / 2;
+          const archShoulder = Math.max((poolBottom - poolTop) * 0.22, 18);
+          const archTop = poolTop + archShoulder;
+          const archBottom = poolBottom - archShoulder;
           ctx.beginPath();
           ctx.moveTo(poolLeft, poolTop);
           ctx.lineTo(romanNoseStartX, poolTop);
-          ctx.quadraticCurveTo(poolRight, poolTop, poolRight, midY);
-          ctx.quadraticCurveTo(poolRight, poolBottom, romanNoseStartX, poolBottom);
+          ctx.lineTo(romanNoseStartX, archTop);
+          ctx.bezierCurveTo(poolRight, archTop, poolRight, archBottom, romanNoseStartX, archBottom);
+          ctx.lineTo(romanNoseStartX, poolBottom);
           ctx.lineTo(poolLeft, poolBottom);
           ctx.closePath();
           return;

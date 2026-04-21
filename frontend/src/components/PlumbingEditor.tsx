@@ -306,6 +306,25 @@ const buildDefaultHydraulicLayout = (project: Project, hydraulicSummary: ReturnT
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const cubicPoint = (
+  t: number,
+  p0: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number }
+) => {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+
+  return {
+    x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+    y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y,
+  };
+};
+
 const HydraulicCssPreview: React.FC<{
   project: Project;
   hydraulicLayout: HydraulicLayoutDraft;
@@ -352,14 +371,25 @@ const HydraulicCssPreview: React.FC<{
   const shellCenterY = poolY + poolH / 2;
   const shellRadiusX = poolW / 2;
   const shellRadiusY = poolH / 2;
+  const romanArchShoulder = Math.max(poolH * 0.22, 18);
+  const romanArchTopY = poolY + romanArchShoulder;
+  const romanArchBottomY = poolY + poolH - romanArchShoulder;
   const shellOuterPath = shellMode === 'roman_arch'
-    ? `M ${poolX} ${poolY} H ${internalWallXStart} Q ${internalWallXEnd} ${poolY} ${internalWallXEnd} ${shellCenterY} Q ${internalWallXEnd} ${poolY + poolH} ${internalWallXStart} ${poolY + poolH} H ${poolX} Z`
+    ? `M ${poolX} ${poolY} H ${internalWallXStart} V ${romanArchTopY} C ${internalWallXEnd} ${romanArchTopY} ${internalWallXEnd} ${romanArchBottomY} ${internalWallXStart} ${romanArchBottomY} V ${poolY + poolH} H ${poolX} Z`
     : shellMode === 'oval'
       ? `M ${poolX + shellRadiusY} ${poolY} H ${poolX + poolW - shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH} H ${poolX + shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + shellRadiusY} ${poolY} Z`
       : null;
   const shellInset = 14;
+  const romanInnerLeft = poolX + shellInset;
+  const romanInnerTop = poolY + shellInset;
+  const romanInnerBottom = poolY + poolH - shellInset;
+  const romanInnerRight = internalWallXEnd - shellInset;
+  const romanInnerShoulderX = internalWallXStart + shellInset * 0.35;
+  const romanInnerShoulder = Math.max((romanInnerBottom - romanInnerTop) * 0.22, 12);
+  const romanInnerArchTopY = romanInnerTop + romanInnerShoulder;
+  const romanInnerArchBottomY = romanInnerBottom - romanInnerShoulder;
   const shellInnerPath = shellMode === 'roman_arch'
-    ? `M ${poolX + shellInset} ${poolY + shellInset} H ${internalWallXStart - shellInset * 0.5} Q ${internalWallXEnd - shellInset} ${poolY + shellInset} ${internalWallXEnd - shellInset} ${shellCenterY} Q ${internalWallXEnd - shellInset} ${poolY + poolH - shellInset} ${internalWallXStart - shellInset * 0.5} ${poolY + poolH - shellInset} H ${poolX + shellInset} Z`
+    ? `M ${romanInnerLeft} ${romanInnerTop} H ${romanInnerShoulderX} V ${romanInnerArchTopY} C ${romanInnerRight} ${romanInnerArchTopY} ${romanInnerRight} ${romanInnerArchBottomY} ${romanInnerShoulderX} ${romanInnerArchBottomY} V ${romanInnerBottom} H ${romanInnerLeft} Z`
     : shellMode === 'oval'
       ? `M ${poolX + shellRadiusY} ${poolY + shellInset} H ${poolX + poolW - shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH - shellInset} H ${poolX + shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + shellRadiusY} ${poolY + shellInset} Z`
       : null;
@@ -400,6 +430,17 @@ const HydraulicCssPreview: React.FC<{
   const pointToSvg = React.useCallback((point: HydraulicPointDraft) => {
     if (point.side === 'internal_wall') {
       const ratio = clamp(point.offsetMeters / Math.max(internalWallSpanMeters, 0.01), 0, 1);
+
+      if (shellMode === 'roman_arch') {
+        return cubicPoint(
+          ratio,
+          { x: internalWallXStart, y: romanArchTopY },
+          { x: internalWallXEnd, y: romanArchTopY },
+          { x: internalWallXEnd, y: romanArchBottomY },
+          { x: internalWallXStart, y: romanArchBottomY },
+        );
+      }
+
       return {
         x: internalWallXEnd - oppositeSideDepth * ratio,
         y: internalWallY,
@@ -433,7 +474,7 @@ const HydraulicCssPreview: React.FC<{
     if (point.side === 'south') return { x: poolX + poolW, y: poolY + poolH * ratio };
     if (point.side === 'east') return { x: poolX + poolW * ratio, y: poolY };
     return { x: poolX + poolW * ratio, y: poolY + poolH };
-  }, [internalWallSpanMeters, internalWallXEnd, internalWallY, oppositeSideDepth, poolH, poolW, poolX, poolY, poolLength, poolWidth, shellMode, shellCenterX, shellCenterY, shellRadiusX, shellRadiusY]);
+  }, [internalWallSpanMeters, internalWallXEnd, internalWallXStart, internalWallY, oppositeSideDepth, poolH, poolW, poolX, poolY, poolLength, poolWidth, romanArchBottomY, romanArchTopY, shellMode, shellCenterX, shellCenterY, shellRadiusX, shellRadiusY]);
 
   const equipmentDistanceSvg = Math.max(metersToSvg(distanceToEquipment), metersToSvg(0.8));
   const equipmentAnchor = hydraulicLayout.referenceSide === 'north'
@@ -1340,14 +1381,17 @@ const HydraulicLayoutPreview: React.FC<{
       const top = poolTop + inset;
       const right = poolRight - inset;
       const bottom = poolBottom - inset;
-      const noseStart = romanNoseStartX - inset * 0.35;
-      const midY = (top + bottom) / 2;
+      const noseStart = romanNoseStartX + inset * 0.35;
+      const archShoulder = Math.max((bottom - top) * 0.22, 18);
+      const archTop = top + archShoulder;
+      const archBottom = bottom - archShoulder;
 
       ctx.beginPath();
       ctx.moveTo(left, top);
       ctx.lineTo(noseStart, top);
-      ctx.quadraticCurveTo(right, top, right, midY);
-      ctx.quadraticCurveTo(right, bottom, noseStart, bottom);
+      ctx.lineTo(noseStart, archTop);
+      ctx.bezierCurveTo(right, archTop, right, archBottom, noseStart, archBottom);
+      ctx.lineTo(noseStart, bottom);
       ctx.lineTo(left, bottom);
       ctx.closePath();
     };
@@ -1375,7 +1419,16 @@ const HydraulicLayoutPreview: React.FC<{
     const plotPlanPoint = (point: HydraulicPointDraft) => {
       if (point.side === 'internal_wall') {
         const ratio = Math.max(0, Math.min(1, point.offsetMeters));
-        return { x: poolRight - romanNoseDepth * ratio, y: shellCenterY };
+        const archShoulder = Math.max(poolH * 0.22, 18);
+        const archTop = poolTop + archShoulder;
+        const archBottom = poolBottom - archShoulder;
+        return cubicPoint(
+          ratio,
+          { x: romanNoseStartX, y: archTop },
+          { x: poolRight, y: archTop },
+          { x: poolRight, y: archBottom },
+          { x: romanNoseStartX, y: archBottom },
+        );
       }
 
       const ratio = (point.side === 'north' || point.side === 'south')
