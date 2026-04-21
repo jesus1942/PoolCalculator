@@ -716,10 +716,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
     const projects = await prisma.project.findMany({
       where: isAdmin
         ? (orgId ? { organizationId: orgId } : {})
-        : {
-            id: { in: accessibleProjectIds.length > 0 ? accessibleProjectIds : ['__none__'] },
-            ...(orgId ? { organizationId: orgId } : {}),
-          },
+        : { id: { in: accessibleProjectIds.length > 0 ? accessibleProjectIds : ['__none__'] } },
       include: {
         poolPreset: true,
         projectAdditionals: {
@@ -782,6 +779,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
     const role = req.user?.role;
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -806,7 +804,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
     } as const;
 
     let project = await prisma.project.findFirst({
-      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+      where: isAdmin ? { id, ...(orgId ? { organizationId: orgId } : {}) } : { id },
       include: baseInclude,
     });
 
@@ -850,7 +848,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
 
       // Recargar proyecto con valores corregidos
       let correctedProject = await prisma.project.findFirst({
-        where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+        where: isAdmin ? { id, ...(orgId ? { organizationId: orgId } : {}) } : { id },
         include: baseInclude,
       });
 
@@ -927,7 +925,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         });
 
         let refreshedProject = await prisma.project.findFirst({
-          where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+          where: isAdmin ? { id, ...(orgId ? { organizationId: orgId } : {}) } : { id },
           include: baseInclude,
         });
 
@@ -958,9 +956,10 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
     const role = req.user?.role;
+    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
     const existingProject = await prisma.project.findFirst({
-      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
+      where: isAdmin ? { id, ...(orgId ? { organizationId: orgId } : {}) } : { id },
       include: { poolPreset: true, projectAdditionals: true },
     });
 

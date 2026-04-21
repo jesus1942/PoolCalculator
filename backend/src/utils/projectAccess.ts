@@ -46,7 +46,7 @@ export type ProjectAccessContext = {
 
 const DEFAULT_SHARED_TABS: ProjectTabId[] = ['overview', 'status'];
 
-const fetchExplicitProjectAccesses = async (userId: string, orgId?: string | null): Promise<ProjectAccessRecord[]> => {
+const fetchExplicitProjectAccesses = async (userId: string): Promise<ProjectAccessRecord[]> => {
   const rows = await prisma.$queryRaw<Array<{
     projectId: string;
     canEdit: boolean;
@@ -56,7 +56,6 @@ const fetchExplicitProjectAccesses = async (userId: string, orgId?: string | nul
     SELECT "projectId", "canEdit", "canViewFinancials", "allowedTabs"
     FROM "ProjectAccess"
     WHERE "userId" = ${userId}
-    ${orgId ? Prisma.sql`AND "organizationId" = ${orgId}` : Prisma.empty}
   `);
 
   return rows.map((row) => ({
@@ -136,7 +135,7 @@ export const getAssignedProjectIdsForUser = async (userId: string, orgId?: strin
 
 export const buildProjectAccessContext = async (userId: string, orgId?: string | null): Promise<ProjectAccessContext> => {
   const [explicitAccesses, assignedProjectIds] = await Promise.all([
-    fetchExplicitProjectAccesses(userId, orgId),
+    fetchExplicitProjectAccesses(userId),
     getAssignedProjectIdsForUser(userId, orgId),
   ]);
 
@@ -158,13 +157,10 @@ export const getAccessibleProjectIdsForUser = async (actor: ProjectActorContext)
 
   const [ownedProjects, explicitAccesses, assignedProjectIds] = await Promise.all([
     prisma.project.findMany({
-      where: {
-        userId: actor.userId,
-        ...(actor.orgId ? { organizationId: actor.orgId } : {}),
-      },
+      where: { userId: actor.userId },
       select: { id: true },
     }),
-    fetchExplicitProjectAccesses(actor.userId, actor.orgId),
+    fetchExplicitProjectAccesses(actor.userId),
     getAssignedProjectIdsForUser(actor.userId, actor.orgId),
   ]);
 

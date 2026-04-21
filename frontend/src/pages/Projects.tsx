@@ -38,18 +38,24 @@ export const Projects: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user?.role]);
 
   const loadData = async () => {
     try {
-      const [projectsData, presetsData] = await Promise.all([
-        projectService.getAll(),
-        poolPresetService.getAll(),
-      ]);
+      const projectsData = await projectService.getAll();
       setProjects(projectsData);
-      setPoolPresets(presetsData);
+
+      if (user?.role !== 'VIEWER' && user?.role !== 'INSTALLER') {
+        try {
+          const presetsData = await poolPresetService.getAll();
+          setPoolPresets(presetsData);
+        } catch (presetError) {
+          console.error('Error al cargar modelos de piscina:', presetError);
+          setPoolPresets([]);
+        }
+      }
     } catch (error) {
-      console.error('Error al cargar datos:', error);
+      console.error('Error al cargar proyectos:', error);
     } finally {
       setLoading(false);
     }
@@ -174,7 +180,7 @@ export const Projects: React.FC = () => {
     return statusOptions.find(s => s.value === status)?.label || status;
   };
 
-  const canWriteProjects = user?.role !== 'VIEWER';
+  const canCreateProjects = user?.role !== 'VIEWER' && user?.role !== 'INSTALLER';
 
   if (loading) {
     return (
@@ -207,7 +213,7 @@ export const Projects: React.FC = () => {
                 <p className="mt-1 text-sm sm:text-base text-gray-600">Administra todos tus proyectos de piscinas</p>
               </div>
             </div>
-            {canWriteProjects && (
+            {canCreateProjects && (
               <button
                 onClick={() => setShowModal(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-3 text-white font-medium shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 sm:w-auto"
@@ -232,7 +238,7 @@ export const Projects: React.FC = () => {
               <p className="text-zinc-300 mb-8 max-w-md mx-auto">
                 Empieza creando tu primer proyecto de piscina y gestiona todos los detalles de construccion
               </p>
-              {canWriteProjects && (
+              {canCreateProjects && (
                 <button
                   onClick={() => setShowModal(true)}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg"
@@ -247,10 +253,12 @@ export const Projects: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((project) => {
               const StatusIcon = getStatusIcon(project.status);
-              const financials = calculateProjectFinancials(project);
-              const materialCost = financials.totalMaterialCost;
-              const laborCost = financials.totalLaborCost;
-              const totalCost = financials.grandTotal;
+              const canViewFinancials = project.currentUserAccess?.canViewFinancials ?? true;
+              const canEditProject = project.currentUserAccess?.canEdit ?? canCreateProjects;
+              const financials = canViewFinancials ? calculateProjectFinancials(project) : null;
+              const materialCost = financials?.totalMaterialCost || 0;
+              const laborCost = financials?.totalLaborCost || 0;
+              const totalCost = financials?.grandTotal || 0;
               const poolDepthLabel = project.poolPreset?.depthEnd && project.poolPreset.depthEnd !== project.poolPreset.depth
                 ? `${project.poolPreset.depth}m a ${project.poolPreset.depthEnd}m`
                 : `${project.poolPreset?.depth}m`;
@@ -290,26 +298,33 @@ export const Projects: React.FC = () => {
 
                     {/* Details Grid */}
                     <div className="border-t border-white/20 pt-4 grid grid-cols-1 gap-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="bg-white/10 rounded-lg p-3 border border-white/20">
-                          <p className="text-xs text-zinc-300 mb-1 font-medium">Materiales</p>
-                          <p className="font-semibold text-cyan-100 text-sm">
-                            ${materialCost.toLocaleString('es-AR')}
-                          </p>
+                      {canViewFinancials ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="bg-white/10 rounded-lg p-3 border border-white/20">
+                            <p className="text-xs text-zinc-300 mb-1 font-medium">Materiales</p>
+                            <p className="font-semibold text-cyan-100 text-sm">
+                              ${materialCost.toLocaleString('es-AR')}
+                            </p>
+                          </div>
+                          <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-300/20">
+                            <p className="text-xs text-cyan-100/80 mb-1 font-medium">Mano de obra</p>
+                            <p className="font-semibold text-cyan-200 text-sm">
+                              ${laborCost.toLocaleString('es-AR')}
+                            </p>
+                          </div>
+                          <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-300/20">
+                            <p className="text-xs text-emerald-100/80 mb-1 font-medium">Costo Total</p>
+                            <p className="font-semibold text-emerald-300 text-sm">
+                              ${totalCost.toLocaleString('es-AR')}
+                            </p>
+                          </div>
                         </div>
-                        <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-300/20">
-                          <p className="text-xs text-cyan-100/80 mb-1 font-medium">Mano de obra</p>
-                          <p className="font-semibold text-cyan-200 text-sm">
-                            ${laborCost.toLocaleString('es-AR')}
-                          </p>
+                      ) : (
+                        <div className="rounded-lg border border-amber-300/20 bg-amber-500/10 p-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-amber-100/80">Vista compartida</p>
+                          <p className="mt-1 text-sm text-amber-100">Los costos están ocultos para este usuario.</p>
                         </div>
-                        <div className="bg-emerald-500/10 rounded-lg p-3 border border-emerald-300/20">
-                          <p className="text-xs text-emerald-100/80 mb-1 font-medium">Costo Total</p>
-                          <p className="font-semibold text-emerald-300 text-sm">
-                            ${totalCost.toLocaleString('es-AR')}
-                          </p>
-                        </div>
-                      </div>
+                      )}
 
                       {project.location && (
                         <div className="bg-white/10 rounded-lg p-3 border border-white/20">
@@ -328,7 +343,7 @@ export const Projects: React.FC = () => {
                         <Eye size={16} />
                         <span>Ver</span>
                       </button>
-                      {canWriteProjects && (
+                      {canEditProject && (
                         <>
                           <button
                             onClick={() => handleEdit(project)}
