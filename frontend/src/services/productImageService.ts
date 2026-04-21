@@ -144,6 +144,10 @@ class ProductImageService {
       return normalizedPath;
     }
 
+    if (normalizedPath.startsWith('/uploads/products/')) {
+      return `https://raw.githubusercontent.com/jesus1942/PoolCalculator/main/backend${normalizedPath}`;
+    }
+
     // Si empieza con /, quitarlo para evitar duplicación
     const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
 

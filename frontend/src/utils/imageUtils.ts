@@ -43,6 +43,10 @@ export const getImageUrl = (imageUrl?: string | null): string | undefined => {
     return optimizeCloudinaryUrl(normalizedImageUrl);
   }
 
+  if (normalizedImageUrl.startsWith('/uploads/products/')) {
+    return `https://raw.githubusercontent.com/jesus1942/PoolCalculator/main/backend${normalizedImageUrl}`;
+  }
+
   // Obtener la URL base del API
   const API_BASE = API_BASE_URL || 'http://localhost:3000';
 
