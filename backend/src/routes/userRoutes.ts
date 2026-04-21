@@ -1,12 +1,20 @@
 import express from 'express';
-import { authenticate, isAdmin } from '../middleware/auth';
-import { listUsers, createUser, updateUser } from '../controllers/userController';
+import { authenticate } from '../middleware/auth';
+import {
+  listUsers,
+  createUser,
+  updateUser,
+  getUserProjectAccess,
+  updateUserProjectAccess,
+} from '../controllers/userController';
 
 const router = express.Router();
 
 router.use(authenticate);
-router.get('/users', isAdmin, listUsers);
-router.post('/users', isAdmin, createUser);
-router.patch('/users/:id', isAdmin, updateUser);
+router.get('/users', listUsers);
+router.post('/users', createUser);
+router.patch('/users/:id', updateUser);
+router.get('/users/:id/project-access', getUserProjectAccess);
+router.put('/users/:id/project-access/:projectId', updateUserProjectAccess);
 
 export default router;

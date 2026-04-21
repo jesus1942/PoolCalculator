@@ -14,6 +14,7 @@ export interface AuthResponse {
 
 export type PoolShape = 'RECTANGULAR' | 'CIRCULAR' | 'OVAL' | 'JACUZZI';
 export type ProjectStatus = 'DRAFT' | 'BUDGETED' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type ProjectTabId = 'overview' | 'status' | 'tiles' | 'plumbing' | 'electrical' | 'hydraulic_pro' | 'electrical_pro' | 'tasks' | 'roles' | 'systems' | 'additionals' | 'export';
 export type AccessoryType = 'CORNER' | 'TRIM' | 'GRILL' | 'BASEBOARD' | 'SKIMMER_ITEM' | 'RETURN_ITEM' | 'DRAIN_ITEM' | 'OTHER';
 export type TileType = 'COMMON' | 'LOMO_BALLENA' | 'L_FINISH' | 'PERIMETER' | 'OTHER';
 export type EquipmentType = 'PUMP' | 'FILTER' | 'HEATER' | 'HEAT_PUMP' | 'CHLORINATOR' | 'LIGHTING' | 'OTHER';
@@ -198,6 +199,14 @@ export interface TaskDetail {
   laborCost?: number;
 }
 
+export interface ProjectAccessProfile {
+  canAccess: boolean;
+  canEdit: boolean;
+  canViewFinancials: boolean;
+  allowedTabs: ProjectTabId[];
+  source: 'admin' | 'owner' | 'explicit' | 'assignment' | 'none';
+}
+
 export interface Project {
   id: string;
   projectCode?: string;
@@ -232,6 +241,7 @@ export interface Project {
     finishes?: TaskDetail;
   };
   exportSettings?: any;
+  currentUserAccess?: ProjectAccessProfile;
   laborCost: number;
   materialCost: number;
   totalCost: number;

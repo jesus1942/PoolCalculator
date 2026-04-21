@@ -19,6 +19,13 @@ import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 import { listConversationSummaries, syncProjectConversation } from '../services/conversationService';
+import {
+  buildProjectAccessContext,
+  buildProjectAccessProfileFromContext,
+  getAccessibleProjectIdsForUser,
+  resolveProjectAccessProfile,
+  sanitizeProjectForAccess,
+} from '../utils/projectAccess';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -703,21 +710,16 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    let where: any;
-    if (isAdmin) {
-      where = orgId ? { organizationId: orgId } : {};
-    } else if (role === 'VIEWER') {
-      const assignedProjectIds = await getAssignedProjectIdsForUser(userId, orgId);
-      where = {
-        id: { in: assignedProjectIds.length > 0 ? assignedProjectIds : ['__none__'] },
-        ...(orgId ? { organizationId: orgId } : {}),
-      };
-    } else {
-      where = { userId };
-    }
+    const accessibleProjectIds = await getAccessibleProjectIdsForUser({ userId, orgId, role });
+    const accessContext = await buildProjectAccessContext(userId, orgId);
 
     const projects = await prisma.project.findMany({
-      where,
+      where: isAdmin
+        ? (orgId ? { organizationId: orgId } : {})
+        : {
+            id: { in: accessibleProjectIds.length > 0 ? accessibleProjectIds : ['__none__'] },
+            ...(orgId ? { organizationId: orgId } : {}),
+          },
       include: {
         poolPreset: true,
         projectAdditionals: {
@@ -759,7 +761,15 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
     });
 
     const normalizedProjects = await Promise.all(projects.map((project) => ensureProjectCode(project)));
-    res.json(normalizedProjects.map((project) => withCommercialProfile(project)));
+    const serializedProjects = normalizedProjects
+      .map((project) => {
+        const access = buildProjectAccessProfileFromContext(project, { userId, orgId, role }, accessContext);
+        if (!access.canAccess) return null;
+        return sanitizeProjectForAccess(withCommercialProfile(project), access);
+      })
+      .filter(Boolean);
+
+    res.json(serializedProjects);
   } catch (error) {
     console.error('Error al obtener proyectos:', error);
     res.status(500).json({ error: 'Error al obtener proyectos' });
@@ -772,7 +782,6 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
     const role = req.user?.role;
-    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -797,23 +806,16 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
     } as const;
 
     let project = await prisma.project.findFirst({
-      where: isAdmin
-        ? { id, ...(orgId ? { organizationId: orgId } : {}) }
-        : { id, userId },
+      where: { id, ...(orgId ? { organizationId: orgId } : {}) },
       include: baseInclude,
     });
 
-    if (!project && role === 'VIEWER') {
-      const assignedProjectIds = await getAssignedProjectIdsForUser(userId, orgId);
-      if (assignedProjectIds.includes(id)) {
-        project = await prisma.project.findFirst({
-          where: { id, ...(orgId ? { organizationId: orgId } : {}) },
-          include: baseInclude,
-        });
-      }
+    if (!project) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (!project) {
+    let access = await resolveProjectAccessProfile(project, { userId, orgId, role });
+    if (!access.canAccess) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
@@ -855,8 +857,9 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       console.log(`  ✓ Proyecto corregido`);
       if (correctedProject) {
         correctedProject = await ensureProjectCode(correctedProject);
+        access = await resolveProjectAccessProfile(correctedProject, { userId, orgId, role });
       }
-      res.json(correctedProject ? withCommercialProfile(await appendProjectConversations(correctedProject as any)) : correctedProject);
+      res.json(correctedProject ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(correctedProject as any)), access) : correctedProject);
       return;
     }
 
@@ -930,15 +933,16 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
 
         if (refreshedProject) {
           refreshedProject = await ensureProjectCode(refreshedProject);
+          access = await resolveProjectAccessProfile(refreshedProject, { userId, orgId, role });
         }
-        res.json(refreshedProject ? withCommercialProfile(await appendProjectConversations(refreshedProject as any)) : refreshedProject);
+        res.json(refreshedProject ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(refreshedProject as any)), access) : refreshedProject);
         return;
       } catch (refreshError) {
         console.error('Error al refrescar materiales del proyecto:', refreshError);
       }
     }
 
-    res.json(project ? withCommercialProfile(await appendProjectConversations(project as any)) : project);
+    res.json(project ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(project as any)), access) : project);
   } catch (error) {
     console.error('Error al obtener proyecto:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -953,7 +957,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
 
     const existingProject = await prisma.project.findFirst({
       where: { id, ...(orgId ? { organizationId: orgId } : {}) },
@@ -964,7 +968,8 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (existingProject.userId !== userId && !isAdmin) {
+    const access = await resolveProjectAccessProfile(existingProject, { userId, orgId, role });
+    if (!access.canEdit) {
       return res.status(403).json({ error: 'No tenés permiso para modificar este proyecto' });
     }
 
@@ -1216,7 +1221,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     const normalizedProject = await ensureProjectCode(project);
 
     console.log('Proyecto actualizado exitosamente');
-    res.json(withCommercialProfile(await appendProjectConversations(normalizedProject as any)));
+    res.json(sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(normalizedProject as any)), access));
   } catch (error) {
     console.error('Error al actualizar proyecto:', error);
     res.status(500).json({ error: 'Error al actualizar proyecto' });

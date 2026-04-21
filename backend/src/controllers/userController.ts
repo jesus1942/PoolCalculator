@@ -1,9 +1,16 @@
+import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
+import {
+  PROJECT_TAB_IDS,
+  canManageOrganization,
+  normalizeAllowedProjectTabs,
+  type ProjectTabId,
+} from '../utils/projectAccess';
 
-const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 const isSuperadminRole = (role?: string) => role === 'SUPERADMIN';
 
 const resolveTargetOrgId = (req: AuthRequest, bodyOrgId?: string) => {
@@ -21,13 +28,42 @@ const canAssignRole = (requesterRole?: string, targetRole?: string) => {
   return true;
 };
 
+const ensureOrganizationAccess = async (req: AuthRequest, res: Response) => {
+  const allowed = await canManageOrganization({
+    userId: req.user?.userId,
+    orgId: req.user?.orgId || null,
+    role: req.user?.role,
+  });
+
+  if (!allowed) {
+    res.status(403).json({ error: 'Se requiere permiso de administración sobre la organización' });
+    return null;
+  }
+
+  return true;
+};
+
+const mapUserRow = (user: any, orgId?: string | null) => {
+  const membershipRole = orgId && Array.isArray(user.organizationMemberships)
+    ? user.organizationMemberships[0]?.role
+    : null;
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    orgRole: membershipRole,
+    createdAt: user.createdAt,
+  };
+};
+
 export const listUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const role = req.user?.role;
+    const hasAccess = await ensureOrganizationAccess(req, res);
+    if (!hasAccess) return;
+
     const orgId = req.user?.orgId || null;
-    if (!isAdminRole(role)) {
-      return res.status(403).json({ error: 'Se requiere rol de administrador' });
-    }
 
     const users = await prisma.user.findMany({
       where: orgId
@@ -49,21 +85,7 @@ export const listUsers = async (req: AuthRequest, res: Response) => {
       orderBy: { name: 'asc' },
     });
 
-    const response = users.map((user) => {
-      const membershipRole = Array.isArray(user.organizationMemberships)
-        ? user.organizationMemberships[0]?.role
-        : null;
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        orgRole: membershipRole,
-        createdAt: user.createdAt,
-      };
-    });
-
-    res.json(response);
+    res.json(users.map((user) => mapUserRow(user, orgId)));
   } catch (error) {
     console.error('Error al listar usuarios:', error);
     res.status(500).json({ error: 'Error al listar usuarios' });
@@ -72,11 +94,10 @@ export const listUsers = async (req: AuthRequest, res: Response) => {
 
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const requesterRole = req.user?.role;
-    if (!isAdminRole(requesterRole)) {
-      return res.status(403).json({ error: 'Se requiere rol de administrador' });
-    }
+    const hasAccess = await ensureOrganizationAccess(req, res);
+    if (!hasAccess) return;
 
+    const requesterRole = req.user?.role;
     const { email, name, password, role, orgRole, organizationId } = req.body || {};
     if (!email || !name) {
       return res.status(400).json({ error: 'Email y nombre son requeridos' });
@@ -154,11 +175,10 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
-    const requesterRole = req.user?.role;
-    if (!isAdminRole(requesterRole)) {
-      return res.status(403).json({ error: 'Se requiere rol de administrador' });
-    }
+    const hasAccess = await ensureOrganizationAccess(req, res);
+    if (!hasAccess) return;
 
+    const requesterRole = req.user?.role;
     const { id } = req.params;
     const { name, role, password, orgRole, organizationId } = req.body || {};
     if (!id) {
@@ -236,5 +256,185 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
     res.status(500).json({ error: 'Error al actualizar usuario' });
+  }
+};
+
+export const getUserProjectAccess = async (req: AuthRequest, res: Response) => {
+  try {
+    const hasAccess = await ensureOrganizationAccess(req, res);
+    if (!hasAccess) return;
+
+    const { id } = req.params;
+    const orgId = resolveTargetOrgId(req);
+    if (!id || !orgId) {
+      return res.status(400).json({ error: 'Usuario y organización requeridos' });
+    }
+
+    const membership = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: orgId,
+          userId: id,
+        },
+      },
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'El usuario no pertenece a la organización actual' });
+    }
+
+    const [targetUser, projects, explicitAccessRows] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id },
+        select: { id: true, name: true, email: true, role: true },
+      }),
+      prisma.project.findMany({
+        where: { organizationId: orgId },
+        select: {
+          id: true,
+          name: true,
+          clientName: true,
+          status: true,
+          userId: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+      }),
+      prisma.$queryRaw<Array<{
+        projectId: string;
+        canEdit: boolean;
+        canViewFinancials: boolean;
+        allowedTabs: string[] | null;
+      }>>(Prisma.sql`
+        SELECT "projectId", "canEdit", "canViewFinancials", "allowedTabs"
+        FROM "ProjectAccess"
+        WHERE "userId" = ${id} AND "organizationId" = ${orgId}
+      `),
+    ]);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const explicitAccessByProjectId = new Map(explicitAccessRows.map((row: { projectId: string; canEdit: boolean; canViewFinancials: boolean; allowedTabs: string[] | null }) => [row.projectId, row]));
+
+    const response = projects.map((project) => {
+      const explicitAccess = explicitAccessByProjectId.get(project.id);
+      const inheritedFromOwnership = project.userId === id;
+      const enabled = inheritedFromOwnership || Boolean(explicitAccess);
+      const allowedTabs = inheritedFromOwnership
+        ? [...PROJECT_TAB_IDS]
+        : explicitAccess
+          ? normalizeAllowedProjectTabs(explicitAccess.allowedTabs || [])
+          : [];
+
+      return {
+        projectId: project.id,
+        name: project.name,
+        clientName: project.clientName,
+        status: project.status,
+        enabled,
+        canEdit: inheritedFromOwnership ? true : Boolean(explicitAccess?.canEdit && targetUser.role !== 'VIEWER'),
+        canViewFinancials: inheritedFromOwnership ? true : Boolean(explicitAccess?.canViewFinancials),
+        allowedTabs,
+        inheritedFromOwnership,
+      };
+    });
+
+    res.json({
+      user: targetUser,
+      tabsCatalog: [...PROJECT_TAB_IDS],
+      projects: response,
+    });
+  } catch (error) {
+    console.error('Error al obtener accesos a proyectos del usuario:', error);
+    res.status(500).json({ error: 'Error al obtener accesos a proyectos del usuario' });
+  }
+};
+
+export const updateUserProjectAccess = async (req: AuthRequest, res: Response) => {
+  try {
+    const hasAccess = await ensureOrganizationAccess(req, res);
+    if (!hasAccess) return;
+
+    const { id, projectId } = req.params;
+    const orgId = resolveTargetOrgId(req);
+    if (!id || !projectId || !orgId) {
+      return res.status(400).json({ error: 'Usuario, proyecto y organización son requeridos' });
+    }
+
+    const { enabled, canEdit, canViewFinancials, allowedTabs } = req.body || {};
+    const [targetUser, project] = await Promise.all([
+      prisma.user.findUnique({ where: { id }, select: { id: true, role: true } }),
+      prisma.project.findFirst({ where: { id: projectId, organizationId: orgId }, select: { id: true, userId: true } }),
+    ]);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (!project) {
+      return res.status(404).json({ error: 'Proyecto no encontrado en la organización actual' });
+    }
+
+    if (project.userId === id) {
+      return res.status(400).json({ error: 'El propietario del proyecto ya tiene acceso total heredado' });
+    }
+
+    const membership = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: orgId,
+          userId: id,
+        },
+      },
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'El usuario no pertenece a la organización actual' });
+    }
+
+    if (!enabled) {
+      await prisma.$executeRaw(Prisma.sql`
+        DELETE FROM "ProjectAccess"
+        WHERE "projectId" = ${projectId} AND "userId" = ${id}
+      `);
+
+      return res.json({
+        projectId,
+        enabled: false,
+        canEdit: false,
+        canViewFinancials: false,
+        allowedTabs: [],
+      });
+    }
+
+    const normalizedTabs = normalizeAllowedProjectTabs(allowedTabs as ProjectTabId[] | undefined);
+    const nextCanEdit = targetUser.role === 'VIEWER' ? false : Boolean(canEdit);
+    const nextCanViewFinancials = Boolean(canViewFinancials);
+
+    const tabsLiteral = Prisma.sql`ARRAY[${Prisma.join(normalizedTabs)}]::TEXT[]`;
+
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO "ProjectAccess" ("id", "projectId", "userId", "organizationId", "canEdit", "canViewFinancials", "allowedTabs", "createdAt", "updatedAt")
+      VALUES (${randomUUID()}, ${projectId}, ${id}, ${orgId}, ${nextCanEdit}, ${nextCanViewFinancials}, ${tabsLiteral}, NOW(), NOW())
+      ON CONFLICT ("projectId", "userId")
+      DO UPDATE SET
+        "organizationId" = EXCLUDED."organizationId",
+        "canEdit" = EXCLUDED."canEdit",
+        "canViewFinancials" = EXCLUDED."canViewFinancials",
+        "allowedTabs" = EXCLUDED."allowedTabs",
+        "updatedAt" = NOW()
+    `);
+
+    res.json({
+      projectId,
+      enabled: true,
+      canEdit: nextCanEdit,
+      canViewFinancials: nextCanViewFinancials,
+      allowedTabs: normalizedTabs,
+    });
+  } catch (error) {
+    console.error('Error al actualizar acceso del usuario al proyecto:', error);
+    res.status(500).json({ error: 'Error al actualizar acceso del usuario al proyecto' });
   }
 };

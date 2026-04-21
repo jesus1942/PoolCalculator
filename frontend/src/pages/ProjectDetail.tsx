@@ -18,7 +18,7 @@ import { HydraulicAnalysisPanel } from '@/components/HydraulicAnalysisPanel';
 import { ElectricalAnalysisPanel } from '@/components/ElectricalAnalysisPanel';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
-import type { Project, ProjectStatus as ProjectStatusType, PoolPreset } from '@/types';
+import type { Project, ProjectStatus as ProjectStatusType, PoolPreset, ProjectTabId } from '@/types';
 import {
   buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
@@ -34,7 +34,7 @@ export const ProjectDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [savingProjectMeta, setSavingProjectMeta] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'status' | 'tiles' | 'plumbing' | 'electrical' | 'tasks' | 'roles' | 'systems' | 'additionals' | 'export' | 'hydraulic_pro' | 'electrical_pro'>('overview');
+  const [activeTab, setActiveTab] = useState<ProjectTabId>('overview');
   const [editFormData, setEditFormData] = useState({
     name: '',
     clientName: '',
@@ -271,7 +271,18 @@ export const ProjectDetail: React.FC = () => {
   }
 
   const readOnlyRoles = ['VIEWER', 'INSTALLER'];
-  const isReadOnlyProjectUser = readOnlyRoles.includes(user?.role || '');
+  const globalReadOnlyUser = readOnlyRoles.includes(user?.role || '');
+  const fallbackAllowedTabs: ProjectTabId[] = globalReadOnlyUser ? ['overview', 'status', 'export'] : ['overview', 'status', 'tiles', 'plumbing', 'electrical', 'hydraulic_pro', 'electrical_pro', 'tasks', 'roles', 'systems', 'additionals', 'export'];
+  const currentUserAccess = project.currentUserAccess || {
+    canAccess: true,
+    canEdit: !globalReadOnlyUser,
+    canViewFinancials: true,
+    allowedTabs: fallbackAllowedTabs,
+    source: globalReadOnlyUser ? 'assignment' as const : 'owner' as const,
+  };
+  const isReadOnlyProjectUser = !currentUserAccess.canEdit;
+  const allowedTabsSet = new Set<ProjectTabId>(currentUserAccess.allowedTabs || fallbackAllowedTabs);
+  const canViewFinancials = currentUserAccess.canViewFinancials;
   const projectStatusOptions = [
     { value: 'DRAFT', label: 'Borrador' },
     { value: 'BUDGETED', label: 'Presupuestado' },
@@ -294,7 +305,7 @@ export const ProjectDetail: React.FC = () => {
               ? 'bg-rose-500/15 text-rose-200 border border-rose-400/30'
               : 'bg-white/10 text-zinc-200 border border-white/20';
 
-  const tabs = [
+  const allTabs: Array<{ id: ProjectTabId; label: string; icon: typeof FileText }> = [
     { id: 'overview', label: 'Vista General', icon: FileText },
     { id: 'status', label: 'Estado', icon: Activity },
     { id: 'tiles', label: 'Losetas', icon: Edit },
@@ -307,10 +318,14 @@ export const ProjectDetail: React.FC = () => {
     { id: 'systems', label: 'Sistemas', icon: Cpu },
     { id: 'additionals', label: 'Adicionales', icon: Package },
     { id: 'export', label: 'Exportar', icon: FileSpreadsheet },
-  ].filter((tab) => {
-    if (!isReadOnlyProjectUser) return true;
-    return ['overview', 'status', 'export'].includes(tab.id);
-  });
+  ];
+  const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id));
+
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab) && tabs[0]) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [activeTab, tabs]);
 
   return (
     <div className="project-surface min-h-screen bg-zinc-950/50">
@@ -372,7 +387,7 @@ export const ProjectDetail: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        {activeTab === 'overview' && <ImprovedOverviewTab project={project} />}
+        {activeTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
         {activeTab === 'status' && <ProjectStatusPanel project={project} />}
         {activeTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
         {activeTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
@@ -397,7 +412,7 @@ export const ProjectDetail: React.FC = () => {
         {activeTab === 'roles' && !isReadOnlyProjectUser && <RolesManager />}
         {activeTab === 'systems' && !isReadOnlyProjectUser && <PoolSystemsRecommendations project={project} />}
         {activeTab === 'additionals' && !isReadOnlyProjectUser && <AdditionalsManager project={project} onUpdate={loadProject} />}
-        {activeTab === 'export' && <EnhancedExportManager project={project} />}
+        {activeTab === 'export' && allowedTabsSet.has('export') && <EnhancedExportManager project={project} />}
       </div>
 
       {!isReadOnlyProjectUser && (
@@ -482,7 +497,7 @@ export const ProjectDetail: React.FC = () => {
   );
 };
 
-const ImprovedOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
+const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boolean }> = ({ project, canViewFinancials }) => {
   const [roles, setRoles] = React.useState<any[]>([]);
   const [additionals, setAdditionals] = React.useState<any[]>([]);
 
@@ -546,5 +561,5 @@ const ImprovedOverviewTab: React.FC<{ project: Project }> = ({ project }) => {
     return summary;
   }, [tasks, hasTasks]);
 
-  return <ImprovedOverview project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} />;
+  return <ImprovedOverview project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} canViewFinancials={canViewFinancials} />;
 };

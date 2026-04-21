@@ -33,13 +33,15 @@ interface ImprovedOverviewProps {
   roles: any[];
   rolesCostSummary: Record<string, { hours: number; cost: number; tasksCount: number }>;
   additionals: any[];
+  canViewFinancials?: boolean;
 }
 
 export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
   project,
   roles,
   rolesCostSummary,
-  additionals
+  additionals,
+  canViewFinancials = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showEquipmentComparison, setShowEquipmentComparison] = useState(false);
@@ -259,31 +261,41 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             )}
           </div>
           <div className="min-w-0 lg:max-w-[28rem] lg:text-right">
-            <div className="mb-1 flex items-center gap-2 lg:justify-end">
-              <p className="text-sm text-zinc-100 sm:text-base">TOTAL DEL PROYECTO</p>
-              <button
-                type="button"
-                onClick={() => setShowGrandTotal((prev) => !prev)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-zinc-50 transition hover:bg-white/20"
-                aria-label={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
-                title={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
-              >
-                {showGrandTotal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="min-h-[48px] break-words text-3xl font-bold tracking-tight sm:min-h-[60px] sm:text-5xl">
-              {showGrandTotal ? `$${grandTotal.toLocaleString('es-AR')}` : '••••••••••'}
-            </p>
-            <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-50 sm:text-base lg:items-end">
-              <span className="flex min-w-0 items-center gap-1">
-                <Package className="w-4 h-4" />
-                <span className="break-words">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
-              </span>
-              <span className="flex min-w-0 items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span className="break-words">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
-              </span>
-            </div>
+            {canViewFinancials ? (
+              <>
+                <div className="mb-1 flex items-center gap-2 lg:justify-end">
+                  <p className="text-sm text-zinc-100 sm:text-base">TOTAL DEL PROYECTO</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowGrandTotal((prev) => !prev)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-zinc-50 transition hover:bg-white/20"
+                    aria-label={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
+                    title={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
+                  >
+                    {showGrandTotal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="min-h-[48px] break-words text-3xl font-bold tracking-tight sm:min-h-[60px] sm:text-5xl">
+                  {showGrandTotal ? `$${grandTotal.toLocaleString('es-AR')}` : '••••••••••'}
+                </p>
+                <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-50 sm:text-base lg:items-end">
+                  <span className="flex min-w-0 items-center gap-1">
+                    <Package className="w-4 h-4" />
+                    <span className="break-words">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
+                  </span>
+                  <span className="flex min-w-0 items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    <span className="break-words">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-5 text-left lg:text-right">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-200/70">Acceso compartido</p>
+                <p className="mt-2 text-xl font-semibold text-white">Vista operativa</p>
+                <p className="mt-2 text-sm text-zinc-100/80">Los totales económicos de este proyecto están ocultos para este perfil.</p>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -391,166 +403,170 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
         )}
       </Card>
 
-      {/* DESGLOSE DE COSTOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Mano de Obra */}
-        <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="text-zinc-200" size={24} />
-            <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
+      {canViewFinancials && (
+        <>
+          {/* DESGLOSE DE COSTOS */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Mano de Obra */}
+            <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="text-zinc-200" size={24} />
+                <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-8 text-center">
+                  <p className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase mb-2">Total Mano de Obra</p>
+                  <p className="text-6xl font-bold leading-none text-white md:text-7xl">
+                    ${totalLaborCost.toLocaleString('es-AR')}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="text-sm text-zinc-400">Base (tareas)</span>
+                  <span className="font-semibold text-zinc-100">${baseLaborCost.toLocaleString('es-AR')}</span>
+                </div>
+                {totalRolesCost > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Detalle por Roles ({totalRolesHours.toFixed(0)}hs)</span>
+                    <span className="font-semibold text-zinc-100">${totalRolesCost.toLocaleString('es-AR')} <span className="text-xs text-zinc-500">(incluido)</span></span>
+                  </div>
+                )}
+                {additionalsCosts.laborCost > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">M.O. Adicionales</span>
+                    <span className="font-semibold text-zinc-100">${additionalsCosts.laborCost.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Materiales */}
+            <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Package className="text-zinc-200" size={24} />
+                <h3 className="text-lg font-bold text-white">Materiales</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="text-sm text-zinc-400">Construcción Base</span>
+                  <span className="font-semibold text-zinc-100">${persistedMaterialCost.toLocaleString('es-AR')}</span>
+                </div>
+                {plumbingCosts > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Plomería</span>
+                    <span className="font-semibold text-zinc-100">${plumbingCosts.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+                {electricalCosts > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Instalación Eléctrica</span>
+                    <span className="font-semibold text-zinc-100">${electricalCosts.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+                {additionalsCosts.materialCost > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Adicionales</span>
+                    <span className="font-semibold text-zinc-100">${additionalsCosts.materialCost.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+                  <span className="font-bold text-white">TOTAL MATERIALES</span>
+                  <span className="font-bold text-2xl text-white">${totalMaterialCost.toLocaleString('es-AR')}</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Total Proyecto */}
+            <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-3">
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign className="text-zinc-200" size={24} />
+                <h3 className="text-lg font-bold text-white">Total Proyecto</h3>
+              </div>
+              <div className="py-4">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5 mb-4">
+                  <p className="text-[11px] font-semibold tracking-[0.18em] text-zinc-500 uppercase mb-2">Costo Total</p>
+                  <p className="text-3xl font-semibold text-zinc-100 md:text-4xl">${grandTotal.toLocaleString('es-AR')}</p>
+                </div>
+                <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 shadow-sm">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-zinc-400">Materiales</span>
+                    <span className="font-semibold text-zinc-100">{materialShare.toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-2 mb-3">
+                    <div
+                      className="bg-zinc-200 h-2 rounded-full"
+                      style={{ width: `${materialShare}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Mano de Obra</span>
+                    <span className="font-semibold text-zinc-100">{laborShare.toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
-          <div className="space-y-4">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-8 text-center">
-              <p className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase mb-2">Total Mano de Obra</p>
-              <p className="text-6xl font-bold leading-none text-white md:text-7xl">
-                ${totalLaborCost.toLocaleString('es-AR')}
-              </p>
+
+          <Card className="bg-zinc-950 border border-amber-800/40 text-zinc-100">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="text-amber-300" size={22} />
+              <h3 className="text-lg font-bold text-white">Auditoría de Costos</h3>
             </div>
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-sm text-zinc-400">Base (tareas)</span>
-              <span className="font-semibold text-zinc-100">${baseLaborCost.toLocaleString('es-AR')}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Base persistida</p>
+                <p className="mt-2 text-2xl font-bold text-white">${persistedMaterialCost.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Construcción base guardada en proyecto</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Hidráulica + eléctrica</p>
+                <p className="mt-2 text-2xl font-bold text-white">${(plumbingCosts + electricalCosts).toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Plomería ${plumbingCosts.toLocaleString('es-AR')} · Eléctrica ${electricalCosts.toLocaleString('es-AR')}</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Adicionales activos</p>
+                <p className="mt-2 text-2xl font-bold text-white">${additionalsCosts.materialCost.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Sólo adicionales no duplicados en configs</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Duplicados descartados</p>
+                <p className="mt-2 text-2xl font-bold text-amber-300">${duplicatedAdditionalsCosts.materialCost.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">{duplicatedAdditionals.length} adicional(es) ya representados en hidráulica o eléctrica</p>
+              </div>
             </div>
-            {totalRolesCost > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-400">Detalle por Roles ({totalRolesHours.toFixed(0)}hs)</span>
-                <span className="font-semibold text-zinc-100">${totalRolesCost.toLocaleString('es-AR')} <span className="text-xs text-zinc-500">(incluido)</span></span>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Materiales auditados</p>
+                <p className="mt-2 text-xl font-bold text-white">${baseMaterialCost.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Base final antes de sumar adicionales activos</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Mano de obra base</p>
+                <p className="mt-2 text-xl font-bold text-white">${baseLaborCost.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Tareas base sin categoría additionals</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Total auditado</p>
+                <p className="mt-2 text-xl font-bold text-white">${grandTotal.toLocaleString('es-AR')}</p>
+                <p className="mt-1 text-xs text-zinc-400">Resultado final que hoy usa toda la app</p>
+              </div>
+            </div>
+
+            {duplicatedAdditionals.length > 0 && (
+              <div className="mt-4 rounded-lg border border-amber-800/40 bg-amber-950/20 p-4">
+                <p className="text-sm font-semibold text-amber-200">Adicionales descartados por posible doble conteo</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {duplicatedAdditionals.map((additional: any, index: number) => (
+                    <span key={`${additional.id || getAdditionalName(additional)}-${index}`} className="rounded-full border border-amber-700/50 bg-amber-900/20 px-3 py-1 text-xs text-amber-100">
+                      {getAdditionalName(additional)} x{additional.newQuantity || 0}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
-            {additionalsCosts.laborCost > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-400">M.O. Adicionales</span>
-                <span className="font-semibold text-zinc-100">${additionalsCosts.laborCost.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Materiales */}
-        <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="text-zinc-200" size={24} />
-            <h3 className="text-lg font-bold text-white">Materiales</h3>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="text-sm text-zinc-400">Construcción Base</span>
-              <span className="font-semibold text-zinc-100">${persistedMaterialCost.toLocaleString('es-AR')}</span>
-            </div>
-            {plumbingCosts > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-400">Plomería</span>
-                <span className="font-semibold text-zinc-100">${plumbingCosts.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            {electricalCosts > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-400">Instalación Eléctrica</span>
-                <span className="font-semibold text-zinc-100">${electricalCosts.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            {additionalsCosts.materialCost > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-400">Adicionales</span>
-                <span className="font-semibold text-zinc-100">${additionalsCosts.materialCost.toLocaleString('es-AR')}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
-              <span className="font-bold text-white">TOTAL MATERIALES</span>
-              <span className="font-bold text-2xl text-white">${totalMaterialCost.toLocaleString('es-AR')}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Total Proyecto */}
-        <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-3">
-          <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="text-zinc-200" size={24} />
-            <h3 className="text-lg font-bold text-white">Total Proyecto</h3>
-          </div>
-          <div className="py-4">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5 mb-4">
-              <p className="text-[11px] font-semibold tracking-[0.18em] text-zinc-500 uppercase mb-2">Costo Total</p>
-              <p className="text-3xl font-semibold text-zinc-100 md:text-4xl">${grandTotal.toLocaleString('es-AR')}</p>
-            </div>
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 shadow-sm">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-zinc-400">Materiales</span>
-                <span className="font-semibold text-zinc-100">{materialShare.toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-zinc-800 rounded-full h-2 mb-3">
-                <div
-                  className="bg-zinc-200 h-2 rounded-full"
-                  style={{ width: `${materialShare}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Mano de Obra</span>
-                <span className="font-semibold text-zinc-100">{laborShare.toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <Card className="bg-zinc-950 border border-amber-800/40 text-zinc-100">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="text-amber-300" size={22} />
-          <h3 className="text-lg font-bold text-white">Auditoría de Costos</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Base persistida</p>
-            <p className="mt-2 text-2xl font-bold text-white">${persistedMaterialCost.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Construcción base guardada en proyecto</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Hidráulica + eléctrica</p>
-            <p className="mt-2 text-2xl font-bold text-white">${(plumbingCosts + electricalCosts).toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Plomería ${plumbingCosts.toLocaleString('es-AR')} · Eléctrica ${electricalCosts.toLocaleString('es-AR')}</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Adicionales activos</p>
-            <p className="mt-2 text-2xl font-bold text-white">${additionalsCosts.materialCost.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Sólo adicionales no duplicados en configs</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Duplicados descartados</p>
-            <p className="mt-2 text-2xl font-bold text-amber-300">${duplicatedAdditionalsCosts.materialCost.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">{duplicatedAdditionals.length} adicional(es) ya representados en hidráulica o eléctrica</p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Materiales auditados</p>
-            <p className="mt-2 text-xl font-bold text-white">${baseMaterialCost.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Base final antes de sumar adicionales activos</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Mano de obra base</p>
-            <p className="mt-2 text-xl font-bold text-white">${baseLaborCost.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Tareas base sin categoría additionals</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Total auditado</p>
-            <p className="mt-2 text-xl font-bold text-white">${grandTotal.toLocaleString('es-AR')}</p>
-            <p className="mt-1 text-xs text-zinc-400">Resultado final que hoy usa toda la app</p>
-          </div>
-        </div>
-
-        {duplicatedAdditionals.length > 0 && (
-          <div className="mt-4 rounded-lg border border-amber-800/40 bg-amber-950/20 p-4">
-            <p className="text-sm font-semibold text-amber-200">Adicionales descartados por posible doble conteo</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {duplicatedAdditionals.map((additional: any, index: number) => (
-                <span key={`${additional.id || getAdditionalName(additional)}-${index}`} className="rounded-full border border-amber-700/50 bg-amber-900/20 px-3 py-1 text-xs text-amber-100">
-                  {getAdditionalName(additional)} x{additional.newQuantity || 0}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
+          </Card>
+        </>
+      )}
 
       {/* MATERIALES DETALLADOS */}
       {hasMaterials && (
@@ -753,12 +769,14 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 </p>
               )}
             </div>
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-white">Total Plomería</span>
-                <span className="font-bold text-xl text-white">${plumbingCosts.toLocaleString('es-AR')}</span>
+            {canViewFinancials && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-white">Total Plomería</span>
+                  <span className="font-bold text-xl text-white">${plumbingCosts.toLocaleString('es-AR')}</span>
+                </div>
               </div>
-            </div>
+            )}
           </Card>
         )}
 
@@ -803,12 +821,14 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 </p>
               )}
             </div>
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-white">Total Eléctrica</span>
-                <span className="font-bold text-xl text-white">${electricalCosts.toLocaleString('es-AR')}</span>
+            {canViewFinancials && (
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-white">Total Eléctrica</span>
+                  <span className="font-bold text-xl text-white">${electricalCosts.toLocaleString('es-AR')}</span>
+                </div>
               </div>
-            </div>
+            )}
           </Card>
         )}
       </div>
@@ -883,12 +903,14 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                       <div>
                         <p className="font-medium text-white">{getItemName()}</p>
                         <p className="text-xs text-zinc-400">{quantity} {additional.customUnit || 'unidades'}</p>
-                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-zinc-400">
-                          {materialCost > 0 && <span>Material: ${materialCost.toLocaleString('es-AR')}</span>}
-                          {laborCost > 0 && <span>M.O.: ${laborCost.toLocaleString('es-AR')}</span>}
-                        </div>
+                        {canViewFinancials && (
+                          <div className="mt-1 flex flex-wrap gap-3 text-xs text-zinc-400">
+                            {materialCost > 0 && <span>Material: ${materialCost.toLocaleString('es-AR')}</span>}
+                            {laborCost > 0 && <span>M.O.: ${laborCost.toLocaleString('es-AR')}</span>}
+                          </div>
+                        )}
                       </div>
-                      <p className="font-bold text-zinc-100">${totalCost.toLocaleString('es-AR')}</p>
+                      {canViewFinancials && <p className="font-bold text-zinc-100">${totalCost.toLocaleString('es-AR')}</p>}
                     </div>
                   </div>
                 </div>
