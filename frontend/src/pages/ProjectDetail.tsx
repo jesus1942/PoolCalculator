@@ -320,12 +320,7 @@ export const ProjectDetail: React.FC = () => {
     { id: 'export', label: 'Exportar', icon: FileSpreadsheet },
   ];
   const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id));
-
-  useEffect(() => {
-    if (!tabs.some((tab) => tab.id === activeTab) && tabs[0]) {
-      setActiveTab(tabs[0].id);
-    }
-  }, [activeTab, tabs]);
+  const visibleActiveTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';
 
   return (
     <div className="project-surface min-h-screen bg-zinc-950/50">
@@ -368,14 +363,14 @@ export const ProjectDetail: React.FC = () => {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium whitespace-nowrap transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm ${
-                      activeTab === tab.id
+                      visibleActiveTab === tab.id
                         ? 'bg-cyan-400 text-zinc-950 shadow-sm'
                         : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border border-white/10'
                     }`}
                   >
                     <tab.icon className="h-4 w-4" />
                     <span>{tab.label}</span>
-                    {activeTab === tab.id && (
+                    {visibleActiveTab === tab.id && (
                       <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-cyan-400 rounded-full"></div>
                     )}
                   </button>
@@ -387,11 +382,11 @@ export const ProjectDetail: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        {activeTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
-        {activeTab === 'status' && <ProjectStatusPanel project={project} />}
-        {activeTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
-        {activeTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
-        {activeTab === 'electrical' && id && !isReadOnlyProjectUser && (
+        {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
+        {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
+        {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
+        {visibleActiveTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
+        {visibleActiveTab === 'electrical' && id && !isReadOnlyProjectUser && (
           <div className="space-y-6">
             <EquipmentSelector
               projectId={id}
@@ -400,19 +395,19 @@ export const ProjectDetail: React.FC = () => {
             />
           </div>
         )}
-        {activeTab === 'hydraulic_pro' && id && !isReadOnlyProjectUser && <HydraulicAnalysisPanel projectId={id} />}
-        {activeTab === 'electrical_pro' && id && !isReadOnlyProjectUser && <ElectricalAnalysisPanel projectId={id} />}
-        {activeTab === 'tasks' && !isReadOnlyProjectUser && (
+        {visibleActiveTab === 'hydraulic_pro' && id && !isReadOnlyProjectUser && <HydraulicAnalysisPanel projectId={id} />}
+        {visibleActiveTab === 'electrical_pro' && id && !isReadOnlyProjectUser && <ElectricalAnalysisPanel projectId={id} />}
+        {visibleActiveTab === 'tasks' && !isReadOnlyProjectUser && (
           <TasksManager
             project={project}
             onSave={handleSaveTasks}
             onUpdateProjectSettings={handleUpdateProjectSettings}
           />
         )}
-        {activeTab === 'roles' && !isReadOnlyProjectUser && <RolesManager />}
-        {activeTab === 'systems' && !isReadOnlyProjectUser && <PoolSystemsRecommendations project={project} />}
-        {activeTab === 'additionals' && !isReadOnlyProjectUser && <AdditionalsManager project={project} onUpdate={loadProject} />}
-        {activeTab === 'export' && allowedTabsSet.has('export') && <EnhancedExportManager project={project} />}
+        {visibleActiveTab === 'roles' && !isReadOnlyProjectUser && <RolesManager />}
+        {visibleActiveTab === 'systems' && !isReadOnlyProjectUser && <PoolSystemsRecommendations project={project} />}
+        {visibleActiveTab === 'additionals' && !isReadOnlyProjectUser && <AdditionalsManager project={project} onUpdate={loadProject} />}
+        {visibleActiveTab === 'export' && allowedTabsSet.has('export') && <EnhancedExportManager project={project} />}
       </div>
 
       {!isReadOnlyProjectUser && (
