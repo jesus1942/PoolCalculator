@@ -464,13 +464,39 @@ export const deleteAdditionalImage = async (req: Request, res: Response) => {
   }
 };
 
+
+function normalizeExternalImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+
+  const trimmedUrl = value.trim();
+  if (!trimmedUrl) return null;
+
+  if (trimmedUrl.startsWith('//')) {
+    return `https:${trimmedUrl}`;
+  }
+
+  if (/^www\./i.test(trimmedUrl)) {
+    return `https://${trimmedUrl}`;
+  }
+
+  return trimmedUrl;
+}
+
+function isExternalImageUrl(imageUrl: string): boolean {
+  return /^(https?:)?\/\//i.test(imageUrl) || /^www\./i.test(imageUrl);
+}
+
+function isValidExternalImageUrl(imageUrl: string): boolean {
+  return /^https?:\/\/.+/i.test(imageUrl);
+}
+
 /**
  * Función auxiliar para eliminar archivo físico
  */
 function deleteImageFile(imageUrl: string): void {
   try {
     // Solo eliminar archivos locales, no URLs externas
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    if (isExternalImageUrl(imageUrl)) {
       return; // No intentar eliminar URLs externas
     }
 
@@ -492,17 +518,17 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
   try {
     const { productType, productId } = req.params;
     const { imageUrl } = req.body;
+    const normalizedImageUrl = normalizeExternalImageUrl(imageUrl);
 
     // Validar que se proporcionó una URL
-    if (!imageUrl || typeof imageUrl !== 'string') {
+    if (!normalizedImageUrl) {
       return res.status(400).json({ error: 'URL de imagen requerida' });
     }
 
     // Validar formato de URL
-    const urlPattern = /^https?:\/\/.+/i;
-    if (!urlPattern.test(imageUrl)) {
+    if (!isValidExternalImageUrl(normalizedImageUrl)) {
       return res.status(400).json({
-        error: 'URL de imagen inválida. Debe comenzar con http:// o https://'
+        error: 'URL de imagen inválida. Use http://, https://, // o www.'
       });
     }
 
@@ -521,7 +547,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
         updatedProduct = await prisma.equipmentPreset.update({
           where: { id: productId },
-          data: { imageUrl }
+          data: { imageUrl: normalizedImageUrl }
         });
         break;
 
@@ -535,7 +561,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
         updatedProduct = await prisma.tilePreset.update({
           where: { id: productId },
-          data: { imageUrl }
+          data: { imageUrl: normalizedImageUrl }
         });
         break;
 
@@ -549,7 +575,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
         updatedProduct = await prisma.accessoryPreset.update({
           where: { id: productId },
-          data: { imageUrl }
+          data: { imageUrl: normalizedImageUrl }
         });
         break;
 
@@ -563,7 +589,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
         updatedProduct = await prisma.constructionMaterialPreset.update({
           where: { id: productId },
-          data: { imageUrl }
+          data: { imageUrl: normalizedImageUrl }
         });
         break;
 
@@ -577,7 +603,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
         updatedProduct = await prisma.plumbingItem.update({
           where: { id: productId },
-          data: { imageUrl }
+          data: { imageUrl: normalizedImageUrl }
         });
         break;
 
@@ -589,7 +615,7 @@ export const saveProductImageUrl = async (req: Request, res: Response) => {
 
     res.json({
       message: 'URL de imagen guardada exitosamente',
-      imageUrl,
+      imageUrl: normalizedImageUrl,
       product: updatedProduct
     });
   } catch (error) {
@@ -620,12 +646,21 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Máximo 5 imágenes adicionales permitidas' });
     }
 
+    const normalizedImageUrls = imageUrls
+      .map((url) => normalizeExternalImageUrl(url))
+      .filter((url): url is string => Boolean(url));
+
+    if (normalizedImageUrls.length !== imageUrls.length) {
+      return res.status(400).json({
+        error: 'Todas las URLs de imágenes deben ser texto no vacío'
+      });
+    }
+
     // Validar formato de todas las URLs
-    const urlPattern = /^https?:\/\/.+/i;
-    for (const url of imageUrls) {
-      if (typeof url !== 'string' || !urlPattern.test(url)) {
+    for (const url of normalizedImageUrls) {
+      if (!isValidExternalImageUrl(url)) {
         return res.status(400).json({
-          error: `URL inválida: ${url}. Todas las URLs deben comenzar con http:// o https://`
+          error: `URL inválida: ${url}. Use http://, https://, // o www.`
         });
       }
     }
@@ -644,7 +679,7 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
           data: {
             additionalImages: [
               ...(currentProduct?.additionalImages || []),
-              ...imageUrls
+              ...normalizedImageUrls
             ]
           }
         });
@@ -659,7 +694,7 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
           data: {
             additionalImages: [
               ...(currentProduct?.additionalImages || []),
-              ...imageUrls
+              ...normalizedImageUrls
             ]
           }
         });
@@ -674,7 +709,7 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
           data: {
             additionalImages: [
               ...(currentProduct?.additionalImages || []),
-              ...imageUrls
+              ...normalizedImageUrls
             ]
           }
         });
@@ -689,7 +724,7 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
           data: {
             additionalImages: [
               ...(currentProduct?.additionalImages || []),
-              ...imageUrls
+              ...normalizedImageUrls
             ]
           }
         });
@@ -704,7 +739,7 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
           data: {
             additionalImages: [
               ...(currentProduct?.additionalImages || []),
-              ...imageUrls
+              ...normalizedImageUrls
             ]
           }
         });
@@ -715,8 +750,8 @@ export const saveAdditionalImageUrls = async (req: Request, res: Response) => {
     }
 
     res.json({
-      message: `${imageUrls.length} URLs de imágenes agregadas exitosamente`,
-      imageUrls,
+      message: `${normalizedImageUrls.length} URLs de imágenes agregadas exitosamente`,
+      imageUrls: normalizedImageUrls,
       product: updatedProduct
     });
   } catch (error) {

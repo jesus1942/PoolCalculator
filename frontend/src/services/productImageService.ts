@@ -26,6 +26,26 @@ export interface UploadMultipleImagesResponse {
 
 class ProductImageService {
   /**
+   * Normalize user-entered external image URLs before saving or rendering.
+   */
+  normalizeExternalImageUrl(url?: string | null): string | null {
+    if (!url || typeof url !== 'string') return null;
+
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return null;
+
+    if (trimmedUrl.startsWith('//')) {
+      return `https:${trimmedUrl}`;
+    }
+
+    if (/^www\./i.test(trimmedUrl)) {
+      return `https://${trimmedUrl}`;
+    }
+
+    return trimmedUrl;
+  }
+
+  /**
    * Upload main image for a product
    */
   async uploadMainImage(
@@ -116,15 +136,16 @@ class ProductImageService {
    * Get the full URL for an image path
    */
   getImageUrl(imagePath?: string | null): string | null {
-    if (!imagePath) return null;
+    const normalizedPath = this.normalizeExternalImageUrl(imagePath);
+    if (!normalizedPath) return null;
 
     // Si ya es una URL completa, devolverla tal cual
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
+    if (/^https?:\/\//i.test(normalizedPath)) {
+      return normalizedPath;
     }
 
     // Si empieza con /, quitarlo para evitar duplicación
-    const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath;
 
     // Construir URL completa
     return `${API_BASE_URL}/${cleanPath}`;
@@ -197,9 +218,14 @@ class ProductImageService {
     productId: string,
     imageUrl: string
   ): Promise<UploadImageResponse> {
+    const normalizedImageUrl = this.normalizeExternalImageUrl(imageUrl);
+    if (!normalizedImageUrl) {
+      throw new Error('URL de imagen requerida');
+    }
+
     const response = await api.post<UploadImageResponse>(
       `/products/${productType}/${productId}/image-url`,
-      { imageUrl }
+      { imageUrl: normalizedImageUrl }
     );
 
     return response.data;
@@ -213,17 +239,21 @@ class ProductImageService {
     productId: string,
     imageUrls: string[]
   ): Promise<UploadMultipleImagesResponse> {
-    if (imageUrls.length === 0) {
+    const normalizedImageUrls = imageUrls
+      .map((url) => this.normalizeExternalImageUrl(url))
+      .filter((url): url is string => Boolean(url));
+
+    if (normalizedImageUrls.length === 0) {
       throw new Error('No se proporcionaron URLs de imágenes');
     }
 
-    if (imageUrls.length > 5) {
+    if (normalizedImageUrls.length > 5) {
       throw new Error('Máximo 5 URLs de imágenes permitidas');
     }
 
     const response = await api.post<UploadMultipleImagesResponse>(
       `/products/${productType}/${productId}/additional-image-urls`,
-      { imageUrls }
+      { imageUrls: normalizedImageUrls }
     );
 
     return response.data;
@@ -234,9 +264,11 @@ class ProductImageService {
    */
   async validateImageUrl(url: string): Promise<boolean> {
     try {
+      const normalizedUrl = this.normalizeExternalImageUrl(url);
+
       // Validate URL format first
       const urlPattern = /^https?:\/\/.+/i;
-      if (!urlPattern.test(url)) {
+      if (!normalizedUrl || !urlPattern.test(normalizedUrl)) {
         return false;
       }
 
@@ -245,7 +277,7 @@ class ProductImageService {
         const img = new Image();
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        img.src = url;
+        img.src = normalizedUrl;
 
         // Timeout after 5 seconds
         setTimeout(() => resolve(false), 5000);
@@ -260,18 +292,19 @@ class ProductImageService {
    */
   validateUrlFormat(url: string): { valid: boolean; error?: string } {
     const urlPattern = /^https?:\/\/.+/i;
+    const normalizedUrl = this.normalizeExternalImageUrl(url);
 
-    if (!url || typeof url !== 'string') {
+    if (!normalizedUrl) {
       return {
         valid: false,
         error: 'URL requerida'
       };
     }
 
-    if (!urlPattern.test(url)) {
+    if (!urlPattern.test(normalizedUrl)) {
       return {
         valid: false,
-        error: 'URL inválida. Debe comenzar con http:// o https://'
+        error: 'URL inválida. Use http://, https://, // o www.'
       };
     }
 

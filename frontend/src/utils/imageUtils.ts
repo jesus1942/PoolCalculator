@@ -5,6 +5,23 @@ import { API_BASE_URL } from '@/services/api';
  * @param imageUrl - URL relativa de la imagen (ej: /pool-images/acquam-page-03.png)
  * @returns URL completa apuntando al backend
  */
+const normalizeImageUrl = (imageUrl?: string | null): string | undefined => {
+  if (!imageUrl) return undefined;
+
+  const trimmedUrl = imageUrl.trim();
+  if (!trimmedUrl) return undefined;
+
+  if (trimmedUrl.startsWith('//')) {
+    return `https:${trimmedUrl}`;
+  }
+
+  if (/^www\./i.test(trimmedUrl)) {
+    return `https://${trimmedUrl}`;
+  }
+
+  return trimmedUrl;
+};
+
 const optimizeCloudinaryUrl = (imageUrl: string): string => {
   const match = imageUrl.match(/^https?:\/\/res\.cloudinary\.com\/([^/]+)\/image\/upload\/(.+)$/);
   if (!match) return imageUrl;
@@ -18,18 +35,21 @@ const optimizeCloudinaryUrl = (imageUrl: string): string => {
 };
 
 export const getImageUrl = (imageUrl?: string | null): string | undefined => {
-  if (!imageUrl) return undefined;
+  const normalizedImageUrl = normalizeImageUrl(imageUrl);
+  if (!normalizedImageUrl) return undefined;
 
   // Si ya es una URL completa, devolverla tal cual
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return optimizeCloudinaryUrl(imageUrl);
+  if (/^https?:\/\//i.test(normalizedImageUrl)) {
+    return optimizeCloudinaryUrl(normalizedImageUrl);
   }
 
   // Obtener la URL base del API
   const API_BASE = API_BASE_URL || 'http://localhost:3000';
 
   // Si la URL de la imagen empieza con /, quitarla para evitar doble /
-  const cleanImageUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+  const cleanImageUrl = normalizedImageUrl.startsWith('/')
+    ? normalizedImageUrl.substring(1)
+    : normalizedImageUrl;
 
   return `${API_BASE}/${cleanImageUrl}`;
 };
