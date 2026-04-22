@@ -1,7 +1,27 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
+const projectUpdateDelegate = prisma.projectUpdate as any;
+
+const updateAuthorSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+} as const;
+
+const mapUpdateAuthor = (createdBy?: { id: string; name: string | null; email: string | null; role: string } | null) => (
+  createdBy
+    ? {
+        id: createdBy.id,
+        name: createdBy.name,
+        email: createdBy.email,
+        role: createdBy.role,
+      }
+    : null
+);
 
 export const projectUpdateController = {
   // Obtener todas las actualizaciones de un proyecto
@@ -9,8 +29,11 @@ export const projectUpdateController = {
     try {
       const { projectId } = req.params;
 
-      const updates = await prisma.projectUpdate.findMany({
+      const updates = await projectUpdateDelegate.findMany({
         where: { projectId },
+        include: {
+          createdBy: { select: updateAuthorSelect },
+        },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -27,8 +50,11 @@ export const projectUpdateController = {
       const { projectId } = req.params;
 
       const [updates, agendaEvents] = await Promise.all([
-        prisma.projectUpdate.findMany({
+        projectUpdateDelegate.findMany({
           where: { projectId },
+          include: {
+            createdBy: { select: updateAuthorSelect },
+          },
           orderBy: { createdAt: 'desc' },
         }),
         prisma.agendaEvent.findMany({
@@ -45,7 +71,7 @@ export const projectUpdateController = {
         }),
       ]);
 
-      const updateItems = updates.map((update) => ({
+      const updateItems = updates.map((update: any) => ({
         id: update.id,
         type: 'PROJECT_UPDATE',
         createdAt: update.createdAt,
@@ -54,6 +80,7 @@ export const projectUpdateController = {
         category: update.category,
         images: update.images,
         isPublic: update.isPublic,
+        author: mapUpdateAuthor(update.createdBy),
       }));
 
       const eventItems = agendaEvents.map((event) => ({
@@ -112,16 +139,17 @@ export const projectUpdateController = {
   },
 
   // Crear una nueva actualización
-  async create(req: Request, res: Response) {
+  async create(req: AuthRequest, res: Response) {
     try {
       const { projectId } = req.params;
+      const userId = req.user?.userId || null;
       const { title, description, category, images, metadata } = req.body;
 
       if (!title) {
         return res.status(400).json({ error: 'El título es obligatorio' });
       }
 
-      const update = await prisma.projectUpdate.create({
+      const update = await projectUpdateDelegate.create({
         data: {
           projectId,
           title,
@@ -129,6 +157,10 @@ export const projectUpdateController = {
           category: category || 'PROGRESS',
           images: images || [],
           metadata: metadata || null,
+          createdById: userId,
+        },
+        include: {
+          createdBy: { select: updateAuthorSelect },
         },
       });
 
@@ -145,7 +177,7 @@ export const projectUpdateController = {
       const { id } = req.params;
       const { title, description, category, images, metadata } = req.body;
 
-      const update = await prisma.projectUpdate.update({
+      const update = await projectUpdateDelegate.update({
         where: { id },
         data: {
           ...(title && { title }),
@@ -153,6 +185,9 @@ export const projectUpdateController = {
           ...(category && { category }),
           ...(images !== undefined && { images }),
           ...(metadata !== undefined && { metadata }),
+        },
+        include: {
+          createdBy: { select: updateAuthorSelect },
         },
       });
 
@@ -168,7 +203,7 @@ export const projectUpdateController = {
     try {
       const { id } = req.params;
 
-      await prisma.projectUpdate.delete({
+      await projectUpdateDelegate.delete({
         where: { id },
       });
 
@@ -184,8 +219,11 @@ export const projectUpdateController = {
     try {
       const { id } = req.params;
 
-      const update = await prisma.projectUpdate.findUnique({
+      const update = await projectUpdateDelegate.findUnique({
         where: { id },
+        include: {
+          createdBy: { select: updateAuthorSelect },
+        },
       });
 
       if (!update) {

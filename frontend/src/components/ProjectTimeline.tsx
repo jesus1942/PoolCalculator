@@ -7,6 +7,13 @@ import { Plus, Image as ImageIcon, X, Clock, FileText, AlertTriangle, CheckCircl
 import api from '@/services/api';
 import { ShareTimelineModal } from './ShareTimelineModal';
 
+interface ProjectUpdateAuthor {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  role?: string | null;
+}
+
 interface ProjectUpdate {
   id: string;
   projectId: string;
@@ -16,6 +23,9 @@ interface ProjectUpdate {
   images: string[];
   metadata?: any;
   isPublic: boolean;
+  createdById?: string | null;
+  createdBy?: ProjectUpdateAuthor | null;
+  author?: ProjectUpdateAuthor | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +45,8 @@ interface TimelineItem {
   category?: ProjectUpdate['category'];
   images?: string[];
   isPublic?: boolean;
+  author?: ProjectUpdateAuthor | null;
+  createdBy?: ProjectUpdateAuthor | null;
   event?: {
     id: string;
     title: string;
@@ -268,6 +280,15 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
     return map[role] || role;
   };
 
+  const getUpdateAuthorLabel = (item: TimelineItem) => {
+    const author = item.author || item.createdBy;
+    if (!author) return 'Autor no registrado';
+
+    const identity = author.name || author.email || 'Usuario';
+    const role = getRoleLabel(author.role);
+    return role ? `${identity} · ${role}` : identity;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -357,6 +378,11 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                             )}
                           </div>
                           <p className="text-xs text-gray-500">{formatDate(item.createdAt)}</p>
+                          {item.type === 'PROJECT_UPDATE' && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Cargado por {getUpdateAuthorLabel(item)}
+                            </p>
+                          )}
                         </div>
                         {item.type === 'PROJECT_UPDATE' && (
                           <div className="flex gap-2">
