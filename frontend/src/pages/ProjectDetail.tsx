@@ -22,8 +22,25 @@ import type { Project, ProjectStatus as ProjectStatusType, PoolPreset, ProjectTa
 import {
   buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
-import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity, Cpu } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity, Cpu, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+
+const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);
+
+const toProjectDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLastProjectUpdateDate = (project: Project): Date | null => {
+  const lastUpdateAt = project.lastProjectUpdateAt || project.projectUpdates?.[0]?.createdAt;
+  if (!lastUpdateAt) return null;
+
+  const parsed = new Date(lastUpdateAt);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -283,6 +300,13 @@ export const ProjectDetail: React.FC = () => {
   const isReadOnlyProjectUser = !currentUserAccess.canEdit;
   const allowedTabsSet = new Set<ProjectTabId>(currentUserAccess.allowedTabs || fallbackAllowedTabs);
   const canViewFinancials = currentUserAccess.canViewFinancials;
+  const lastProjectUpdateDate = getLastProjectUpdateDate(project);
+  const needsDailyProjectUpdate = !DAILY_UPDATE_EXCLUDED_STATUSES.has(project.status) && (
+    !lastProjectUpdateDate || toProjectDateKey(lastProjectUpdateDate) !== toProjectDateKey(new Date())
+  );
+  const lastProjectUpdateLabel = lastProjectUpdateDate
+    ? lastProjectUpdateDate.toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : null;
   const projectStatusOptions = [
     { value: 'DRAFT', label: 'Borrador' },
     { value: 'BUDGETED', label: 'Presupuestado' },
@@ -382,6 +406,33 @@ export const ProjectDetail: React.FC = () => {
       </div>
 
       <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {needsDailyProjectUpdate && (
+          <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50 shadow-lg shadow-amber-950/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-100">Actualización diaria pendiente</p>
+                  <p className="mt-1 text-sm text-amber-100/80">
+                    Este proyecto todavía no tiene avance registrado hoy{lastProjectUpdateLabel ? `. Última actualización: ${lastProjectUpdateLabel}.` : '.'}
+                  </p>
+                </div>
+              </div>
+              {allowedTabsSet.has('status') && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('status')}
+                  className="rounded-xl border border-amber-300/40 bg-amber-300 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200"
+                >
+                  {isReadOnlyProjectUser ? 'Ver estado' : 'Cargar avance'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
         {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
         {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}

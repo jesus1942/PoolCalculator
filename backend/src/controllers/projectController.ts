@@ -518,6 +518,15 @@ const withCommercialProfile = <T extends { plumbingConfig?: any; projectAddition
   commercialProfile: buildProjectCommercialProfile(project),
 });
 
+const withProjectActivity = <T extends { projectUpdates?: Array<{ title?: string | null; createdAt?: Date | string | null }> }>(project: T) => {
+  const lastProjectUpdate = project.projectUpdates?.[0] || null;
+  return {
+    ...project,
+    lastProjectUpdateAt: lastProjectUpdate?.createdAt || null,
+    lastProjectUpdateTitle: lastProjectUpdate?.title || null,
+  };
+};
+
 const appendProjectConversations = async (project: any) => {
   if (!project?.id) return project;
   const conversations = await listConversationSummaries({
@@ -751,6 +760,15 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
             email: true,
           },
         },
+        projectUpdates: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            title: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -762,7 +780,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
       .map((project) => {
         const access = buildProjectAccessProfileFromContext(project, { userId, orgId, role }, accessContext);
         if (!access.canAccess) return null;
-        return sanitizeProjectForAccess(withCommercialProfile(project), access);
+        return sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(project)), access);
       })
       .filter(Boolean);
 
@@ -799,6 +817,15 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
           id: true,
           name: true,
           email: true,
+        },
+      },
+      projectUpdates: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
         },
       },
     } as const;
@@ -857,7 +884,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         correctedProject = await ensureProjectCode(correctedProject);
         access = await resolveProjectAccessProfile(correctedProject, { userId, orgId, role });
       }
-      res.json(correctedProject ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(correctedProject as any)), access) : correctedProject);
+      res.json(correctedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(correctedProject as any))), access) : correctedProject);
       return;
     }
 
@@ -933,14 +960,14 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
           refreshedProject = await ensureProjectCode(refreshedProject);
           access = await resolveProjectAccessProfile(refreshedProject, { userId, orgId, role });
         }
-        res.json(refreshedProject ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(refreshedProject as any)), access) : refreshedProject);
+        res.json(refreshedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(refreshedProject as any))), access) : refreshedProject);
         return;
       } catch (refreshError) {
         console.error('Error al refrescar materiales del proyecto:', refreshError);
       }
     }
 
-    res.json(project ? sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(project as any)), access) : project);
+    res.json(project ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(project as any))), access) : project);
   } catch (error) {
     console.error('Error al obtener proyecto:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });

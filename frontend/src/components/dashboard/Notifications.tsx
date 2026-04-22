@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCircle2, AlertTriangle, Info, X, Cloud, FolderOpen, Settings, TrendingUp } from 'lucide-react';
+import { Bell, CheckCircle2, AlertTriangle, X, Cloud, FolderOpen, Settings, TrendingUp, ClipboardList } from 'lucide-react';
 import { Project } from '@/types';
 import { WeatherData, isGoodWorkingWeather } from '@/services/weatherService';
 import { useReminders } from '@/context/RemindersContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Notification {
   id: string;
@@ -21,10 +22,28 @@ interface NotificationsProps {
   weather?: WeatherData | null;
 }
 
+const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);
+
+const toDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLastProjectUpdateDate = (project: Project): Date | null => {
+  const lastUpdateAt = project.lastProjectUpdateAt || project.projectUpdates?.[0]?.createdAt;
+  if (!lastUpdateAt) return null;
+
+  const parsed = new Date(lastUpdateAt);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export const Notifications: React.FC<NotificationsProps> = ({ projects, weather }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const { reminders, snooze, dismiss } = useReminders();
 
   useEffect(() => {
@@ -61,6 +80,40 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         timestamp: new Date(),
         read: false,
         icon: <FolderOpen className="w-4 h-4" />,
+        actionUrl: '/projects'
+      });
+    }
+
+    // Control diario de avance por proyecto abierto
+    const todayKey = toDateKey(new Date());
+    const projectsMissingDailyUpdate = projects.filter((project) => {
+      if (DAILY_UPDATE_EXCLUDED_STATUSES.has(project.status)) return false;
+      const lastUpdateDate = getLastProjectUpdateDate(project);
+      return !lastUpdateDate || toDateKey(lastUpdateDate) !== todayKey;
+    });
+
+    projectsMissingDailyUpdate.slice(0, 5).forEach((project) => {
+      newNotifications.push({
+        id: `daily-update-${project.id}`,
+        type: 'warning',
+        title: 'Actualización diaria pendiente',
+        message: `${project.name} no tiene avance registrado hoy`,
+        timestamp: new Date(),
+        read: false,
+        icon: <ClipboardList className="w-4 h-4" />,
+        actionUrl: `/projects/${project.id}`
+      });
+    });
+
+    if (projectsMissingDailyUpdate.length > 5) {
+      newNotifications.push({
+        id: 'daily-update-summary',
+        type: 'warning',
+        title: 'Más proyectos pendientes',
+        message: `${projectsMissingDailyUpdate.length - 5} proyecto${projectsMissingDailyUpdate.length - 5 > 1 ? 's' : ''} más sin actualización diaria`,
+        timestamp: new Date(),
+        read: false,
+        icon: <AlertTriangle className="w-4 h-4" />,
         actionUrl: '/projects'
       });
     }
@@ -349,8 +402,8 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
                       onClick={() => {
                         markAsRead(notification.id);
                         if (notification.actionUrl) {
-                          // Aquí podrías navegar si tuvieras useNavigate
-                          console.log('Navigate to:', notification.actionUrl);
+                          navigate(notification.actionUrl);
+                          setIsOpen(false);
                         }
                       }}
                     >

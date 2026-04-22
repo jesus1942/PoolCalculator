@@ -242,6 +242,13 @@ export interface Project {
   };
   exportSettings?: any;
   currentUserAccess?: ProjectAccessProfile;
+  projectUpdates?: Array<{
+    id: string;
+    title: string;
+    createdAt: string;
+  }>;
+  lastProjectUpdateAt?: string | null;
+  lastProjectUpdateTitle?: string | null;
   laborCost: number;
   materialCost: number;
   totalCost: number;
