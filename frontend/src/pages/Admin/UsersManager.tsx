@@ -559,17 +559,28 @@ export const UsersManager: React.FC = () => {
                   const isViewerRole = projectAccessUser?.role === 'VIEWER';
                   const isDisabled = Boolean(entry.inheritedFromOwnership);
                   return (
-                    <div key={entry.projectId} className="rounded-2xl border border-zinc-800/70 bg-zinc-950/60 p-4">
+                    <div key={entry.projectId} className={`rounded-2xl border p-4 transition ${entry.enabled
+                      ? 'border-cyan-500/30 bg-cyan-950/10'
+                      : 'border-zinc-800/70 bg-zinc-950/60 opacity-75'}`}>
                       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                         <div>
                           <h3 className="text-base font-semibold text-white">{entry.name}</h3>
                           <p className="text-sm text-zinc-400">Cliente: {entry.clientName} · Estado: {entry.status}</p>
                         </div>
-                        {entry.inheritedFromOwnership && (
-                          <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200">
-                            Acceso total heredado por propietario
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {entry.inheritedFromOwnership && (
+                            <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200">
+                              Acceso total heredado por propietario
+                            </span>
+                          )}
+                          {!entry.inheritedFromOwnership && (
+                            <span className={`rounded-full border px-3 py-1 text-xs ${entry.enabled
+                              ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'
+                              : 'border-zinc-700/70 bg-zinc-900/70 text-zinc-400'}`}>
+                              {entry.enabled ? 'Compartido' : 'Sin acceso'}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -616,26 +627,32 @@ export const UsersManager: React.FC = () => {
                         </label>
                       </div>
 
-                      <div className={`mt-4 ${entry.enabled ? '' : 'opacity-50'}`}>
+                      <div className="mt-4">
                         <p className="mb-2 text-xs uppercase tracking-wider text-zinc-500">Pestañas visibles</p>
-                        <div className="flex flex-wrap gap-2">
-                          {tabs.map((tabId) => {
-                            const selected = entry.allowedTabs.includes(tabId);
-                            return (
-                              <button
-                                key={tabId}
-                                type="button"
-                                disabled={!entry.enabled || isDisabled}
-                                onClick={() => toggleProjectTab(entry.projectId, tabId)}
-                                className={`rounded-full border px-3 py-1.5 text-xs transition ${selected
-                                  ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-100'
-                                  : 'border-zinc-700/70 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'}`}
-                              >
-                                {PROJECT_TAB_LABELS[tabId]}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {!entry.enabled ? (
+                          <div className="rounded-xl border border-zinc-800/70 bg-zinc-900/50 px-3 py-3 text-sm text-zinc-500">
+                            Este usuario no ve este proyecto. Activá "Compartir proyecto" para elegir pestañas.
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {tabs.map((tabId) => {
+                              const selected = entry.allowedTabs.includes(tabId);
+                              return (
+                                <button
+                                  key={tabId}
+                                  type="button"
+                                  disabled={isDisabled}
+                                  onClick={() => toggleProjectTab(entry.projectId, tabId)}
+                                  className={`rounded-full border px-3 py-1.5 text-xs transition ${selected
+                                    ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-100'
+                                    : 'border-zinc-700/70 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'}`}
+                                >
+                                  {PROJECT_TAB_LABELS[tabId]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-4 flex justify-end">
