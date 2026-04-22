@@ -4,6 +4,17 @@ import { AuthRequest } from '../middleware/auth';
 
 const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 
+const canManageCrew = (crew: { ownerId: string; organizationId?: string | null }, userId: string, role?: string, orgId?: string | null) => {
+  if (crew.ownerId === userId) return true;
+  if (!isAdminRole(role)) return false;
+
+  if (orgId) {
+    return !crew.organizationId || crew.organizationId === orgId;
+  }
+
+  return role === 'SUPERADMIN';
+};
+
 export const listCrews = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -26,8 +37,8 @@ export const listCrews = async (req: AuthRequest, res: Response) => {
 
     res.json(crews);
   } catch (error) {
-    console.error('Error al listar crews:', error);
-    res.status(500).json({ error: 'Error al listar crews' });
+    console.error('Error al listar cuadrillas:', error);
+    res.status(500).json({ error: 'Error al listar cuadrillas' });
   }
 };
 
@@ -70,8 +81,8 @@ export const createCrew = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(fullCrew);
   } catch (error) {
-    console.error('Error al crear crew:', error);
-    res.status(500).json({ error: 'Error al crear crew' });
+    console.error('Error al crear cuadrilla:', error);
+    res.status(500).json({ error: 'Error al crear cuadrilla' });
   }
 };
 
@@ -86,9 +97,9 @@ export const updateCrew = async (req: AuthRequest, res: Response) => {
 
     const crew = await prisma.crew.findUnique({ where: { id } });
     if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
-      return res.status(404).json({ error: 'Crew no encontrado' });
+      return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
-    if (crew.ownerId !== userId) return res.status(403).json({ error: 'No tenés permiso para editar este crew' });
+    if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
 
     const { name, description } = req.body;
     const updated = await prisma.crew.update({
@@ -101,8 +112,8 @@ export const updateCrew = async (req: AuthRequest, res: Response) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Error al actualizar crew:', error);
-    res.status(500).json({ error: 'Error al actualizar crew' });
+    console.error('Error al actualizar cuadrilla:', error);
+    res.status(500).json({ error: 'Error al actualizar cuadrilla' });
   }
 };
 
@@ -117,15 +128,15 @@ export const deleteCrew = async (req: AuthRequest, res: Response) => {
 
     const crew = await prisma.crew.findUnique({ where: { id } });
     if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
-      return res.status(404).json({ error: 'Crew no encontrado' });
+      return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
-    if (crew.ownerId !== userId) return res.status(403).json({ error: 'No tenés permiso para eliminar este crew' });
+    if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para eliminar esta cuadrilla' });
 
     await prisma.crew.delete({ where: { id } });
-    res.json({ message: 'Crew eliminado' });
+    res.json({ message: 'Cuadrilla eliminada' });
   } catch (error) {
-    console.error('Error al eliminar crew:', error);
-    res.status(500).json({ error: 'Error al eliminar crew' });
+    console.error('Error al eliminar cuadrilla:', error);
+    res.status(500).json({ error: 'Error al eliminar cuadrilla' });
   }
 };
 
@@ -141,12 +152,27 @@ export const addCrewMember = async (req: AuthRequest, res: Response) => {
 
     const crew = await prisma.crew.findUnique({ where: { id } });
     if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
-      return res.status(404).json({ error: 'Crew no encontrado' });
+      return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
-    if (crew.ownerId !== userId) return res.status(403).json({ error: 'No tenés permiso para editar este crew' });
+    if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
 
-    await prisma.crewMember.create({
-      data: {
+    if (!memberId || typeof memberId !== 'string') {
+      return res.status(400).json({ error: 'Se requiere seleccionar una persona' });
+    }
+
+    const memberUser = await prisma.user.findUnique({
+      where: { id: memberId },
+      select: { id: true, currentOrgId: true },
+    });
+
+    if (!memberUser || (orgId && memberUser.currentOrgId !== orgId)) {
+      return res.status(404).json({ error: 'La persona seleccionada no pertenece a esta organización' });
+    }
+
+    await prisma.crewMember.upsert({
+      where: { crewId_userId: { crewId: id, userId: memberId } },
+      update: {},
+      create: {
         crewId: id,
         userId: memberId,
       },
@@ -177,9 +203,9 @@ export const removeCrewMember = async (req: AuthRequest, res: Response) => {
 
     const crew = await prisma.crew.findUnique({ where: { id } });
     if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
-      return res.status(404).json({ error: 'Crew no encontrado' });
+      return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
-    if (crew.ownerId !== userId) return res.status(403).json({ error: 'No tenés permiso para editar este crew' });
+    if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
 
     await prisma.crewMember.deleteMany({
       where: { crewId: id, userId: memberId },

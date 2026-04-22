@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, Plus, Filter, Lock, Shield, Users, Bell, Clock, MapPin, Briefcase } from 'lucide-react';
+import { Calendar, Plus, Filter, Lock, Shield, Users, Bell, Clock, MapPin, Briefcase, UserPlus } from 'lucide-react';
 import { agendaService } from '@/services/agendaService';
 import { crewService } from '@/services/crewService';
 import { userService } from '@/services/userService';
@@ -52,6 +52,9 @@ export const Agenda: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'events' | 'crews'>('events');
   const [showCrewCreate, setShowCrewCreate] = useState(false);
   const [crewForm, setCrewForm] = useState({ name: '', description: '' });
+  const [memberToAddByCrew, setMemberToAddByCrew] = useState<Record<string, string>>({});
+  const [crewError, setCrewError] = useState<string | null>(null);
+  const [savingCrewMemberId, setSavingCrewMemberId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [selectedEvents, setSelectedEvents] = useState<AgendaEvent[]>([]);
@@ -464,13 +467,24 @@ export const Agenda: React.FC = () => {
     }
   };
 
-  const handleAddCrewMember = async (crewId: string, memberId: string) => {
+  const handleAddCrewMember = async (crewId: string) => {
+    const memberId = memberToAddByCrew[crewId];
+    if (!memberId) {
+      setCrewError('Seleccioná una persona para agregar a la cuadrilla.');
+      return;
+    }
+
     try {
-      if (!memberId) return;
+      setCrewError(null);
+      setSavingCrewMemberId(crewId);
       await crewService.addMember(crewId, memberId);
+      setMemberToAddByCrew((prev) => ({ ...prev, [crewId]: '' }));
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al agregar miembro:', error);
+      setCrewError(error.response?.data?.error || 'No se pudo agregar la persona a la cuadrilla.');
+    } finally {
+      setSavingCrewMemberId(null);
     }
   };
 
@@ -478,8 +492,9 @@ export const Agenda: React.FC = () => {
     try {
       await crewService.removeMember(crewId, memberId);
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al quitar miembro:', error);
+      setCrewError(error.response?.data?.error || 'No se pudo quitar la persona de la cuadrilla.');
     }
   };
 
@@ -527,7 +542,7 @@ export const Agenda: React.FC = () => {
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 transition-all hover:bg-cyan-500/20 sm:w-auto sm:px-5"
             >
               <Plus className="h-5 w-5" />
-              Nuevo crew
+              Nueva cuadrilla
             </button>
           )}
         </div>
@@ -1129,62 +1144,87 @@ export const Agenda: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
+            <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-zinc-300">
+              <span className="text-cyan-200">Cuadrilla</span> es el equipo operativo: instaladores, técnicos o personas que pueden quedar asignadas juntas a una visita, instalación o mantenimiento.
+            </div>
+
+            {crewError && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {crewError}
+              </div>
+            )}
+
             {crews.length === 0 ? (
-              <div className="text-center text-zinc-300 py-16">No hay crews creados.</div>
+              <div className="text-center text-zinc-300 py-16">No hay cuadrillas creadas.</div>
             ) : (
-              crews.map((crew) => (
-                <div
-                  key={crew.id}
-                  className="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-5 flex flex-col gap-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg text-white font-light">{crew.name}</h3>
-                      {crew.description && (
-                        <p className="text-xs text-zinc-300 mt-1">{crew.description}</p>
-                      )}
-                    </div>
-                  </div>
+              crews.map((crew) => {
+                const currentMemberIds = new Set((crew.members || []).map((member: any) => member.userId));
+                const availableUsers = users.filter((member) => !currentMemberIds.has(member.id));
 
-                  <div className="text-xs text-zinc-300">
-                    Miembros: {crew.members?.length || 0}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {(crew.members || []).map((member: any) => (
-                      <span
-                        key={member.id}
-                        className="px-3 py-1 rounded-full border border-zinc-800 text-xs text-zinc-300 flex items-center gap-2"
-                      >
-                        {member.user?.name || member.user?.email}
-                        {canManage && (
-                          <button
-                            onClick={() => handleRemoveCrewMember(crew.id, member.userId)}
-                            className="text-zinc-300 hover:text-red-300"
-                          >
-                            Quitar
-                          </button>
+                return (
+                  <div
+                    key={crew.id}
+                    className="bg-zinc-950/80 border border-zinc-800/60 rounded-2xl p-5 flex flex-col gap-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg text-white font-light">{crew.name}</h3>
+                        {crew.description && (
+                          <p className="text-xs text-zinc-300 mt-1">{crew.description}</p>
                         )}
-                      </span>
-                    ))}
-                  </div>
-
-                  {canManage && (
-                    <div className="flex items-center gap-3">
-                      <select
-                        onChange={(e) => handleAddCrewMember(crew.id, e.target.value)}
-                        className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
-                        defaultValue=""
-                      >
-                        <option value="">Agregar miembro</option>
-                        {users.map((member) => (
-                          <option key={member.id} value={member.id}>{member.name}</option>
-                        ))}
-                      </select>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))
+
+                    <div className="text-xs text-zinc-300">
+                      Personas asignadas: {crew.members?.length || 0}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {(crew.members || []).map((member: any) => (
+                        <span
+                          key={member.id}
+                          className="px-3 py-1 rounded-full border border-zinc-800 text-xs text-zinc-300 flex items-center gap-2"
+                        >
+                          {member.user?.name || member.user?.email}
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCrewMember(crew.id, member.userId)}
+                              className="text-zinc-300 hover:text-red-300"
+                            >
+                              Quitar
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+
+                    {canManage && (
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <select
+                          value={memberToAddByCrew[crew.id] || ''}
+                          onChange={(e) => setMemberToAddByCrew((prev) => ({ ...prev, [crew.id]: e.target.value }))}
+                          className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
+                        >
+                          <option value="">Seleccionar persona</option>
+                          {availableUsers.map((member) => (
+                            <option key={member.id} value={member.id}>{member.name || member.email}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleAddCrewMember(crew.id)}
+                          disabled={savingCrewMemberId === crew.id || !memberToAddByCrew[crew.id]}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          {savingCrewMemberId === crew.id ? 'Agregando...' : 'Agregar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         )}
@@ -1449,14 +1489,14 @@ export const Agenda: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-zinc-300 mb-1">Crew</label>
+                <label className="block text-xs text-zinc-300 mb-1">Cuadrilla</label>
                 <select
                   value={form.crewId}
                   onChange={(e) => setForm({ ...form, crewId: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
                   disabled={!canManage && !!editingEvent}
                 >
-                  <option value="">Sin crew</option>
+                  <option value="">Sin cuadrilla</option>
                   {crews.map((crew) => (
                     <option key={crew.id} value={crew.id}>{crew.name}</option>
                   ))}
@@ -1650,7 +1690,7 @@ export const Agenda: React.FC = () => {
           />
           <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl text-white font-light">Nuevo crew</h2>
+              <h2 className="text-xl text-white font-light">Nueva cuadrilla</h2>
               <button
                 onClick={() => setShowCrewCreate(false)}
                 className="text-zinc-300 hover:text-white transition-colors"
