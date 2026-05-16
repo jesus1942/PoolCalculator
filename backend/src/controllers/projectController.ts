@@ -1259,7 +1259,7 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
 
     const existingProject = await prisma.project.findFirst({
       where: { id, ...(orgId ? { organizationId: orgId } : {}) },
@@ -1269,7 +1269,8 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (existingProject.userId !== userId && !isAdmin) {
+    const access = await resolveProjectAccessProfile(existingProject, { userId, orgId, role });
+    if (!access.canDelete) {
       return res.status(403).json({ error: 'No tenés permiso para eliminar este proyecto' });
     }
 

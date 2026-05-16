@@ -24,6 +24,9 @@ export const Projects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [projectPendingDelete, setProjectPendingDelete] = useState<Project | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -42,6 +45,7 @@ export const Projects: React.FC = () => {
 
   const loadData = async () => {
     try {
+      setDeleteError(null);
       const projectsData = await projectService.getAll();
       setProjects(projectsData);
 
@@ -114,14 +118,33 @@ export const Projects: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este proyecto?')) {
-      try {
-        await projectService.delete(id);
-        loadData();
-      } catch (error) {
-        console.error('Error al eliminar proyecto:', error);
-      }
+    setDeleteError(null);
+    setProjectPendingDelete(projects.find((project) => project.id === id) || null);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectPendingDelete) return;
+
+    try {
+      setDeletingProjectId(projectPendingDelete.id);
+      await projectService.delete(projectPendingDelete.id);
+      setProjectPendingDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error('Error al eliminar proyecto:', error);
+      setDeleteError(error?.response?.data?.error || 'No se pudo eliminar el proyecto');
+    } finally {
+      setDeletingProjectId(null);
     }
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingProjectId) return;
+    setProjectPendingDelete(null);
+  };
+
+  const dismissDeleteError = () => {
+    setDeleteError(null);
   };
 
   const handleView = (id: string) => {
@@ -199,6 +222,21 @@ export const Projects: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {deleteError && !projectPendingDelete && (
+          <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="flex items-start justify-between gap-4">
+              <p>{deleteError}</p>
+              <button
+                type="button"
+                onClick={dismissDeleteError}
+                className="shrink-0 text-rose-500 transition-colors hover:text-rose-700"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -255,6 +293,7 @@ export const Projects: React.FC = () => {
               const StatusIcon = getStatusIcon(project.status);
               const canViewFinancials = project.currentUserAccess?.canViewFinancials ?? true;
               const canEditProject = project.currentUserAccess?.canEdit ?? canCreateProjects;
+              const canDeleteProject = project.currentUserAccess?.canDelete ?? canEditProject;
               const financials = canViewFinancials ? calculateProjectFinancials(project) : null;
               const materialCost = financials?.totalMaterialCost || 0;
               const laborCost = financials?.totalLaborCost || 0;
@@ -351,12 +390,14 @@ export const Projects: React.FC = () => {
                           >
                             <Edit size={16} />
                           </button>
-                          <button
-                            onClick={() => handleDelete(project.id)}
-                            className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {canDeleteProject && (
+                            <button
+                              onClick={() => handleDelete(project.id)}
+                              className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -488,6 +529,49 @@ export const Projects: React.FC = () => {
               </Button>
             </div>
           </form>
+        </Modal>
+
+        <Modal
+          isOpen={Boolean(projectPendingDelete)}
+          onClose={closeDeleteModal}
+          title="Eliminar Proyecto"
+          size="sm"
+        >
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm text-zinc-200">
+                Vas a eliminar <strong className="text-white">{projectPendingDelete?.name}</strong>.
+              </p>
+              <p className="text-sm text-zinc-400">
+                Esta acción no se puede deshacer.
+              </p>
+              {deleteError && (
+                <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+                  {deleteError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={closeDeleteModal}
+                disabled={Boolean(deletingProjectId)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={confirmDelete}
+                disabled={Boolean(deletingProjectId)}
+                className="flex-1"
+              >
+                {deletingProjectId ? 'Eliminando...' : 'Eliminar Proyecto'}
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </div>

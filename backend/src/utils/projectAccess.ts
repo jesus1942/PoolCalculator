@@ -28,6 +28,7 @@ type ProjectAccessRecord = {
 export type ProjectAccessProfile = {
   canAccess: boolean;
   canEdit: boolean;
+  canDelete: boolean;
   canViewFinancials: boolean;
   allowedTabs: ProjectTabId[];
   source: 'admin' | 'owner' | 'explicit' | 'assignment' | 'none';
@@ -177,13 +178,14 @@ export const buildProjectAccessProfileFromContext = (
   context?: ProjectAccessContext,
 ): ProjectAccessProfile => {
   if (!actor.userId) {
-    return { canAccess: false, canEdit: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
+    return { canAccess: false, canEdit: false, canDelete: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
   }
 
   if (isPlatformAdminRole(actor.role)) {
     return {
       canAccess: true,
       canEdit: true,
+      canDelete: true,
       canViewFinancials: true,
       allowedTabs: [...PROJECT_TAB_IDS],
       source: 'admin',
@@ -194,6 +196,7 @@ export const buildProjectAccessProfileFromContext = (
     return {
       canAccess: true,
       canEdit: true,
+      canDelete: true,
       canViewFinancials: true,
       allowedTabs: [...PROJECT_TAB_IDS],
       source: 'owner',
@@ -205,6 +208,7 @@ export const buildProjectAccessProfileFromContext = (
     return {
       canAccess: true,
       canEdit: actor.role === 'VIEWER' ? false : Boolean(explicitAccess.canEdit),
+      canDelete: actor.role === 'VIEWER' ? false : Boolean(explicitAccess.canEdit),
       canViewFinancials: Boolean(explicitAccess.canViewFinancials),
       allowedTabs: normalizeAllowedProjectTabs(explicitAccess.allowedTabs),
       source: 'explicit',
@@ -215,13 +219,14 @@ export const buildProjectAccessProfileFromContext = (
     return {
       canAccess: true,
       canEdit: false,
+      canDelete: false,
       canViewFinancials: false,
       allowedTabs: ['overview', 'status'],
       source: 'assignment',
     };
   }
 
-  return { canAccess: false, canEdit: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
+  return { canAccess: false, canEdit: false, canDelete: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
 };
 
 export const resolveProjectAccessProfile = async (
@@ -229,7 +234,7 @@ export const resolveProjectAccessProfile = async (
   actor: ProjectActorContext,
 ): Promise<ProjectAccessProfile> => {
   if (!actor.userId) {
-    return { canAccess: false, canEdit: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
+    return { canAccess: false, canEdit: false, canDelete: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
   }
 
   const context = await buildProjectAccessContext(actor.userId, actor.orgId);

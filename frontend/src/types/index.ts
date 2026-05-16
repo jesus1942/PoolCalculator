@@ -202,6 +202,7 @@ export interface TaskDetail {
 export interface ProjectAccessProfile {
   canAccess: boolean;
   canEdit: boolean;
+  canDelete: boolean;
   canViewFinancials: boolean;
   allowedTabs: ProjectTabId[];
   source: 'admin' | 'owner' | 'explicit' | 'assignment' | 'none';

@@ -293,6 +293,7 @@ export const ProjectDetail: React.FC = () => {
   const currentUserAccess = project.currentUserAccess || {
     canAccess: true,
     canEdit: !globalReadOnlyUser,
+    canDelete: !globalReadOnlyUser,
     canViewFinancials: true,
     allowedTabs: fallbackAllowedTabs,
     source: globalReadOnlyUser ? 'assignment' as const : 'owner' as const,
