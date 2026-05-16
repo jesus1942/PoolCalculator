@@ -1274,9 +1274,14 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'No tenés permiso para eliminar este proyecto' });
     }
 
-    await prisma.project.delete({
-      where: { id },
-    });
+    await prisma.$transaction([
+      prisma.projectAdditional.deleteMany({
+        where: { projectId: id },
+      }),
+      prisma.project.delete({
+        where: { id },
+      }),
+    ]);
 
     res.json({ message: 'Proyecto eliminado exitosamente' });
   } catch (error) {
