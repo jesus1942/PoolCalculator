@@ -973,28 +973,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
           <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
           ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
-          ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
-          ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
         </ul>
 
         ${showComparisonGrid ? `
         <div class="comparison-grid">
-          <div class="comparison-card">
-            <div class="comparison-title">Instalación base</div>
-            <div class="comparison-subtitle">Versión estándar de instalación</div>
-            <ul class="comparison-list">
-              ${exportInstallationProfile.baseScope.map((item) => `<li>${item}</li>`).join('')}
-              ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
-            </ul>
-            <div class="comparison-price">${showMaterialsToClient ? `Total base: ${formatCurrency(baseMaterialCost + clientBaseLaborCost)}` : `M.O. base: ${formatCurrency(clientBaseLaborCost)}`}</div>
-          </div>
-
-          ${showRecommendedInstallationBox ? `
           <div class="comparison-card recommended">
             <div class="comparison-title">${installationTier}</div>
-            <div class="comparison-subtitle">Propuesta recomendada para este proyecto</div>
+            <div class="comparison-subtitle">Resumen de agregados sobre la instalación base</div>
             <ul class="comparison-list">
-              <li>Incluye todo el alcance de la instalación base</li>
+              <li>M.O. base: ${formatCurrency(clientBaseLaborCost)}</li>
               ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
               ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
               ${platinumExtrasSummary.length > 0 ? platinumExtrasSummary.map((item) => `<li>${item}</li>`).join('') : '<li>Sin extras cargados</li>'}
