@@ -14,6 +14,7 @@ import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { calculateProjectFinancials, getAdditionalName, getProjectAdditionals, isBaseModelAdditional, summarizeHydraulicSystem } from '@/utils/projectCosting';
+import { getCommercialInstallationProfile } from '@/utils/commercialInstallationPricing';
 
 interface EnhancedExportManagerProps {
   project: Project;
@@ -101,33 +102,12 @@ const CLIENT_DYNAMIC_FIELDS: Array<{ key: string; label: string }> = [
   { key: 'projectCode', label: 'Código de proyecto' },
 ];
 
-const BASE_INSTALLATION_LABOR_COST = 4_000_000;
-const HEATING_INSTALLATION_SURCHARGE = 600_000;
-const BASE_INSTALLATION_SCOPE = [
-  'Excavación del pozo',
-  'Instalación del casco',
-  '4 retornos orientables',
-  '2 retornos en escalera',
-  '2 retornos bajo skimmer para retorno de agua caliente',
-];
-const BASE_INSTALLATION_EXCLUSIONS = [
-  'No incluye transporte',
-  'No incluye materiales',
-  'No incluye grúa, de ser necesaria',
-];
 const COMMERCIAL_EXCLUSION_GROUPS = [
   {
     key: 'logistics_exclusions',
     terms: ['no incluye', 'transporte', 'materiales', 'grua'],
   },
 ];
-const HEATING_INSTALLATION_EXTRAS = [
-  'Acometida de gas en gabinete',
-  'Luz',
-  'Jornada de 2 personas',
-  'Aproximadamente 2 jornadas y media de instalador',
-];
-
 export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ project, brandLogoUrl }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ExportTemplate>('client');
   const [roles, setRoles] = useState<any[]>([]);
@@ -726,40 +706,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       .toLowerCase()
       .trim();
 
-  const hasHeatingInstallation = (additionalsList: any[], plumbingItems: any[]) => {
-    const names = [
-      ...additionalsList.map((additional: any) => getAdditionalName(additional)),
-      ...plumbingItems.map((item: any) => getPlumbingItemName(item)),
-    ].map((name) => normalizeCommercialText(String(name || '')));
-
-    return names.some((name) =>
-      name.includes('calef') ||
-      name.includes('calent') ||
-      name.includes('heater') ||
-      name.includes('heat pump') ||
-      name.includes('intercambiador') ||
-      name.includes('bomba de calor') ||
-      name.includes('caldera') ||
-      name.includes('caldaia')
-    );
-  };
-
-  const getExportInstallationProfile = (additionalsList: any[], plumbingItems: any[]) => {
-    const includesHeating = hasHeatingInstallation(additionalsList, plumbingItems);
-    const baseLaborCost = BASE_INSTALLATION_LABOR_COST;
-    const heatingLaborCost = includesHeating ? HEATING_INSTALLATION_SURCHARGE : 0;
-
-    return {
-      includesHeating,
-      baseLaborCost,
-      heatingLaborCost,
-      totalLaborCost: baseLaborCost + heatingLaborCost,
-      baseScope: BASE_INSTALLATION_SCOPE,
-      exclusions: BASE_INSTALLATION_EXCLUSIONS,
-      heatingExtras: includesHeating ? HEATING_INSTALLATION_EXTRAS : [],
-    };
-  };
-
   const resolveCostOverrides = (templateSettings: ExportTemplateSettings) => {
     const costs = calculateCosts();
     const overrides = templateSettings.values || {};
@@ -831,7 +777,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const hydraulicSummary = summarizeHydraulicSystem(project, commercialAdditionals);
   const summarizedAdditionalItems = dedupeLabeledItems(hydraulicSummary.added.items);
   const installationTier = getInstallationTier(extraPlumbingItems, commercialAdditionals);
-  const exportInstallationProfile = getExportInstallationProfile(commercialAdditionals, selectedPlumbingItems);
+  const exportInstallationProfile = getCommercialInstallationProfile(project);
   const rolesSummary = getRolesCostSummary();
   const taskMaterials = getTaskMaterials();
   const taskMaterialsByStage = getTaskMaterialsByStage();

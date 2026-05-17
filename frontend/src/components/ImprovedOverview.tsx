@@ -214,6 +214,8 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
     duplicatedAdditionalsCosts,
     baseMaterialCost,
     baseLaborCost,
+    taskBaseLaborCost,
+    commercialPricingSource,
     totalMaterialCost,
     totalLaborCost,
     grandTotal,
@@ -421,9 +423,15 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                   </p>
                 </div>
                 <div className="flex justify-between items-center pb-2 border-b">
-                  <span className="text-sm text-zinc-400">Base (tareas)</span>
+                  <span className="text-sm text-zinc-400">Base comercial</span>
                   <span className="font-semibold text-zinc-100">${baseLaborCost.toLocaleString('es-AR')}</span>
                 </div>
+                {taskBaseLaborCost > 0 && taskBaseLaborCost !== baseLaborCost && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-400">Referencia por tareas</span>
+                    <span className="font-semibold text-zinc-100">${taskBaseLaborCost.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
                 {totalRolesCost > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-zinc-400">Detalle por Roles ({totalRolesHours.toFixed(0)}hs)</span>
@@ -543,7 +551,11 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">Mano de obra base</p>
                 <p className="mt-2 text-xl font-bold text-white">${baseLaborCost.toLocaleString('es-AR')}</p>
-                <p className="mt-1 text-xs text-zinc-400">Tareas base sin categoría additionals</p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {commercialPricingSource === 'model_pricing'
+                    ? 'Tarifa comercial base del modelo'
+                    : 'Base calculada desde tareas'}
+                </p>
               </div>
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
                 <p className="text-xs uppercase tracking-wide text-zinc-500">Total auditado</p>

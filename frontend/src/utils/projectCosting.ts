@@ -1,4 +1,5 @@
 import { Project } from '@/types';
+import { getCommercialInstallationProfile } from '@/utils/commercialInstallationPricing';
 
 const normalize = (value: string) =>
   value
@@ -116,7 +117,9 @@ export const calculateProjectFinancials = (project: Project | any, additionalsIn
   const tasks = (project.tasks as any) || {};
   const tasksLaborCost = getTasksLaborCost(tasks, { excludeAdditionals: true });
   const additionalsTaskLaborCost = getTasksLaborCost(tasks) - tasksLaborCost;
-  const baseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
+  const commercialInstallationProfile = getCommercialInstallationProfile(project);
+  const taskBaseLaborCost = tasksLaborCost > 0 ? tasksLaborCost : (project.laborCost || 0);
+  const baseLaborCost = commercialInstallationProfile.baseLaborCost || taskBaseLaborCost;
   const effectiveAdditionalsLaborCost = Math.max(additionalsCosts.laborCost, additionalsTaskLaborCost, 0);
 
   const baseMaterialCost = (project.materialCost || 0) + plumbingCosts + electricalCosts;
@@ -136,6 +139,10 @@ export const calculateProjectFinancials = (project: Project | any, additionalsIn
     electricalCosts,
     baseMaterialCost,
     baseLaborCost,
+    taskBaseLaborCost,
+    commercialBaseLaborCost: commercialInstallationProfile.baseLaborCost,
+    commercialPricingSource: commercialInstallationProfile.pricingSource,
+    commercialPricingRule: commercialInstallationProfile.pricingRule,
     additionalsTaskLaborCost,
     totalMaterialCost,
     totalLaborCost,
