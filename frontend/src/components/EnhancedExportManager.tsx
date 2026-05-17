@@ -48,6 +48,7 @@ type ExportTemplateSettings = {
   drawingView?: 'cad' | 'planta';
   installationMode?: 'basic' | 'with_extras';
   clientPricingMode?: 'full' | 'labor_only';
+  showRecommendedInstallationBox?: boolean;
   documentBlocks?: ClientDocumentBlock[];
   customBodyHtml?: string;
   values?: {
@@ -113,6 +114,12 @@ const BASE_INSTALLATION_EXCLUSIONS = [
   'No incluye transporte',
   'No incluye materiales',
   'No incluye grúa, de ser necesaria',
+];
+const COMMERCIAL_EXCLUSION_GROUPS = [
+  {
+    key: 'logistics_exclusions',
+    terms: ['no incluye', 'transporte', 'materiales', 'grua'],
+  },
 ];
 const HEATING_INSTALLATION_EXTRAS = [
   'Acometida de gas en gabinete',
@@ -694,6 +701,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       return {
         installationMode: 'with_extras' as const,
         clientPricingMode: 'labor_only' as const,
+        showRecommendedInstallationBox: true,
         ...templateSettings,
       };
     }
@@ -781,6 +789,25 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       'No incluye: Conexión eléctrica al tablero principal, provisión de agua y provisión de gas',
     ];
   };
+
+  const hasConditionCoveringExclusion = (conditions: string[], exclusion: string) => {
+    const normalizedExclusion = normalizeCommercialText(exclusion);
+    const matchingGroup = COMMERCIAL_EXCLUSION_GROUPS.find((group) =>
+      group.terms.every((term) => normalizedExclusion.includes(term))
+    );
+
+    if (!matchingGroup) {
+      return conditions.some((condition) => normalizeCommercialText(condition) === normalizedExclusion);
+    }
+
+    return conditions.some((condition) => {
+      const normalizedCondition = normalizeCommercialText(condition);
+      return matchingGroup.terms.every((term) => normalizedCondition.includes(term));
+    });
+  };
+
+  const getVisibleInstallationExclusions = (conditions: string[]) =>
+    exportInstallationProfile.exclusions.filter((exclusion) => !hasConditionCoveringExclusion(conditions, exclusion));
 
   const materials = project.materials as any;
   const plumbingConfig = project.plumbingConfig as any;
@@ -919,6 +946,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const installationMode = templateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
     const showMaterialsToClient = clientPricingMode === 'full';
+    const showRecommendedInstallationBox = templateSettings.showRecommendedInstallationBox !== false;
     const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
     const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
     const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost;
@@ -930,6 +958,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ...summarizedAdditionalItems.map((item) => `${item.name} x${item.quantity}`),
     ];
     const conditions = getConditionsList(templateSettings.conditions);
+    const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
 
     return `
       ${sections.header ? `
@@ -991,7 +1020,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           ${project.poolPreset?.hasBottomDrain ? `<li>Desagüe de fondo</li>` : ''}
           ${project.poolPreset?.hasVacuumIntake ? `<li>Toma de limpiafondos</li>` : ''}
           <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
-          ${exportInstallationProfile.exclusions.map((item) => `<li>${item}</li>`).join('')}
+          ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
           ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
           ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
         </ul>
@@ -1002,11 +1031,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="comparison-subtitle">Versión estándar de instalación</div>
             <ul class="comparison-list">
               ${exportInstallationProfile.baseScope.map((item) => `<li>${item}</li>`).join('')}
-              ${exportInstallationProfile.exclusions.map((item) => `<li>${item}</li>`).join('')}
+              ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
             </ul>
             <div class="comparison-price">${showMaterialsToClient ? `Total base: ${formatCurrency(baseMaterialCost + clientBaseLaborCost)}` : `M.O. base: ${formatCurrency(clientBaseLaborCost)}`}</div>
           </div>
 
+          ${showRecommendedInstallationBox ? `
           <div class="comparison-card recommended">
             <div class="comparison-title">${installationTier}</div>
             <div class="comparison-subtitle">Propuesta recomendada para este proyecto</div>
@@ -1018,6 +1048,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             </ul>
             <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(visibleLaborCost)}`}</div>
           </div>
+          ` : ''}
         </div>
       </div>
       ` : ''}
@@ -2286,6 +2317,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const visibleGrandTotal = showMaterialsToClient
       ? visibleMaterialCost + visibleLaborCost
       : grandTotal;
+    const conditions = getConditionsList(templateSettings.conditions);
+    const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
     const headerSubtitle = templateSettings.subtitle || (showMaterialsToClient ? 'Presupuesto Detallado con Costos Unitarios' : 'Presupuesto de Instalación');
     const documentTitle = templateSettings.title || `Presupuesto Detallado - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('budget');
@@ -2413,7 +2446,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           <tbody>
             ${exportInstallationProfile.baseScope.map((item) => `<tr><td>Incluye</td><td>${item}</td></tr>`).join('')}
             ${includeExtras && exportInstallationProfile.includesHeating ? exportInstallationProfile.heatingExtras.map((item) => `<tr><td>Extra calefacción</td><td>${item}</td></tr>`).join('') : ''}
-            ${exportInstallationProfile.exclusions.map((item) => `<tr><td>No incluye</td><td>${item}</td></tr>`).join('')}
+            ${visibleInstallationExclusions.map((item) => `<tr><td>No incluye</td><td>${item}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -2451,6 +2484,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const generateCompleteReport = (templateSettings: ExportTemplateSettings = getTemplateSettings('complete')) => {
     const { grandTotal } = resolveCostOverrides(templateSettings);
+    const conditions = getConditionsList(getTemplateSettings('client').conditions);
+    const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
     const headerSubtitle = templateSettings.subtitle || 'Reporte Completo del Proyecto';
     const documentTitle = templateSettings.title || `Reporte Completo - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('complete');
@@ -2947,7 +2982,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       <div class="content-grid" style="flex: 0 0 auto;">
         <div class="scope-panel">
           <div class="scope-title">Instalación Base</div>
-          <div class="scope-value">${exportInstallationProfile.baseScope.join(', ')}. ${exportInstallationProfile.exclusions.join(', ')}.</div>
+          <div class="scope-value">${[
+            exportInstallationProfile.baseScope.join(', '),
+            visibleInstallationExclusions.length > 0 ? visibleInstallationExclusions.join(', ') : '',
+          ].filter(Boolean).join('. ')}.</div>
         </div>
         <div class="scope-panel">
           <div class="scope-title">Extras y Personalizaciones</div>
@@ -3563,6 +3601,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const visibleLaborCost = clientBaseLaborCost + visibleHeatingLaborCost;
     const visibleGrandTotal = visibleMaterialCost + visibleLaborCost;
     const visibleInstallationTier = includeExtras ? installationTier : 'Instalación base';
+    const conditions = getConditionsList(clientTemplateSettings.conditions);
+    const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
 
     let message = '';
 
@@ -3579,7 +3619,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const heatingLines = exportInstallationProfile.includesHeating && includeExtras
         ? `\n- Adicional instalacion de calefaccion: $${exportInstallationProfile.heatingLaborCost.toLocaleString('es-AR')}\n${exportInstallationProfile.heatingExtras.map((item) => `- ${item}`).join('\n')}`
         : '';
-      const exclusionsLines = exportInstallationProfile.exclusions.map((item) => `- ${item}`).join('\n');
+      const exclusionsLines = visibleInstallationExclusions.map((item) => `- ${item}`).join('\n');
       message += `${message ? '\n\n' : ''}*INCLUYE:*\n- ${includeExtras ? `${installationTier} recomendada` : visibleInstallationTier}\n${baseScopeLines}${heatingLines}\n${exclusionsLines}\n${visibleExtraPlumbingItems.length > 0 ? `- Accesorios extra de instalacion: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}\n` : ''}${visibleAdditionals.length > 0 ? `- Equipos/agregados adicionales: ${visibleAdditionals.map((add: any) => `${getAdditionalName(add)} x${add.newQuantity}`).join(', ')}\n` : ''}${showMaterialsToClient ? '- Materiales de construccion' : '- Materiales y equipos fuera del valor comercial informado'}`;
     }
 
@@ -3622,7 +3662,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
 
     if (sections.conditions) {
-      message += `${message ? '\n\n' : ''}*CONDICIONES:*\n- Valido por 30 dias\n- Plazo: 15-20 dias habiles\n- Pago: 50% inicio, 50% finalizacion\n- El valor contempla viaticos, consumibles y extras de ejecucion propios de la instalacion\n- Garantia: 3 meses mano de obra`;
+      message += `${message ? '\n\n' : ''}*CONDICIONES:*\n${conditions.map((item) => `- ${item}`).join('\n')}`;
     }
 
     message += `\n\n_Generado por Pool Installer - ${new Date().toLocaleDateString('es-AR')}_`;
@@ -4974,6 +5014,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <option value="full">Materiales + mano de obra</option>
                         </select>
                         <p className="text-[11px] text-zinc-500 mt-1">En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.</p>
+
+                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={activeDraftTemplate.showRecommendedInstallationBox !== false}
+                            onChange={(event) => updateDraftTemplate({ showRecommendedInstallationBox: event.target.checked })}
+                            className="h-4 w-4"
+                          />
+                          <span>Mostrar cuadro de instalación recomendada</span>
+                        </label>
+                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto cliente muestra solo la tarjeta de instalación base.</p>
                       </div>
                     )}
                     <div className="space-y-3">
