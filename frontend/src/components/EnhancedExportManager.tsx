@@ -790,20 +790,27 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     ];
   };
 
+  const getConditionCoverageGroup = (condition: string) =>
+    COMMERCIAL_EXCLUSION_GROUPS.find((group) => {
+      const normalizedCondition = normalizeCommercialText(condition);
+      return group.terms.every((term) => normalizedCondition.includes(term));
+    })?.key;
+
+  const getExclusionCoverageGroup = (exclusion: string) =>
+    COMMERCIAL_EXCLUSION_GROUPS.find((group) => {
+      const normalizedExclusion = normalizeCommercialText(exclusion);
+      return group.terms.some((term) => normalizedExclusion.includes(term));
+    })?.key;
+
   const hasConditionCoveringExclusion = (conditions: string[], exclusion: string) => {
     const normalizedExclusion = normalizeCommercialText(exclusion);
-    const matchingGroup = COMMERCIAL_EXCLUSION_GROUPS.find((group) =>
-      group.terms.every((term) => normalizedExclusion.includes(term))
-    );
+    const matchingGroupKey = getExclusionCoverageGroup(exclusion);
 
-    if (!matchingGroup) {
+    if (!matchingGroupKey) {
       return conditions.some((condition) => normalizeCommercialText(condition) === normalizedExclusion);
     }
 
-    return conditions.some((condition) => {
-      const normalizedCondition = normalizeCommercialText(condition);
-      return matchingGroup.terms.every((term) => normalizedCondition.includes(term));
-    });
+    return conditions.some((condition) => getConditionCoverageGroup(condition) === matchingGroupKey);
   };
 
   const getVisibleInstallationExclusions = (conditions: string[]) =>
@@ -947,6 +954,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const includeExtras = installationMode === 'with_extras';
     const showMaterialsToClient = clientPricingMode === 'full';
     const showRecommendedInstallationBox = templateSettings.showRecommendedInstallationBox !== false;
+    const showComparisonGrid = showRecommendedInstallationBox && includeExtras;
     const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
     const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
     const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost;
@@ -1017,14 +1025,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           ${visibleExtraPlumbingItems.length > 0 ? `<li>Accesorios extra de instalación: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}</li>` : ''}
           ${visibleHydraulicAdditionals.length > 0 ? `<li>Equipos/agregados adicionales: ${visibleHydraulicAdditionals.map((item) => `${item.name} x${item.quantity}`).join(', ')}</li>` : ''}
           ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
-          ${project.poolPreset?.hasBottomDrain ? `<li>Desagüe de fondo</li>` : ''}
-          ${project.poolPreset?.hasVacuumIntake ? `<li>Toma de limpiafondos</li>` : ''}
           <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
           ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
           ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
           ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
         </ul>
 
+        ${showComparisonGrid ? `
         <div class="comparison-grid">
           <div class="comparison-card">
             <div class="comparison-title">Instalación base</div>
@@ -1048,8 +1055,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             </ul>
             <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(visibleLaborCost)}`}</div>
           </div>
-          ` : ''}
         </div>
+        ` : ''}
       </div>
       ` : ''}
 
