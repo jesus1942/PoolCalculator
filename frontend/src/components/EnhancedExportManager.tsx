@@ -296,7 +296,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   useEffect(() => {
     if (!isEditorOpen || selectedTemplate !== 'client') return;
     const clientTemplate = (draftSettings.templates?.client || {}) as ExportTemplateSettings;
-    const nextHtml = clientTemplate.customBodyHtml?.trim() || buildClientBudgetBody(clientTemplate);
+    const nextHtml = resolveClientBodyHtml(clientTemplate);
     setClientDocumentEditorHtml(nextHtml);
   }, [isEditorOpen, selectedTemplate]);
 
@@ -892,6 +892,27 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     `;
   };
 
+  const isLegacyAutoClientHtml = (html?: string) => {
+    const normalizedHtml = normalizeCommercialText(html || '');
+    if (!normalizedHtml) return false;
+
+    return (
+      normalizedHtml.includes('version estandar de instalacion') &&
+      normalizedHtml.includes('m.o. base') &&
+      normalizedHtml.includes('2 retornos en escalera') &&
+      normalizedHtml.includes('2 retornos bajo skimmer para retorno de agua caliente')
+    );
+  };
+
+  const resolveClientBodyHtml = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
+    const customBodyHtml = templateSettings.customBodyHtml?.trim();
+    if (customBodyHtml && !isLegacyAutoClientHtml(customBodyHtml)) {
+      return interpolateProjectHtml(customBodyHtml);
+    }
+
+    return buildClientBudgetBody(templateSettings);
+  };
+
   const buildClientBudgetBody = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const sections = templateSettings.sections || selectedSections;
     const { additionalsCosts, baseMaterialCost } = resolveCostOverrides(templateSettings);
@@ -1367,9 +1388,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const headerSubtitle = templateSettings.subtitle || 'Propuesta Comercial de Instalación';
     const documentTitle = templateSettings.title || `Propuesta Comercial - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('client');
-    const bodyHtml = templateSettings.customBodyHtml?.trim()
-      ? interpolateProjectHtml(templateSettings.customBodyHtml)
-      : buildClientBudgetBody(templateSettings);
+    const bodyHtml = resolveClientBodyHtml(templateSettings);
 
     const html = `
 <!DOCTYPE html>
