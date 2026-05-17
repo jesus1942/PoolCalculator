@@ -100,6 +100,27 @@ const CLIENT_DYNAMIC_FIELDS: Array<{ key: string; label: string }> = [
   { key: 'projectCode', label: 'Código de proyecto' },
 ];
 
+const BASE_INSTALLATION_LABOR_COST = 4_000_000;
+const HEATING_INSTALLATION_SURCHARGE = 600_000;
+const BASE_INSTALLATION_SCOPE = [
+  'Excavación del pozo',
+  'Instalación del casco',
+  '4 retornos orientables',
+  '2 retornos en escalera',
+  '2 retornos bajo skimmer para retorno de agua caliente',
+];
+const BASE_INSTALLATION_EXCLUSIONS = [
+  'No incluye transporte',
+  'No incluye materiales',
+  'No incluye grúa, de ser necesaria',
+];
+const HEATING_INSTALLATION_EXTRAS = [
+  'Acometida de gas en gabinete',
+  'Luz',
+  'Jornada de 2 personas',
+  'Aproximadamente 2 jornadas y media de instalador',
+];
+
 export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ project, brandLogoUrl }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<ExportTemplate>('client');
   const [roles, setRoles] = useState<any[]>([]);
@@ -666,17 +687,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return 'Instalación básica';
   };
 
-  const getClientBaseAccessoryScope = () => [
-    '4 retornos orientables',
-    '1 toma de aspiración',
-    '1 toma de fondo',
-    '1 skimmer',
-    'bomba de filtrado',
-    'filtro',
-    'luces',
-    'tablero con timer mecánico',
-  ];
-
   const getTemplateSettings = (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
     const templateSettings = settings.templates?.[template] || {};
 
@@ -700,6 +710,47 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const formatCurrency = (value: number) => `$${value.toLocaleString('es-AR')}`;
+
+  const normalizeCommercialText = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+  const hasHeatingInstallation = (additionalsList: any[], plumbingItems: any[]) => {
+    const names = [
+      ...additionalsList.map((additional: any) => getAdditionalName(additional)),
+      ...plumbingItems.map((item: any) => getPlumbingItemName(item)),
+    ].map((name) => normalizeCommercialText(String(name || '')));
+
+    return names.some((name) =>
+      name.includes('calef') ||
+      name.includes('calent') ||
+      name.includes('heater') ||
+      name.includes('heat pump') ||
+      name.includes('intercambiador') ||
+      name.includes('bomba de calor') ||
+      name.includes('caldera') ||
+      name.includes('caldaia')
+    );
+  };
+
+  const getExportInstallationProfile = (additionalsList: any[], plumbingItems: any[]) => {
+    const includesHeating = hasHeatingInstallation(additionalsList, plumbingItems);
+    const baseLaborCost = BASE_INSTALLATION_LABOR_COST;
+    const heatingLaborCost = includesHeating ? HEATING_INSTALLATION_SURCHARGE : 0;
+
+    return {
+      includesHeating,
+      baseLaborCost,
+      heatingLaborCost,
+      totalLaborCost: baseLaborCost + heatingLaborCost,
+      baseScope: BASE_INSTALLATION_SCOPE,
+      exclusions: BASE_INSTALLATION_EXCLUSIONS,
+      heatingExtras: includesHeating ? HEATING_INSTALLATION_EXTRAS : [],
+    };
+  };
 
   const resolveCostOverrides = (templateSettings: ExportTemplateSettings) => {
     const costs = calculateCosts();
@@ -726,6 +777,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       'Forma de pago: 50% al inicio de obra, 50% a la finalización',
       'El presupuesto contempla viáticos, consumibles y extras de ejecución propios de la instalación',
       'Garantía: 3 meses en mano de obra, según fabricante en equipos',
+      'No incluye transporte, materiales ni grúa de ser necesaria',
       'No incluye: Conexión eléctrica al tablero principal, provisión de agua y provisión de gas',
     ];
   };
@@ -745,7 +797,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const hydraulicSummary = summarizeHydraulicSystem(project, commercialAdditionals);
   const summarizedAdditionalItems = dedupeLabeledItems(hydraulicSummary.added.items);
   const installationTier = getInstallationTier(extraPlumbingItems, commercialAdditionals);
-  const clientBaseAccessoryScope = getClientBaseAccessoryScope();
+  const exportInstallationProfile = getExportInstallationProfile(commercialAdditionals, selectedPlumbingItems);
   const rolesSummary = getRolesCostSummary();
   const taskMaterials = getTaskMaterials();
   const taskMaterialsByStage = getTaskMaterialsByStage();
@@ -775,7 +827,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     volume: `${project.volume.toFixed(2)} m³`,
     waterMirrorArea: `${project.waterMirrorArea.toFixed(2)} m²`,
     installationTier,
-    laborCost: formatCurrency(computedCosts.totalLaborCost),
+    laborCost: formatCurrency(exportInstallationProfile.totalLaborCost),
     materialCost: formatCurrency(computedCosts.totalMaterialCost),
     grandTotal: formatCurrency(computedCosts.grandTotal),
     projectCode: getProjectCode(project),
@@ -862,12 +914,14 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const buildClientBudgetBody = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const sections = templateSettings.sections || selectedSections;
-    const { additionalsCosts, totalLaborCost, baseMaterialCost } = resolveCostOverrides(templateSettings);
+    const { additionalsCosts, baseMaterialCost } = resolveCostOverrides(templateSettings);
     const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const installationMode = templateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
     const showMaterialsToClient = clientPricingMode === 'full';
-    const clientBaseLaborCost = Math.max(0, totalLaborCost - additionalsCosts.laborCost);
+    const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
+    const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
+    const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost;
     const visibleCommercialBadge = includeExtras ? `${installationTier} recomendada` : 'Instalación base';
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
     const visibleHydraulicAdditionals = includeExtras ? summarizedAdditionalItems : [];
@@ -928,16 +982,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <h2>Alcance del Proyecto</h2>
         <ul class="features-list">
           <li>${visibleCommercialBadge}</li>
-          <li>Excavación y preparación del terreno</li>
-          <li>Instalación de la piscina de fibra de vidrio</li>
-          <li>Sistema de filtración completo</li>
-          <li>Instalación base de accesorios: ${clientBaseAccessoryScope.join(', ')}</li>
+          ${exportInstallationProfile.baseScope.map((item) => `<li>${item}</li>`).join('')}
+          ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación de calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
+          ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
           ${visibleExtraPlumbingItems.length > 0 ? `<li>Accesorios extra de instalación: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}</li>` : ''}
           ${visibleHydraulicAdditionals.length > 0 ? `<li>Equipos/agregados adicionales: ${visibleHydraulicAdditionals.map((item) => `${item.name} x${item.quantity}`).join(', ')}</li>` : ''}
           ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
           ${project.poolPreset?.hasBottomDrain ? `<li>Desagüe de fondo</li>` : ''}
           ${project.poolPreset?.hasVacuumIntake ? `<li>Toma de limpiafondos</li>` : ''}
           <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
+          ${exportInstallationProfile.exclusions.map((item) => `<li>${item}</li>`).join('')}
           ${equipmentRecommendation ? `<li>Bomba de filtrado ${equipmentRecommendation.pump.name}</li>` : ''}
           ${equipmentRecommendation ? `<li>Filtro de arena ${equipmentRecommendation.filter.name}</li>` : ''}
         </ul>
@@ -947,8 +1001,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="comparison-title">Instalación base</div>
             <div class="comparison-subtitle">Versión estándar de instalación</div>
             <ul class="comparison-list">
-              <li>Excavación, colocación y conexión de la piscina</li>
-              <li>${clientBaseAccessoryScope.join(', ')}</li>
+              ${exportInstallationProfile.baseScope.map((item) => `<li>${item}</li>`).join('')}
+              ${exportInstallationProfile.exclusions.map((item) => `<li>${item}</li>`).join('')}
             </ul>
             <div class="comparison-price">${showMaterialsToClient ? `Total base: ${formatCurrency(baseMaterialCost + clientBaseLaborCost)}` : `M.O. base: ${formatCurrency(clientBaseLaborCost)}`}</div>
           </div>
@@ -958,9 +1012,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="comparison-subtitle">Propuesta recomendada para este proyecto</div>
             <ul class="comparison-list">
               <li>Incluye todo el alcance de la instalación base</li>
+              ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
+              ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
               ${platinumExtrasSummary.length > 0 ? platinumExtrasSummary.map((item) => `<li>${item}</li>`).join('') : '<li>Sin extras cargados</li>'}
             </ul>
-            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + totalLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(totalLaborCost)}`}</div>
+            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(visibleLaborCost)}`}</div>
           </div>
         </div>
       </div>
@@ -1000,8 +1056,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         label: 'Costos presupuestados',
         detail: clientPricingMode === 'labor_only' ? 'Solo mano de obra visible para cliente.' : 'Materiales, mano de obra y total.',
         value: clientPricingMode === 'labor_only'
-          ? formatCurrency(computedCosts.totalLaborCost)
-          : `${formatCurrency(computedCosts.totalMaterialCost)} + ${formatCurrency(computedCosts.totalLaborCost)}`,
+          ? formatCurrency(exportInstallationProfile.totalLaborCost)
+          : `${formatCurrency(computedCosts.totalMaterialCost)} + ${formatCurrency(exportInstallationProfile.totalLaborCost)}`,
         ready: computedCosts.grandTotal > 0,
       },
       {
@@ -1084,14 +1140,14 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         id: 'budget-labor',
         label: 'Costo de mano de obra',
         detail: 'Tareas y adicionales con mano de obra.',
-        value: formatCurrency(computedCosts.totalLaborCost),
-        ready: computedCosts.totalLaborCost > 0,
+        value: formatCurrency(exportInstallationProfile.totalLaborCost),
+        ready: exportInstallationProfile.totalLaborCost > 0,
       },
       {
         id: 'budget-total',
         label: 'Total general',
         detail: 'Inversión total del proyecto.',
-        value: formatCurrency(computedCosts.grandTotal),
+        value: formatCurrency(computedCosts.totalMaterialCost + exportInstallationProfile.totalLaborCost),
         ready: computedCosts.grandTotal > 0,
       },
       {
@@ -1240,8 +1296,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       key: 'labor',
       label: 'Mano de Obra',
       description: 'Roles, tareas, horas y costos.',
-      preview: `${rolesCount} roles · ${computedTaskCount} tareas · ${formatCurrency(computedCosts.totalLaborCost)}`,
-      ready: rolesCount > 0 || computedTaskCount > 0 || computedCosts.totalLaborCost > 0,
+      preview: `${rolesCount} roles · ${computedTaskCount} tareas · ${formatCurrency(exportInstallationProfile.totalLaborCost)}`,
+      ready: rolesCount > 0 || computedTaskCount > 0 || exportInstallationProfile.totalLaborCost > 0,
     },
     {
       key: 'sequence',
@@ -2221,11 +2277,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const includeExtras = installationMode === 'with_extras';
     const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const showMaterialsToClient = clientPricingMode === 'full';
-    const { additionals, additionalsCosts, totalMaterialCost, totalLaborCost, grandTotal, baseMaterialCost, baseLaborCost } = resolveCostOverrides(templateSettings);
+    const { additionals, additionalsCosts, totalMaterialCost, grandTotal, baseMaterialCost } = resolveCostOverrides(templateSettings);
     const rolesSummary = getRolesCostSummary();
     const visibleMaterialCost = includeExtras ? totalMaterialCost : baseMaterialCost;
-    const visibleLaborCost = includeExtras ? totalLaborCost : baseLaborCost;
-    const visibleGrandTotal = includeExtras ? grandTotal : (baseMaterialCost + baseLaborCost);
+    const baseVisibleLaborCost = exportInstallationProfile.baseLaborCost;
+    const heatingVisibleLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
+    const visibleLaborCost = baseVisibleLaborCost + heatingVisibleLaborCost;
+    const visibleGrandTotal = showMaterialsToClient
+      ? visibleMaterialCost + visibleLaborCost
+      : grandTotal;
     const headerSubtitle = templateSettings.subtitle || (showMaterialsToClient ? 'Presupuesto Detallado con Costos Unitarios' : 'Presupuesto de Instalación');
     const documentTitle = templateSettings.title || `Presupuesto Detallado - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('budget');
@@ -2337,9 +2397,23 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             ${Object.values(rolesSummary).map((role: any) =>
               `<tr><td>${role.roleName}</td><td>${role.tasksCount}</td><td>${role.hours.toFixed(1)} hs</td><td class="text-right">$ ${role.cost.toLocaleString('es-AR')}</td></tr>`
             ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Mano de Obra Base</td><td class="text-right">$ ${baseLaborCost.toLocaleString('es-AR')}</td></tr>
-            ${includeExtras && additionalsCosts.laborCost > 0 ? `<tr class="subtotal-row"><td colspan="3">M.O. por Agregados</td><td class="text-right">$ ${additionalsCosts.laborCost.toLocaleString('es-AR')}</td></tr>` : ''}
+            <tr class="subtotal-row"><td colspan="3">Instalación base</td><td class="text-right">$ ${baseVisibleLaborCost.toLocaleString('es-AR')}</td></tr>
+            ${includeExtras && exportInstallationProfile.includesHeating ? `<tr class="subtotal-row"><td colspan="3">Adicional instalación de calefacción</td><td class="text-right">$ ${heatingVisibleLaborCost.toLocaleString('es-AR')}</td></tr>` : ''}
             <tr class="subtotal-row"><td colspan="3">Total Mano de Obra</td><td class="text-right">$ ${visibleLaborCost.toLocaleString('es-AR')}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Alcance de Instalación</h2>
+        <table class="budget-table">
+          <thead>
+            <tr><th>Concepto</th><th>Detalle</th></tr>
+          </thead>
+          <tbody>
+            ${exportInstallationProfile.baseScope.map((item) => `<tr><td>Incluye</td><td>${item}</td></tr>`).join('')}
+            ${includeExtras && exportInstallationProfile.includesHeating ? exportInstallationProfile.heatingExtras.map((item) => `<tr><td>Extra calefacción</td><td>${item}</td></tr>`).join('') : ''}
+            ${exportInstallationProfile.exclusions.map((item) => `<tr><td>No incluye</td><td>${item}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -2873,7 +2947,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       <div class="content-grid" style="flex: 0 0 auto;">
         <div class="scope-panel">
           <div class="scope-title">Instalación Base</div>
-          <div class="scope-value">${clientBaseAccessoryScope.join(', ')}</div>
+          <div class="scope-value">${exportInstallationProfile.baseScope.join(', ')}. ${exportInstallationProfile.exclusions.join(', ')}.</div>
         </div>
         <div class="scope-panel">
           <div class="scope-title">Extras y Personalizaciones</div>
@@ -3478,16 +3552,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       additionalsCosts,
       plumbingCosts,
       electricalCosts,
-      totalLaborCost,
       baseMaterialCost,
     } = calculateProjectFinancials(project);
     const visibleAdditionals = includeExtras ? additionals : [];
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
     const visibleAdditionalsMaterialCost = includeExtras ? additionalsCosts.materialCost : 0;
-    const visibleAdditionalsLaborCost = includeExtras ? additionalsCosts.laborCost : 0;
     const visibleMaterialCost = baseMaterialCost + visibleAdditionalsMaterialCost;
-    const clientBaseLaborCost = Math.max(0, totalLaborCost - additionalsCosts.laborCost);
-    const visibleLaborCost = clientBaseLaborCost + visibleAdditionalsLaborCost;
+    const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
+    const visibleHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
+    const visibleLaborCost = clientBaseLaborCost + visibleHeatingLaborCost;
     const visibleGrandTotal = visibleMaterialCost + visibleLaborCost;
     const visibleInstallationTier = includeExtras ? installationTier : 'Instalación base';
 
@@ -3502,7 +3575,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
 
     if (sections.includes) {
-      message += `${message ? '\n\n' : ''}*INCLUYE:*\n- ${includeExtras ? `${installationTier} recomendada` : visibleInstallationTier}\n- Excavacion y preparacion del terreno\n- Instalacion de piscina de fibra de vidrio\n- Sistema de filtracion completo\n- Instalacion base de accesorios: ${clientBaseAccessoryScope.join(', ')}\n${visibleExtraPlumbingItems.length > 0 ? `- Accesorios extra de instalacion: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}\n` : ''}${visibleAdditionals.length > 0 ? `- Equipos/agregados adicionales: ${visibleAdditionals.map((add: any) => `${getAdditionalName(add)} x${add.newQuantity}`).join(', ')}\n` : ''}${showMaterialsToClient ? '- Materiales de construccion' : '- Materiales y equipos fuera del valor comercial informado'}`;
+      const baseScopeLines = exportInstallationProfile.baseScope.map((item) => `- ${item}`).join('\n');
+      const heatingLines = exportInstallationProfile.includesHeating && includeExtras
+        ? `\n- Adicional instalacion de calefaccion: $${exportInstallationProfile.heatingLaborCost.toLocaleString('es-AR')}\n${exportInstallationProfile.heatingExtras.map((item) => `- ${item}`).join('\n')}`
+        : '';
+      const exclusionsLines = exportInstallationProfile.exclusions.map((item) => `- ${item}`).join('\n');
+      message += `${message ? '\n\n' : ''}*INCLUYE:*\n- ${includeExtras ? `${installationTier} recomendada` : visibleInstallationTier}\n${baseScopeLines}${heatingLines}\n${exclusionsLines}\n${visibleExtraPlumbingItems.length > 0 ? `- Accesorios extra de instalacion: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}\n` : ''}${visibleAdditionals.length > 0 ? `- Equipos/agregados adicionales: ${visibleAdditionals.map((add: any) => `${getAdditionalName(add)} x${add.newQuantity}`).join(', ')}\n` : ''}${showMaterialsToClient ? '- Materiales de construccion' : '- Materiales y equipos fuera del valor comercial informado'}`;
     }
 
     if (sections.additionals && visibleAdditionals.length > 0) {
@@ -3535,8 +3613,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       } else {
         message += `${message ? '\n\n' : ''}*MANO DE OBRA*\n- Instalacion base: $${clientBaseLaborCost.toLocaleString('es-AR')}`;
 
-        if (visibleAdditionalsLaborCost > 0) {
-          message += `\n- Adicionales: $${visibleAdditionalsLaborCost.toLocaleString('es-AR')}`;
+        if (visibleHeatingLaborCost > 0) {
+          message += `\n- Instalacion de calefaccion: $${visibleHeatingLaborCost.toLocaleString('es-AR')}`;
         }
 
         message += `\n- Total mano de obra: $${visibleLaborCost.toLocaleString('es-AR')}`;
