@@ -317,13 +317,13 @@ interface RomanArchBounds {
 const getRomanArchGeometry = ({ left, top, right, bottom, archDepth }: RomanArchBounds) => {
   const height = Math.max(bottom - top, 1);
   const safeArchDepth = Math.max(archDepth, 1);
-  const archStartX = right - safeArchDepth;
-  const shoulderInset = Math.min(Math.max(height * 0.18, 14), height * 0.32);
+  const shoulderInset = Math.min(Math.max(height * 0.1, 10), height * 0.18);
   const archTopY = top + shoulderInset;
   const archBottomY = bottom - shoulderInset;
   const centerY = (archTopY + archBottomY) / 2;
-  const radiusX = safeArchDepth;
   const radiusY = Math.max((archBottomY - archTopY) / 2, 10);
+  const radiusX = Math.min(safeArchDepth, radiusY * 1.04);
+  const archStartX = right - radiusX;
 
   return {
     archStartX,

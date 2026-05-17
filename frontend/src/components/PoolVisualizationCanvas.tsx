@@ -80,14 +80,14 @@ const getRomanShellGeometry = (
 ): RomanShellGeometry => {
   const width = poolRight - poolLeft;
   const height = poolBottom - poolTop;
-  const archDepth = Math.max(12, archDepthOverride ?? Math.min(width * 0.28, width * 0.35));
-  const archStartX = poolRight - archDepth;
-  const shoulderInset = Math.min(Math.max(height * 0.18, 18), height * 0.32);
+  const archDepth = Math.max(12, archDepthOverride ?? Math.min(width * 0.24, height * 0.52));
+  const shoulderInset = Math.min(Math.max(height * 0.1, 10), height * 0.18);
   const archTopY = poolTop + shoulderInset;
   const archBottomY = poolBottom - shoulderInset;
   const archCenterY = (archTopY + archBottomY) / 2;
-  const archRadiusX = archDepth;
   const archRadiusY = Math.max((archBottomY - archTopY) / 2, 10);
+  const archRadiusX = Math.min(archDepth, archRadiusY * 1.04);
+  const archStartX = poolRight - archRadiusX;
 
   return {
     left: poolLeft,
