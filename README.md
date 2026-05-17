@@ -16,6 +16,14 @@ Pool Calculator es una aplicacion web profesional disenada para instaladores de 
 - **Sistema de Backup**: Backups automaticos de base de datos
 - **Multi-usuario**: Sistema de roles (SUPERADMIN, ADMIN, USER)
 
+### Visualizacion de Losetas
+
+- La forma y medidas de la piscina se leen directamente desde el catalogo/modelo asociado al proyecto
+- La vista de losetas se genera automaticamente en base a la geometria real de la piscina
+- Los modelos con arco romano soportan corridas curvas reales y recuadre exterior opcional
+- La configuracion del proyecto puede definir si el arco sigue curvo en todas las corridas o si se recuadra a partir de una corrida exterior
+- La vista detallada y la vista CAD comparten la misma logica de dibujo para evitar diferencias visuales entre vistas
+
 ## Stack Tecnologico
 
 ### Frontend

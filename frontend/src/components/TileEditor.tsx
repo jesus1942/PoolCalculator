@@ -20,6 +20,25 @@ interface SideConfig {
   selectedTileId: string;
 }
 
+interface TileEditorConfig {
+  north: SideConfig;
+  south: SideConfig;
+  east: SideConfig;
+  west: SideConfig;
+  arcLayoutMode?: 'follow' | 'square_off';
+  arcCurvedRowsLimit?: number;
+}
+
+const isRomanArchPool = (project: Project) => {
+  const preset = project.poolPreset;
+  const romanSignals = [preset?.name, preset?.description, (preset as any)?.backDescription]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return romanSignals.includes('arco romano') || romanSignals.includes('escalera romana');
+};
+
 export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
   const [tilePresets, setTilePresets] = useState<TilePreset[]>([]);
   const [calculationMode, setCalculationMode] = useState<'automatic' | 'manual'>('automatic');
@@ -33,16 +52,13 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
   // Izquierdo = Norte (arriba)
   // Derecho = Sur (abajo)
 
-  const [config, setConfig] = useState<{
-    north: SideConfig;
-    south: SideConfig;
-    east: SideConfig;
-    west: SideConfig;
-  }>({
+  const [config, setConfig] = useState<TileEditorConfig>({
     north: { firstRingType: '', rows: 2, selectedTileId: '' },
     south: { firstRingType: '', rows: 2, selectedTileId: '' },
     east: { firstRingType: '', rows: 2, selectedTileId: '' },
     west: { firstRingType: '', rows: 2, selectedTileId: '' },
+    arcLayoutMode: 'follow',
+    arcCurvedRowsLimit: 2,
   });
 
   useEffect(() => {
@@ -67,19 +83,33 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
     if (project.tileCalculation && typeof project.tileCalculation === 'object') {
       const saved = project.tileCalculation as any;
       if (saved.north || saved.south || saved.east || saved.west) {
-        setConfig(saved);
+        setConfig({
+          arcLayoutMode: 'follow',
+          arcCurvedRowsLimit: saved?.east?.rows || 1,
+          ...saved,
+        });
       }
     }
   };
 
   const handleSideChange = (side: keyof typeof config, field: keyof SideConfig, value: any) => {
-    setConfig({
+    const nextConfig = {
       ...config,
       [side]: {
         ...config[side],
         [field]: value,
       },
-    });
+    };
+
+    if (side === 'east' && field === 'rows') {
+      const eastRows = Math.max(0, Number(value) || 0);
+      nextConfig.arcCurvedRowsLimit = Math.min(
+        Math.max(0, nextConfig.arcCurvedRowsLimit || eastRows),
+        eastRows
+      );
+    }
+
+    setConfig(nextConfig);
   };
 
   const handleSave = () => {
@@ -92,6 +122,8 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
       south: { firstRingType: '', rows: 2, selectedTileId: '' },
       east: { firstRingType: '', rows: 2, selectedTileId: '' },
       west: { firstRingType: '', rows: 2, selectedTileId: '' },
+      arcLayoutMode: 'follow',
+      arcCurvedRowsLimit: 2,
     });
   };
 
@@ -119,6 +151,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
   const poolLength = project.poolPreset?.length || 8;
   const poolWidth = project.poolPreset?.width || 4;
   const scale = 40; // píxeles por metro
+  const romanArch = isRomanArchPool(project);
 
   const firstRingOptions = [
     { value: '', label: 'Seleccionar tipo' },
@@ -410,6 +443,48 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
           </Card>
         ))}
       </div>
+
+      {romanArch && (
+        <Card>
+          <h3 className="text-lg font-semibold mb-4">Configuración del Arco Romano</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Tratamiento del lado del arco"
+              options={[
+                { value: 'follow', label: 'Seguir arco en todas las corridas' },
+                { value: 'square_off', label: 'Recuadrar después de cierta corrida' },
+              ]}
+              value={config.arcLayoutMode || 'follow'}
+              onChange={(e) => setConfig((prev) => ({
+                ...prev,
+                arcLayoutMode: e.target.value as 'follow' | 'square_off',
+              }))}
+            />
+
+            <Input
+              type="number"
+              label="Corridas curvas máximas del arco"
+              min={0}
+              max={Math.max(0, config.east.rows || 0)}
+              value={Math.min(Math.max(0, config.arcCurvedRowsLimit || 0), Math.max(0, config.east.rows || 0))}
+              onChange={(e) => setConfig((prev) => ({
+                ...prev,
+                arcCurvedRowsLimit: Math.min(
+                  Math.max(0, parseInt(e.target.value) || 0),
+                  Math.max(0, prev.east.rows || 0)
+                ),
+              }))}
+            />
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              El lado derecho de la vista corresponde al arco romano. Puede seguir la curva en todas las corridas o recuadrarse
+              a partir de una corrida exterior, manteniendo las medidas del modelo del catálogo.
+            </p>
+          </div>
+        </Card>
+      )}
 
           {/* Acciones */}
           <div className="flex justify-end space-x-3">

@@ -1,6 +1,50 @@
 import React, { useRef, useEffect } from 'react';
 import { Project } from '@/types';
 
+type TileVisualizationConfig = {
+  north?: SideTileConfig;
+  south?: SideTileConfig;
+  east?: SideTileConfig;
+  west?: SideTileConfig;
+  arcLayoutMode?: 'follow' | 'square_off';
+  arcCurvedRowsLimit?: number;
+};
+
+type SideTileConfig = {
+  firstRingType?: string;
+  rows?: number;
+  selectedTileId?: string;
+};
+
+type RomanShellGeometry = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  archDepth: number;
+  archStartX: number;
+  archTopY: number;
+  archBottomY: number;
+  archCenterY: number;
+  archRadiusX: number;
+  archRadiusY: number;
+};
+
+type RomanArcRowLayout = {
+  row: number;
+  mode: 'curved' | 'square';
+  topLength: number;
+  bottomLength: number;
+  leftLength: number;
+  arcLength: number;
+  frameLength: number;
+  topCount: number;
+  bottomCount: number;
+  leftCount: number;
+  arcCount: number;
+  frameCount: number;
+};
+
 const isRomanArchPool = (project: Project) => {
   const preset = project.poolPreset;
   const romanSignals = [preset?.name, preset?.description, (preset as any)?.backDescription]
@@ -18,6 +62,90 @@ const getPoolShellMode = (project: Project) => {
   if (shape === 'OVAL') return 'oval';
   if (shape === 'CIRCULAR' || shape === 'JACUZZI') return 'radial';
   return 'linear';
+};
+
+const TILE_SIZE_METERS = 0.5;
+
+const getTileRows = (sideConfig?: SideTileConfig) => {
+  const rows = Number(sideConfig?.rows || 0);
+  return Number.isFinite(rows) ? Math.max(0, Math.floor(rows)) : 0;
+};
+
+const getRomanShellGeometry = (
+  poolLeft: number,
+  poolTop: number,
+  poolRight: number,
+  poolBottom: number,
+  archDepthOverride?: number
+): RomanShellGeometry => {
+  const width = poolRight - poolLeft;
+  const height = poolBottom - poolTop;
+  const archDepth = Math.max(12, archDepthOverride ?? Math.min(width * 0.28, width * 0.35));
+  const archStartX = poolRight - archDepth;
+  const shoulderInset = Math.min(Math.max(height * 0.18, 18), height * 0.32);
+  const archTopY = poolTop + shoulderInset;
+  const archBottomY = poolBottom - shoulderInset;
+  const archCenterY = (archTopY + archBottomY) / 2;
+  const archRadiusX = archDepth;
+  const archRadiusY = Math.max((archBottomY - archTopY) / 2, 10);
+
+  return {
+    left: poolLeft,
+    top: poolTop,
+    right: poolRight,
+    bottom: poolBottom,
+    archDepth,
+    archStartX,
+    archTopY,
+    archBottomY,
+    archCenterY,
+    archRadiusX,
+    archRadiusY,
+  };
+};
+
+const approxHalfEllipseLength = (rx: number, ry: number) =>
+  (Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)))) / 2;
+
+const buildRomanArcRowLayouts = (
+  geometry: RomanShellGeometry,
+  baseTile: number,
+  totalRows: number,
+  arcLayoutMode: 'follow' | 'square_off',
+  arcCurvedRowsLimit: number
+): RomanArcRowLayout[] => {
+  const layouts: RomanArcRowLayout[] = [];
+  const curvedRows = arcLayoutMode === 'square_off' ? Math.max(0, Math.min(totalRows, arcCurvedRowsLimit)) : totalRows;
+
+  for (let row = 0; row < totalRows; row += 1) {
+    const offset = row * baseTile;
+    const rowUsesCurve = row < curvedRows;
+    const extraSquareRows = Math.max(0, row - curvedRows);
+    const topLength = rowUsesCurve
+      ? (geometry.archStartX - geometry.left) + offset
+      : (geometry.right - geometry.left) + offset * 2 + extraSquareRows * baseTile;
+    const bottomLength = topLength;
+    const leftLength = (geometry.bottom - geometry.top) + offset * 2;
+    const arcLength = rowUsesCurve ? approxHalfEllipseLength(geometry.archRadiusX + offset, geometry.archRadiusY + offset) : 0;
+    const frameLength = rowUsesCurve ? 0 : (geometry.bottom - geometry.top) + offset * 2;
+
+    layouts.push({
+      row: row + 1,
+      mode: rowUsesCurve ? 'curved' : 'square',
+      topLength,
+      bottomLength,
+      leftLength,
+      arcLength,
+      frameLength,
+      topCount: Math.max(1, Math.round(topLength / baseTile)),
+      bottomCount: Math.max(1, Math.round(bottomLength / baseTile)),
+      leftCount: Math.max(1, Math.round(leftLength / baseTile)),
+      arcCount: rowUsesCurve ? Math.max(5, Math.round(arcLength / baseTile)) : 0,
+      frameCount: rowUsesCurve ? 0 : Math.max(1, Math.round(frameLength / baseTile)),
+    });
+  }
+
+  return layouts;
 };
 
 type ViewMode = 'planta' | 'cad';
@@ -114,14 +242,13 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       return { tiles, mode: 'uniforme', adjustedSize };
     };
 
-    const calculateExtension = (sideConfig: any): number => {
-      if (!sideConfig || !sideConfig.rows || sideConfig.rows === 0) return 0;
-      return sideConfig.rows * 0.5;
+    const calculateExtension = (sideConfig?: SideTileConfig): number => {
+      return getTileRows(sideConfig) * TILE_SIZE_METERS;
     };
 
     const getPoolDimensions = () => {
       const poolPreset = project.poolPreset;
-      const config = tileConfig || project.tileCalculation || {};
+      const config = (tileConfig || project.tileCalculation || {}) as TileVisualizationConfig;
 
       const largo = poolPreset?.length || 8;
       const ancho = poolPreset?.width || 4;
@@ -158,32 +285,29 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       const poolRight = poolLeft + largo * scale;
       const poolBottom = poolTop + ancho * scale;
 
-      const rectPool = { left: poolLeft, top: poolTop, right: poolRight, bottom: poolBottom };
       const shellMode = getPoolShellMode(project);
       const shellCenterX = (poolLeft + poolRight) / 2;
       const shellCenterY = (poolTop + poolBottom) / 2;
       const shellRadiusX = (poolRight - poolLeft) / 2;
       const shellRadiusY = (poolBottom - poolTop) / 2;
-      const romanNoseDepth = (poolRight - poolLeft) * 0.28;
-      const romanNoseStartX = poolRight - romanNoseDepth;
+      const romanShell = getRomanShellGeometry(poolLeft, poolTop, poolRight, poolBottom);
+      const romanArcRows = getTileRows(config.east);
+      const romanArcLayoutMode = config.arcLayoutMode === 'square_off' ? 'square_off' : 'follow';
+      const romanArcCurvedRowsLimit = Math.max(0, Math.min(romanArcRows, Number(config.arcCurvedRowsLimit ?? romanArcRows)));
+      const romanArcRowLayouts = shellMode === 'roman_arch'
+        ? buildRomanArcRowLayouts(romanShell, 0.5 * scale, romanArcRows, romanArcLayoutMode, romanArcCurvedRowsLimit)
+        : [];
 
       const traceShellPath = (inset = 0) => {
         if (shellMode === 'roman_arch') {
-          const left = poolLeft + inset;
-          const top = poolTop + inset;
-          const right = poolRight - inset;
-          const bottom = poolBottom - inset;
-          const noseStart = romanNoseStartX + inset * 0.35;
-          const archShoulder = Math.max((bottom - top) * 0.22, 18);
-          const archTop = top + archShoulder;
-          const archBottom = bottom - archShoulder;
+          const shell = getRomanShellGeometry(poolLeft + inset, poolTop + inset, poolRight - inset, poolBottom - inset);
           ctx.beginPath();
-          ctx.moveTo(left, top);
-          ctx.lineTo(noseStart, top);
-          ctx.lineTo(noseStart, archTop);
-          ctx.bezierCurveTo(right, archTop, right, archBottom, noseStart, archBottom);
-          ctx.lineTo(noseStart, bottom);
-          ctx.lineTo(left, bottom);
+          ctx.moveTo(shell.left, shell.top);
+          ctx.lineTo(shell.archStartX, shell.top);
+          ctx.lineTo(shell.archStartX, shell.archTopY);
+          ctx.ellipse(shell.archStartX, shell.archCenterY, shell.archRadiusX, shell.archRadiusY, 0, -Math.PI / 2, Math.PI / 2, false);
+          ctx.lineTo(shell.archStartX, shell.bottom);
+          ctx.lineTo(shell.left, shell.bottom);
           ctx.closePath();
           return;
         }
@@ -260,7 +384,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       };
 
       // Dibujar losetas Norte
-      for (let row = 0; row < Math.floor(extIzquierdo / 0.5); row++) {
+      for (let row = 0; row < getTileRows(config.north); row++) {
         const y = poolTop - (row + 1) * baseTile;
         let x = poolLeft;
         for (const t of tilesH) {
@@ -270,7 +394,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       }
 
       // Dibujar losetas Sur
-      for (let row = 0; row < Math.floor(extDerecho / 0.5); row++) {
+      for (let row = 0; row < getTileRows(config.south); row++) {
         const y = poolBottom + row * baseTile;
         let x = poolLeft;
         for (const t of tilesH) {
@@ -280,7 +404,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       }
 
       // Dibujar losetas Oeste (Skimmer)
-      for (let col = 0; col < Math.floor(extSkimmer / 0.5); col++) {
+      for (let col = 0; col < getTileRows(config.west); col++) {
         const x = poolLeft - (col + 1) * baseTile;
         let y = poolTop;
         for (const t of tilesV) {
@@ -289,21 +413,88 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
         }
       }
 
-      // Dibujar losetas Este (Escalera)
-      for (let col = 0; col < Math.floor(extEscalera / 0.5); col++) {
-        const x = poolRight + col * baseTile;
-        let y = poolTop;
-        for (const t of tilesV) {
-          drawTile(x, y, baseTile, t * scale);
-          y += t * scale;
+      // Dibujar losetas Este (Escalera / Arco romano)
+      if (shellMode === 'roman_arch') {
+        romanArcRowLayouts.forEach((rowLayout, rowIndex) => {
+          const offset = rowIndex * baseTile;
+
+          let xTop = romanShell.left - offset;
+          const topYInner = romanShell.top - offset;
+          const topYOuter = topYInner - baseTile;
+          const topStep = rowLayout.topLength / rowLayout.topCount;
+          for (let i = 0; i < rowLayout.topCount; i++) {
+            drawTile(xTop, topYOuter, topStep, baseTile);
+            xTop += topStep;
+          }
+
+          let xBottom = romanShell.left - offset;
+          const bottomYInner = romanShell.bottom + offset;
+          const bottomStep = rowLayout.bottomLength / rowLayout.bottomCount;
+          for (let i = 0; i < rowLayout.bottomCount; i++) {
+            drawTile(xBottom, bottomYInner, bottomStep, baseTile);
+            xBottom += bottomStep;
+          }
+
+          if (rowLayout.mode === 'curved') {
+            const arcRxInner = romanShell.archRadiusX + offset;
+            const arcRyInner = romanShell.archRadiusY + offset;
+            const arcRxOuter = arcRxInner + baseTile;
+            const arcRyOuter = arcRyInner + baseTile;
+            for (let i = 0; i < rowLayout.arcCount; i++) {
+              const a0 = -Math.PI / 2 + (Math.PI / rowLayout.arcCount) * i;
+              const a1 = -Math.PI / 2 + (Math.PI / rowLayout.arcCount) * (i + 1);
+              const ix0 = romanShell.archStartX + arcRxInner * Math.cos(a0);
+              const iy0 = romanShell.archCenterY + arcRyInner * Math.sin(a0);
+              const ix1 = romanShell.archStartX + arcRxInner * Math.cos(a1);
+              const iy1 = romanShell.archCenterY + arcRyInner * Math.sin(a1);
+              const ox0 = romanShell.archStartX + arcRxOuter * Math.cos(a0);
+              const oy0 = romanShell.archCenterY + arcRyOuter * Math.sin(a0);
+              const ox1 = romanShell.archStartX + arcRxOuter * Math.cos(a1);
+              const oy1 = romanShell.archCenterY + arcRyOuter * Math.sin(a1);
+
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(ox0, oy0);
+              ctx.lineTo(ox1, oy1);
+              ctx.lineTo(ix1, iy1);
+              ctx.lineTo(ix0, iy0);
+              ctx.closePath();
+              const grad = ctx.createLinearGradient(ix0, iy0, ox1, oy1);
+              grad.addColorStop(0, '#f8fafc');
+              grad.addColorStop(1, '#e2e8f0');
+              ctx.fillStyle = grad;
+              ctx.fill();
+              ctx.strokeStyle = '#94a3b8';
+              ctx.lineWidth = 0.75;
+              ctx.stroke();
+              ctx.restore();
+            }
+          } else {
+            const frameX = romanShell.right + romanArcCurvedRowsLimit * baseTile + (rowIndex - romanArcCurvedRowsLimit) * baseTile;
+            let y = romanShell.top - offset;
+            const frameStep = rowLayout.frameLength / rowLayout.frameCount;
+            for (let i = 0; i < rowLayout.frameCount; i++) {
+              drawTile(frameX, y, baseTile, frameStep);
+              y += frameStep;
+            }
+          }
+        });
+      } else {
+        for (let col = 0; col < getTileRows(config.east); col++) {
+          const x = poolRight + col * baseTile;
+          let y = poolTop;
+          for (const t of tilesV) {
+            drawTile(x, y, baseTile, t * scale);
+            y += t * scale;
+          }
         }
       }
 
       // Esquinas
-      const numColsW = Math.floor(extSkimmer / 0.5);
-      const numColsE = Math.floor(extEscalera / 0.5);
-      const numRowsN = Math.floor(extIzquierdo / 0.5);
-      const numRowsS = Math.floor(extDerecho / 0.5);
+      const numColsW = getTileRows(config.west);
+      const numColsE = shellMode === 'roman_arch' ? 0 : getTileRows(config.east);
+      const numRowsN = getTileRows(config.north);
+      const numRowsS = getTileRows(config.south);
 
       // Esquina NO
       for (let col = 0; col < numColsW; col++) {
@@ -437,6 +628,14 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       const tilesH = distH.tiles;
       const tilesV = distV.tiles;
       const baseTile = 0.5 * scale;
+      const shellMode = getPoolShellMode(project);
+      const romanShell = getRomanShellGeometry(poolLeft, poolTop, poolRight, poolBottom);
+      const romanArcRows = getTileRows(config.east);
+      const romanArcLayoutMode = config.arcLayoutMode === 'square_off' ? 'square_off' : 'follow';
+      const romanArcCurvedRowsLimit = Math.max(0, Math.min(romanArcRows, Number(config.arcCurvedRowsLimit ?? romanArcRows)));
+      const romanArcRowLayouts = shellMode === 'roman_arch'
+        ? buildRomanArcRowLayouts(romanShell, baseTile, romanArcRows, romanArcLayoutMode, romanArcCurvedRowsLimit)
+        : [];
 
       const hasLomoBalena = ['north', 'south', 'east', 'west'].some(
         side => config[side]?.firstRingType === 'LOMO_BALLENA'
@@ -450,7 +649,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       };
 
       // Losetas Norte
-      for (let row = 0; row < Math.floor(extIzquierdo / 0.5); row++) {
+      for (let row = 0; row < getTileRows(config.north); row++) {
         const y = poolTop - (row + 1) * baseTile;
         let x = poolLeft;
         const centerIdx = Math.floor(tilesH.length / 2);
@@ -463,7 +662,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       }
 
       // Losetas Sur
-      for (let row = 0; row < Math.floor(extDerecho / 0.5); row++) {
+      for (let row = 0; row < getTileRows(config.south); row++) {
         const y = poolBottom + row * baseTile;
         let x = poolLeft;
         const centerIdx = Math.floor(tilesH.length / 2);
@@ -476,7 +675,7 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       }
 
       // Losetas Oeste
-      for (let col = 0; col < Math.floor(extSkimmer / 0.5); col++) {
+      for (let col = 0; col < getTileRows(config.west); col++) {
         const x = poolLeft - (col + 1) * baseTile;
         let y = poolTop;
         const centerIdx = Math.floor(tilesV.length / 2);
@@ -489,24 +688,81 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
       }
 
       // Losetas Este
-      for (let col = 0; col < Math.floor(extEscalera / 0.5); col++) {
-        const x = poolRight + col * baseTile;
-        let y = poolTop;
-        const centerIdx = Math.floor(tilesV.length / 2);
-        for (let i = 0; i < tilesV.length; i++) {
-          const th = tilesV[i] * scale;
-          const isCenter = (i === centerIdx && distV.mode === 'centro');
-          drawRect(x, y, baseTile, th, isCenter ? '#67e8f9' : '#38bdf8', isCenter ? 1.5 : 0.75);
-          y += th;
+      if (shellMode === 'roman_arch') {
+        romanArcRowLayouts.forEach((rowLayout, rowIndex) => {
+          const offset = rowIndex * baseTile;
+          const topY = romanShell.top - offset - baseTile;
+          const topStep = rowLayout.topLength / rowLayout.topCount;
+          let xTop = romanShell.left - offset;
+          for (let i = 0; i < rowLayout.topCount; i++) {
+            drawRect(xTop, topY, topStep, baseTile, '#38bdf8');
+            xTop += topStep;
+          }
+
+          const bottomY = romanShell.bottom + offset;
+          const bottomStep = rowLayout.bottomLength / rowLayout.bottomCount;
+          let xBottom = romanShell.left - offset;
+          for (let i = 0; i < rowLayout.bottomCount; i++) {
+            drawRect(xBottom, bottomY, bottomStep, baseTile, '#38bdf8');
+            xBottom += bottomStep;
+          }
+
+          if (rowLayout.mode === 'curved') {
+            const arcRxInner = romanShell.archRadiusX + offset;
+            const arcRyInner = romanShell.archRadiusY + offset;
+            const arcRxOuter = arcRxInner + baseTile;
+            const arcRyOuter = arcRyInner + baseTile;
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 0.75;
+            for (let i = 0; i < rowLayout.arcCount; i++) {
+              const a0 = -Math.PI / 2 + (Math.PI / rowLayout.arcCount) * i;
+              const a1 = -Math.PI / 2 + (Math.PI / rowLayout.arcCount) * (i + 1);
+              const ix0 = romanShell.archStartX + arcRxInner * Math.cos(a0);
+              const iy0 = romanShell.archCenterY + arcRyInner * Math.sin(a0);
+              const ix1 = romanShell.archStartX + arcRxInner * Math.cos(a1);
+              const iy1 = romanShell.archCenterY + arcRyInner * Math.sin(a1);
+              const ox0 = romanShell.archStartX + arcRxOuter * Math.cos(a0);
+              const oy0 = romanShell.archCenterY + arcRyOuter * Math.sin(a0);
+              const ox1 = romanShell.archStartX + arcRxOuter * Math.cos(a1);
+              const oy1 = romanShell.archCenterY + arcRyOuter * Math.sin(a1);
+              ctx.beginPath();
+              ctx.moveTo(ox0, oy0);
+              ctx.lineTo(ox1, oy1);
+              ctx.lineTo(ix1, iy1);
+              ctx.lineTo(ix0, iy0);
+              ctx.closePath();
+              ctx.stroke();
+            }
+          } else {
+            const frameX = romanShell.right + romanArcCurvedRowsLimit * baseTile + (rowIndex - romanArcCurvedRowsLimit) * baseTile;
+            const frameStep = rowLayout.frameLength / rowLayout.frameCount;
+            let y = romanShell.top - offset;
+            for (let i = 0; i < rowLayout.frameCount; i++) {
+              drawRect(frameX, y, baseTile, frameStep, '#38bdf8');
+              y += frameStep;
+            }
+          }
+        });
+      } else {
+        for (let col = 0; col < getTileRows(config.east); col++) {
+          const x = poolRight + col * baseTile;
+          let y = poolTop;
+          const centerIdx = Math.floor(tilesV.length / 2);
+          for (let i = 0; i < tilesV.length; i++) {
+            const th = tilesV[i] * scale;
+            const isCenter = (i === centerIdx && distV.mode === 'centro');
+            drawRect(x, y, baseTile, th, isCenter ? '#67e8f9' : '#38bdf8', isCenter ? 1.5 : 0.75);
+            y += th;
+          }
         }
       }
 
       // Esquinas
       const cornerColor = hasLomoBalena ? '#fbbf24' : '#38bdf8';
-      const numColsW = Math.floor(extSkimmer / 0.5);
-      const numColsE = Math.floor(extEscalera / 0.5);
-      const numRowsN = Math.floor(extIzquierdo / 0.5);
-      const numRowsS = Math.floor(extDerecho / 0.5);
+      const numColsW = getTileRows(config.west);
+      const numColsE = shellMode === 'roman_arch' ? 0 : getTileRows(config.east);
+      const numRowsN = getTileRows(config.north);
+      const numRowsS = getTileRows(config.south);
 
       for (let col = 0; col < numColsW; col++) {
         for (let row = 0; row < numRowsN; row++)
@@ -521,26 +777,20 @@ export const PoolVisualizationCanvas = React.forwardRef<HTMLCanvasElement, PoolV
           drawRect(poolRight + col * baseTile, poolBottom + row * baseTile, baseTile, baseTile, cornerColor);
       }
 
-      const shellMode = getPoolShellMode(project);
       const shellCenterX = (poolLeft + poolRight) / 2;
       const shellCenterY = (poolTop + poolBottom) / 2;
       const shellRadiusX = (poolRight - poolLeft) / 2;
       const shellRadiusY = (poolBottom - poolTop) / 2;
-      const romanNoseDepth = (poolRight - poolLeft) * 0.28;
-      const romanNoseStartX = poolRight - romanNoseDepth;
 
       const traceShellPath = () => {
         if (shellMode === 'roman_arch') {
-          const archShoulder = Math.max((poolBottom - poolTop) * 0.22, 18);
-          const archTop = poolTop + archShoulder;
-          const archBottom = poolBottom - archShoulder;
           ctx.beginPath();
-          ctx.moveTo(poolLeft, poolTop);
-          ctx.lineTo(romanNoseStartX, poolTop);
-          ctx.lineTo(romanNoseStartX, archTop);
-          ctx.bezierCurveTo(poolRight, archTop, poolRight, archBottom, romanNoseStartX, archBottom);
-          ctx.lineTo(romanNoseStartX, poolBottom);
-          ctx.lineTo(poolLeft, poolBottom);
+          ctx.moveTo(romanShell.left, romanShell.top);
+          ctx.lineTo(romanShell.archStartX, romanShell.top);
+          ctx.lineTo(romanShell.archStartX, romanShell.archTopY);
+          ctx.ellipse(romanShell.archStartX, romanShell.archCenterY, romanShell.archRadiusX, romanShell.archRadiusY, 0, -Math.PI / 2, Math.PI / 2, false);
+          ctx.lineTo(romanShell.archStartX, romanShell.bottom);
+          ctx.lineTo(romanShell.left, romanShell.bottom);
           ctx.closePath();
           return;
         }

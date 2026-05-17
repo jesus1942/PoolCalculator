@@ -306,22 +306,72 @@ const buildDefaultHydraulicLayout = (project: Project, hydraulicSummary: ReturnT
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const cubicPoint = (
-  t: number,
-  p0: { x: number; y: number },
-  p1: { x: number; y: number },
-  p2: { x: number; y: number },
-  p3: { x: number; y: number }
-) => {
-  const u = 1 - t;
-  const tt = t * t;
-  const uu = u * u;
-  const uuu = uu * u;
-  const ttt = tt * t;
+interface RomanArchBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  archDepth: number;
+}
+
+const getRomanArchGeometry = ({ left, top, right, bottom, archDepth }: RomanArchBounds) => {
+  const height = Math.max(bottom - top, 1);
+  const safeArchDepth = Math.max(archDepth, 1);
+  const archStartX = right - safeArchDepth;
+  const shoulderInset = Math.min(Math.max(height * 0.18, 14), height * 0.32);
+  const archTopY = top + shoulderInset;
+  const archBottomY = bottom - shoulderInset;
+  const centerY = (archTopY + archBottomY) / 2;
+  const radiusX = safeArchDepth;
+  const radiusY = Math.max((archBottomY - archTopY) / 2, 10);
 
   return {
-    x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
-    y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y,
+    archStartX,
+    archTopY,
+    archBottomY,
+    centerY,
+    radiusX,
+    radiusY,
+  };
+};
+
+const buildRomanArchSvgPath = (bounds: RomanArchBounds) => {
+  const { left, top, bottom } = bounds;
+  const { archStartX, archTopY, archBottomY, radiusX, radiusY } = getRomanArchGeometry(bounds);
+
+  return [
+    `M ${left} ${top}`,
+    `H ${archStartX}`,
+    `V ${archTopY}`,
+    `A ${radiusX} ${radiusY} 0 0 1 ${archStartX} ${archBottomY}`,
+    `V ${bottom}`,
+    `H ${left}`,
+    'Z',
+  ].join(' ');
+};
+
+const traceRomanArchCanvasPath = (ctx: CanvasRenderingContext2D, bounds: RomanArchBounds) => {
+  const { left, top, bottom } = bounds;
+  const { archStartX, archTopY, archBottomY, centerY, radiusX, radiusY } = getRomanArchGeometry(bounds);
+
+  ctx.beginPath();
+  ctx.moveTo(left, top);
+  ctx.lineTo(archStartX, top);
+  ctx.lineTo(archStartX, archTopY);
+  ctx.ellipse(archStartX, centerY, radiusX, radiusY, 0, -Math.PI / 2, Math.PI / 2, false);
+  ctx.lineTo(archStartX, bottom);
+  ctx.lineTo(left, bottom);
+  ctx.closePath();
+};
+
+const pointOnRomanArchCurve = (ratio: number, bounds: RomanArchBounds) => {
+  const clampedRatio = clamp(ratio, 0, 1);
+  const { archStartX, centerY, radiusX, radiusY } = getRomanArchGeometry(bounds);
+  const angle = -Math.PI / 2 + Math.PI * clampedRatio;
+
+  return {
+    x: archStartX + radiusX * Math.cos(angle),
+    y: centerY + radiusY * Math.sin(angle),
   };
 };
 
@@ -363,6 +413,13 @@ const HydraulicCssPreview: React.FC<{
   const oppositeSideDepth = Math.min(metersToSvg(1), poolW * 0.35);
   const oppositeSideHalfH = poolH / 2;
   const internalWallSpanMeters = 1;
+  const romanArchBounds = {
+    left: poolX,
+    top: poolY,
+    right: poolX + poolW,
+    bottom: poolY + poolH,
+    archDepth: oppositeSideDepth,
+  };
   const internalWallXStart = poolX + poolW - oppositeSideDepth;
   const internalWallXEnd = poolX + poolW;
   const internalWallY = poolY + oppositeSideHalfH;
@@ -371,28 +428,35 @@ const HydraulicCssPreview: React.FC<{
   const shellCenterY = poolY + poolH / 2;
   const shellRadiusX = poolW / 2;
   const shellRadiusY = poolH / 2;
-  const romanArchShoulder = Math.max(poolH * 0.22, 18);
-  const romanArchTopY = poolY + romanArchShoulder;
-  const romanArchBottomY = poolY + poolH - romanArchShoulder;
+  const { archTopY: romanArchTopY, archBottomY: romanArchBottomY } = getRomanArchGeometry(romanArchBounds);
   const shellOuterPath = shellMode === 'roman_arch'
-    ? `M ${poolX} ${poolY} H ${internalWallXStart} V ${romanArchTopY} C ${internalWallXEnd} ${romanArchTopY} ${internalWallXEnd} ${romanArchBottomY} ${internalWallXStart} ${romanArchBottomY} V ${poolY + poolH} H ${poolX} Z`
+    ? buildRomanArchSvgPath(romanArchBounds)
     : shellMode === 'oval'
       ? `M ${poolX + shellRadiusY} ${poolY} H ${poolX + poolW - shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH} H ${poolX + shellRadiusY} A ${shellRadiusY} ${shellRadiusY} 0 0 1 ${poolX + shellRadiusY} ${poolY} Z`
       : null;
   const shellInset = 14;
-  const romanInnerLeft = poolX + shellInset;
-  const romanInnerTop = poolY + shellInset;
-  const romanInnerBottom = poolY + poolH - shellInset;
-  const romanInnerRight = internalWallXEnd - shellInset;
-  const romanInnerShoulderX = internalWallXStart + shellInset * 0.35;
-  const romanInnerShoulder = Math.max((romanInnerBottom - romanInnerTop) * 0.22, 12);
-  const romanInnerArchTopY = romanInnerTop + romanInnerShoulder;
-  const romanInnerArchBottomY = romanInnerBottom - romanInnerShoulder;
+  const romanInnerBounds = {
+    left: poolX + shellInset,
+    top: poolY + shellInset,
+    right: poolX + poolW - shellInset,
+    bottom: poolY + poolH - shellInset,
+    archDepth: Math.max(oppositeSideDepth - shellInset, 10),
+  };
+  const shellDeckBounds = {
+    left: poolX - shellInset,
+    top: poolY - shellInset,
+    right: poolX + poolW + shellInset,
+    bottom: poolY + poolH + shellInset,
+    archDepth: oppositeSideDepth + shellInset,
+  };
   const shellInnerPath = shellMode === 'roman_arch'
-    ? `M ${romanInnerLeft} ${romanInnerTop} H ${romanInnerShoulderX} V ${romanInnerArchTopY} C ${romanInnerRight} ${romanInnerArchTopY} ${romanInnerRight} ${romanInnerArchBottomY} ${romanInnerShoulderX} ${romanInnerArchBottomY} V ${romanInnerBottom} H ${romanInnerLeft} Z`
+    ? buildRomanArchSvgPath(romanInnerBounds)
     : shellMode === 'oval'
       ? `M ${poolX + shellRadiusY} ${poolY + shellInset} H ${poolX + poolW - shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + poolW - shellRadiusY} ${poolY + poolH - shellInset} H ${poolX + shellRadiusY} A ${Math.max(shellRadiusY - shellInset, 8)} ${Math.max(shellRadiusY - shellInset, 8)} 0 0 1 ${poolX + shellRadiusY} ${poolY + shellInset} Z`
       : null;
+  const romanDeckRingPath = shellMode === 'roman_arch' && shellOuterPath
+    ? `${buildRomanArchSvgPath(shellDeckBounds)} ${shellOuterPath}`
+    : null;
   const showRomanAmenities = shellMode === 'roman_arch';
   const workspaceMarginX = Math.max(metersToSvg(4.8), 280);
   const workspaceMarginY = Math.max(metersToSvg(3.4), 220);
@@ -432,13 +496,7 @@ const HydraulicCssPreview: React.FC<{
       const ratio = clamp(point.offsetMeters / Math.max(internalWallSpanMeters, 0.01), 0, 1);
 
       if (shellMode === 'roman_arch') {
-        return cubicPoint(
-          ratio,
-          { x: internalWallXStart, y: romanArchTopY },
-          { x: internalWallXEnd, y: romanArchTopY },
-          { x: internalWallXEnd, y: romanArchBottomY },
-          { x: internalWallXStart, y: romanArchBottomY },
-        );
+        return pointOnRomanArchCurve(ratio, romanArchBounds);
       }
 
       return {
@@ -898,6 +956,15 @@ const HydraulicCssPreview: React.FC<{
               </>
             ) : shellOuterPath && shellInnerPath ? (
               <>
+                {romanDeckRingPath && (
+                  <path
+                    d={romanDeckRingPath}
+                    fill="rgba(30,41,59,0.86)"
+                    stroke="rgba(148,163,184,0.18)"
+                    strokeWidth="1.6"
+                    fillRule="evenodd"
+                  />
+                )}
                 <path d={shellOuterPath} fill="url(#pool-water)" stroke="rgba(224,242,254,0.9)" strokeWidth="3" />
                 <path d={shellInnerPath} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
                 {shellMode === 'oval' && (
@@ -1324,10 +1391,14 @@ const HydraulicLayoutPreview: React.FC<{
     const shellCenterY = poolTop + poolH / 2;
     const shellRadiusX = poolW / 2;
     const shellRadiusY = poolH / 2;
-    const romanNoseDepth = poolW * 0.28;
-    const romanNoseStartX = poolRight - romanNoseDepth;
-    const wetDeckWidth = poolW * 0.24;
-    const stairsWidth = poolW * 0.18;
+    const romanNoseDepth = Math.min(scale * 1, poolW * 0.35);
+    const romanArchBounds = {
+      left: poolLeft,
+      top: poolTop,
+      right: poolRight,
+      bottom: poolBottom,
+      archDepth: romanNoseDepth,
+    };
     const lowerBandHeight = poolH * 0.22;
 
     const arrowHead = (ax: number, ay: number, dx: number, dy: number, sz = 7) => {
@@ -1377,23 +1448,13 @@ const HydraulicLayoutPreview: React.FC<{
     };
 
     const drawRomanShellPath = (inset = 0) => {
-      const left = poolLeft + inset;
-      const top = poolTop + inset;
-      const right = poolRight - inset;
-      const bottom = poolBottom - inset;
-      const noseStart = romanNoseStartX + inset * 0.35;
-      const archShoulder = Math.max((bottom - top) * 0.22, 18);
-      const archTop = top + archShoulder;
-      const archBottom = bottom - archShoulder;
-
-      ctx.beginPath();
-      ctx.moveTo(left, top);
-      ctx.lineTo(noseStart, top);
-      ctx.lineTo(noseStart, archTop);
-      ctx.bezierCurveTo(right, archTop, right, archBottom, noseStart, archBottom);
-      ctx.lineTo(noseStart, bottom);
-      ctx.lineTo(left, bottom);
-      ctx.closePath();
+      traceRomanArchCanvasPath(ctx, {
+        left: poolLeft + inset,
+        top: poolTop + inset,
+        right: poolRight - inset,
+        bottom: poolBottom - inset,
+        archDepth: Math.max(romanNoseDepth - inset, 10),
+      });
     };
 
     const drawOvalShellPath = (inset = 0) => {
@@ -1419,16 +1480,7 @@ const HydraulicLayoutPreview: React.FC<{
     const plotPlanPoint = (point: HydraulicPointDraft) => {
       if (point.side === 'internal_wall') {
         const ratio = Math.max(0, Math.min(1, point.offsetMeters));
-        const archShoulder = Math.max(poolH * 0.22, 18);
-        const archTop = poolTop + archShoulder;
-        const archBottom = poolBottom - archShoulder;
-        return cubicPoint(
-          ratio,
-          { x: romanNoseStartX, y: archTop },
-          { x: poolRight, y: archTop },
-          { x: poolRight, y: archBottom },
-          { x: romanNoseStartX, y: archBottom },
-        );
+        return pointOnRomanArchCurve(ratio, romanArchBounds);
       }
 
       const ratio = (point.side === 'north' || point.side === 'south')
@@ -1483,28 +1535,61 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.fillText('PLANTA', W - 66, 33); ctx.fillText('HIDRÁULICA', W - 66, 47);
     ctx.textAlign = 'left';
 
-    ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.rect(poolLeft - WALL_T, poolTop - WALL_T, poolW + WALL_T * 2, poolH + WALL_T * 2); ctx.fill(); ctx.stroke();
-    ctx.save();
-    ctx.beginPath(); ctx.rect(poolLeft - WALL_T, poolTop - WALL_T, poolW + WALL_T * 2, poolH + WALL_T * 2); ctx.clip();
-    ctx.beginPath(); ctx.rect(poolLeft, poolTop, poolW, poolH);
-    ctx.restore();
-
-    const hatchStrip = (x: number, y: number, w: number, h: number) => {
-      ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-      ctx.fillStyle = '#263548'; ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = 'rgba(148,163,184,0.28)'; ctx.lineWidth = 0.7;
-      for (let i = -h; i < w + h; i += 6) {
-        ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i + h, y + h); ctx.stroke();
+    const hatchPattern = (bounds: { x: number; y: number; w: number; h: number }) => {
+      ctx.fillStyle = '#263548';
+      ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+      ctx.strokeStyle = 'rgba(148,163,184,0.28)';
+      ctx.lineWidth = 0.7;
+      for (let i = -bounds.h; i < bounds.w + bounds.h; i += 6) {
+        ctx.beginPath();
+        ctx.moveTo(bounds.x + i, bounds.y);
+        ctx.lineTo(bounds.x + i + bounds.h, bounds.y + bounds.h);
+        ctx.stroke();
       }
-      ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, w, h);
-      ctx.restore();
     };
-    hatchStrip(poolLeft - WALL_T, poolTop - WALL_T, poolW + WALL_T * 2, WALL_T);
-    hatchStrip(poolLeft - WALL_T, poolBottom, poolW + WALL_T * 2, WALL_T);
-    hatchStrip(poolLeft - WALL_T, poolTop, WALL_T, poolH);
-    hatchStrip(poolRight, poolTop, WALL_T, poolH);
+
+    if (shellMode === 'roman_arch') {
+      const deckBounds = {
+        left: poolLeft - WALL_T,
+        top: poolTop - WALL_T,
+        right: poolRight + WALL_T,
+        bottom: poolBottom + WALL_T,
+        archDepth: romanNoseDepth + WALL_T,
+      };
+      ctx.save();
+      traceRomanArchCanvasPath(ctx, deckBounds);
+      drawRomanShellPath();
+      ctx.fillStyle = '#1e293b';
+      ctx.fill('evenodd');
+      ctx.clip('evenodd');
+      hatchPattern({
+        x: deckBounds.left,
+        y: deckBounds.top,
+        w: deckBounds.right - deckBounds.left,
+        h: deckBounds.bottom - deckBounds.top,
+      });
+      ctx.restore();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      traceRomanArchCanvasPath(ctx, deckBounds);
+      ctx.stroke();
+      drawRomanShellPath();
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.rect(poolLeft - WALL_T, poolTop - WALL_T, poolW + WALL_T * 2, poolH + WALL_T * 2); ctx.fill(); ctx.stroke();
+      const hatchStrip = (x: number, y: number, w: number, h: number) => {
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+        hatchPattern({ x, y, w, h });
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+        ctx.restore();
+      };
+      hatchStrip(poolLeft - WALL_T, poolTop - WALL_T, poolW + WALL_T * 2, WALL_T);
+      hatchStrip(poolLeft - WALL_T, poolBottom, poolW + WALL_T * 2, WALL_T);
+      hatchStrip(poolLeft - WALL_T, poolTop, WALL_T, poolH);
+      hatchStrip(poolRight, poolTop, WALL_T, poolH);
+    }
 
     const waterGrad = ctx.createLinearGradient(poolLeft, poolTop, poolRight, poolBottom);
     waterGrad.addColorStop(0, 'rgba(14,165,233,0.32)');
