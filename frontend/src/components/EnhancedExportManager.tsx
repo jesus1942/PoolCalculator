@@ -50,6 +50,7 @@ type ExportTemplateSettings = {
   installationMode?: 'basic' | 'with_extras';
   clientPricingMode?: 'full' | 'labor_only';
   showRecommendedInstallationBox?: boolean;
+  useCustomClientBody?: boolean;
   documentBlocks?: ClientDocumentBlock[];
   customBodyHtml?: string;
   values?: {
@@ -682,6 +683,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         installationMode: 'with_extras' as const,
         clientPricingMode: 'labor_only' as const,
         showRecommendedInstallationBox: true,
+        useCustomClientBody: false,
         ...templateSettings,
       };
     }
@@ -825,6 +827,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       return escapeHtml(String(projectDynamicValues[normalizedKey as keyof typeof projectDynamicValues] || ''));
     });
 
+  const commercialExtraSummaryItems = dedupeLabeledItems([
+    ...extraPlumbingItems.map((item: any) => ({
+      name: getPlumbingItemName(item),
+      quantity: Number(item.quantity || 0),
+    })),
+    ...commercialAdditionals
+      .filter((additional: any) => Number(additional.newQuantity || 0) > 0)
+      .map((additional: any) => ({
+        name: getAdditionalName(additional),
+        quantity: Number(additional.newQuantity || 0),
+      })),
+  ]).filter((item) => item.quantity > 0);
+
   const renderClientDocumentBlocks = (blocks: ClientDocumentBlock[] = []) => {
     if (!Array.isArray(blocks) || blocks.length === 0) return '';
 
@@ -906,7 +921,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const resolveClientBodyHtml = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const customBodyHtml = templateSettings.customBodyHtml?.trim();
-    if (customBodyHtml && !isLegacyAutoClientHtml(customBodyHtml)) {
+    if (templateSettings.useCustomClientBody && customBodyHtml && !isLegacyAutoClientHtml(customBodyHtml)) {
       return interpolateProjectHtml(customBodyHtml);
     }
 
@@ -927,11 +942,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost;
     const visibleCommercialBadge = includeExtras ? `${installationTier} recomendada` : 'Instalación base';
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
-    const visibleHydraulicAdditionals = includeExtras ? summarizedAdditionalItems : [];
-    const platinumExtrasSummary = [
-      ...extraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`),
-      ...summarizedAdditionalItems.map((item) => `${item.name} x${item.quantity}`),
-    ];
+    const visibleHydraulicAdditionals = includeExtras ? commercialExtraSummaryItems : [];
+    const platinumExtrasSummary = commercialExtraSummaryItems.map((item) => `${item.name} x${item.quantity}`);
     const conditions = getConditionsList(templateSettings.conditions);
     const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
 
@@ -4460,6 +4472,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
       const nextTemplate = { ...prevTemplate };
       delete nextTemplate.customBodyHtml;
+      nextTemplate.useCustomClientBody = false;
       return {
         ...prev,
         templates: {
@@ -4984,6 +4997,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <span>Mostrar cuadro de instalación recomendada</span>
                         </label>
                         <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto cliente muestra solo la tarjeta de instalación base.</p>
+
+                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={!!activeDraftTemplate.useCustomClientBody}
+                            onChange={(event) => updateDraftTemplate({ useCustomClientBody: event.target.checked })}
+                            className="h-4 w-4"
+                          />
+                          <span>Usar propuesta personalizada editada</span>
+                        </label>
+                        <p className="text-[11px] text-zinc-500 mt-1">Si está desactivado, la exportación usa siempre la plantilla automática actual del sistema.</p>
                       </div>
                     )}
                     <div className="space-y-3">
