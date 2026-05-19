@@ -50,6 +50,7 @@ type ExportTemplateSettings = {
   installationMode?: 'basic' | 'with_extras';
   clientPricingMode?: 'full' | 'labor_only';
   showRecommendedInstallationBox?: boolean;
+  includeAdditionalsPricing?: boolean;
   useCustomClientBody?: boolean;
   documentBlocks?: ClientDocumentBlock[];
   customBodyHtml?: string;
@@ -683,6 +684,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         installationMode: 'with_extras' as const,
         clientPricingMode: 'labor_only' as const,
         showRecommendedInstallationBox: true,
+        includeAdditionalsPricing: true,
         useCustomClientBody: false,
         ...templateSettings,
       };
@@ -934,12 +936,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const installationMode = templateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
+    const includeAdditionalsPricing = templateSettings.includeAdditionalsPricing !== false;
     const showMaterialsToClient = clientPricingMode === 'full';
     const showRecommendedInstallationBox = templateSettings.showRecommendedInstallationBox !== false;
     const showComparisonGrid = showRecommendedInstallationBox && includeExtras;
     const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
     const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
-    const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost;
+    const visibleAdditionalsLaborCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.laborCost : 0;
+    const visibleAdditionalsMaterialCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.materialCost : 0;
+    const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost + visibleAdditionalsLaborCost;
     const visibleCommercialBadge = includeExtras ? `${installationTier} recomendada` : 'Instalación base';
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
     const visibleHydraulicAdditionals = includeExtras ? commercialExtraSummaryItems : [];
@@ -1014,12 +1019,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="comparison-title">${installationTier}</div>
             <div class="comparison-subtitle">Resumen de agregados sobre la instalación base</div>
             <ul class="comparison-list">
-              <li>M.O. base: ${formatCurrency(clientBaseLaborCost)}</li>
+              <li>Mano de obra base: ${formatCurrency(clientBaseLaborCost)}</li>
               ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
+              ${visibleAdditionalsLaborCost > 0 ? `<li>M.O. adicionales del proyecto: ${formatCurrency(visibleAdditionalsLaborCost)}</li>` : ''}
               ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
               ${platinumExtrasSummary.length > 0 ? platinumExtrasSummary.map((item) => `<li>${item}</li>`).join('') : '<li>Sin extras cargados</li>'}
             </ul>
-            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + additionalsCosts.materialCost)}` : `M.O. recomendada: ${formatCurrency(visibleLaborCost)}`}</div>
+            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + visibleAdditionalsMaterialCost)}` : `Mano de obra: ${formatCurrency(visibleLaborCost)}`}</div>
           </div>
         </div>
         ` : ''}
@@ -4454,6 +4460,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           ...prev.templates,
           client: {
             ...prevTemplate,
+            useCustomClientBody: true,
             customBodyHtml: html,
           },
         },
@@ -4997,6 +5004,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <span>Mostrar cuadro de instalación recomendada</span>
                         </label>
                         <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto cliente muestra solo la tarjeta de instalación base.</p>
+
+                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={activeDraftTemplate.includeAdditionalsPricing !== false}
+                            onChange={(event) => updateDraftTemplate({ includeAdditionalsPricing: event.target.checked })}
+                            className="h-4 w-4"
+                          />
+                          <span>Sumar precios de adicionales</span>
+                        </label>
+                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, los adicionales se muestran como alcance pero no se suman al precio comercial exportado.</p>
 
                         <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                           <input
