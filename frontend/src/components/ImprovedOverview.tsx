@@ -264,7 +264,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           </div>
           <div className="min-w-0 lg:max-w-[28rem] lg:text-right">
             {canViewFinancials ? (
-              <>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-5 lg:border-0 lg:bg-transparent lg:p-0">
                 <div className="mb-1 flex items-center gap-2 lg:justify-end">
                   <p className="text-sm text-zinc-100 sm:text-base">TOTAL DEL PROYECTO</p>
                   <button
@@ -277,20 +277,20 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                     {showGrandTotal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="min-h-[48px] break-words text-3xl font-bold tracking-tight sm:min-h-[60px] sm:text-5xl">
+                <p className="min-h-[40px] max-w-full overflow-hidden break-all text-2xl font-bold leading-tight tracking-tight sm:min-h-[56px] sm:text-4xl lg:text-5xl">
                   {showGrandTotal ? `$${grandTotal.toLocaleString('es-AR')}` : '••••••••••'}
                 </p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-50 sm:text-base lg:items-end">
                   <span className="flex min-w-0 items-center gap-1">
-                    <Package className="w-4 h-4" />
-                    <span className="break-words">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
+                    <Package className="h-4 w-4 shrink-0" />
+                    <span className="break-all">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
                   </span>
                   <span className="flex min-w-0 items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    <span className="break-words">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
+                    <Users className="h-4 w-4 shrink-0" />
+                    <span className="break-all">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
                   </span>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="rounded-2xl border border-white/15 bg-white/5 p-5 text-left lg:text-right">
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-200/70">Acceso compartido</p>
@@ -416,32 +416,32 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
               </div>
               <div className="space-y-4">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-8 text-center">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-6 text-center sm:px-5 sm:py-8">
                   <p className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase mb-2">Total Mano de Obra</p>
-                  <p className="text-6xl font-bold leading-none text-white md:text-7xl">
+                  <p className="max-w-full overflow-hidden break-all text-4xl font-bold leading-none text-white sm:text-5xl md:text-6xl lg:text-7xl">
                     ${totalLaborCost.toLocaleString('es-AR')}
                   </p>
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b">
+                <div className="flex items-start justify-between gap-3 border-b pb-2">
                   <span className="text-sm text-zinc-400">Base comercial</span>
-                  <span className="font-semibold text-zinc-100">${baseLaborCost.toLocaleString('es-AR')}</span>
+                  <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${baseLaborCost.toLocaleString('es-AR')}</span>
                 </div>
                 {taskBaseLaborCost > 0 && taskBaseLaborCost !== baseLaborCost && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">Referencia por tareas</span>
-                    <span className="font-semibold text-zinc-100">${taskBaseLaborCost.toLocaleString('es-AR')}</span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${taskBaseLaborCost.toLocaleString('es-AR')}</span>
                   </div>
                 )}
                 {totalRolesCost > 0 && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">Detalle por Roles ({totalRolesHours.toFixed(0)}hs)</span>
-                    <span className="font-semibold text-zinc-100">${totalRolesCost.toLocaleString('es-AR')} <span className="text-xs text-zinc-500">(incluido)</span></span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${totalRolesCost.toLocaleString('es-AR')} <span className="text-xs text-zinc-500">(incluido)</span></span>
                   </div>
                 )}
                 {additionalsCosts.laborCost > 0 && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">M.O. Adicionales</span>
-                    <span className="font-semibold text-zinc-100">${additionalsCosts.laborCost.toLocaleString('es-AR')}</span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${additionalsCosts.laborCost.toLocaleString('es-AR')}</span>
                   </div>
                 )}
               </div>
@@ -454,31 +454,31 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 <h3 className="text-lg font-bold text-white">Materiales</h3>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between items-center pb-2 border-b">
+                <div className="flex items-start justify-between gap-3 border-b pb-2">
                   <span className="text-sm text-zinc-400">Construcción Base</span>
-                  <span className="font-semibold text-zinc-100">${persistedMaterialCost.toLocaleString('es-AR')}</span>
+                  <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${persistedMaterialCost.toLocaleString('es-AR')}</span>
                 </div>
                 {plumbingCosts > 0 && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">Plomería</span>
-                    <span className="font-semibold text-zinc-100">${plumbingCosts.toLocaleString('es-AR')}</span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${plumbingCosts.toLocaleString('es-AR')}</span>
                   </div>
                 )}
                 {electricalCosts > 0 && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">Instalación Eléctrica</span>
-                    <span className="font-semibold text-zinc-100">${electricalCosts.toLocaleString('es-AR')}</span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${electricalCosts.toLocaleString('es-AR')}</span>
                   </div>
                 )}
                 {additionalsCosts.materialCost > 0 && (
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-sm text-zinc-400">Adicionales</span>
-                    <span className="font-semibold text-zinc-100">${additionalsCosts.materialCost.toLocaleString('es-AR')}</span>
+                    <span className="min-w-0 break-all text-right font-semibold text-zinc-100">${additionalsCosts.materialCost.toLocaleString('es-AR')}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-3 border-t border-zinc-800">
+                <div className="flex items-start justify-between gap-3 border-t border-zinc-800 pt-3">
                   <span className="font-bold text-white">TOTAL MATERIALES</span>
-                  <span className="font-bold text-2xl text-white">${totalMaterialCost.toLocaleString('es-AR')}</span>
+                  <span className="min-w-0 break-all text-right text-xl font-bold text-white sm:text-2xl">${totalMaterialCost.toLocaleString('es-AR')}</span>
                 </div>
               </div>
             </Card>
@@ -490,9 +490,9 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 <h3 className="text-lg font-bold text-white">Total Proyecto</h3>
               </div>
               <div className="py-4">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-5 py-5 mb-4">
+                <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-4 sm:px-5 sm:py-5">
                   <p className="text-[11px] font-semibold tracking-[0.18em] text-zinc-500 uppercase mb-2">Costo Total</p>
-                  <p className="text-3xl font-semibold text-zinc-100 md:text-4xl">${grandTotal.toLocaleString('es-AR')}</p>
+                  <p className="max-w-full overflow-hidden break-all text-2xl font-semibold text-zinc-100 sm:text-3xl md:text-4xl">${grandTotal.toLocaleString('es-AR')}</p>
                 </div>
                 <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 shadow-sm">
                   <div className="flex justify-between text-sm mb-2">
