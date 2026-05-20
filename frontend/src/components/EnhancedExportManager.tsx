@@ -4088,6 +4088,103 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       return { styleText, bodyHtml, title: doc.title || '' };
     };
 
+    const createPdfPageShell = (pageWidthPx: number, pagePaddingPx: number) => {
+      const page = document.createElement('div');
+      page.className = 'pdf-page-shell';
+      page.style.width = `${pageWidthPx}px`;
+      page.style.padding = `${pagePaddingPx}px`;
+      page.style.background = '#ffffff';
+      page.style.color = '#111827';
+      page.style.boxSizing = 'border-box';
+      page.style.overflow = 'hidden';
+      return page;
+    };
+
+    const collectPdfBlocks = (root: HTMLElement) => {
+      const container = root.querySelector('.container') as HTMLElement | null;
+      if (!container) {
+        return Array.from(root.children) as HTMLElement[];
+      }
+
+      const blocks: HTMLElement[] = [];
+      const header = container.querySelector(':scope > .header') as HTMLElement | null;
+      if (header) blocks.push(header);
+
+      const content = (container.querySelector(':scope > .content') ||
+        container.querySelector(':scope > .content-wrapper')) as HTMLElement | null;
+
+      if (content) {
+        const sectionChildren = Array.from(content.children).filter(
+          (child): child is HTMLElement => child instanceof HTMLElement
+        );
+        if (sectionChildren.length > 0) {
+          blocks.push(...sectionChildren);
+        } else {
+          blocks.push(content);
+        }
+      } else {
+        blocks.push(
+          ...Array.from(container.children).filter(
+            (child): child is HTMLElement => child instanceof HTMLElement && child !== header
+          )
+        );
+      }
+
+      const footer = container.querySelector(':scope > .footer') as HTMLElement | null;
+      if (footer) blocks.push(footer);
+
+      return blocks.filter((block, index, list) => list.indexOf(block) === index);
+    };
+
+    const paginatePdfBlocks = async (
+      root: HTMLElement,
+      pageWidthPx: number,
+      pagePaddingPx: number,
+      maxPageHeightPx: number
+    ) => {
+      const blocks = collectPdfBlocks(root);
+      if (blocks.length === 0) return [root.cloneNode(true) as HTMLElement];
+
+      const measurementHost = document.createElement('div');
+      measurementHost.style.position = 'fixed';
+      measurementHost.style.left = '0';
+      measurementHost.style.top = '0';
+      measurementHost.style.transform = 'translateX(-300vw)';
+      measurementHost.style.pointerEvents = 'none';
+      measurementHost.style.zIndex = '2147483647';
+      document.body.appendChild(measurementHost);
+
+      const pages: HTMLElement[] = [];
+      let currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
+      measurementHost.appendChild(currentPage);
+
+      for (const block of blocks) {
+        const clonedBlock = block.cloneNode(true) as HTMLElement;
+        currentPage.appendChild(clonedBlock);
+        await nextFrame();
+
+        const fitsCurrentPage = currentPage.scrollHeight <= maxPageHeightPx;
+        if (fitsCurrentPage || currentPage.children.length === 1) {
+          continue;
+        }
+
+        currentPage.removeChild(clonedBlock);
+        pages.push(currentPage.cloneNode(true) as HTMLElement);
+
+        currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
+        measurementHost.replaceChildren(currentPage);
+        currentPage.appendChild(clonedBlock);
+        await nextFrame();
+      }
+
+      if (currentPage.children.length > 0) {
+        pages.push(currentPage.cloneNode(true) as HTMLElement);
+      }
+
+      measurementHost.remove();
+      return pages;
+    };
+
     let wrapper: HTMLDivElement | null = null;
 
     try {
@@ -4186,26 +4283,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       await waitForImages(wrapper);
       await nextFrame();
 
-      // 6) Render a canvas (más nítido)
       const scale = Math.min(3, Math.max(2, (window.devicePixelRatio || 1)));
-      const canvas = await html2canvas(wrapper, {
-        scale,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        // evita crop raro cuando hay scroll
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: wrapper.scrollWidth,
-        windowHeight: wrapper.scrollHeight,
-      });
-
-      // 7) Generación PDF SIN “calamidad”:
-      // - Renderizamos a canvas una sola vez
-      // - Cortamos el canvas por páginas (slices)
-      // - Respetamos márgenes + header/footer
-      // - Header/Footer no se deforman y no dependen de html2canvas
+      // 6) Generación PDF por páginas A4 reales.
+      // En vez de cortar un canvas largo, armamos páginas por bloques y
+      // renderizamos cada una por separado para evitar cortes entre secciones.
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       const pdfW = pdf.internal.pageSize.getWidth();
@@ -4217,10 +4298,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const contentW = pdfW - marginMm * 2;
       const contentH = pdfH - marginMm * 2 - headerMm - footerMm;
 
-      // Relación mm->px para saber cuánto cortar del canvas por página.
-      const pxPerMm = canvas.width / contentW;
-      const pageSlicePx = Math.floor(contentH * pxPerMm);
-      const totalPages = Math.max(1, Math.ceil(canvas.height / pageSlicePx));
+      // Relación mm->px para construir páginas A4 sin cortar secciones.
+      const pxPerMm = wrapper.scrollWidth / contentW;
+      const maxPageHeightPx = Math.floor(contentH * pxPerMm);
+      const pagedWrappers = await paginatePdfBlocks(wrapper, A4_W, A4_PADDING, maxPageHeightPx);
+      const totalPages = Math.max(1, pagedWrappers.length);
 
       const drawHeaderFooter = (page: number) => {
         // Header
@@ -4269,20 +4351,25 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         }
       };
 
-      // Cortamos y agregamos cada página como imagen independiente (sin posiciones negativas)
-      let yPx = 0;
+      // Renderizamos cada página ya paginada por bloques.
       for (let page = 1; page <= totalPages; page++) {
-        const sliceH = Math.min(pageSlicePx, canvas.height - yPx);
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceH;
-        const pctx = pageCanvas.getContext('2d');
-        if (!pctx) break;
-        pctx.fillStyle = '#ffffff';
-        pctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        pctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        const pageWrapper = pagedWrappers[page - 1];
+        wrapper.replaceChildren(pageWrapper);
+        await waitForImages(wrapper);
+        await nextFrame();
 
-        // JPEG para slices grandes reduce mucho el peso
+        const pageCanvas = await html2canvas(wrapper, {
+          scale,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff',
+          logging: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: wrapper.scrollWidth,
+          windowHeight: wrapper.scrollHeight,
+        });
+
         const sliceMega = (pageCanvas.width * pageCanvas.height) / 1_000_000;
         const useJpeg = sliceMega > 10;
         const imgData = useJpeg ? pageCanvas.toDataURL('image/jpeg', 0.92) : pageCanvas.toDataURL('image/png');
@@ -4290,19 +4377,21 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         if (page > 1) pdf.addPage();
         drawHeaderFooter(page);
 
-        const drawH = (sliceH / canvas.width) * contentW;
+        const rawDrawH = (pageCanvas.height / pageCanvas.width) * contentW;
+        const fitScale = rawDrawH > contentH ? contentH / rawDrawH : 1;
+        const drawW = contentW * fitScale;
+        const drawH = rawDrawH * fitScale;
+        const drawX = marginMm + (contentW - drawW) / 2;
         pdf.addImage(
           imgData,
           useJpeg ? 'JPEG' : 'PNG',
-          marginMm,
+          drawX,
           marginMm + headerMm,
-          contentW,
+          drawW,
           drawH,
           undefined,
           'FAST'
         );
-
-        yPx += sliceH;
       }
 
       const filename = `${template}-${(project.name || 'proyecto').replace(/\s+/g, '-').toLowerCase()}.pdf`;
