@@ -36,6 +36,35 @@ interface ImprovedOverviewProps {
   canViewFinancials?: boolean;
 }
 
+const TILE_ROW_WIDTH_METERS = 0.5;
+
+const getSideRows = (tileCalculation: any, side: 'north' | 'south' | 'east' | 'west') => {
+  const rows = Number(tileCalculation?.[side]?.rows || 0);
+  return Number.isFinite(rows) ? Math.max(0, rows) : 0;
+};
+
+const getDisplaySidewalkArea = (project: Project) => {
+  const persistedSidewalkArea = Number(project.sidewalkArea || 0);
+  if (persistedSidewalkArea > 0) return persistedSidewalkArea;
+
+  const tileCalculation = project.tileCalculation as any;
+  const poolLength = Number(project.poolPreset?.length || 0);
+  const poolWidth = Number(project.poolPreset?.width || 0);
+  if (!tileCalculation || !poolLength || !poolWidth) return 0;
+
+  const northRows = getSideRows(tileCalculation, 'north');
+  const southRows = getSideRows(tileCalculation, 'south');
+  const eastRows = getSideRows(tileCalculation, 'east');
+  const westRows = getSideRows(tileCalculation, 'west');
+
+  return (
+    (northRows * poolLength * TILE_ROW_WIDTH_METERS) +
+    (southRows * poolLength * TILE_ROW_WIDTH_METERS) +
+    (eastRows * poolWidth * TILE_ROW_WIDTH_METERS) +
+    (westRows * poolWidth * TILE_ROW_WIDTH_METERS)
+  );
+};
+
 export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
   project,
   roles,
@@ -222,6 +251,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
   } = financials;
   const hydraulicSummary = React.useMemo(() => summarizeHydraulicSystem(project, additionals), [project, additionals]);
   const persistedMaterialCost = Number(project.materialCost || 0);
+  const displaySidewalkArea = React.useMemo(() => getDisplaySidewalkArea(project), [project]);
   const materialShare = grandTotal > 0 ? (totalMaterialCost / grandTotal) * 100 : 0;
   const laborShare = grandTotal > 0 ? (totalLaborCost / grandTotal) * 100 : 0;
 
@@ -619,8 +649,8 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
               </div>
 
               {/* Visualización de la Piscina */}
-              <div className="mb-4 flex items-center justify-center overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 p-2 sm:p-6">
-                <div className="w-full max-w-4xl">
+              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+                <div className="mb-4 min-w-[720px] rounded-lg border border-zinc-800 bg-zinc-900 p-2 sm:min-w-0 sm:p-6">
                   <PoolVisualizationCanvas
                     ref={canvasRef}
                     project={project}
@@ -636,7 +666,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
 
               <div className="bg-zinc-900 p-3 rounded-lg mb-3 border border-zinc-800">
                 <p className="text-sm text-zinc-200">
-                  Área total de vereda: <strong>{project.sidewalkArea.toFixed(2)} m²</strong>
+                  Área total de vereda: <strong>{displaySidewalkArea.toFixed(2)} m²</strong>
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
