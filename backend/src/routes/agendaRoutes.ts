@@ -15,6 +15,9 @@ import {
   listAgendaReminders,
   snoozeAgendaReminder,
   dismissAgendaReminder,
+  getAgendaPushPublicKey,
+  saveAgendaPushSubscription,
+  deleteAgendaPushSubscription,
   listAgendaMessages,
   addAgendaMessage,
 } from '../controllers/agendaController';
@@ -51,6 +54,9 @@ const handleAgendaUpload: express.RequestHandler = (req, res, next) => {
 
 router.get('/', listAgendaEvents);
 router.get('/reminders', listAgendaReminders);
+router.get('/push/public-key', getAgendaPushPublicKey);
+router.post('/push/subscription', saveAgendaPushSubscription);
+router.delete('/push/subscription', deleteAgendaPushSubscription);
 router.post('/reminders/:id/snooze', snoozeAgendaReminder);
 router.post('/reminders/:id/dismiss', dismissAgendaReminder);
 router.get('/:id', getAgendaEventById);

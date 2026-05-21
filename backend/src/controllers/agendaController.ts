@@ -5,6 +5,7 @@ import { logSystemEvent } from '../utils/systemLog';
 import { AuthRequest } from '../middleware/auth';
 import { storeImageFile } from '../utils/imageStorage';
 import { listConversationSummaries, syncAgendaConversation } from '../services/conversationService';
+import { getPushPublicKey, isPushEnabled, removePushSubscription, savePushSubscription } from '../services/pushNotificationService';
 
 const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 
@@ -994,6 +995,61 @@ export const listAgendaReminders = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const getAgendaPushPublicKey = async (_req: AuthRequest, res: Response) => {
+  return res.json({
+    enabled: isPushEnabled(),
+    publicKey: getPushPublicKey(),
+  });
+};
+
+export const saveAgendaPushSubscription = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+    if (!isPushEnabled()) {
+      return res.status(503).json({ error: 'Las notificaciones push no están configuradas todavía.' });
+    }
+
+    const subscription = req.body?.subscription;
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      return res.status(400).json({ error: 'Suscripción push inválida' });
+    }
+
+    const saved = await savePushSubscription(
+      userId,
+      subscription,
+      req.headers['user-agent'] ? String(req.headers['user-agent']) : undefined,
+    );
+
+    return res.status(201).json({
+      id: saved.id,
+      endpoint: saved.endpoint,
+    });
+  } catch (error) {
+    console.error('Error al guardar la suscripción push:', error);
+    return res.status(500).json({ error: 'No se pudo guardar la suscripción push' });
+  }
+};
+
+export const deleteAgendaPushSubscription = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+    const endpoint = String(req.body?.endpoint || '');
+    if (!endpoint) {
+      return res.status(400).json({ error: 'Endpoint requerido' });
+    }
+
+    await removePushSubscription(userId, endpoint);
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error al eliminar la suscripción push:', error);
+    return res.status(500).json({ error: 'No se pudo eliminar la suscripción push' });
+  }
+};
+
 export const snoozeAgendaReminder = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -1014,8 +1070,14 @@ export const snoozeAgendaReminder = async (req: AuthRequest, res: Response) => {
       data: {
         status: 'SNOOZED',
         snoozedUntil,
+        emailSentAt: null,
       },
     });
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE "AgendaReminder" SET "pushSentAt" = NULL WHERE "id" = $1`,
+      id,
+    );
 
     void sendReminderStatusEmail(updated.id, 'SNOOZED', snoozedUntil);
 

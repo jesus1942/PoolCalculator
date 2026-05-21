@@ -34,6 +34,7 @@ model User {
   agendaEvents        AgendaEvent[]
   agendaAssignments   AgendaAssignment[]
   agendaReminders     AgendaReminder[]
+  pushSubscriptions   PushSubscription[]
   systemLogs          SystemLog[]
   agendaMessages      AgendaMessage[]
   organizationMemberships OrganizationMember[]
@@ -261,6 +262,7 @@ model AgendaReminder {
   status       AgendaReminderStatus @default(PENDING)
   snoozedUntil DateTime?
   emailSentAt  DateTime?
+  pushSentAt   DateTime?
 
   event        AgendaEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -272,6 +274,22 @@ model AgendaReminder {
   @@index([userId, remindAt])
   @@index([eventId])
   @@index([emailSentAt, remindAt])
+  @@index([pushSentAt, remindAt])
+}
+
+model PushSubscription {
+  id             String   @id @default(uuid())
+  userId         String
+  endpoint       String   @unique
+  expirationTime DateTime?
+  keys           Json
+  userAgent      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum AgendaReminderStatus {

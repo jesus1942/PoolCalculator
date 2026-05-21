@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import { sendEmail } from '../utils/mailer';
 import { logSystemEvent } from '../utils/systemLog';
+import { sendPushNotificationToUser } from './pushNotificationService';
 
 const REMINDER_EMAIL_INTERVAL_MS = Number(process.env.REMINDER_EMAIL_INTERVAL_MS || 5 * 60 * 1000);
 const REMINDER_EMAIL_BATCH = Number(process.env.REMINDER_EMAIL_BATCH || 50);
@@ -59,61 +60,134 @@ const buildEmail = (reminder: any) => {
 const fetchDueReminders = async () => {
   const now = new Date();
   const lookback = new Date(now.getTime() - REMINDER_EMAIL_LOOKBACK_MS);
-  return prisma.agendaReminder.findMany({
-    where: {
-      emailSentAt: null,
-      status: { in: ['PENDING', 'SNOOZED'] },
-      remindAt: { lte: now, gte: lookback },
-      OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
+  const rows = await prisma.$queryRawUnsafe<Array<any>>(
+    `
+      SELECT
+        ar."id" AS "reminderId",
+        ar."remindAt" AS "remindAt",
+        ar."emailSentAt" AS "emailSentAt",
+        ar."pushSentAt" AS "pushSentAt",
+        u."id" AS "userId",
+        u."name" AS "userName",
+        u."email" AS "userEmail",
+        e."id" AS "eventId",
+        e."title" AS "eventTitle",
+        e."startAt" AS "eventStartAt",
+        e."endAt" AS "eventEndAt",
+        e."location" AS "eventLocation",
+        p."id" AS "projectId",
+        p."name" AS "projectName"
+      FROM "AgendaReminder" ar
+      INNER JOIN "User" u ON u."id" = ar."userId"
+      INNER JOIN "AgendaEvent" e ON e."id" = ar."eventId"
+      LEFT JOIN "Project" p ON p."id" = e."projectId"
+      WHERE ar."status" IN ('PENDING', 'SNOOZED')
+        AND ar."remindAt" <= $1
+        AND ar."remindAt" >= $2
+        AND (ar."snoozedUntil" IS NULL OR ar."snoozedUntil" <= $1)
+      ORDER BY ar."remindAt" ASC
+      LIMIT $3
+    `,
+    now,
+    lookback,
+    REMINDER_EMAIL_BATCH,
+  );
+
+  return rows.map((row) => ({
+    id: row.reminderId,
+    remindAt: row.remindAt,
+    emailSentAt: row.emailSentAt,
+    pushSentAt: row.pushSentAt,
+    user: {
+      id: row.userId,
+      name: row.userName,
+      email: row.userEmail,
     },
-    orderBy: { remindAt: 'asc' },
-    take: REMINDER_EMAIL_BATCH,
-    include: {
-      user: { select: { id: true, name: true, email: true } },
-      event: {
-        select: {
-          id: true,
-          title: true,
-          startAt: true,
-          endAt: true,
-          location: true,
-          project: { select: { id: true, name: true } },
-        },
-      },
+    event: {
+      id: row.eventId,
+      title: row.eventTitle,
+      startAt: row.eventStartAt,
+      endAt: row.eventEndAt,
+      location: row.eventLocation,
+      project: row.projectId
+        ? {
+            id: row.projectId,
+            name: row.projectName,
+          }
+        : null,
     },
-  });
+  }));
 };
 
 const processReminder = async (reminder: any) => {
-  if (!reminder.user?.email) return;
-
-  const { subject, html, text } = buildEmail(reminder);
-  const sent = await sendEmail({
-    to: [reminder.user.email],
-    subject,
-    html,
-    text,
+  const start = new Date(reminder.event.startAt);
+  const startLabel = start.toLocaleString('es-AR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
-  await logSystemEvent({
-    level: sent ? 'INFO' : 'WARN',
-    category: 'AGENDA_REMINDER',
-    message: `${sent ? 'Recordatorio enviado' : 'Recordatorio no enviado'}: ${reminder.event.title || 'Evento'}`,
-    meta: {
-      reminderId: reminder.id,
+  let emailSentAt = reminder.emailSentAt;
+  let pushSentAt = reminder.pushSentAt;
+
+  if (!reminder.emailSentAt && reminder.user?.email) {
+    const { subject, html, text } = buildEmail(reminder);
+    const sent = await sendEmail({
+      to: [reminder.user.email],
+      subject,
+      html,
+      text,
+    });
+
+    await logSystemEvent({
+      level: sent ? 'INFO' : 'WARN',
+      category: 'AGENDA_REMINDER',
+      message: `${sent ? 'Recordatorio enviado por email' : 'Recordatorio no enviado por email'}: ${reminder.event.title || 'Evento'}`,
+      meta: {
+        reminderId: reminder.id,
+        eventId: reminder.event?.id,
+        remindAt: reminder.remindAt?.toISOString?.() || null,
+      },
+      userId: reminder.user.id,
       eventId: reminder.event?.id,
-      remindAt: reminder.remindAt?.toISOString?.() || null,
-    },
-    userId: reminder.user.id,
-    eventId: reminder.event?.id,
-  });
+    });
 
-  if (!sent) return;
+    if (sent) {
+      emailSentAt = new Date();
+    }
+  }
 
-  await prisma.agendaReminder.update({
-    where: { id: reminder.id },
-    data: { emailSentAt: new Date() },
-  });
+  if (!reminder.pushSentAt) {
+    const pushResult = await sendPushNotificationToUser(reminder.user.id, {
+      title: 'Recordatorio de agenda',
+      body: `${reminder.event.title}\n${startLabel}${reminder.event.location ? `\n${reminder.event.location}` : ''}`,
+      url: '/agenda',
+      tag: `agenda-reminder-${reminder.id}`,
+    });
+
+    if (!pushResult.skipped && pushResult.delivered > 0) {
+      pushSentAt = new Date();
+    }
+  }
+
+  if (!emailSentAt && !pushSentAt) return;
+
+  if (emailSentAt) {
+    await prisma.agendaReminder.update({
+      where: { id: reminder.id },
+      data: { emailSentAt },
+    });
+  }
+
+  if (pushSentAt) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "AgendaReminder" SET "pushSentAt" = $2 WHERE "id" = $1`,
+      reminder.id,
+      pushSentAt,
+    );
+  }
 };
 
 export const startAgendaReminderEmailService = () => {

@@ -43,7 +43,8 @@
     "pdf-poppler": "^0.2.3",
     "pdf2json": "^4.0.0",
     "sharp": "^0.34.4",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

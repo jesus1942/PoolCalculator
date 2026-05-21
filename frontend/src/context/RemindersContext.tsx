@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { agendaReminderService } from '@/services/agendaReminderService';
+import { PUSH_SUBSCRIPTION_FLAG } from '@/services/pushNotificationService';
 
 interface ReminderContextValue {
   reminders: any[];
@@ -42,6 +43,10 @@ export const RemindersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const notifyBrowserForReminders = useCallback((items: any[]) => {
     if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+
+    if (window.localStorage.getItem(PUSH_SUBSCRIPTION_FLAG) === '1') {
       return;
     }
 
