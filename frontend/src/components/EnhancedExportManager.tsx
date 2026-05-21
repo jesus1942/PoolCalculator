@@ -7,7 +7,7 @@ import { plumbingCalculationService } from '@/services/plumbingCalculationServic
 import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
 import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
-import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File } from 'lucide-react';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -140,7 +140,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [generatingPackage, setGeneratingPackage] = useState(false);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const [clientDocumentEditorHtml, setClientDocumentEditorHtml] = useState('');
-  const [copiedPwaLink, setCopiedPwaLink] = useState(false);
   const [excelSections, setExcelSections] = useState({
     excavation: true,
     supportBed: true,
@@ -4719,16 +4718,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     : undefined;
   const draftPreviewHtml = getContentForTemplate(selectedTemplate, draftSettings);
   const defaultConditionsText = getConditionsList().join('\n');
-  const templatePreviewHighlights: Record<ExportTemplate, string[]> = {
-    client: ['Resumen del proyecto', 'Alcance editable', 'Inversión clara'],
-    professional: ['Criterio técnico', 'Medidas y alcances', 'Secuencia de obra'],
-    materials: ['Listado por categorías', 'Unidades y cantidades', 'Notas de obra'],
-    budget: ['Costos unitarios', 'Subtotales', 'Materiales vs mano de obra'],
-    complete: ['Resumen comercial', 'Soporte técnico', 'Anexos del proyecto'],
-    overview: ['Resumen visual', 'Datos del proyecto', 'Alcance de instalación'],
-    hydraulic: ['Esquema limpio', 'Sala técnica', 'Puntos hidráulicos'],
-  };
-
   return (
     <div className="space-y-6">
       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
@@ -4762,7 +4751,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               </div>
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight">Exportación de Documentos</h2>
-                <p className="text-zinc-300 mt-1">Prepare una propuesta clara para cliente y el respaldo técnico de la obra.</p>
               </div>
             </div>
             <div className="text-sm text-zinc-300">
@@ -4776,7 +4764,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">Plantillas disponibles</h3>
-                <span className="text-xs text-zinc-500">Mostramos solo las plantillas útiles para presentar la propuesta.</span>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -4812,8 +4799,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 p-5">
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
-                      <h4 className="text-sm font-semibold text-zinc-100">Uso interno / técnico</h4>
-                      <p className="text-xs text-zinc-400 mt-1">Documentos de costos y materiales. Quedan aparte para no mezclar la propuesta comercial.</p>
+                      <h4 className="text-sm font-semibold text-zinc-100">Documentos internos</h4>
                     </div>
                     <span className="text-[11px] uppercase tracking-wide text-zinc-500">Interno</span>
                   </div>
@@ -4885,105 +4871,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   />
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(templatePreviewHighlights[selectedTemplateData.id] || []).map((item) => (
-                    <span
-                      key={item}
-                      className="text-xs text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
               </div>
 
-              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">Manual PWA del cliente</h4>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Acceso visible al manual instalable para cliente final. Hoy apunta a <span className="text-zinc-200 font-medium">/sistemas-pwa/</span>.
-                    </p>
-                  </div>
-                  <span className="text-[11px] uppercase tracking-wide text-zinc-500">Cliente final</span>
-                </div>
-
-                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">Link</p>
-                  <p className="mt-2 break-all text-sm text-zinc-200">{getClientPwaUrl()}</p>
-                </div>
-
-                <div className="mt-4 overflow-hidden rounded-xl border border-zinc-800 bg-white">
-                  <iframe
-                    title="manual-pwa-preview"
-                    src={clientPwaPath}
-                    className="h-64 w-full"
-                  />
-                </div>
-
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <a
-                    href={clientPwaPath}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-sm font-semibold text-zinc-950 hover:bg-white"
-                  >
-                    Abrir PWA
-                  </a>
-                  <button
-                    onClick={handleCopyClientPwaLink}
-                    className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-500"
-                  >
-                    {copiedPwaLink ? 'Link copiado' : 'Copiar link'}
-                  </button>
-                  <button
-                    onClick={handleShareClientPwaWhatsApp}
-                    className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-500"
-                  >
-                    Enviar por WhatsApp
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">Control de datos a exportar</h4>
-                    <p className="text-xs text-zinc-400 mt-1">Cada bloque indica qué dato sale y desde dónde se está armando.</p>
-                  </div>
-                  <span className="text-xs font-medium text-zinc-400">
-                    {selectedTemplateAuditItems.filter((item) => item.ready).length}/{selectedTemplateAuditItems.length} listos
-                  </span>
-                </div>
-
-                <div className="mt-4 grid gap-3">
-                  {selectedTemplateAuditItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`rounded-xl border p-4 ${
-                        item.ready
-                          ? 'border-zinc-700 bg-zinc-900'
-                          : 'border-zinc-800 bg-zinc-950'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-zinc-100">{item.label}</p>
-                          <p className="text-xs text-zinc-300 mt-1">{item.detail}</p>
-                          <p className="text-xs text-zinc-400 mt-2">Dato detectado: {item.value}</p>
-                        </div>
-                        <div className={`shrink-0 rounded-full p-1.5 ${
-                          item.ready
-                            ? 'bg-zinc-100 text-zinc-950 border border-zinc-200'
-                            : 'bg-zinc-900 text-zinc-300 border border-zinc-700'
-                        }`}>
-                          {item.ready ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] h-fit space-y-4">
