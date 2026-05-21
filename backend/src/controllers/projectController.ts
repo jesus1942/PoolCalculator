@@ -26,6 +26,7 @@ import {
   resolveProjectAccessProfile,
   sanitizeProjectForAccess,
 } from '../utils/projectAccess';
+import { getReferenceRoleBlueprints, getRoleAliases } from '../utils/laborReferences';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -133,6 +134,40 @@ const mapRoleRates = (rolesRaw: Array<{
   ratePerUnit: r.ratePerUnit ?? undefined,
   bocaRates: r.bocaRates ?? undefined,
 }));
+
+const normalizeRoleValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const ensureReferenceRolesForUser = async (userId: string) => {
+  const existingRoles = await prisma.professionRole.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  });
+
+  const missingBlueprints = getReferenceRoleBlueprints().filter((blueprint) => {
+    const aliases = [blueprint.name, ...getRoleAliases(blueprint.name), ...blueprint.aliases].map(normalizeRoleValue);
+    return !existingRoles.some((role) => aliases.includes(normalizeRoleValue(role.name)));
+  });
+
+  if (missingBlueprints.length > 0) {
+    await prisma.professionRole.createMany({
+      data: missingBlueprints.map(({ aliases: _aliases, ...blueprint }) => ({
+        ...blueprint,
+        userId,
+        bocaRates: blueprint.bocaRates || [],
+      })),
+    });
+  }
+
+  return prisma.professionRole.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  });
+};
 
 const buildTaskGenerationContext = (projectLike: { plumbingConfig?: any; electricalConfig?: any; projectAdditionals?: any[] }) => {
   const plumbingConfig = (projectLike.plumbingConfig as any) || {};
@@ -581,18 +616,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
     // Cargar roles para calcular costos de mano de obra
     console.log('[PROJECT] Cargando roles de profesión...');
-    const rolesRaw = await prisma.professionRole.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        name: true,
-        hourlyRate: true,
-        dailyRate: true,
-        billingType: true,
-        ratePerUnit: true,
-        bocaRates: true,
-      },
-    });
+    const rolesRaw = await ensureReferenceRolesForUser(userId);
     const roles = mapRoleRates(rolesRaw);
     console.log(`[PROJECT] Roles cargados: ${roles.length}`);
 
@@ -1170,18 +1194,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
         const perimeter = calculatePerimeter(dimensions);
         const volume = calculateVolume(dimensions);
 
-        const rolesRaw = await prisma.professionRole.findMany({
-          where: { userId: existingProject.userId },
-          select: {
-            id: true,
-            name: true,
-            hourlyRate: true,
-            dailyRate: true,
-            billingType: true,
-            ratePerUnit: true,
-            bocaRates: true,
-          },
-        });
+        const rolesRaw = await ensureReferenceRolesForUser(existingProject.userId);
         const roles = mapRoleRates(rolesRaw);
         const generatedTasks = generateDefaultTasks(
           buildEffectivePoolPreset(poolPreset, existingProject.projectAdditionals),
