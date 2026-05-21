@@ -1490,131 +1490,152 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       --soft: #fafaf9;
       --accent: #0f172a;
     }
+    @page {
+      size: A4;
+      margin: 9mm;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      line-height: 1.5;
+      line-height: 1.45;
       color: var(--ink);
       background: var(--bg);
-      padding: 24px;
+      padding: 12px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .container {
-      max-width: 1120px;
+      width: 100%;
+      max-width: 190mm;
       margin: 0 auto;
       background: var(--paper);
       border: 1px solid var(--line);
     }
     .header {
-      padding: 36px 44px 28px;
+      padding: 24px 28px 18px;
       border-bottom: 1px solid var(--line);
       background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
     }
     .logo {
-      min-height: 34px;
-      margin-bottom: 22px;
+      min-height: 28px;
+      margin-bottom: 16px;
     }
     .header-top {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 24px;
+      gap: 18px;
     }
     .title-block {
-      max-width: 720px;
+      max-width: 620px;
     }
     .eyebrow {
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       font-weight: 700;
     }
     .title {
-      font-size: 30px;
-      line-height: 1.1;
+      font-size: 26px;
+      line-height: 1.05;
       color: var(--accent);
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .subtitle {
-      font-size: 15px;
+      font-size: 14px;
       color: #3f3f46;
-      max-width: 560px;
+      max-width: 520px;
     }
     .date-box {
-      min-width: 170px;
+      min-width: 142px;
       border-left: 1px solid var(--line);
-      padding-left: 18px;
+      padding-left: 14px;
       text-align: right;
+      flex-shrink: 0;
     }
     .date-label {
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       color: var(--muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: 700;
     }
     .date {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--ink);
       font-weight: 600;
     }
     .content {
-      padding: 22px 44px 40px;
+      padding: 18px 28px 26px;
+    }
+    .custom-document {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
     .section {
-      margin: 0 0 28px;
+      margin: 0;
       page-break-inside: avoid;
+      break-inside: avoid;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      background: #fff;
     }
     .section h2 {
       color: var(--accent);
-      padding-bottom: 8px;
-      margin-bottom: 16px;
-      font-size: 15px;
+      padding-bottom: 7px;
+      margin-bottom: 12px;
+      font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       border-bottom: 1px solid var(--line);
     }
     .info-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px 18px;
+      gap: 10px 16px;
     }
     .info-item {
-      padding: 14px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--line);
-      background: transparent;
-      border-left: 0;
+      min-width: 0;
     }
     .info-label {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       font-weight: 700;
     }
     .info-value {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--ink);
+      overflow-wrap: anywhere;
     }
     .section p {
-      font-size: 15px;
+      font-size: 14px;
       color: #27272a;
-      margin: 0 0 10px;
+      margin: 0 0 8px;
+      overflow-wrap: anywhere;
+    }
+    .section p:last-child {
+      margin-bottom: 0;
     }
     .comparison-grid {
-      margin-top: 16px;
+      margin-top: 12px;
     }
     .comparison-card {
       border: 1px solid var(--line);
-      border-radius: 0;
-      padding: 18px 20px;
+      padding: 14px 16px;
       background: var(--soft);
+      break-inside: avoid;
     }
     .comparison-card.recommended {
       background: var(--soft);
@@ -1622,9 +1643,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       border-color: var(--line);
     }
     .comparison-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--accent);
@@ -1634,8 +1655,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 7px;
-      font-size: 14px;
+      gap: 6px;
+      font-size: 13px;
       color: #27272a;
     }
     .conditions-list {
@@ -1643,26 +1664,24 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       padding: 0;
       display: grid;
       grid-template-columns: 1fr;
-      gap: 8px;
+      gap: 6px;
     }
     .conditions-list li {
-      padding: 0 0 8px;
-      background: transparent;
-      border-left: 0;
+      padding: 0 0 6px;
       border-bottom: 1px solid var(--line);
-      font-size: 14px;
+      font-size: 13px;
       color: #27272a;
+      overflow-wrap: anywhere;
     }
     .custom-blocks {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
     .custom-block {
       padding: 0;
       background: transparent;
       border: 0;
-      border-radius: 0;
     }
     .custom-heading {
       color: var(--accent);
@@ -1672,17 +1691,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .custom-paragraph {
       color: #27272a;
       margin: 0;
-      line-height: 1.7;
+      line-height: 1.65;
     }
     .custom-bullets {
       margin: 0;
       padding-left: 18px;
       color: #27272a;
-      line-height: 1.7;
+      line-height: 1.65;
     }
     .custom-divider {
       border-top: 1px solid var(--line);
-      margin: 4px 0;
+      margin: 2px 0;
     }
     .custom-data-field {
       color: var(--ink);
@@ -1691,28 +1710,30 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .custom-data-label {
       color: var(--muted);
       text-transform: uppercase;
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 0.12em;
       font-weight: 700;
     }
     .custom-comment {
-      margin-top: 6px;
+      margin-top: 5px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       font-style: italic;
     }
     .custom-document table {
       width: 100%;
       border-collapse: collapse;
-      margin: 12px 0;
+      margin: 10px 0;
+      table-layout: fixed;
     }
     .custom-document th,
     .custom-document td {
       border: 1px solid var(--line);
-      padding: 10px 12px;
+      padding: 8px 10px;
       text-align: left;
       vertical-align: top;
-      font-size: 13px;
+      font-size: 12px;
+      word-break: break-word;
     }
     .custom-document th {
       background: var(--soft);
@@ -1722,47 +1743,85 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .custom-document .doc-columns {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      gap: 12px;
     }
     .custom-document .doc-comment {
       border-left: 2px solid #d6d3d1;
-      padding: 10px 14px;
+      padding: 8px 12px;
       background: var(--soft);
       color: #52525b;
-      font-size: 13px;
+      font-size: 12px;
       font-style: italic;
-      margin: 12px 0;
+      margin: 10px 0;
     }
     .footer {
-      margin-top: 36px;
-      padding-top: 14px;
+      margin-top: 18px;
+      padding-top: 10px;
       border-top: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
-      gap: 16px;
-      font-size: 11px;
+      gap: 12px;
+      font-size: 10px;
       color: var(--muted);
     }
     .footer strong {
       color: var(--ink);
     }
     @media (max-width: 900px) {
-      body { padding: 0; background: #fff; }
-      .header, .content { padding-left: 22px; padding-right: 22px; }
-      .header-top, .footer { display: block; }
-      .date-box { border-left: 0; padding-left: 0; margin-top: 18px; text-align: left; }
-      .info-grid, .custom-document .doc-columns { grid-template-columns: 1fr; }
+      body {
+        padding: 0;
+        background: #fff;
+      }
+      .container {
+        max-width: 100%;
+        border: 0;
+      }
+      .header,
+      .content {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      .header-top,
+      .footer {
+        display: block;
+      }
+      .date-box {
+        border-left: 0;
+        padding-left: 0;
+        margin-top: 14px;
+        text-align: left;
+      }
+      .info-grid,
+      .custom-document .doc-columns {
+        grid-template-columns: 1fr;
+      }
+      .section {
+        padding: 14px;
+      }
     }
     @media print {
-      body { background: white; padding: 0; }
-      .container { border: 0; }
+      body {
+        background: white;
+        padding: 0;
+      }
+      .container {
+        max-width: 100%;
+        border: 0;
+      }
+      .section,
+      .comparison-card,
+      .custom-block,
+      .custom-document table {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
+      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:30px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
       <div class="header-top">
         <div class="title-block">
           <div class="eyebrow">Propuesta</div>
