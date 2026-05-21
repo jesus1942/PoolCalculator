@@ -162,8 +162,8 @@ Todos los derechos reservados.
 ## Soporte
 
 Para soporte tecnico o consultas:
-- Email: [tu-email]
-- Web: [tu-website]
+- Email: denovaje@proton.me
+- Tel: +5492804018359
 
 ---
 
