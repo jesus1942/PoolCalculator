@@ -54,6 +54,9 @@ const toIsoFromLocalInput = (value: string) => {
   return Number.isNaN(localDate.getTime()) ? value : localDate.toISOString();
 };
 
+const LEGACY_AGENDA_TZ_FIX_CUTOFF = new Date('2026-05-20T00:00:00-03:00').getTime();
+const LEGACY_AGENDA_TZ_OFFSET_MS = 3 * 60 * 60 * 1000;
+
 export const Agenda: React.FC = () => {
   const { user } = useAuth();
   const { reminders, snooze, dismiss } = useReminders();
@@ -154,6 +157,23 @@ export const Agenda: React.FC = () => {
 
   const formatDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
+  const getAgendaEventDate = (event: AgendaEvent, field: 'startAt' | 'endAt') => {
+    const rawValue = event?.[field];
+    const parsed = new Date(rawValue);
+    if (Number.isNaN(parsed.getTime())) return parsed;
+
+    const createdAt = event?.createdAt ? new Date(event.createdAt) : null;
+    const isLegacy = Boolean(
+      createdAt &&
+      !Number.isNaN(createdAt.getTime()) &&
+      createdAt.getTime() < LEGACY_AGENDA_TZ_FIX_CUTOFF,
+    );
+
+    if (!isLegacy) return parsed;
+
+    return new Date(parsed.getTime() + LEGACY_AGENDA_TZ_OFFSET_MS);
+  };
+
   const startOfWeek = (date: Date) => {
     const d = new Date(date);
     const day = (d.getDay() + 6) % 7;
@@ -195,7 +215,7 @@ export const Agenda: React.FC = () => {
   const eventsByDay = useMemo(() => {
     const map = new Map<string, AgendaEvent[]>();
     events.forEach((event) => {
-      const key = formatDateKey(new Date(event.startAt));
+      const key = formatDateKey(getAgendaEventDate(event, 'startAt'));
       if (!map.has(key)) map.set(key, []);
       map.get(key)?.push(event);
     });
@@ -215,12 +235,12 @@ export const Agenda: React.FC = () => {
   const getEventsForDate = (date: Date) => {
     const key = formatDateKey(date);
     return (eventsByDay.get(key) || []).slice().sort((a, b) => (
-      new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+      getAgendaEventDate(a, 'startAt').getTime() - getAgendaEventDate(b, 'startAt').getTime()
     ));
   };
 
   const formatEventTime = (event: AgendaEvent) => (
-    `${new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
+    `${getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
   );
 
   const getProjectName = (event: AgendaEvent) => {
@@ -251,7 +271,7 @@ export const Agenda: React.FC = () => {
   const mobileSelectedDateKey = useMemo(() => formatDateKey(anchorDate), [anchorDate]);
   const mobileSelectedEvents = useMemo(() => (
     (eventsByDay.get(mobileSelectedDateKey) || []).slice().sort((a, b) => (
-      new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+      getAgendaEventDate(a, 'startAt').getTime() - getAgendaEventDate(b, 'startAt').getTime()
     ))
   ), [eventsByDay, mobileSelectedDateKey]);
 
@@ -419,7 +439,7 @@ export const Agenda: React.FC = () => {
   };
 
   const openEditEvent = (event: AgendaEvent) => {
-    const start = new Date(event.startAt);
+    const start = getAgendaEventDate(event, 'startAt');
     const label = start.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short' }) +
       ` · ${String(start.getHours()).padStart(2, '0')}:00`;
     const key = formatDateKey(start);
@@ -434,7 +454,7 @@ export const Agenda: React.FC = () => {
       status: event.status || 'PLANNED',
       priority: event.priority || 'NORMAL',
       startAt: toDateInput(start),
-      endAt: toDateInput(new Date(event.endAt)),
+      endAt: toDateInput(getAgendaEventDate(event, 'endAt')),
       location: event.location || '',
       projectId: event.projectId || '',
       crewId: event.crewId || '',
@@ -868,7 +888,7 @@ export const Agenda: React.FC = () => {
                             <div className="min-w-0">
                               <div className="truncate text-sm text-zinc-100">{event.title}</div>
                               <div className="mt-1 text-xs text-zinc-300">
-                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                             {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
@@ -903,7 +923,7 @@ export const Agenda: React.FC = () => {
                     {weekDays.map((day) => {
                       const slotKey = formatDateKey(day);
                       const slotEvents = (eventsByDay.get(slotKey) || []).filter((event) => {
-                        const start = new Date(event.startAt);
+                        const start = getAgendaEventDate(event, 'startAt');
                         return start.getHours() === hour;
                       });
                       return (
@@ -1007,7 +1027,7 @@ export const Agenda: React.FC = () => {
                             <div className="min-w-0">
                               <div className="truncate text-sm text-zinc-100">{event.title}</div>
                               <div className="mt-1 text-xs text-zinc-300">
-                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                             {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
@@ -1147,7 +1167,7 @@ export const Agenda: React.FC = () => {
                             <div className="min-w-0">
                               <div className="truncate text-sm text-zinc-100">{event.title}</div>
                               <div className="mt-1 text-xs text-zinc-300">
-                                {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                             {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
@@ -1294,8 +1314,8 @@ export const Agenda: React.FC = () => {
                         <div>
                           <div className="text-sm text-zinc-200">{event.title}</div>
                           <div className="text-xs text-zinc-300">
-                            {new Date(event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} -{' '}
-                            {new Date(event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                            {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} -{' '}
+                            {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                         <button
