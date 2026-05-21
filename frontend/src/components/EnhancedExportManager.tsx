@@ -817,6 +817,29 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     projectCode: getProjectCode(project),
   };
 
+  const automaticScopeItems = [
+    hydraulicSummary.base.skimmers > 0 ? `${hydraulicSummary.base.skimmers} skimmer${hydraulicSummary.base.skimmers > 1 ? 's' : ''}` : '',
+    hydraulicSummary.base.returns > 0 ? `${hydraulicSummary.base.returns} retorno${hydraulicSummary.base.returns > 1 ? 's' : ''}` : '',
+    hydraulicSummary.base.bottomDrains > 0 ? `${hydraulicSummary.base.bottomDrains} toma${hydraulicSummary.base.bottomDrains > 1 ? 's' : ''} de fondo` : '',
+    hydraulicSummary.base.vacuumIntakes > 0 ? `${hydraulicSummary.base.vacuumIntakes} toma${hydraulicSummary.base.vacuumIntakes > 1 ? 's' : ''} de aspiración` : '',
+    hydraulicSummary.base.lights > 0 ? `${hydraulicSummary.base.lights} luz${hydraulicSummary.base.lights > 1 ? 'ces' : ''}` : '',
+  ].filter(Boolean);
+
+  const projectStageNames = Object.entries((project.tasks as any) || {})
+    .filter(([, categoryTasks]) => Array.isArray(categoryTasks) && categoryTasks.length > 0)
+    .map(([category]) => {
+      const labels: Record<string, string> = {
+        excavation: 'Excavación',
+        hydraulic: 'Instalación hidráulica',
+        electrical: 'Instalación eléctrica',
+        floor: 'Solado y cama',
+        tiles: 'Colocación de losetas',
+        finishes: 'Terminaciones',
+        additionals: 'Adicionales',
+      };
+      return labels[category] || category;
+    });
+
   const interpolateProjectText = (value: string) =>
     value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
       const normalizedKey = String(key);
@@ -847,7 +870,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
     return `
       <div class="section">
-        <h2>Mensaje Personalizado</h2>
         <div class="custom-blocks">
           ${blocks.map((block) => {
             const fontFamily = block.fontFamily || 'Segoe UI, Arial, sans-serif';
@@ -932,50 +954,55 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const buildClientBudgetBody = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const sections = templateSettings.sections || selectedSections;
-    const { additionalsCosts, baseMaterialCost } = resolveCostOverrides(templateSettings);
+    const { additionalsCosts, baseMaterialCost, grandTotal, totalMaterialCost } = resolveCostOverrides(templateSettings);
     const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const installationMode = templateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
     const includeAdditionalsPricing = templateSettings.includeAdditionalsPricing !== false;
     const showMaterialsToClient = clientPricingMode === 'full';
-    const showRecommendedInstallationBox = templateSettings.showRecommendedInstallationBox !== false;
-    const showComparisonGrid = showRecommendedInstallationBox && includeExtras;
     const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
     const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
     const visibleAdditionalsLaborCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.laborCost : 0;
     const visibleAdditionalsMaterialCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.materialCost : 0;
     const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost + visibleAdditionalsLaborCost;
-    const visibleCommercialBadge = includeExtras ? `${installationTier} recomendada` : 'Instalación base';
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
     const visibleHydraulicAdditionals = includeExtras ? commercialExtraSummaryItems : [];
-    const platinumExtrasSummary = commercialExtraSummaryItems.map((item) => `${item.name} x${item.quantity}`);
     const conditions = getConditionsList(templateSettings.conditions);
     const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
+    const visibleAdditionalsSummary = dedupeLabeledItems([
+      ...visibleExtraPlumbingItems.map((item: any) => ({
+        name: getPlumbingItemName(item),
+        quantity: Number(item.quantity || 0),
+      })),
+      ...visibleHydraulicAdditionals.map((item) => ({
+        name: item.name,
+        quantity: Number(item.quantity || 0),
+      })),
+    ]).filter((item) => item.name && item.quantity > 0);
+    const showAdditionalSummary = templateSettings.showRecommendedInstallationBox !== false && visibleAdditionalsSummary.length > 0;
+    const visibleTotal = showMaterialsToClient
+      ? grandTotal
+      : visibleLaborCost;
+    const visibleMaterialsTotal = showMaterialsToClient
+      ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
+      : 0;
 
     return `
       ${sections.header ? `
       <div class="section">
-        <h2>Información del Cliente</h2>
+        <h2>Resumen del Proyecto</h2>
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Cliente</div>
             <div class="info-value">${project.clientName}</div>
           </div>
-          ${project.clientEmail ? `<div class="info-item"><div class="info-label">Email</div><div class="info-value">${project.clientEmail}</div></div>` : ''}
-          ${project.clientPhone ? `<div class="info-item"><div class="info-label">Teléfono</div><div class="info-value">${project.clientPhone}</div></div>` : ''}
-          ${project.location ? `<div class="info-item"><div class="info-label">Ubicación</div><div class="info-value">${project.location}</div></div>` : ''}
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>Descripción del Proyecto</h2>
-        <div class="info-grid">
           <div class="info-item">
-            <div class="info-label">Nombre del Proyecto</div>
+            <div class="info-label">Proyecto</div>
             <div class="info-value">${project.name}</div>
           </div>
+          ${project.location ? `<div class="info-item"><div class="info-label">Ubicación</div><div class="info-value">${project.location}</div></div>` : ''}
           <div class="info-item">
-            <div class="info-label">Modelo de Piscina</div>
+            <div class="info-label">Modelo</div>
             <div class="info-value">${project.poolPreset?.name}</div>
           </div>
           <div class="info-item">
@@ -987,48 +1014,56 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="info-value">${project.volume.toFixed(2)} m³</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Forma</div>
-            <div class="info-value">${project.poolPreset?.shape || 'RECTANGULAR'}</div>
-          </div>
-          <div class="info-item">
             <div class="info-label">Área de Espejo de Agua</div>
             <div class="info-value">${project.waterMirrorArea.toFixed(2)} m²</div>
           </div>
+          ${project.clientPhone ? `<div class="info-item"><div class="info-label">Teléfono</div><div class="info-value">${project.clientPhone}</div></div>` : ''}
+          ${project.clientEmail ? `<div class="info-item"><div class="info-label">Email</div><div class="info-value">${project.clientEmail}</div></div>` : ''}
         </div>
       </div>
       ` : ''}
 
       ${sections.includes ? `
       <div class="section">
-        <h2>Alcance del Proyecto</h2>
+        <h2>Alcance</h2>
         <ul class="features-list">
-          <li>${visibleCommercialBadge}</li>
-          ${exportInstallationProfile.baseScope.map((item) => `<li>${item}</li>`).join('')}
-          ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación de calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
-          ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
-          ${visibleExtraPlumbingItems.length > 0 ? `<li>Accesorios extra de instalación: ${visibleExtraPlumbingItems.map((item: any) => `${getPlumbingItemName(item)} x${item.quantity}`).join(', ')}</li>` : ''}
-          ${visibleHydraulicAdditionals.length > 0 ? `<li>Equipos/agregados adicionales: ${visibleHydraulicAdditionals.map((item) => `${item.name} x${item.quantity}`).join(', ')}</li>` : ''}
-          ${project.poolPreset?.hasLighting ? `<li>Iluminación LED (${project.poolPreset.lightingCount} unidades)</li>` : ''}
-          <li>${showMaterialsToClient ? 'Materiales y equipos contemplados según alcance definido' : 'Materiales y equipos provistos por cliente / fuera del valor comercial informado'}</li>
-          ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
+          <li>${includeExtras ? installationTier : 'Instalación base'}</li>
+          ${automaticScopeItems.map((item) => `<li>${item}</li>`).join('')}
+          ${projectStageNames.map((item) => `<li>${item}</li>`).join('')}
         </ul>
 
-        ${showComparisonGrid ? `
+        ${showAdditionalSummary ? `
         <div class="comparison-grid">
           <div class="comparison-card recommended">
-            <div class="comparison-title">${installationTier}</div>
-            <div class="comparison-subtitle">Resumen de agregados sobre la instalación base</div>
+            <div class="comparison-title">Adicionales incluidos</div>
             <ul class="comparison-list">
-              <li>Mano de obra base: ${formatCurrency(clientBaseLaborCost)}</li>
-              ${exportInstallationProfile.includesHeating && includeExtras ? `<li>Adicional instalación calefacción: ${formatCurrency(exportInstallationProfile.heatingLaborCost)}</li>` : ''}
-              ${visibleAdditionalsLaborCost > 0 ? `<li>M.O. adicionales del proyecto: ${formatCurrency(visibleAdditionalsLaborCost)}</li>` : ''}
-              ${exportInstallationProfile.includesHeating && includeExtras ? exportInstallationProfile.heatingExtras.map((item) => `<li>${item}</li>`).join('') : ''}
-              ${platinumExtrasSummary.length > 0 ? platinumExtrasSummary.map((item) => `<li>${item}</li>`).join('') : '<li>Sin extras cargados</li>'}
+              ${visibleAdditionalsSummary.map((item) => `<li>${item.name} x${item.quantity}</li>`).join('')}
             </ul>
-            <div class="comparison-price">${showMaterialsToClient ? `Total recomendado: ${formatCurrency(baseMaterialCost + visibleLaborCost + visibleAdditionalsMaterialCost)}` : `Mano de obra: ${formatCurrency(visibleLaborCost)}`}</div>
           </div>
         </div>
         ` : ''}
+      </div>
+      ` : ''}
+
+      ${sections.costs ? `
+      <div class="section">
+        <h2>Inversión</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Mano de obra</div>
+            <div class="info-value">${formatCurrency(visibleLaborCost)}</div>
+          </div>
+          ${showMaterialsToClient ? `
+          <div class="info-item">
+            <div class="info-label">Materiales</div>
+            <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
+          </div>
+          ` : ''}
+          <div class="info-item">
+            <div class="info-label">Total</div>
+            <div class="info-value">${formatCurrency(visibleTotal)}</div>
+          </div>
+        </div>
       </div>
       ` : ''}
 
@@ -1039,6 +1074,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <h2>Condiciones Comerciales</h2>
         <ul class="conditions-list">
           ${conditions.map((item) => `<li>${item}</li>`).join('')}
+          ${visibleInstallationExclusions.map((item) => `<li>${item}</li>`).join('')}
         </ul>
       </div>
       ` : ''}
@@ -4653,7 +4689,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const draftPreviewHtml = getContentForTemplate(selectedTemplate, draftSettings);
   const defaultConditionsText = getConditionsList().join('\n');
   const templatePreviewHighlights: Record<ExportTemplate, string[]> = {
-    client: ['Instalación recomendada', 'Comparación base vs platinum', 'Condiciones comerciales'],
+    client: ['Resumen del proyecto', 'Alcance editable', 'Inversión clara'],
     professional: ['Criterio técnico', 'Medidas y alcances', 'Secuencia de obra'],
     materials: ['Listado por categorías', 'Unidades y cantidades', 'Notas de obra'],
     budget: ['Costos unitarios', 'Subtotales', 'Materiales vs mano de obra'],
@@ -5104,7 +5140,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <option value="basic">Instalación base</option>
                           <option value="with_extras">{installationTier}</option>
                         </select>
-                        <p className="text-[11px] text-zinc-500 mt-1 mb-3">Podés descargar el presupuesto cliente solo con alcance base o con todos los extras del proyecto.</p>
+                        <p className="text-[11px] text-zinc-500 mt-1 mb-3">Elegí si el presupuesto sale con el alcance base o con los adicionales cargados en el proyecto.</p>
 
                         <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
                         <select
@@ -5124,9 +5160,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                             onChange={(event) => updateDraftTemplate({ showRecommendedInstallationBox: event.target.checked })}
                             className="h-4 w-4"
                           />
-                          <span>Mostrar cuadro de instalación recomendada</span>
+                          <span>Mostrar bloque de adicionales</span>
                         </label>
-                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto cliente muestra solo la tarjeta de instalación base.</p>
+                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto automático no muestra el resumen de adicionales.</p>
 
                         <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                           <input
@@ -5211,7 +5247,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <label key={item.key} className="flex items-center gap-2">
                             <input
                               type="checkbox"
-                              checked={!!draftSections?.[item.key]}
+                            checked={draftSections?.[item.key] !== false}
                               onChange={(event) => updateDraftSection(item.key, event.target.checked)}
                               className="h-4 w-4"
                             />
