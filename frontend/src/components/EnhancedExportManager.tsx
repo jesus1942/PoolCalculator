@@ -45,6 +45,7 @@ type ExportTemplateSettings = {
   title?: string;
   subtitle?: string;
   conditions?: string;
+  scopeSummary?: string;
   sections?: Record<string, boolean>;
   drawingView?: 'cad' | 'planta';
   installationMode?: 'basic' | 'with_extras';
@@ -817,18 +818,18 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     projectCode: getProjectCode(project),
   };
 
-  const automaticScopeItems = [
+  const automaticAccessorySummary = [
     hydraulicSummary.base.skimmers > 0 ? `${hydraulicSummary.base.skimmers} skimmer${hydraulicSummary.base.skimmers > 1 ? 's' : ''}` : '',
     hydraulicSummary.base.returns > 0 ? `${hydraulicSummary.base.returns} retorno${hydraulicSummary.base.returns > 1 ? 's' : ''}` : '',
     hydraulicSummary.base.bottomDrains > 0 ? `${hydraulicSummary.base.bottomDrains} toma${hydraulicSummary.base.bottomDrains > 1 ? 's' : ''} de fondo` : '',
     hydraulicSummary.base.vacuumIntakes > 0 ? `${hydraulicSummary.base.vacuumIntakes} toma${hydraulicSummary.base.vacuumIntakes > 1 ? 's' : ''} de aspiración` : '',
     hydraulicSummary.base.lights > 0 ? `${hydraulicSummary.base.lights} luz${hydraulicSummary.base.lights > 1 ? 'ces' : ''}` : '',
-  ].filter(Boolean);
+  ].filter(Boolean).join(', ');
 
   const projectStageNames = Object.entries((project.tasks as any) || {})
     .filter(([, categoryTasks]) => Array.isArray(categoryTasks) && categoryTasks.length > 0)
     .map(([category]) => {
-      const labels: Record<string, string> = {
+      const labels: Record<string, string | null> = {
         excavation: 'Excavación',
         hydraulic: 'Instalación hidráulica',
         electrical: 'Instalación eléctrica',
@@ -836,9 +837,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         tiles: 'Colocación de losetas',
         finishes: 'Terminaciones',
         additionals: 'Adicionales',
+        other: null,
       };
-      return labels[category] || category;
-    });
+      return labels[category] ?? null;
+    })
+    .filter((item): item is string => Boolean(item));
+
+  const automaticScopeLines = [
+    automaticAccessorySummary ? `Accesorios base: ${automaticAccessorySummary}.` : '',
+    projectStageNames.length > 0 ? `Etapas incluidas: ${projectStageNames.join(', ')}.` : '',
+  ].filter(Boolean);
 
   const interpolateProjectText = (value: string) =>
     value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
@@ -980,6 +988,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       })),
     ]).filter((item) => item.name && item.quantity > 0);
     const showAdditionalSummary = templateSettings.showRecommendedInstallationBox !== false && visibleAdditionalsSummary.length > 0;
+    const scopeLines = (templateSettings.scopeSummary || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const visibleScopeLines = scopeLines.length > 0
+      ? scopeLines
+      : [
+          `${includeExtras ? installationTier : 'Instalación base'}.`,
+          ...automaticScopeLines,
+        ];
     const visibleTotal = showMaterialsToClient
       ? grandTotal
       : visibleLaborCost;
@@ -1026,11 +1044,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ${sections.includes ? `
       <div class="section">
         <h2>Alcance</h2>
-        <ul class="features-list">
-          <li>${includeExtras ? installationTier : 'Instalación base'}</li>
-          ${automaticScopeItems.map((item) => `<li>${item}</li>`).join('')}
-          ${projectStageNames.map((item) => `<li>${item}</li>`).join('')}
-        </ul>
+        ${visibleScopeLines.map((item) => `<p>${escapeHtml(item)}</p>`).join('')}
 
         ${showAdditionalSummary ? `
         <div class="comparison-grid">
@@ -5122,6 +5136,18 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                             placeholder={defaultConditionsText}
                           />
                           <p className="text-[11px] text-zinc-500 mt-1">Una condición por línea.</p>
+                        </div>
+                      )}
+                      {selectedTemplate === 'client' && (
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Texto del alcance</label>
+                          <textarea
+                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[120px]"
+                            value={(activeDraftTemplate as ExportTemplateSettings).scopeSummary || ''}
+                            onChange={(event) => updateDraftTemplate({ scopeSummary: event.target.value })}
+                            placeholder={automaticScopeLines.join('\n')}
+                          />
+                          <p className="text-[11px] text-zinc-500 mt-1">Si lo dejás vacío, la app arma un alcance automático corto.</p>
                         </div>
                       )}
                     </div>
