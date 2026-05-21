@@ -8,7 +8,7 @@ import {
 } from '../utils/calculations';
 import { calculateTileMaterials } from '../utils/tileCalculations';
 import { calculateBedMaterials } from '../utils/bedCalculations';
-import { generateDefaultTasks } from '../utils/taskGenerator';
+import { generateCatalogInstallationTasks, generateDefaultTasks } from '../utils/taskGenerator';
 import { calculateHydraulicSystem } from '../utils/hydraulicCalculations';
 import { calculateElectricalSystem } from '../utils/electricalCalculations';
 import { exec, execFile } from 'child_process';
@@ -598,12 +598,11 @@ export const createProject = async (req: AuthRequest, res: Response) => {
 
     // Generar tareas automáticas basadas en las características de la piscina
     console.log('[PROJECT] Generando tareas automáticas para:', poolPreset.name);
-    const defaultTasks = generateDefaultTasks(
+    const defaultTasks = generateCatalogInstallationTasks(
       buildEffectivePoolPreset(poolPreset, []),
-      volume,
       perimeter,
+      waterMirrorArea,
       roles,
-      buildTaskGenerationContext({})
     );
     console.log('[PROJECT] Tareas generadas:', Object.keys(defaultTasks).map(cat => `${cat}: ${defaultTasks[cat].length}`).join(', '));
 
@@ -633,6 +632,10 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         sidewalkArea: 0,
         materials: {},
         tasks: defaultTasks as any,
+        exportSettings: {
+          taskAutomationLocked: true,
+          taskTemplate: 'catalog_installation_base_v1',
+        } as any,
         laborCost: totalLaborCost,
         materialCost: 0,
         totalCost: totalLaborCost,

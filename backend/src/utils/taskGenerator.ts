@@ -49,6 +49,12 @@ interface RoleRate {
   bocaRates?: any;
 }
 
+interface BaseInstallationPricingRule {
+  totalLaborCost: number;
+  lengthBand: 'up_to_7m' | 'over_7m';
+  depthProfile: 'uniform' | 'sloped';
+}
+
 /**
  * Genera tareas automáticas según las características de la piscina
  * @param roles - Array opcional de roles con sus tarifas para calcular laborCost
@@ -497,6 +503,246 @@ export function generateDefaultTasks(
   });
 
   return tasks;
+}
+
+const hasSlopedDepth = (poolPreset: PoolPreset) => {
+  if (poolPreset.depthEnd === null || poolPreset.depthEnd === undefined) return false;
+  return Math.abs(Number(poolPreset.depthEnd) - Number(poolPreset.depth)) >= 0.05;
+};
+
+const resolveBaseInstallationPricing = (poolPreset: PoolPreset): BaseInstallationPricingRule => {
+  const sloped = hasSlopedDepth(poolPreset);
+  const over7m = Number(poolPreset.length) > 7;
+
+  if (over7m) {
+    return {
+      totalLaborCost: sloped ? 6_000_000 : 5_500_000,
+      lengthBand: 'over_7m',
+      depthProfile: sloped ? 'sloped' : 'uniform',
+    };
+  }
+
+  return {
+    totalLaborCost: sloped ? 4_000_000 : 3_500_000,
+    lengthBand: 'up_to_7m',
+    depthProfile: sloped ? 'sloped' : 'uniform',
+  };
+};
+
+const buildFixedLaborCostAllocator = (totalLaborCost: number) => {
+  let assigned = 0;
+
+  return (share: number, isLast = false) => {
+    if (isLast) {
+      return totalLaborCost - assigned;
+    }
+
+    const amount = Math.round(totalLaborCost * share);
+    assigned += amount;
+    return amount;
+  };
+};
+
+const buildBaseTask = (
+  category: string,
+  name: string,
+  description: string,
+  estimatedHours: number,
+  suggestedRoleType: string,
+  laborCost: number,
+  roles: RoleRate[],
+  extra: Partial<TaskDetail> = {}
+): TaskDetail => {
+  const matchedRole = findMatchingRole(roles, suggestedRoleType);
+
+  return {
+    id: randomUUID(),
+    name,
+    description,
+    estimatedHours,
+    laborCost,
+    status: 'pending',
+    category,
+    suggestedRoleType,
+    assignedRole: matchedRole?.name || suggestedRoleType,
+    assignedRoleId: matchedRole?.id,
+    ...extra,
+  };
+};
+
+export function generateCatalogInstallationTasks(
+  poolPreset: PoolPreset,
+  perimeter: number,
+  waterMirrorArea: number,
+  roles: RoleRate[] = []
+): Record<string, TaskDetail[]> {
+  const pricing = resolveBaseInstallationPricing(poolPreset);
+  const assignCost = buildFixedLaborCostAllocator(pricing.totalLaborCost);
+  const sloped = pricing.depthProfile === 'sloped';
+  const longPool = pricing.lengthBand === 'over_7m';
+  const floorArea = Math.max(1, Number(waterMirrorArea.toFixed(2)));
+  const firstTileLoop = Math.max(1, Number(perimeter.toFixed(2)));
+  const poolPlacementHours = longPool ? 10 : 8;
+  const slopeExtraHours = sloped ? 2 : 0;
+
+  return {
+    excavation: [
+      buildBaseTask(
+        'excavation',
+        'Replanteo y marcación de obra',
+        `Marcación completa para piscina de ${poolPreset.length}m x ${poolPreset.width}m y nivel de implantación.`,
+        longPool ? 4 : 3,
+        'Capataz',
+        assignCost(0.05),
+        roles,
+      ),
+      buildBaseTask(
+        'excavation',
+        'Excavación y perfilado del pozo',
+        sloped
+          ? `Excavación para fondo inclinado / de menos a más, contemplando perfilado técnico y profundidades finales.`
+          : `Excavación para fondo uniforme con perfilado final listo para base de apoyo.`,
+        longPool ? 18 + slopeExtraHours : 14 + slopeExtraHours,
+        'Excavador',
+        assignCost(0.11),
+        roles,
+      ),
+      buildBaseTask(
+        'excavation',
+        'Nivelación y compactación final',
+        'Ajuste de cotas, compactación y control previo a la cama de apoyo.',
+        longPool ? 8 : 6,
+        'Excavador',
+        assignCost(0.06),
+        roles,
+      ),
+    ],
+    hydraulic: [
+      buildBaseTask(
+        'hydraulic',
+        'Instalación hidráulica base en casco',
+        'Colocación de 1 skimmer, 2 retornos orientables, 1 toma de fondo y 1 toma de aspiración.',
+        longPool ? 18 + slopeExtraHours : 15 + slopeExtraHours,
+        'Plomero',
+        assignCost(0.13),
+        roles,
+        { quantity: 5, unit: 'boca' }
+      ),
+      buildBaseTask(
+        'hydraulic',
+        'Tendido y pegado de cañerías hidráulicas',
+        'Armado de líneas de impulsión, succión, limpieza, pruebas y ordenado general de la instalación.',
+        longPool ? 20 : 16,
+        'Plomero',
+        assignCost(0.11),
+        roles,
+      ),
+      buildBaseTask(
+        'hydraulic',
+        'Montaje de cabecera hidráulica básica',
+        'Conexión de bomba, filtro y colectores base para dejar el sistema operativo.',
+        longPool ? 12 : 10,
+        'Instalador de Equipos',
+        assignCost(0.06),
+        roles,
+      ),
+    ],
+    electrical: [
+      buildBaseTask(
+        'electrical',
+        'Instalación de 2 luces y canalizaciones',
+        'Montaje de 2 luces, nichos, cañerías y cajas asociadas.',
+        longPool ? 12 : 10,
+        'Electricista',
+        assignCost(0.07),
+        roles,
+        { quantity: 2, unit: 'boca', bocaType: 'Luz' }
+      ),
+      buildBaseTask(
+        'electrical',
+        'Cableado, comando y pruebas eléctricas',
+        'Cableado completo, conexionado al tablero y verificación de funcionamiento.',
+        longPool ? 10 : 8,
+        'Electricista',
+        assignCost(0.05),
+        roles,
+      ),
+    ],
+    floor: [
+      buildBaseTask(
+        'floor',
+        'Colocación de geomembrana',
+        `Instalación de geomembrana en ${floorArea.toFixed(2)}m².`,
+        longPool ? 6 : 5,
+        'Albañil',
+        assignCost(0.06),
+        roles,
+        { quantity: floorArea, unit: 'm2' }
+      ),
+      buildBaseTask(
+        'floor',
+        'Cama de apoyo y preparación de base',
+        sloped
+          ? 'Formación de cama, correcciones por pendiente y preparación final para apoyar el casco.'
+          : 'Formación de cama y afinado final de base para apoyar el casco.',
+        longPool ? 14 + slopeExtraHours : 11 + slopeExtraHours,
+        'Albañil',
+        assignCost(0.1),
+        roles,
+      ),
+      buildBaseTask(
+        'floor',
+        'Posicionamiento y nivelación del casco',
+        'Presentación, apoyo, aplomado y control de nivel de la piscina en su posición definitiva.',
+        poolPlacementHours,
+        'Capataz',
+        assignCost(0.08),
+        roles,
+      ),
+    ],
+    tiles: [
+      buildBaseTask(
+        'tiles',
+        'Primera vuelta de loseta perimetral',
+        `Colocación de la primera vuelta de loseta sobre ${firstTileLoop.toFixed(2)} ml de perímetro.`,
+        longPool ? 14 : 12,
+        'Colocador',
+        assignCost(0.08),
+        roles,
+        { quantity: firstTileLoop, unit: 'ml' }
+      ),
+      buildBaseTask(
+        'tiles',
+        'Ajustes y cortes de remate de primera vuelta',
+        'Resolución de cortes, encuentros, remates y alineación de la vuelta inicial.',
+        longPool ? 8 : 6,
+        'Colocador',
+        assignCost(0.04),
+        roles,
+      ),
+    ],
+    finishes: [
+      buildBaseTask(
+        'finishes',
+        'Rellenos, terminación y limpieza técnica',
+        'Cierre de instalación base, repasos, orden y limpieza técnica final.',
+        longPool ? 12 : 10,
+        'Ayudante',
+        assignCost(0.05),
+        roles,
+      ),
+      buildBaseTask(
+        'finishes',
+        'Pruebas hidráulicas, eléctricas y entrega técnica',
+        'Puesta en marcha inicial, pruebas funcionales y validación final de la instalación base.',
+        longPool ? 8 : 6,
+        'Especialista',
+        assignCost(0.05, true),
+        roles,
+      ),
+    ],
+    other: [],
+  };
 }
 
 /**
