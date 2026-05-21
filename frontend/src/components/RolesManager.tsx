@@ -119,6 +119,30 @@ export const RolesManager: React.FC = () => {
     }
   };
 
+  const handleHourlyRateChange = (value: string) => {
+    const parsed = value === '' ? null : Number(value);
+    setFormData((current) => ({
+      ...current,
+      hourlyRate: value,
+      dailyRate:
+        current.billingType === 'HOUR'
+          ? (parsed === null || Number.isNaN(parsed) ? '' : String(parsed * 8))
+          : current.dailyRate,
+    }));
+  };
+
+  const handleDailyRateChange = (value: string) => {
+    const parsed = value === '' ? null : Number(value);
+    setFormData((current) => ({
+      ...current,
+      dailyRate: value,
+      hourlyRate:
+        current.billingType === 'HOUR'
+          ? (parsed === null || Number.isNaN(parsed) ? '' : String(parsed / 8))
+          : current.hourlyRate,
+    }));
+  };
+
   if (loading) {
     return <div className="animate-pulse">Cargando roles...</div>;
   }
@@ -291,7 +315,7 @@ export const RolesManager: React.FC = () => {
                 type="number"
                 step="0.01"
                 value={formData.hourlyRate}
-                onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                onChange={(e) => handleHourlyRateChange(e.target.value)}
                 placeholder="0.00"
               />
 
@@ -300,7 +324,7 @@ export const RolesManager: React.FC = () => {
                 type="number"
                 step="0.01"
                 value={formData.dailyRate}
-                onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
+                onChange={(e) => handleDailyRateChange(e.target.value)}
                 placeholder="0.00"
               />
             </div>
