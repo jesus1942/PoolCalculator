@@ -943,17 +943,34 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const normalizedHtml = normalizeCommercialText(html || '');
     if (!normalizedHtml) return false;
 
-    return (
-      normalizedHtml.includes('version estandar de instalacion') &&
-      normalizedHtml.includes('m.o. base') &&
-      normalizedHtml.includes('2 retornos en escalera') &&
-      normalizedHtml.includes('2 retornos bajo skimmer para retorno de agua caliente')
-    );
+    const legacySignals = [
+      'version estandar de instalacion',
+      'm.o. base',
+      '2 retornos en escalera',
+      '2 retornos bajo skimmer para retorno de agua caliente',
+      'otros adicionales',
+      'otros agregados cargados en el proyecto',
+    ];
+
+    const matchedSignals = legacySignals.filter((signal) => normalizedHtml.includes(signal)).length;
+    const currentAutomaticSignals = [
+      'resumen del proyecto',
+      'adicionales incluidos',
+      'condiciones comerciales',
+    ];
+    const matchesCurrentAutomaticShape = currentAutomaticSignals.every((signal) => normalizedHtml.includes(signal));
+
+    return matchedSignals >= 2 || (matchedSignals >= 1 && !matchesCurrentAutomaticShape);
   };
 
   const resolveClientBodyHtml = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const customBodyHtml = templateSettings.customBodyHtml?.trim();
-    if (templateSettings.useCustomClientBody && customBodyHtml && !isLegacyAutoClientHtml(customBodyHtml)) {
+    const shouldUseCustomBody =
+      templateSettings.useCustomClientBody === true &&
+      !!customBodyHtml &&
+      !isLegacyAutoClientHtml(customBodyHtml);
+
+    if (shouldUseCustomBody) {
       return interpolateProjectHtml(customBodyHtml);
     }
 
@@ -5205,7 +5222,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <input
                             type="checkbox"
                             checked={!!activeDraftTemplate.useCustomClientBody}
-                            onChange={(event) => updateDraftTemplate({ useCustomClientBody: event.target.checked })}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                handleResetClientDocument();
+                                return;
+                              }
+                              handleUseAutomaticClientDocument();
+                            }}
                             className="h-4 w-4"
                           />
                           <span>Usar propuesta personalizada editada</span>
