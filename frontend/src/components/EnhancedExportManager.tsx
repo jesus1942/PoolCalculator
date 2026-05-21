@@ -4092,13 +4092,33 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const page = document.createElement('div');
       page.className = 'pdf-page-shell';
       page.style.width = `${pageWidthPx}px`;
-      page.style.padding = `${pagePaddingPx}px`;
-      page.style.background = '#ffffff';
+      page.style.padding = `${Math.max(20, Math.round(pagePaddingPx * 0.5))}px`;
+      page.style.background = '#f3f4f6';
       page.style.color = '#111827';
       page.style.boxSizing = 'border-box';
       page.style.overflow = 'hidden';
+
+      const frame = document.createElement('div');
+      frame.className = 'pdf-page-frame';
+      frame.style.background = '#ffffff';
+      frame.style.border = '1px solid #d4d4d8';
+      frame.style.borderRadius = '22px';
+      frame.style.boxShadow = '0 18px 40px rgba(15, 23, 42, 0.08)';
+      frame.style.padding = `${pagePaddingPx}px`;
+      frame.style.overflow = 'hidden';
+      frame.style.boxSizing = 'border-box';
+
+      const content = document.createElement('div');
+      content.className = 'pdf-page-content';
+      content.style.display = 'block';
+
+      frame.appendChild(content);
+      page.appendChild(frame);
       return page;
     };
+
+    const getPdfPageContentTarget = (page: HTMLElement) =>
+      (page.querySelector('.pdf-page-content') as HTMLElement | null) || page;
 
     const collectPdfBlocks = (root: HTMLElement) => {
       const container = root.querySelector('.container') as HTMLElement | null;
@@ -4157,27 +4177,41 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const pages: HTMLElement[] = [];
       let currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
       measurementHost.appendChild(currentPage);
+      let currentContent = getPdfPageContentTarget(currentPage);
 
-      for (const block of blocks) {
+      for (const [index, block] of blocks.entries()) {
         const clonedBlock = block.cloneNode(true) as HTMLElement;
-        currentPage.appendChild(clonedBlock);
+        const blockShell = document.createElement('div');
+        blockShell.className = 'pdf-page-block';
+        if (index > 0) {
+          blockShell.style.borderTop = '1px solid #e5e7eb';
+          blockShell.style.paddingTop = '18px';
+          blockShell.style.marginTop = '18px';
+        }
+        blockShell.appendChild(clonedBlock);
+        currentContent.appendChild(blockShell);
         await nextFrame();
 
         const fitsCurrentPage = currentPage.scrollHeight <= maxPageHeightPx;
-        if (fitsCurrentPage || currentPage.children.length === 1) {
+        if (fitsCurrentPage || currentContent.children.length === 1) {
           continue;
         }
 
-        currentPage.removeChild(clonedBlock);
+        currentContent.removeChild(blockShell);
         pages.push(currentPage.cloneNode(true) as HTMLElement);
 
         currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
         measurementHost.replaceChildren(currentPage);
-        currentPage.appendChild(clonedBlock);
+        currentContent = getPdfPageContentTarget(currentPage);
+        const resetBlockShell = blockShell.cloneNode(true) as HTMLElement;
+        resetBlockShell.style.borderTop = '0';
+        resetBlockShell.style.paddingTop = '0';
+        resetBlockShell.style.marginTop = '0';
+        currentContent.appendChild(resetBlockShell);
         await nextFrame();
       }
 
-      if (currentPage.children.length > 0) {
+      if (currentContent.children.length > 0) {
         pages.push(currentPage.cloneNode(true) as HTMLElement);
       }
 
