@@ -1481,208 +1481,193 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   <meta charset="UTF-8">
   <title>${documentTitle}</title>
   <style>
+    :root {
+      --bg: #f5f5f4;
+      --paper: #ffffff;
+      --ink: #18181b;
+      --muted: #71717a;
+      --line: #e7e5e4;
+      --soft: #fafaf9;
+      --accent: #0f172a;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background: #f9fafb;
-      padding: 20px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 24px;
     }
     .container {
-      max-width: 1200px;
+      max-width: 1120px;
       margin: 0 auto;
-      background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      background: var(--paper);
+      border: 1px solid var(--line);
     }
     .header {
-      background: #111111;
-      color: white;
-      padding: 30px 40px;
-      text-align: center;
+      padding: 36px 44px 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
     }
     .logo {
-      font-size: 28px;
+      min-height: 34px;
+      margin-bottom: 22px;
+    }
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .title-block {
+      max-width: 720px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 10px;
       font-weight: 700;
-      letter-spacing: 1px;
+    }
+    .title {
+      font-size: 30px;
+      line-height: 1.1;
+      color: var(--accent);
+      font-weight: 700;
       margin-bottom: 10px;
     }
     .subtitle {
-      font-size: 16px;
-      opacity: 0.9;
+      font-size: 15px;
+      color: #3f3f46;
+      max-width: 560px;
+    }
+    .date-box {
+      min-width: 170px;
+      border-left: 1px solid var(--line);
+      padding-left: 18px;
+      text-align: right;
+    }
+    .date-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 700;
     }
     .date {
-      font-size: 13px;
-      opacity: 0.7;
-      margin-top: 10px;
+      font-size: 14px;
+      color: var(--ink);
+      font-weight: 600;
     }
     .content {
-      padding: 40px;
+      padding: 22px 44px 40px;
     }
     .section {
-      margin: 30px 0;
+      margin: 0 0 28px;
       page-break-inside: avoid;
     }
     .section h2 {
-      color: #111111;
-      border-bottom: 1px solid #d4d4d8;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-      font-size: 20px;
-      font-weight: 600;
-    }
-    .content-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 30px;
-      margin: 20px 0;
+      color: var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--line);
     }
     .info-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin: 20px 0;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
     }
     .info-item {
-      padding: 15px;
-      background: #fafafa;
-      border-left: 2px solid #d4d4d8;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      border-left: 0;
     }
     .info-label {
-      font-size: 11px;
-      color: #6b7280;
+      font-size: 10px;
+      color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 5px;
-      font-weight: 500;
+      letter-spacing: 0.12em;
+      margin-bottom: 6px;
+      font-weight: 700;
     }
     .info-value {
       font-size: 15px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--ink);
     }
-    .features-list {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .features-list li {
-      padding: 10px 15px;
-      background: #fafafa;
-      border-left: 2px solid #d4d4d8;
-      font-size: 14px;
+    .section p {
+      font-size: 15px;
+      color: #27272a;
+      margin: 0 0 10px;
     }
     .comparison-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 18px;
-      margin-top: 20px;
+      margin-top: 16px;
     }
     .comparison-card {
-      border: 1px solid #e4e4e7;
-      border-radius: 12px;
-      padding: 18px;
-      background: #fafafa;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      padding: 18px 20px;
+      background: var(--soft);
     }
     .comparison-card.recommended {
-      background: #111111;
-      color: white;
-      border-color: #111111;
+      background: var(--soft);
+      color: var(--ink);
+      border-color: var(--line);
     }
     .comparison-title {
-      font-size: 16px;
+      font-size: 13px;
       font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .comparison-subtitle {
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 12px;
-    }
-    .comparison-card.recommended .comparison-subtitle {
-      color: rgba(255,255,255,0.72);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
     }
     .comparison-list {
       list-style: none;
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      font-size: 13px;
-    }
-    .comparison-price {
-      margin-top: 14px;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .cost-section {
-      background: #fafafa;
-      padding: 25px;
-      margin: 20px 0;
-      border: 1px solid #e4e4e7;
-      border-radius: 8px;
-    }
-    .cost-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid #e4e4e7;
-    }
-    .cost-row:last-child {
-      border-bottom: none;
-    }
-    .cost-label {
-      font-weight: 500;
-      color: #4b5563;
-      font-size: 15px;
-    }
-    .cost-value {
-      font-weight: 600;
-      color: #1f2937;
-      font-size: 15px;
-    }
-    .total-row {
-      background: #111111;
-      color: white;
-      padding: 20px;
-      margin-top: 15px;
-      font-size: 22px;
-      font-weight: 700;
-      border-radius: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      gap: 7px;
+      font-size: 14px;
+      color: #27272a;
     }
     .conditions-list {
       list-style: none;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      grid-template-columns: 1fr;
+      gap: 8px;
     }
     .conditions-list li {
-      padding: 10px 15px;
-      background: #fafafa;
-      border-left: 2px solid #d4d4d8;
+      padding: 0 0 8px;
+      background: transparent;
+      border-left: 0;
+      border-bottom: 1px solid var(--line);
       font-size: 14px;
+      color: #27272a;
     }
     .custom-blocks {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
     .custom-block {
-      padding: 16px 18px;
-      background: #fafafa;
-      border: 1px solid #e4e4e7;
-      border-radius: 10px;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
     }
     .custom-heading {
-      color: #111111;
+      color: var(--accent);
       margin: 0;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     .custom-paragraph {
       color: #27272a;
@@ -1691,28 +1676,28 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
     .custom-bullets {
       margin: 0;
-      padding-left: 20px;
+      padding-left: 18px;
       color: #27272a;
       line-height: 1.7;
     }
     .custom-divider {
-      border-top: 1px solid #d4d4d8;
-      margin: 8px 0;
+      border-top: 1px solid var(--line);
+      margin: 4px 0;
     }
     .custom-data-field {
-      color: #18181b;
+      color: var(--ink);
       font-weight: 600;
     }
     .custom-data-label {
-      color: #71717a;
+      color: var(--muted);
       text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 0.06em;
+      font-size: 10px;
+      letter-spacing: 0.12em;
       font-weight: 700;
     }
     .custom-comment {
-      margin-top: 8px;
-      color: #71717a;
+      margin-top: 6px;
+      color: var(--muted);
       font-size: 12px;
       font-style: italic;
     }
@@ -1723,10 +1708,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
     .custom-document th,
     .custom-document td {
-      border: 1px solid #d4d4d8;
+      border: 1px solid var(--line);
       padding: 10px 12px;
       text-align: left;
       vertical-align: top;
+      font-size: 13px;
+    }
+    .custom-document th {
+      background: var(--soft);
+      color: var(--accent);
+      font-weight: 700;
     }
     .custom-document .doc-columns {
       display: grid;
@@ -1734,25 +1725,37 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       gap: 16px;
     }
     .custom-document .doc-comment {
-      border-left: 3px solid #a1a1aa;
+      border-left: 2px solid #d6d3d1;
       padding: 10px 14px;
-      background: #fafafa;
+      background: var(--soft);
       color: #52525b;
       font-size: 13px;
       font-style: italic;
       margin: 12px 0;
     }
     .footer {
-      margin-top: 60px;
-      padding-top: 20px;
-      border-top: 1px solid #e0e0e0;
-      text-align: center;
-      font-size: 12px;
-      color: #999;
+      margin-top: 36px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .footer strong {
+      color: var(--ink);
+    }
+    @media (max-width: 900px) {
+      body { padding: 0; background: #fff; }
+      .header, .content { padding-left: 22px; padding-right: 22px; }
+      .header-top, .footer { display: block; }
+      .date-box { border-left: 0; padding-left: 0; margin-top: 18px; text-align: left; }
+      .info-grid, .custom-document .doc-columns { grid-template-columns: 1fr; }
     }
     @media print {
       body { background: white; padding: 0; }
-      .container { box-shadow: none; }
+      .container { border: 0; }
     }
   </style>
 </head>
@@ -1760,8 +1763,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   <div class="container">
     <div class="header">
       <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
-      <p class="subtitle">${headerSubtitle}</p>
-      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <div class="header-top">
+        <div class="title-block">
+          <div class="eyebrow">Propuesta</div>
+          <h1 class="title">${project.name}</h1>
+          <p class="subtitle">${headerSubtitle}</p>
+        </div>
+        <div class="date-box">
+          <div class="date-label">Fecha</div>
+          <div class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </div>
+      </div>
     </div>
 
     <div class="content">
@@ -1770,8 +1782,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </div>
 
       <div class="footer">
-        <p><strong>Pool Installer</strong> | Sistema Profesional de Cálculo de Materiales para Piscinas</p>
-        <p>Documento generado el ${new Date().toLocaleDateString('es-AR')} | Código: ${getProjectCode(project)}</p>
+        <p><strong>Pool Installer</strong></p>
+        <p>Código ${getProjectCode(project)} · ${new Date().toLocaleDateString('es-AR')}</p>
       </div>
     </div>
   </div>
