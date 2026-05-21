@@ -98,14 +98,32 @@ export const RemindersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [refresh]);
 
   const snooze = useCallback(async (id: string, minutes: number) => {
-    await agendaReminderService.snooze(id, minutes);
-    await refresh();
-  }, [refresh]);
+    const previousReminders = reminders;
+    setReminders((current) => current.filter((reminder) => reminder.id !== id));
+
+    try {
+      await agendaReminderService.snooze(id, minutes);
+      await refresh();
+    } catch (error) {
+      console.error('Error al posponer recordatorio:', error);
+      setReminders(previousReminders);
+      throw error;
+    }
+  }, [refresh, reminders]);
 
   const dismiss = useCallback(async (id: string) => {
-    await agendaReminderService.dismiss(id);
-    await refresh();
-  }, [refresh]);
+    const previousReminders = reminders;
+    setReminders((current) => current.filter((reminder) => reminder.id !== id));
+
+    try {
+      await agendaReminderService.dismiss(id);
+      await refresh();
+    } catch (error) {
+      console.error('Error al descartar recordatorio:', error);
+      setReminders(previousReminders);
+      throw error;
+    }
+  }, [refresh, reminders]);
 
   const value = useMemo(() => ({
     reminders,
