@@ -37,7 +37,22 @@ const EVENT_PRIORITIES = [
   { value: 'URGENT', label: 'Urgente' },
 ];
 
-const toDateInput = (date: Date) => date.toISOString().slice(0, 16);
+const padDatePart = (value: number) => String(value).padStart(2, '0');
+
+const toDateInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const toIsoFromLocalInput = (value: string) => {
+  if (!value) return value;
+  const localDate = new Date(value);
+  return Number.isNaN(localDate.getTime()) ? value : localDate.toISOString();
+};
 
 export const Agenda: React.FC = () => {
   const { user } = useAuth();
@@ -324,12 +339,16 @@ export const Agenda: React.FC = () => {
       if (editingEvent) {
         await agendaService.update(editingEvent.id, {
           ...form,
+          startAt: toIsoFromLocalInput(form.startAt),
+          endAt: toIsoFromLocalInput(form.endAt),
           projectId: form.projectId || null,
           crewId: form.crewId || null,
         });
       } else {
         await agendaService.create({
           ...form,
+          startAt: toIsoFromLocalInput(form.startAt),
+          endAt: toIsoFromLocalInput(form.endAt),
           projectId: form.projectId || null,
           crewId: form.crewId || null,
         });
