@@ -1,5 +1,5 @@
 import prisma from '../config/database';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { logSystemEvent } from '../utils/systemLog';
 
 type PushSubscriptionInput = {
@@ -93,7 +93,7 @@ export const savePushSubscription = async (userId: string, subscription: PushSub
         "updatedAt" = NOW()
       RETURNING "id", "endpoint"
     `,
-    uuidv4(),
+    randomUUID(),
     userId,
     subscription.endpoint,
     subscription.expirationTime ? new Date(subscription.expirationTime) : null,
