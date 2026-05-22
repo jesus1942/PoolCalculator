@@ -120,7 +120,8 @@ export const PublicTimeline: React.FC = () => {
     return map[role] || role;
   };
 
-  const timelineItems = projectData?.timeline || projectData?.updates || [];
+  const timelineSource = projectData?.timeline || projectData?.updates || [];
+  const timelineItems = timelineSource.filter((item: any) => !item?.type || item.type === 'PROJECT_UPDATE');
   const exportUrl = shareToken
     ? `${API_BASE_URL}/api/public/timeline/${shareToken}/export`
     : '';
