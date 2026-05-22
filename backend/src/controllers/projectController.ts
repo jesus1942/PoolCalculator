@@ -35,7 +35,9 @@ const quoteShellArg = (value: string) => `'${value.replace(/'/g, `'\"'\"'`)}'`;
 
 const runPythonCommand = async (args: string[]) => {
   const pythonArgs = args.map(quoteShellArg).join(' ');
+  const pythonPackagesDir = '/app/backend/.python-packages';
   const command = [
+    `if [ -d ${quoteShellArg(pythonPackagesDir)} ]; then export PYTHONPATH=${quoteShellArg(pythonPackagesDir)}:$PYTHONPATH; fi;`,
     'if [ -n "${PYTHON_BIN:-}" ] && [ -x "${PYTHON_BIN}" ]; then PY="${PYTHON_BIN}";',
     'elif [ -x /root/.nix-profile/bin/python3 ]; then PY=/root/.nix-profile/bin/python3;',
     'elif [ -x /nix/var/nix/profiles/default/bin/python3 ]; then PY=/nix/var/nix/profiles/default/bin/python3;',
