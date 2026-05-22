@@ -12,8 +12,8 @@ nixPkgs = [
 
 [phases.install]
 cmds = [
-  "npm --prefix frontend ci",
-  "npm --prefix backend ci"
+  "npm --prefix frontend ci --include=dev",
+  "npm --prefix backend ci --include=dev"
 ]
 
 [phases.build]
