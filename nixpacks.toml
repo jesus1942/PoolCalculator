@@ -2,7 +2,7 @@ providers = []
 
 [phases.setup]
 nixPkgs = [
-  "nodejs_22",
+  "nodejs_20",
   "python311",
   "python311Packages.openpyxl",
   "python311Packages.pillow",
