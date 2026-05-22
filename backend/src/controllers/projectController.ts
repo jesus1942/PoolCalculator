@@ -16,7 +16,6 @@ import { promisify } from 'util';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
-import fsSync from 'fs';
 import { randomUUID } from 'crypto';
 import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 import { listConversationSummaries, syncProjectConversation } from '../services/conversationService';
@@ -32,22 +31,22 @@ import { getReferenceRoleBlueprints, getRoleAliases } from '../utils/laborRefere
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
-const resolvePythonBinary = () => {
-  const candidates = [
-    process.env.PYTHON_BIN,
-    '/root/.nix-profile/bin/python3',
-    '/nix/var/nix/profiles/default/bin/python3',
-    '/usr/bin/python3',
-    'python3',
-  ].filter((value): value is string => Boolean(value));
+const quoteShellArg = (value: string) => `'${value.replace(/'/g, `'\"'\"'`)}'`;
 
-  return candidates.find((candidate) => {
-    if (candidate === 'python3') return true;
-    return fsSync.existsSync(candidate);
-  }) || 'python3';
+const runPythonCommand = async (args: string[]) => {
+  const pythonArgs = args.map(quoteShellArg).join(' ');
+  const command = [
+    'if [ -n "${PYTHON_BIN:-}" ] && [ -x "${PYTHON_BIN}" ]; then PY="${PYTHON_BIN}";',
+    'elif [ -x /root/.nix-profile/bin/python3 ]; then PY=/root/.nix-profile/bin/python3;',
+    'elif [ -x /nix/var/nix/profiles/default/bin/python3 ]; then PY=/nix/var/nix/profiles/default/bin/python3;',
+    'elif command -v python3 >/dev/null 2>&1; then PY=$(command -v python3);',
+    'elif command -v python >/dev/null 2>&1; then PY=$(command -v python);',
+    'else echo "python-runtime-not-found" >&2; exit 127; fi',
+    `exec "$PY" ${pythonArgs}`,
+  ].join(' ');
+
+  return execFileAsync('/bin/bash', ['-lc', command]);
 };
-
-const PYTHON_BIN = resolvePythonBinary();
 
 const AUTO_TASK_CATEGORIES = ['excavation', 'hydraulic', 'electrical', 'floor', 'tiles', 'finishes'];
 
@@ -501,7 +500,7 @@ const generateExcelExportFileFromProject = async (project: any, sections?: any, 
 
   await fs.mkdir(path.dirname(exportPath), { recursive: true });
   await fs.copyFile(templatePath, exportPath);
-  await execFileAsync(PYTHON_BIN, [scriptPath, JSON.stringify(projectData), exportPath]);
+  await runPythonCommand([scriptPath, JSON.stringify(projectData), exportPath]);
 
   return { exportPath, exportFileName };
 };
@@ -520,7 +519,7 @@ const zipDirectory = async (sourceDir: string, zipPath: string) => {
   ].join('\n');
 
   await fs.mkdir(path.dirname(zipPath), { recursive: true });
-  await execFileAsync(PYTHON_BIN, ['-c', zipScript, sourceDir, zipPath]);
+  await runPythonCommand(['-c', zipScript, sourceDir, zipPath]);
 };
 
 const mergeGeneratedTasks = (
