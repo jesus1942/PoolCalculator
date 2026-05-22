@@ -4229,8 +4229,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const page = document.createElement('div');
       page.className = 'pdf-page-shell';
       page.style.width = `${pageWidthPx}px`;
-      page.style.padding = `${Math.max(20, Math.round(pagePaddingPx * 0.5))}px`;
-      page.style.background = '#f3f4f6';
+      page.style.padding = '0';
+      page.style.background = '#ffffff';
       page.style.color = '#111827';
       page.style.boxSizing = 'border-box';
       page.style.overflow = 'hidden';
@@ -4238,9 +4238,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const frame = document.createElement('div');
       frame.className = 'pdf-page-frame';
       frame.style.background = '#ffffff';
-      frame.style.border = '1px solid #d4d4d8';
-      frame.style.borderRadius = '22px';
-      frame.style.boxShadow = '0 18px 40px rgba(15, 23, 42, 0.08)';
+      frame.style.border = '0';
+      frame.style.borderRadius = '0';
+      frame.style.boxShadow = 'none';
       frame.style.padding = `${pagePaddingPx}px`;
       frame.style.overflow = 'hidden';
       frame.style.boxSizing = 'border-box';
@@ -4374,8 +4374,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       }
 
       // 3) Construimos wrapper A4 en px (evita “mm” inconsistentes en html2canvas)
-      const A4_W = mmToPx(210);
-      const A4_PADDING = 48;
+      const A4_W = mmToPx(190);
+      const A4_PADDING = 16;
 
       let cadImageDataUrl = '';
       if (template === 'professional') {
@@ -4411,7 +4411,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       wrapper.style.top = '0';
       wrapper.style.transform = 'translateX(-250vw)';
       wrapper.style.width = `${A4_W}px`;
-      wrapper.style.padding = `${A4_PADDING}px`;
+      wrapper.style.padding = '0';
       wrapper.style.background = '#ffffff';
       wrapper.style.color = '#111827';
       wrapper.style.zIndex = '2147483647';
@@ -4463,9 +4463,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       const pdfW = pdf.internal.pageSize.getWidth();
       const pdfH = pdf.internal.pageSize.getHeight();
 
-      const marginMm = 10;
-      const headerMm = 12;
-      const footerMm = 12;
+      const marginMm = 8;
+      const headerMm = 8;
+      const footerMm = 8;
       const contentW = pdfW - marginMm * 2;
       const contentH = pdfH - marginMm * 2 - headerMm - footerMm;
 
@@ -4549,10 +4549,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         drawHeaderFooter(page);
 
         const rawDrawH = (pageCanvas.height / pageCanvas.width) * contentW;
-        const fitScale = rawDrawH > contentH ? contentH / rawDrawH : 1;
-        const drawW = contentW * fitScale;
-        const drawH = rawDrawH * fitScale;
-        const drawX = marginMm + (contentW - drawW) / 2;
+        const drawW = contentW;
+        const drawH = Math.min(rawDrawH, contentH);
+        const drawX = marginMm;
         pdf.addImage(
           imgData,
           useJpeg ? 'JPEG' : 'PNG',
