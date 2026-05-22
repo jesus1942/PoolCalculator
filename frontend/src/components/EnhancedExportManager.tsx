@@ -803,15 +803,48 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     : `${project.poolPreset?.depth || 0}m`;
   const conditionsCount = getConditionsList(getTemplateSettings('client').conditions).length;
 
+  const effectiveProjectSpec = (() => {
+    const poolPreset = project.poolPreset || {};
+    const shape = String(poolPreset.shape || '').toUpperCase();
+    const tileConfig = (project.tileCalculation as any) || {};
+    const returnsCount = Number(hydraulicSummary.total.returns || poolPreset.returnsCount || 0);
+    const skimmersCount = Number(hydraulicSummary.total.skimmers || poolPreset.skimmerCount || 0);
+    const hydrojetsCount = Number(hydraulicSummary.total.hydrojets || poolPreset.hydroJetsCount || 0);
+    const lightingCount = Number(poolPreset.lightingCount || 0);
+    const hasBottomDrain = Boolean(poolPreset.hasBottomDrain);
+    const hasVacuumIntake = Boolean(poolPreset.hasVacuumIntake);
+    const shallowDepth = Number(poolPreset.depth || 0);
+    const deepDepth = Number(poolPreset.depthEnd || poolPreset.depth || 0);
+    return {
+      modelName: poolPreset.name || project.name || 'Piscina',
+      shape,
+      shapeLabel: shape === 'OVAL' ? 'Oval' : shape === 'CIRCULAR' ? 'Circular' : shape === 'JACUZZI' ? 'Jacuzzi' : shape === 'ROMAN' ? 'Arco romano' : shape || 'Rectangular',
+      length: Number(poolPreset.length || 0),
+      width: Number(poolPreset.width || 0),
+      shallowDepth,
+      deepDepth,
+      depthLabel: deepDepth && deepDepth !== shallowDepth ? `${shallowDepth}m a ${deepDepth}m` : `${shallowDepth}m`,
+      volume: Number(project.volume || 0),
+      waterMirrorArea: Number(project.waterMirrorArea || 0),
+      tileCalculation: tileConfig,
+      returnsCount,
+      skimmersCount,
+      hydrojetsCount,
+      lightingCount,
+      hasBottomDrain,
+      hasVacuumIntake,
+    };
+  })();
+
   const clientPricingMode = getTemplateSettings('client').clientPricingMode || 'labor_only';
   const projectDynamicValues = {
     clientName: project.clientName || '',
     projectName: project.name || '',
     location: project.location || 'Ubicación a definir',
     poolModel: project.poolPreset?.name || 'Modelo sin definir',
-    dimensions: `${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${poolDepthLabel}`,
-    volume: `${project.volume.toFixed(2)} m³`,
-    waterMirrorArea: `${project.waterMirrorArea.toFixed(2)} m²`,
+    dimensions: `${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${effectiveProjectSpec.depthLabel}`,
+    volume: `${effectiveProjectSpec.volume.toFixed(2)} m³`,
+    waterMirrorArea: `${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²`,
     installationTier,
     laborCost: formatCurrency(exportInstallationProfile.totalLaborCost),
     materialCost: formatCurrency(computedCosts.totalMaterialCost),
@@ -1065,15 +1098,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           </div>
           <div class="info-item">
             <div class="info-label">Dimensiones</div>
-            <div class="info-value">${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${poolDepthLabel}</div>
+            <div class="info-value">${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${effectiveProjectSpec.depthLabel}</div>
           </div>
           <div class="info-item">
             <div class="info-label">Volumen</div>
-            <div class="info-value">${project.volume.toFixed(2)} m³</div>
+            <div class="info-value">${effectiveProjectSpec.volume.toFixed(2)} m³</div>
           </div>
           <div class="info-item">
             <div class="info-label">Área de Espejo de Agua</div>
-            <div class="info-value">${project.waterMirrorArea.toFixed(2)} m²</div>
+            <div class="info-value">${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²</div>
           </div>
           ${project.clientPhone ? `<div class="info-item"><div class="info-label">Teléfono</div><div class="info-value">${project.clientPhone}</div></div>` : ''}
           ${project.clientEmail ? `<div class="info-item"><div class="info-label">Email</div><div class="info-value">${project.clientEmail}</div></div>` : ''}
@@ -1130,7 +1163,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         id: 'client-pool',
         label: 'Piscina y alcance',
         detail: 'Modelo, dimensiones, volumen y alcance comercial.',
-        value: `${project.poolPreset?.name || 'Sin modelo'} · ${project.volume.toFixed(2)} m³`,
+        value: `${project.poolPreset?.name || 'Sin modelo'} · ${effectiveProjectSpec.volume.toFixed(2)} m³`,
         ready: !!project.poolPreset,
       },
       {
@@ -1282,7 +1315,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         id: 'overview-pool',
         label: 'Indicadores de piscina',
         detail: 'Modelo, volumen y espejo de agua.',
-        value: `${project.poolPreset?.name || 'Sin modelo'} · ${project.waterMirrorArea.toFixed(2)} m²`,
+        value: `${project.poolPreset?.name || 'Sin modelo'} · ${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²`,
         ready: !!project.poolPreset,
       },
       {
@@ -1991,11 +2024,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <div class="spec-grid">
           <div class="spec-item"><div class="spec-label">Largo</div><div class="spec-value">${project.poolPreset?.length || 0} m</div></div>
           <div class="spec-item"><div class="spec-label">Ancho</div><div class="spec-value">${project.poolPreset?.width || 0} m</div></div>
-          <div class="spec-item"><div class="spec-label">Profundidad</div><div class="spec-value">${poolDepthLabel}</div></div>
-          <div class="spec-item"><div class="spec-label">Volumen</div><div class="spec-value">${project.volume.toFixed(2)} m³</div></div>
-          <div class="spec-item"><div class="spec-label">Capacidad</div><div class="spec-value">${(project.volume * 1000).toFixed(0)} litros</div></div>
-          <div class="spec-item"><div class="spec-label">Área Espejo</div><div class="spec-value">${project.waterMirrorArea.toFixed(2)} m²</div></div>
-          <div class="spec-item"><div class="spec-label">Forma</div><div class="spec-value">${project.poolPreset?.shape || 'RECTANGULAR'}</div></div>
+          <div class="spec-item"><div class="spec-label">Profundidad</div><div class="spec-value">${effectiveProjectSpec.depthLabel}</div></div>
+          <div class="spec-item"><div class="spec-label">Volumen</div><div class="spec-value">${effectiveProjectSpec.volume.toFixed(2)} m³</div></div>
+          <div class="spec-item"><div class="spec-label">Capacidad</div><div class="spec-value">${(effectiveProjectSpec.volume * 1000).toFixed(0)} litros</div></div>
+          <div class="spec-item"><div class="spec-label">Área Espejo</div><div class="spec-value">${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²</div></div>
+          <div class="spec-item"><div class="spec-label">Forma</div><div class="spec-value">${effectiveProjectSpec.shapeLabel}</div></div>
           <div class="spec-item"><div class="spec-label">Skimmers</div><div class="spec-value">${hydraulicSummary.total.skimmers}</div></div>
           <div class="spec-item"><div class="spec-label">Retornos</div><div class="spec-value">${hydraulicSummary.total.returns}</div></div>
         </div>
@@ -2642,8 +2675,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <h3 style="color: #18181b; margin: 0 0 10px 0; font-size: 18px;">Resumen Ejecutivo</h3>
         <p style="font-size: 14px; line-height: 1.6; margin: 0;">
           Proyecto <strong>${project.name}</strong> para <strong>${project.clientName}</strong>.
-          Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${poolDepthLabel}
-          con capacidad de ${(project.volume * 1000).toFixed(0)} litros.
+          Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${effectiveProjectSpec.depthLabel}
+          con capacidad de ${(effectiveProjectSpec.volume * 1000).toFixed(0)} litros.
           Inversión total: <strong style="color: #111111; font-size: 18px;">$${grandTotal.toLocaleString('es-AR')}</strong>
         </p>
       </div>
@@ -3029,15 +3062,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       <!-- METRICS -->
       <div class="metrics-row">
         <div class="metric-card">
-          <div class="metric-value">${project.poolPreset?.length || 0} × ${project.poolPreset?.width || 0}</div>
+          <div class="metric-value">${effectiveProjectSpec.length} × ${effectiveProjectSpec.width}</div>
           <div class="metric-label">Dimensiones (m)</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">${poolDepthLabel}</div>
+          <div class="metric-value">${effectiveProjectSpec.depthLabel}</div>
           <div class="metric-label">Profundidad</div>
         </div>
         <div class="metric-card">
-          <div class="metric-value">${(project.volume * 1000).toFixed(0)}</div>
+          <div class="metric-value">${(effectiveProjectSpec.volume * 1000).toFixed(0)}</div>
           <div class="metric-label">Capacidad (L)</div>
         </div>
         <div class="metric-card">
@@ -3055,19 +3088,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           <div class="info-list">
             <div class="info-item">
               <span class="info-label">Modelo</span>
-              <span class="info-value">${project.poolPreset?.name || 'N/A'}</span>
+              <span class="info-value">${effectiveProjectSpec.modelName}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Forma</span>
-              <span class="info-value">${project.poolPreset?.shape || 'RECTANGULAR'}</span>
+              <span class="info-value">${effectiveProjectSpec.shapeLabel}</span>
             </div>
             <div class="info-item">
               <span class="info-label">Volumen</span>
-              <span class="info-value">${project.volume.toFixed(2)} m³</span>
+              <span class="info-value">${effectiveProjectSpec.volume.toFixed(2)} m³</span>
             </div>
             <div class="info-item">
               <span class="info-label">Espejo de Agua</span>
-              <span class="info-value">${project.waterMirrorArea.toFixed(2)} m²</span>
+              <span class="info-value">${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²</span>
             </div>
             <div class="info-item">
               <span class="info-label">Estado</span>
@@ -3079,17 +3112,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         <!-- RIGHT: EQUIPMENT -->
         <div class="info-panel">
           <div class="panel-title">Equipamiento del Sistema</div>
-          ${equipmentRecommendation ? `
+          ${equipmentRecommendation?.pump && equipmentRecommendation?.filter ? `
           <div class="equipment-grid">
             <div class="equipment-item">
               <div class="equipment-label">Bomba</div>
-              <div class="equipment-name">${equipmentRecommendation.pump.name}</div>
-              <div class="equipment-spec">${equipmentRecommendation.pump.power} HP | ${equipmentRecommendation.pump.flowRate} m³/h</div>
+              <div class="equipment-name">${equipmentRecommendation.pump.name || 'Sin definir'}</div>
+              <div class="equipment-spec">${equipmentRecommendation.pump.power || '-'} HP | ${equipmentRecommendation.pump.flowRate || '-'} m³/h</div>
             </div>
             <div class="equipment-item">
               <div class="equipment-label">Filtro</div>
-              <div class="equipment-name">${equipmentRecommendation.filter.name}</div>
-              <div class="equipment-spec">${equipmentRecommendation.filter.capacity} m³/h</div>
+              <div class="equipment-name">${equipmentRecommendation.filter.name || 'Sin definir'}</div>
+              <div class="equipment-spec">${equipmentRecommendation.filter.capacity || '-'} m³/h</div>
             </div>
             ${equipmentRecommendation.heater ? `
             <div class="equipment-item">
@@ -3154,19 +3187,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="accessory-label">Hidrojets</div>
           </div>
           ` : ''}
-          ${project.poolPreset?.hasLighting ? `
+          ${effectiveProjectSpec.lightingCount > 0 ? `
           <div class="accessory-box">
-            <div class="accessory-count">${project.poolPreset.lightingCount}</div>
+            <div class="accessory-count">${effectiveProjectSpec.lightingCount}</div>
             <div class="accessory-label">Luces LED</div>
           </div>
           ` : ''}
-          ${project.poolPreset?.hasBottomDrain ? `
+          ${effectiveProjectSpec.hasBottomDrain ? `
           <div class="accessory-box">
             <div class="accessory-count">1</div>
             <div class="accessory-label">Desagüe Fondo</div>
           </div>
           ` : ''}
-          ${project.poolPreset?.hasVacuumIntake ? `
+          ${effectiveProjectSpec.hasVacuumIntake ? `
           <div class="accessory-box">
             <div class="accessory-count">1</div>
             <div class="accessory-label">Limpiafondos</div>
@@ -3736,7 +3769,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
 
     if (sections.characteristics) {
-      message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*\n- Modelo: ${project.poolPreset?.name || 'N/A'}\n- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${poolDepthLabel}\n- Volumen: ${project.volume.toFixed(2)} m³ (${(project.volume * 1000).toFixed(0)} litros)\n- Forma: ${project.poolPreset?.shape || 'N/A'}`;
+      message += `${message ? '\n\n' : ''}*CARACTERISTICAS DE LA PISCINA*\n- Modelo: ${effectiveProjectSpec.modelName}\n- Dimensiones: ${project.poolPreset?.length || 0}m x ${project.poolPreset?.width || 0}m x ${effectiveProjectSpec.depthLabel}\n- Volumen: ${effectiveProjectSpec.volume.toFixed(2)} m³ (${(effectiveProjectSpec.volume * 1000).toFixed(0)} litros)\n- Forma: ${project.poolPreset?.shape || 'N/A'}`;
     }
 
     if (sections.includes) {
