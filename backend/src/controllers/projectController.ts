@@ -16,6 +16,7 @@ import { promisify } from 'util';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import { randomUUID } from 'crypto';
 import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 import { listConversationSummaries, syncProjectConversation } from '../services/conversationService';
@@ -30,6 +31,23 @@ import { getReferenceRoleBlueprints, getRoleAliases } from '../utils/laborRefere
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
+
+const resolvePythonBinary = () => {
+  const candidates = [
+    process.env.PYTHON_BIN,
+    '/root/.nix-profile/bin/python3',
+    '/nix/var/nix/profiles/default/bin/python3',
+    '/usr/bin/python3',
+    'python3',
+  ].filter((value): value is string => Boolean(value));
+
+  return candidates.find((candidate) => {
+    if (candidate === 'python3') return true;
+    return fsSync.existsSync(candidate);
+  }) || 'python3';
+};
+
+const PYTHON_BIN = resolvePythonBinary();
 
 const AUTO_TASK_CATEGORIES = ['excavation', 'hydraulic', 'electrical', 'floor', 'tiles', 'finishes'];
 
@@ -483,7 +501,7 @@ const generateExcelExportFileFromProject = async (project: any, sections?: any, 
 
   await fs.mkdir(path.dirname(exportPath), { recursive: true });
   await fs.copyFile(templatePath, exportPath);
-  await execFileAsync('python3', [scriptPath, JSON.stringify(projectData), exportPath]);
+  await execFileAsync(PYTHON_BIN, [scriptPath, JSON.stringify(projectData), exportPath]);
 
   return { exportPath, exportFileName };
 };
@@ -502,7 +520,7 @@ const zipDirectory = async (sourceDir: string, zipPath: string) => {
   ].join('\n');
 
   await fs.mkdir(path.dirname(zipPath), { recursive: true });
-  await execFileAsync('python3', ['-c', zipScript, sourceDir, zipPath]);
+  await execFileAsync(PYTHON_BIN, ['-c', zipScript, sourceDir, zipPath]);
 };
 
 const mergeGeneratedTasks = (
