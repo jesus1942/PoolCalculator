@@ -1,5 +1,8 @@
+providers = []
+
 [phases.setup]
 nixPkgs = [
+  "nodejs_22",
   "python311",
   "python311Packages.openpyxl",
   "python311Packages.pillow",
@@ -21,4 +24,3 @@ cmds = [
 
 [start]
 cmd = "npm --prefix backend run start:deploy"
-providers = ["node"]
