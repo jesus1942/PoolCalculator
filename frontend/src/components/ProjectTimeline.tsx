@@ -315,7 +315,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
             <p className="text-sm text-gray-600">Registro cronológico de actualizaciones y eventos</p>
           </div>
           <div className="flex gap-2">
-            {updates.length > 0 && (
+            {timelineItems.length > 0 && (
               <Button variant="secondary" onClick={() => setShowExportModal(true)}>
                 <Share2 size={18} className="mr-2" />
                 Compartir Timeline
