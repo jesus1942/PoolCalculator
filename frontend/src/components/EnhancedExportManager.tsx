@@ -46,6 +46,7 @@ type ExportTemplateSettings = {
   subtitle?: string;
   conditions?: string;
   scopeSummary?: string;
+  pricingPosition?: 'top' | 'bottom';
   sections?: Record<string, boolean>;
   drawingView?: 'cad' | 'planta';
   installationMode?: 'basic' | 'with_extras';
@@ -685,6 +686,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         clientPricingMode: 'labor_only' as const,
         showRecommendedInstallationBox: true,
         includeAdditionalsPricing: true,
+        pricingPosition: 'bottom' as const,
         useCustomClientBody: false,
         ...templateSettings,
       };
@@ -1004,6 +1006,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       })),
     ]).filter((item) => item.name && item.quantity > 0);
     const showAdditionalSummary = templateSettings.showRecommendedInstallationBox !== false && visibleAdditionalsSummary.length > 0;
+    const pricingPosition = templateSettings.pricingPosition || 'bottom';
     const scopeLines = (templateSettings.scopeSummary || '')
       .split('\n')
       .map((line) => line.trim())
@@ -1020,6 +1023,27 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const visibleMaterialsTotal = showMaterialsToClient
       ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
       : 0;
+    const pricingSectionHtml = sections.costs ? `
+      <div class="section">
+        <h2>Inversión</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Mano de obra</div>
+            <div class="info-value">${formatCurrency(visibleLaborCost)}</div>
+          </div>
+          ${showMaterialsToClient ? `
+          <div class="info-item">
+            <div class="info-label">Materiales</div>
+            <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
+          </div>
+          ` : ''}
+          <div class="info-item">
+            <div class="info-label">Total</div>
+            <div class="info-value">${formatCurrency(visibleTotal)}</div>
+          </div>
+        </div>
+      </div>
+      ` : '';
 
     return `
       ${sections.header ? `
@@ -1075,27 +1099,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </div>
       ` : ''}
 
-      ${sections.costs ? `
-      <div class="section">
-        <h2>Inversión</h2>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Mano de obra</div>
-            <div class="info-value">${formatCurrency(visibleLaborCost)}</div>
-          </div>
-          ${showMaterialsToClient ? `
-          <div class="info-item">
-            <div class="info-label">Materiales</div>
-            <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
-          </div>
-          ` : ''}
-          <div class="info-item">
-            <div class="info-label">Total</div>
-            <div class="info-value">${formatCurrency(visibleTotal)}</div>
-          </div>
-        </div>
-      </div>
-      ` : ''}
+      ${pricingPosition === 'top' ? pricingSectionHtml : ''}
 
       ${renderClientDocumentBlocks(templateSettings.documentBlocks)}
 
@@ -1108,6 +1112,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         </ul>
       </div>
       ` : ''}
+
+      ${pricingPosition === 'bottom' ? pricingSectionHtml : ''}
     `;
   };
 
@@ -5159,6 +5165,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <option value="full">Materiales + mano de obra</option>
                         </select>
                         <p className="text-[11px] text-zinc-500 mt-1">En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.</p>
+
+                        <label className="mt-4 block text-xs text-zinc-400 mb-1">Posición de inversión</label>
+                        <select
+                          value={activeDraftTemplate.pricingPosition || 'bottom'}
+                          onChange={(event) => updateDraftTemplate({ pricingPosition: event.target.value as 'top' | 'bottom' })}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                        >
+                          <option value="bottom">Al final</option>
+                          <option value="top">Al principio</option>
+                        </select>
+                        <p className="text-[11px] text-zinc-500 mt-1">Elegís dónde aparece el precio dentro del presupuesto.</p>
 
                         <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                           <input
