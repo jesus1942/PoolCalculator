@@ -1,14 +1,14 @@
 [phases.setup]
 nixPkgs = [
   "python311",
-  "python311Packages.pip",
+  "python311Packages.openpyxl",
+  "python311Packages.pillow",
   "libjpeg",
   "zlib"
 ]
 
 [phases.install]
 cmds = [
-  "python3 -m pip install --no-cache-dir --break-system-packages -r backend/requirements.txt",
   "npm --prefix frontend ci",
   "npm --prefix backend ci"
 ]
