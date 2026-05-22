@@ -41,7 +41,7 @@ const runPythonCommand = async (args: string[]) => {
     'elif [ -x /nix/var/nix/profiles/default/bin/python3 ]; then PY=/nix/var/nix/profiles/default/bin/python3;',
     'elif command -v python3 >/dev/null 2>&1; then PY=$(command -v python3);',
     'elif command -v python >/dev/null 2>&1; then PY=$(command -v python);',
-    'else echo "python-runtime-not-found" >&2; exit 127; fi',
+    'else echo "python-runtime-not-found" >&2; exit 127; fi;',
     `exec "$PY" ${pythonArgs}`,
   ].join(' ');
 
