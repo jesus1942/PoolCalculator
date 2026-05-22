@@ -215,76 +215,17 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
       return res.status(410).json({ error: 'Link expirado' });
     }
 
-    const agendaEvents = await prisma.agendaEvent.findMany({
-      where: { projectId: projectShare.project.id },
-      include: {
-        messages: {
-          where: { visibility: 'ALL' },
-          orderBy: { createdAt: 'asc' },
-          include: {
-            user: { select: { id: true, name: true, email: true, role: true } },
-          },
-        },
-      },
-      orderBy: { startAt: 'desc' },
-    });
-
-    const updateItems = projectShare.project.projectUpdates.map((update) => ({
-      id: update.id,
-      type: 'PROJECT_UPDATE',
-      createdAt: update.createdAt,
-      title: update.title,
-      description: update.description,
-      category: update.category,
-      images: update.images,
-    }));
-
-    const eventItems = agendaEvents.map((event) => ({
-      id: `event-${event.id}`,
-      type: 'AGENDA_EVENT',
-      createdAt: event.startAt,
-      title: event.title,
-      description: event.location,
-      event: {
-        id: event.id,
-        title: event.title,
-        startAt: event.startAt,
-        endAt: event.endAt,
-        status: event.status,
-        type: event.type,
-        location: event.location,
-      },
-    }));
-
-    const messageItems = agendaEvents.flatMap((event) =>
-      event.messages.map((message) => ({
-        id: `message-${message.id}`,
-        type: 'AGENDA_MESSAGE',
-        createdAt: message.createdAt,
-        title: `Mensaje en ${event.title}`,
-        description: message.body,
-        images: message.images,
-        message: {
-          id: message.id,
-          body: message.body,
-          images: message.images,
-          user: message.user,
-        },
-        event: {
-          id: event.id,
-          title: event.title,
-          startAt: event.startAt,
-          endAt: event.endAt,
-          status: event.status,
-          type: event.type,
-          location: event.location,
-        },
+    const timeline = projectShare.project.projectUpdates
+      .map((update) => ({
+        id: update.id,
+        type: 'PROJECT_UPDATE',
+        createdAt: update.createdAt,
+        title: update.title,
+        description: update.description,
+        category: update.category,
+        images: update.images,
       }))
-    );
-
-    const timeline = [...updateItems, ...eventItems, ...messageItems].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Preparar datos a enviar
     const response = {
@@ -365,61 +306,19 @@ export const exportPublicTimeline = async (req: Request, res: Response) => {
       return res.status(410).json({ error: 'Link expirado' });
     }
 
-    const agendaEvents = await prisma.agendaEvent.findMany({
-      where: { projectId: projectShare.project.id },
-      include: {
-        messages: {
-          where: { visibility: 'ALL' },
-          orderBy: { createdAt: 'asc' },
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
-        },
-      },
-      orderBy: { startAt: 'desc' },
-    });
-
-    const updateItems = projectShare.project.projectUpdates.map((update) => ({
-      type: 'PROJECT_UPDATE',
-      createdAt: update.createdAt,
-      title: update.title,
-      description: update.description,
-      category: update.category,
-      eventStartAt: '',
-      eventEndAt: '',
-      location: '',
-      messageBody: '',
-    }));
-
-    const eventItems = agendaEvents.map((event) => ({
-      type: 'AGENDA_EVENT',
-      createdAt: event.startAt,
-      title: event.title,
-      description: '',
-      category: event.type,
-      eventStartAt: event.startAt,
-      eventEndAt: event.endAt,
-      location: event.location || '',
-      messageBody: '',
-    }));
-
-    const messageItems = agendaEvents.flatMap((event) =>
-      event.messages.map((message) => ({
-        type: 'AGENDA_MESSAGE',
-        createdAt: message.createdAt,
-        title: `Mensaje en ${event.title}`,
-        description: '',
-        category: message.visibility,
-        eventStartAt: event.startAt,
-        eventEndAt: event.endAt,
-        location: event.location || '',
-        messageBody: message.body,
+    const timeline = projectShare.project.projectUpdates
+      .map((update) => ({
+        type: 'PROJECT_UPDATE',
+        createdAt: update.createdAt,
+        title: update.title,
+        description: update.description,
+        category: update.category,
+        eventStartAt: '',
+        eventEndAt: '',
+        location: '',
+        messageBody: '',
       }))
-    );
-
-    const timeline = [...updateItems, ...eventItems, ...messageItems].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const header = [
       'Tipo',
