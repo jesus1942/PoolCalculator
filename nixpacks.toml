@@ -4,14 +4,14 @@ providers = []
 nixPkgs = [
   "nodejs_20",
   "python311",
-  "python311Packages.pip",
+  "python311Packages.openpyxl",
+  "python311Packages.pillow",
   "libjpeg",
   "zlib"
 ]
 
 [phases.install]
 cmds = [
-  "python3 -m pip install --no-cache-dir --break-system-packages --target /app/backend/.python-packages openpyxl Pillow",
   "npm --prefix frontend ci --include=dev",
   "npm --prefix backend ci --include=dev"
 ]
