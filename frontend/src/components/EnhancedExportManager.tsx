@@ -1575,20 +1575,21 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .custom-document {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
     }
     .section {
       margin: 0;
       page-break-inside: avoid;
       break-inside: avoid;
-      padding: 16px 18px;
+      padding: 18px 20px;
       border: 1px solid var(--line);
       background: #fff;
+      box-shadow: inset 0 0 0 1px #fafaf9;
     }
     .section h2 {
       color: var(--accent);
       padding-bottom: 7px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
@@ -1598,10 +1599,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .info-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px 16px;
+      gap: 12px 18px;
     }
     .info-item {
-      padding: 10px 0;
+      padding: 12px 0;
       border-bottom: 1px solid var(--line);
       min-width: 0;
     }
@@ -1622,18 +1623,22 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .section p {
       font-size: 14px;
       color: #27272a;
-      margin: 0 0 8px;
+      margin: 0 0 10px;
       overflow-wrap: anywhere;
     }
     .section p:last-child {
       margin-bottom: 0;
     }
+    .section p + p {
+      padding-top: 8px;
+      border-top: 1px dashed #e7e5e4;
+    }
     .comparison-grid {
-      margin-top: 12px;
+      margin-top: 16px;
     }
     .comparison-card {
       border: 1px solid var(--line);
-      padding: 14px 16px;
+      padding: 16px 18px;
       background: var(--soft);
       break-inside: avoid;
     }
@@ -1655,7 +1660,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
       font-size: 13px;
       color: #27272a;
     }
@@ -1664,10 +1669,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       padding: 0;
       display: grid;
       grid-template-columns: 1fr;
-      gap: 6px;
+      gap: 10px;
     }
     .conditions-list li {
-      padding: 0 0 6px;
+      padding: 0 0 10px;
       border-bottom: 1px solid var(--line);
       font-size: 13px;
       color: #27272a;
@@ -2833,7 +2838,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .info-item {
       display: flex;
       justify-content: space-between;
-      padding: 10px 0;
+      padding: 12px 0;
       border-bottom: 1px solid #f3f4f6;
     }
     .info-item:last-child { border-bottom: none; }
