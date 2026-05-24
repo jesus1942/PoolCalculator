@@ -53,6 +53,7 @@ type ExportTemplateSettings = {
   clientPricingMode?: 'full' | 'labor_only';
   showRecommendedInstallationBox?: boolean;
   includeAdditionalsPricing?: boolean;
+  includeVeredaMaterials?: boolean;
   useCustomClientBody?: boolean;
   documentBlocks?: ClientDocumentBlock[];
   customBodyHtml?: string;
@@ -1065,7 +1066,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       : 0;
     const tilesMaterialCost = Number(project.materialCost || 0);
     const tilesLaborCost = Number((project.materials as any)?.laborBreakdown?.tileInstaller?.cost || 0);
-    const hasTilesMaterialCost = tilesMaterialCost > 0 && !showMaterialsToClient;
+    const includeVeredaMaterials = templateSettings.includeVeredaMaterials !== false;
+    const hasTilesMaterialCost = tilesMaterialCost > 0 && !showMaterialsToClient && includeVeredaMaterials;
     const hasTilesLaborCost = tilesLaborCost > 0 && !showMaterialsToClient;
     const hasHeatingCost = clientHeatingLaborCost > 0;
     const hasAdditionalsCost = visibleAdditionalsLaborCost > 0;
@@ -5261,6 +5263,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           <span>Sumar precios de adicionales</span>
                         </label>
                         <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, los adicionales se muestran como alcance pero no se suman al precio comercial exportado.</p>
+
+                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                          <input
+                            type="checkbox"
+                            checked={activeDraftTemplate.includeVeredaMaterials !== false}
+                            onChange={(event) => updateDraftTemplate({ includeVeredaMaterials: event.target.checked })}
+                            className="h-4 w-4"
+                          />
+                          <span>Cobrar materiales de vereda</span>
+                        </label>
+                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, se muestra solo la mano de obra de colocación de losetas sin sumar el costo de materiales.</p>
 
                         <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
                           <input
