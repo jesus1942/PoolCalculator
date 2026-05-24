@@ -997,56 +997,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return matchedSignals >= 2 || (matchedSignals >= 1 && !matchesCurrentAutomaticShape);
   };
 
-  const appendPricingSectionIfMissing = (
-    html: string,
-    templateSettings: ExportTemplateSettings = getTemplateSettings('client')
-  ) => {
-    const normalizedHtml = normalizeCommercialText(html);
-    const alreadyShowsPricing =
-      normalizedHtml.includes('inversion') ||
-      normalizedHtml.includes('mano de obra') ||
-      normalizedHtml.includes('total');
-
-    if (alreadyShowsPricing) return html;
-
-    const { additionalsCosts, baseMaterialCost, grandTotal, totalMaterialCost } = resolveCostOverrides(templateSettings);
-    const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
-    const installationMode = templateSettings.installationMode || 'with_extras';
-    const includeExtras = installationMode === 'with_extras';
-    const includeAdditionalsPricing = templateSettings.includeAdditionalsPricing !== false;
-    const showMaterialsToClient = clientPricingMode === 'full';
-    const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
-    const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
-    const visibleAdditionalsLaborCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.laborCost : 0;
-    const visibleAdditionalsMaterialCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.materialCost : 0;
-    const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost + visibleAdditionalsLaborCost;
-    const visibleTotal = showMaterialsToClient ? grandTotal : visibleLaborCost;
-    const visibleMaterialsTotal = showMaterialsToClient
-      ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
-      : 0;
-
-    return `${html}
-      <div class="section">
-        <h2>Inversión</h2>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Mano de obra</div>
-            <div class="info-value">${formatCurrency(visibleLaborCost)}</div>
-          </div>
-          ${showMaterialsToClient ? `
-          <div class="info-item">
-            <div class="info-label">Materiales</div>
-            <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
-          </div>
-          ` : ''}
-          <div class="info-item">
-            <div class="info-label">Total</div>
-            <div class="info-value">${formatCurrency(visibleTotal)}</div>
-          </div>
-        </div>
-      </div>`;
-  };
-
   const resolveClientBodyHtml = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
     const customBodyHtml = templateSettings.customBodyHtml?.trim();
     const shouldUseCustomBody =
@@ -1055,14 +1005,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       !isLegacyAutoClientHtml(customBodyHtml);
 
     if (shouldUseCustomBody) {
-      return appendPricingSectionIfMissing(interpolateProjectHtml(customBodyHtml), templateSettings);
+      return interpolateProjectHtml(customBodyHtml);
     }
 
     return buildClientBudgetBody(templateSettings);
   };
 
   const buildClientBudgetBody = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
-    const sections = templateSettings.sections || selectedSections;
+    const sections = {
+      ...selectedSections,
+      ...(templateSettings.sections || {}),
+    };
     const { additionalsCosts, baseMaterialCost, grandTotal, totalMaterialCost } = resolveCostOverrides(templateSettings);
     const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const installationMode = templateSettings.installationMode || 'with_extras';
@@ -4875,7 +4828,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     ? (activeDraftTemplate as ExportTemplateSettings).documentBlocks || []
     : [];
   const draftSections = selectedTemplate === 'client'
-    ? (activeDraftTemplate.sections || selectedSections)
+    ? {
+        ...selectedSections,
+        ...(activeDraftTemplate.sections || {}),
+      }
     : undefined;
   const draftMaterialSections = selectedTemplate === 'materials'
     ? (activeDraftTemplate.sections || {})
