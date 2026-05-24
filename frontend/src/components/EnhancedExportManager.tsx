@@ -4981,41 +4981,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 </div>
               )}
 
-              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-zinc-100 text-zinc-950">
-                    <selectedTemplateData.icon size={24} />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-white">{selectedTemplateData.name}</h4>
-                    <p className="text-zinc-300 mt-2">{selectedTemplateData.description}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-white">Vista previa</h4>
-                  <button
-                    onClick={() => setEditorFullscreen(true)}
-                    className="text-xs font-semibold text-zinc-300 hover:text-white"
-                  >
-                    Pantalla completa
-                  </button>
-                </div>
-
-                <div className="mt-4 border border-zinc-800 rounded-xl overflow-hidden bg-white shadow-inner">
-                  <iframe
-                    title="preview"
-                    srcDoc={getContentForTemplate(selectedTemplate)}
-                    className="w-full h-64"
-                    sandbox=""
-                    style={{ pointerEvents: 'none' }}
-                  />
-                </div>
-
-              </div>
-
             </div>
 
             <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] h-fit space-y-4">
