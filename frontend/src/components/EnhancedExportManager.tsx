@@ -4372,8 +4372,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       pagePaddingPx: number,
       maxPageHeightPx: number
     ) => {
-      const blocks = collectPdfBlocks(root);
-      if (blocks.length === 0) return [root.cloneNode(true) as HTMLElement];
+      const topBlocks = collectPdfBlocks(root);
+      if (topBlocks.length === 0) return [root.cloneNode(true) as HTMLElement];
 
       const measurementHost = document.createElement('div');
       measurementHost.style.position = 'fixed';
@@ -4384,16 +4384,21 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       measurementHost.style.zIndex = '2147483647';
       document.body.appendChild(measurementHost);
 
+      const MAX_SPLIT_DEPTH = 3;
+      const queue: Array<{ block: HTMLElement; depth: number }> = topBlocks.map(b => ({ block: b, depth: 0 }));
+
       const pages: HTMLElement[] = [];
       let currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
       measurementHost.appendChild(currentPage);
       let currentContent = getPdfPageContentTarget(currentPage);
+      let isFirstOnPage = true;
 
-      for (const [index, block] of blocks.entries()) {
+      while (queue.length > 0) {
+        const { block, depth } = queue.shift()!;
         const clonedBlock = block.cloneNode(true) as HTMLElement;
         const blockShell = document.createElement('div');
         blockShell.className = 'pdf-page-block';
-        if (index > 0) {
+        if (!isFirstOnPage) {
           blockShell.style.borderTop = '1px solid #e5e7eb';
           blockShell.style.paddingTop = '18px';
           blockShell.style.marginTop = '18px';
@@ -4403,22 +4408,38 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         await nextFrame();
 
         const fitsCurrentPage = currentPage.scrollHeight <= maxPageHeightPx;
-        if (fitsCurrentPage || currentContent.children.length === 1) {
+
+        if (fitsCurrentPage) {
+          isFirstOnPage = false;
           continue;
         }
 
-        currentContent.removeChild(blockShell);
-        pages.push(currentPage.cloneNode(true) as HTMLElement);
+        if (!isFirstOnPage) {
+          // Move block to a fresh page
+          currentContent.removeChild(blockShell);
+          pages.push(currentPage.cloneNode(true) as HTMLElement);
+          currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
+          measurementHost.replaceChildren(currentPage);
+          currentContent = getPdfPageContentTarget(currentPage);
+          isFirstOnPage = true;
+          queue.unshift({ block, depth });
+          continue;
+        }
 
-        currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
-        measurementHost.replaceChildren(currentPage);
-        currentContent = getPdfPageContentTarget(currentPage);
-        const resetBlockShell = blockShell.cloneNode(true) as HTMLElement;
-        resetBlockShell.style.borderTop = '0';
-        resetBlockShell.style.paddingTop = '0';
-        resetBlockShell.style.marginTop = '0';
-        currentContent.appendChild(resetBlockShell);
-        await nextFrame();
+        // Block is alone on the page and still too tall — try splitting into children
+        if (depth < MAX_SPLIT_DEPTH) {
+          const children = Array.from(block.children).filter(
+            (c): c is HTMLElement => c instanceof HTMLElement
+          );
+          if (children.length > 1) {
+            currentContent.removeChild(blockShell);
+            queue.unshift(...children.map(c => ({ block: c, depth: depth + 1 })));
+            continue;
+          }
+        }
+
+        // Can't split further — keep it as-is (will be scaled down at render time)
+        isFirstOnPage = false;
       }
 
       if (currentContent.children.length > 0) {
@@ -4622,9 +4643,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         drawHeaderFooter(page);
 
         const rawDrawH = (pageCanvas.height / pageCanvas.width) * contentW;
-        const drawW = contentW;
-        const drawH = Math.min(rawDrawH, contentH);
-        const drawX = marginMm;
+        const scaleFactor = rawDrawH > contentH ? contentH / rawDrawH : 1;
+        const drawW = contentW * scaleFactor;
+        const drawH = rawDrawH * scaleFactor;
+        const drawX = marginMm + (contentW - drawW) / 2;
         pdf.addImage(
           imgData,
           useJpeg ? 'JPEG' : 'PNG',
