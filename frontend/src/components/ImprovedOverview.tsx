@@ -82,6 +82,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
   const [hydraulicSpecs, setHydraulicSpecs] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'planta' | 'cad'>('planta');
   const [showGrandTotal, setShowGrandTotal] = useState(false);
+  const [laborView, setLaborView] = useState<'total' | 'base' | 'sin_vereda'>('total');
 
   // Cargar comparación de equipos
   useEffect(() => {
@@ -250,6 +251,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
     commercialPricingSource,
     totalMaterialCost,
     totalLaborCost,
+    tileLaborCost,
     grandTotal,
   } = financials;
   const hydraulicSummary = React.useMemo(() => summarizeHydraulicSystem(project, additionals), [project, additionals]);
@@ -444,15 +446,43 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Mano de Obra */}
             <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="text-zinc-200" size={24} />
-                <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className="text-zinc-200" size={24} />
+                  <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
+                </div>
+                <div className="flex gap-1 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
+                  {([
+                    { key: 'total', label: 'Total' },
+                    { key: 'base', label: 'Mi instalación' },
+                    { key: 'sin_vereda', label: 'Sin vereda' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setLaborView(opt.key)}
+                      className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        laborView === opt.key
+                          ? 'bg-cyan-600 text-white'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-4">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-6 text-center sm:px-5 sm:py-8">
-                  <p className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase mb-2">Total Mano de Obra</p>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase mb-2">
+                    {laborView === 'total' ? 'Total Mano de Obra' : laborView === 'base' ? 'Mi Instalación (sin vereda)' : 'MO sin instalador de losetas'}
+                  </p>
                   <p className="max-w-full overflow-hidden break-all text-4xl font-bold leading-none text-white sm:text-5xl md:text-6xl lg:text-7xl">
-                    ${totalLaborCost.toLocaleString('es-AR')}
+                    ${(laborView === 'total'
+                        ? totalLaborCost
+                        : laborView === 'base'
+                        ? baseLaborCost
+                        : totalLaborCost - (tileLaborCost || 0)
+                      ).toLocaleString('es-AR')}
                   </p>
                 </div>
                 <div className="flex items-start justify-between gap-3 border-b pb-2">
