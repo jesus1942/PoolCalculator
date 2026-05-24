@@ -1064,11 +1064,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
       : 0;
     const tilesMaterialCost = Number(project.materialCost || 0);
-    const hasTilesCost = tilesMaterialCost > 0 && !showMaterialsToClient;
+    const tilesLaborCost = Number((project.materials as any)?.laborBreakdown?.tileInstaller?.cost || 0);
+    const hasTilesMaterialCost = tilesMaterialCost > 0 && !showMaterialsToClient;
+    const hasTilesLaborCost = tilesLaborCost > 0 && !showMaterialsToClient;
     const hasHeatingCost = clientHeatingLaborCost > 0;
     const hasAdditionalsCost = visibleAdditionalsLaborCost > 0;
-    const hasMultipleCostLines = hasHeatingCost || hasAdditionalsCost || hasTilesCost || (showMaterialsToClient && visibleMaterialsTotal > 0);
-    const fullVisibleTotal = visibleLaborCost + (hasTilesCost ? tilesMaterialCost : showMaterialsToClient ? visibleMaterialsTotal : 0);
+    const hasMultipleCostLines = hasHeatingCost || hasAdditionalsCost || hasTilesMaterialCost || hasTilesLaborCost || (showMaterialsToClient && visibleMaterialsTotal > 0);
+    const fullVisibleTotal = visibleLaborCost
+      + (hasTilesMaterialCost ? tilesMaterialCost : showMaterialsToClient ? visibleMaterialsTotal : 0)
+      + (hasTilesLaborCost ? tilesLaborCost : 0);
 
     const pricingSectionHtml = sections.costs ? `
       <div class="section">
@@ -1088,10 +1092,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             <div class="info-label">Adicionales</div>
             <div class="info-value">${formatCurrency(visibleAdditionalsLaborCost)}</div>
           </div>` : ''}
-          ${hasTilesCost ? `
+          ${hasTilesMaterialCost ? `
           <div class="info-item">
-            <div class="info-label">Vereda + losetas</div>
+            <div class="info-label">Materiales vereda</div>
             <div class="info-value">${formatCurrency(tilesMaterialCost)}</div>
+          </div>` : ''}
+          ${hasTilesLaborCost ? `
+          <div class="info-item">
+            <div class="info-label">MO colocación losetas</div>
+            <div class="info-value">${formatCurrency(tilesLaborCost)}</div>
           </div>` : ''}
           ${showMaterialsToClient && visibleMaterialsTotal > 0 ? `
           <div class="info-item">

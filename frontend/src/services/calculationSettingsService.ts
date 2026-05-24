@@ -2,6 +2,7 @@ import api from './api';
 
 export interface CalculationSettings {
   id: string;
+  // Materiales
   adhesiveKgPerM2: number;
   sidewalkBaseThicknessCm: number;
   cementKgPerM3: number;
@@ -22,6 +23,10 @@ export interface CalculationSettings {
   drainTrenchDepthCm: number;
   geomembraneM2PerM2: number;
   electroweldedMeshM2PerM2: number;
+  // Mano de obra — tasas por unidad
+  tileInstallerRatePerM2: number;
+  excavationRatePerM3: number;
+  finishingRatePerM2: number;
 }
 
 export const calculationSettingsService = {

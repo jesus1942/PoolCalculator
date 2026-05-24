@@ -980,9 +980,11 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
           ...tileCalculations.materials,
           ...bedCalculations.bedMaterials,
           tiles: tileCalculations.tiles as any,
+          laborBreakdown: tileCalculations.laborBreakdown,
         };
 
         const refreshedMaterialCost = tileCalculations.totalMaterialCost + bedCalculations.totalBedMaterialCost;
+        const refreshedTileLaborCost = tileCalculations.totalLaborCost || 0;
 
         await prisma.project.update({
           where: { id },
@@ -991,7 +993,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
             totalTileArea: tileCalculations.sidewalkArea,
             materials: refreshedMaterials,
             materialCost: refreshedMaterialCost,
-            totalCost: refreshedMaterialCost + (project.laborCost || 0),
+            totalCost: refreshedMaterialCost + refreshedTileLaborCost + (project.laborCost || 0),
           },
         });
 
@@ -1171,20 +1173,22 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
           const allMaterials: any = {
             ...tileCalculations.materials,
             ...bedCalculations.bedMaterials,
-            tiles: tileCalculations.tiles as any, // Agregar las losetas calculadas
+            tiles: tileCalculations.tiles as any,
+            laborBreakdown: tileCalculations.laborBreakdown,
           };
 
-          // Calcular costo total de materiales
           const totalMaterialCost = tileCalculations.totalMaterialCost + bedCalculations.totalBedMaterialCost;
+          const tileLaborCost = tileCalculations.totalLaborCost || 0;
           console.log(`TOTAL materiales base: $${totalMaterialCost.toLocaleString('es-AR')}`);
+          console.log(`TOTAL MO losetas/vereda: $${tileLaborCost.toLocaleString('es-AR')}`);
 
           updateData.sidewalkArea = tileCalculations.sidewalkArea;
           updateData.materials = allMaterials;
           updateData.totalTileArea = tileCalculations.sidewalkArea;
           updateData.materialCost = totalMaterialCost;
 
-          // Recalcular totalCost = materialCost + laborCost
-          updateData.totalCost = totalMaterialCost + (existingProject.laborCost || 0);
+          // totalCost = materiales + MO vereda/losetas + MO base (roles/tareas)
+          updateData.totalCost = totalMaterialCost + tileLaborCost + (existingProject.laborCost || 0);
         }
       } catch (calcError) {
         console.error('Error en cálculos:', calcError);

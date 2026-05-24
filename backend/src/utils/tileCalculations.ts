@@ -14,6 +14,7 @@ interface SideConfig {
 }
 
 interface CalculationSettings {
+  // Materiales
   adhesiveKgPerM2: number;
   sidewalkBaseThicknessCm: number;
   cementKgPerM3: number;
@@ -25,6 +26,10 @@ interface CalculationSettings {
   wireMeshM2PerM2: number;
   waterproofingKgPerM2: number;
   waterproofingCoats: number;
+  // Mano de obra
+  tileInstallerRatePerM2: number;
+  excavationRatePerM3: number;
+  finishingRatePerM2: number;
 }
 
 interface MaterialPricing {
@@ -120,23 +125,35 @@ export function calculateTileMaterials(
   const totalMaterialCost = adhesiveCost + cementCost + sandCost + gravelCost +
                             whiteCementCost + marmolinaCost + wireMeshCost + waterproofingCost;
 
+  // Mano de obra de colocación de losetas y contrapiso de vereda
+  const tileInstallerCost = totalSidewalkArea * (settings.tileInstallerRatePerM2 || 0);
+
   return {
     sidewalkArea: totalSidewalkArea,
     tiles,
     materials: {
       adhesive: { quantity: Math.ceil(adhesive), unit: 'kg', cost: adhesiveCost },
       cement: { quantity: cementBags, unit: `bolsas de ${cementBagWeight}kg`, cost: cementCost },
-      cementKg: { quantity: Math.ceil(cement), unit: 'kg', cost: cementCost }, // Referencia en kg
+      cementKg: { quantity: Math.ceil(cement), unit: 'kg', cost: cementCost },
       sand: { quantity: sandRounded, unit: 'm³', cost: sandCost },
       gravel: { quantity: gravelRounded, unit: 'm³', cost: gravelCost },
       whiteCement: { quantity: whiteCementBags, unit: `bolsas de ${whiteCementBagWeight}kg`, cost: whiteCementCost },
-      whiteCementKg: { quantity: Math.ceil(whiteCement), unit: 'kg', cost: whiteCementCost }, // Referencia en kg
+      whiteCementKg: { quantity: Math.ceil(whiteCement), unit: 'kg', cost: whiteCementCost },
       marmolina: { quantity: marmolinaBags, unit: `bolsas de ${marmolinaBagWeight}kg`, cost: marmolinaCost },
-      marmolinaKg: { quantity: Math.ceil(marmolina), unit: 'kg', cost: marmolinaCost }, // Referencia en kg
+      marmolinaKg: { quantity: Math.ceil(marmolina), unit: 'kg', cost: marmolinaCost },
       wireMesh: { quantity: Math.ceil(wireMesh), unit: 'm²', cost: wireMeshCost },
       waterproofing: { quantity: Math.ceil(waterproofing), unit: 'kg', cost: waterproofingCost },
     },
     totalMaterialCost,
+    // Desglose de mano de obra separado de materiales
+    laborBreakdown: {
+      tileInstaller: {
+        area: totalSidewalkArea,
+        ratePerM2: settings.tileInstallerRatePerM2 || 0,
+        cost: tileInstallerCost,
+      },
+    },
+    totalLaborCost: tileInstallerCost,
   };
 }
 

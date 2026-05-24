@@ -1726,6 +1726,50 @@ export const Settings: React.FC = () => {
                 </div>
                     <p className="text-xs text-gray-700 mt-2">Factor de malla incluye solapamiento (tipicamente 10-15%)</p>
                   </div>
+
+                  {/* MANO DE OBRA — TASAS POR UNIDAD */}
+                  <div className="bg-amber-50 border border-amber-200 p-5 rounded-lg mt-4">
+                    <h4 className="font-bold text-xl text-gray-900 mb-1">MANO DE OBRA — NOMENCLADOR</h4>
+                    <p className="text-sm text-gray-500 mb-4">Tasas de mano de obra por unidad. Se aplican automáticamente al calcular vereda y losetas. Se exportan separadas de los materiales.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Instalador de losetas y contrapiso ($ / m²)</label>
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          value={calcFormData.tileInstallerRatePerM2 ?? 0}
+                          onChange={(e) => setCalcFormData({...calcFormData, tileInstallerRatePerM2: parseFloat(e.target.value) || 0})}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Se multiplica por los m² de vereda calculados</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Excavación ($ / m³)</label>
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          value={calcFormData.excavationRatePerM3 ?? 0}
+                          onChange={(e) => setCalcFormData({...calcFormData, excavationRatePerM3: parseFloat(e.target.value) || 0})}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Se multiplica por el volumen de excavación</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Terminaciones ($ / m²)</label>
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          value={calcFormData.finishingRatePerM2 ?? 0}
+                          onChange={(e) => setCalcFormData({...calcFormData, finishingRatePerM2: parseFloat(e.target.value) || 0})}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Se multiplica por el área de terminaciones</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* SECCIÓN 2: RELLENO Y FONDO */}

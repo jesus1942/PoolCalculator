@@ -533,8 +533,8 @@ model CalculationSettings {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Vereda
-  adhesiveKgPerM2 Float @default(5.0)
+  // Vereda — materiales
+  adhesiveKgPerM2          Float @default(5.0)
   sidewalkBaseThicknessCm  Float @default(10.0)
   cementKgPerM3            Float @default(200.0)
   sandM3PerM3              Float @default(0.6)
@@ -546,6 +546,11 @@ model CalculationSettings {
   wireMeshM2PerM2          Float @default(1.15)
   waterproofingKgPerM2     Float @default(0.0)
   waterproofingCoats       Int   @default(2)
+
+  // Mano de obra — tasas por unidad (pesos por m², m³, etc.)
+  tileInstallerRatePerM2   Float @default(0.0)
+  excavationRatePerM3      Float @default(0.0)
+  finishingRatePerM2       Float @default(0.0)
 
   // Proporción de pastina (junta entre losetas)
   // Por defecto: 1 parte cemento blanco : 4 partes marmolina
@@ -794,6 +799,7 @@ enum MaterialType {
   GRAVEL
   MARMOLINA
   WIRE_MESH
+  ADHESIVE
   WIRE
   NAILS
   WATERPROOFING
