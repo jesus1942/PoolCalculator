@@ -139,11 +139,11 @@ export function calculateTileMaterials(
 function calculateSidewalkArea(sideLength: number, sideConfig: SideConfig, tilePresets: any[]): number {
   // Junta entre losetas: 8mm = 0.008m
   const jointSize = 0.008;
+  const DEFAULT_TILE_WIDTH_METERS = 0.50; // 50cm por defecto
   let totalArea = 0;
 
   // PRIMER ANILLO - siempre debe contarse si está configurado
   if (sideConfig.firstRingType) {
-    // Dimensiones reales de losetas de primer anillo según tipo (en metros)
     let firstRingTileWidth = 0.40; // metros por defecto (40cm de ancho hacia afuera)
 
     if (sideConfig.firstRingType === 'LOMO_BALLENA') {
@@ -154,26 +154,26 @@ function calculateSidewalkArea(sideLength: number, sideConfig: SideConfig, tileP
       firstRingTileWidth = 0.40; // 40cm
     }
 
-    // Ancho efectivo = ancho de loseta + junta
     const effectiveFirstRingWidth = firstRingTileWidth + jointSize;
-
-    // Área del primer anillo = largo del lado × ancho efectivo
     totalArea += sideLength * effectiveFirstRingWidth;
   }
 
-  // FILAS ADICIONALES - solo si están configuradas
-  if (sideConfig.rows > 0 && sideConfig.selectedTileId) {
-    const tile = tilePresets.find(t => t.id === sideConfig.selectedTileId);
-    if (tile) {
-      // Ancho de una loseta en metros (tile.width está en centímetros)
-      const tileWidthMeters = tile.width / 100;
+  // FILAS ADICIONALES: filas más allá del primer anillo
+  // rows incluye el primer anillo, por lo que las filas extra = rows - 1 cuando hay primer anillo
+  const hasFirstRing = !!sideConfig.firstRingType;
+  const totalRows = sideConfig.rows || 0;
+  const extraRows = hasFirstRing ? Math.max(0, totalRows - 1) : totalRows;
 
-      // Ancho efectivo = ancho de loseta + junta
-      const effectiveTileWidth = tileWidthMeters + jointSize;
-
-      // Área = largo del lado × (ancho efectivo × cantidad de filas)
-      totalArea += sideLength * (effectiveTileWidth * sideConfig.rows);
+  if (extraRows > 0) {
+    let tileWidthMeters = DEFAULT_TILE_WIDTH_METERS;
+    if (sideConfig.selectedTileId) {
+      const tile = tilePresets.find(t => t.id === sideConfig.selectedTileId);
+      if (tile) {
+        tileWidthMeters = tile.width / 100;
+      }
     }
+    const effectiveTileWidth = tileWidthMeters + jointSize;
+    totalArea += sideLength * (effectiveTileWidth * extraRows);
   }
 
   return totalArea;
