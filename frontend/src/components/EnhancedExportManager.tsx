@@ -135,8 +135,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [exportSettings, setExportSettings] = useState<ExportSettings>(() => {
     return (project.exportSettings as ExportSettings) || { templates: {} };
   });
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [draftSettings, setDraftSettings] = useState<ExportSettings>({ templates: {} });
+  const [isEditorOpen, setIsEditorOpen] = useState(true);
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
+  const [draftSettings, setDraftSettings] = useState<ExportSettings>(() =>
+    JSON.parse(JSON.stringify((project.exportSettings as ExportSettings) || { templates: {} }))
+  );
   const [savingSettings, setSavingSettings] = useState(false);
   const [generatingPackage, setGeneratingPackage] = useState(false);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
@@ -297,11 +300,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   }, [project]);
 
   useEffect(() => {
-    if (!isEditorOpen || selectedTemplate !== 'client') return;
+    if (selectedTemplate !== 'client') return;
     const clientTemplate = (draftSettings.templates?.client || {}) as ExportTemplateSettings;
+    if (clientDocumentEditorHtml) return;
     const nextHtml = resolveClientBodyHtml(clientTemplate);
     setClientDocumentEditorHtml(nextHtml);
-  }, [isEditorOpen, selectedTemplate]);
+  }, [selectedTemplate]);
 
   const loadRoles = async () => {
     try {
@@ -1059,24 +1063,46 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const visibleMaterialsTotal = showMaterialsToClient
       ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
       : 0;
+    const tilesMaterialCost = Number(project.materialCost || 0);
+    const hasTilesCost = tilesMaterialCost > 0 && !showMaterialsToClient;
+    const hasHeatingCost = clientHeatingLaborCost > 0;
+    const hasAdditionalsCost = visibleAdditionalsLaborCost > 0;
+    const hasMultipleCostLines = hasHeatingCost || hasAdditionalsCost || hasTilesCost || (showMaterialsToClient && visibleMaterialsTotal > 0);
+    const fullVisibleTotal = visibleLaborCost + (hasTilesCost ? tilesMaterialCost : showMaterialsToClient ? visibleMaterialsTotal : 0);
+
     const pricingSectionHtml = sections.costs ? `
       <div class="section">
         <h2>Inversión</h2>
         <div class="info-grid">
           <div class="info-item">
-            <div class="info-label">Mano de obra</div>
-            <div class="info-value">${formatCurrency(visibleLaborCost)}</div>
+            <div class="info-label">Instalación</div>
+            <div class="info-value">${formatCurrency(clientBaseLaborCost)}</div>
           </div>
-          ${showMaterialsToClient ? `
+          ${hasHeatingCost ? `
+          <div class="info-item">
+            <div class="info-label">Calefacción</div>
+            <div class="info-value">${formatCurrency(clientHeatingLaborCost)}</div>
+          </div>` : ''}
+          ${hasAdditionalsCost ? `
+          <div class="info-item">
+            <div class="info-label">Adicionales</div>
+            <div class="info-value">${formatCurrency(visibleAdditionalsLaborCost)}</div>
+          </div>` : ''}
+          ${hasTilesCost ? `
+          <div class="info-item">
+            <div class="info-label">Vereda + losetas</div>
+            <div class="info-value">${formatCurrency(tilesMaterialCost)}</div>
+          </div>` : ''}
+          ${showMaterialsToClient && visibleMaterialsTotal > 0 ? `
           <div class="info-item">
             <div class="info-label">Materiales</div>
             <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
-          </div>
-          ` : ''}
+          </div>` : ''}
+          ${hasMultipleCostLines ? `
           <div class="info-item">
             <div class="info-label">Total</div>
-            <div class="info-value">${formatCurrency(visibleTotal)}</div>
-          </div>
+            <div class="info-value">${formatCurrency(fullVisibleTotal)}</div>
+          </div>` : ''}
         </div>
       </div>
       ` : '';
@@ -4813,7 +4839,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     try {
       await projectService.update(project.id, { exportSettings: draftSettings });
       setExportSettings(draftSettings);
-      setIsEditorOpen(false);
+      if (editorFullscreen) setEditorFullscreen(false);
     } catch (error) {
       console.error('Error al guardar configuración de exportación:', error);
       alert('No se pudo guardar la configuración del documento');
@@ -4969,15 +4995,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
               <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-white">Vista previa real</h4>
+                  <h4 className="text-sm font-semibold text-white">Vista previa</h4>
                   <button
-                    onClick={() => {
-                      setDraftSettings(JSON.parse(JSON.stringify(exportSettings || { templates: {} })));
-                      setIsEditorOpen(true);
-                    }}
+                    onClick={() => setEditorFullscreen(true)}
                     className="text-xs font-semibold text-zinc-300 hover:text-white"
                   >
-                    Editar en pantalla completa
+                    Pantalla completa
                   </button>
                 </div>
 
@@ -5093,23 +5116,28 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </Card>
 
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md">
-          <div className="absolute inset-0 flex flex-col bg-zinc-950">
+        <div className={editorFullscreen
+          ? "fixed inset-0 z-50 bg-zinc-950 flex flex-col"
+          : "border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
+        }>
+          <div className={editorFullscreen ? "flex flex-col h-full" : ""}>
             <div className="flex flex-col gap-3 border-b border-zinc-800 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h3 className="text-xl font-semibold text-white">Editor de documentos</h3>
-                <p className="text-sm text-zinc-400">Plantilla activa: {selectedTemplateData.name}</p>
+                <h3 className="text-xl font-semibold text-white">
+                  {selectedTemplateData.name}
+                </h3>
+                <p className="text-sm text-zinc-400">Editá el documento y guardá los cambios</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsEditorOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500"
+                  onClick={() => setEditorFullscreen(!editorFullscreen)}
+                  className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 text-sm"
                 >
-                  Cerrar
+                  {editorFullscreen ? 'Reducir' : 'Pantalla completa'}
                 </button>
                 <button
                   onClick={handleSaveExportSettings}
-                  className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-950 hover:bg-white"
+                  className="px-4 py-2 rounded-lg bg-zinc-100 text-zinc-950 hover:bg-white text-sm font-semibold"
                   disabled={savingSettings}
                 >
                   {savingSettings ? 'Guardando...' : 'Guardar cambios'}
@@ -5117,19 +5145,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               </div>
             </div>
 
-            <div className="flex-1 grid min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px]">
-              <div className="bg-zinc-950 p-4 overflow-auto min-h-0">
-                <div className="bg-white rounded-2xl border border-zinc-800 shadow-sm overflow-auto min-h-[70vh] h-[calc(100vh-170px)]">
+            <div className={`grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] ${editorFullscreen ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
+              <div className="bg-zinc-950 p-4 overflow-auto">
+                <div className={`bg-white rounded-2xl border border-zinc-800 shadow-sm overflow-hidden ${editorFullscreen ? 'h-[calc(100vh-110px)]' : 'min-h-[560px]'}`}>
                   <iframe
                     title="preview-editor"
                     srcDoc={draftPreviewHtml}
-                    className="w-full h-full min-h-[70vh]"
+                    className="w-full h-full"
                     sandbox=""
                   />
                 </div>
               </div>
 
-              <div className="border-l border-zinc-800 p-5 overflow-auto bg-zinc-950">
+              <div className={`border-l border-zinc-800 p-5 overflow-auto bg-zinc-950 ${editorFullscreen ? 'h-[calc(100vh-65px)]' : 'max-h-[700px]'}`}>
                 <div className="space-y-6">
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3">Textos del documento</h4>
