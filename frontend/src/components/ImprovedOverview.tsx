@@ -36,33 +36,35 @@ interface ImprovedOverviewProps {
   canViewFinancials?: boolean;
 }
 
-const TILE_ROW_WIDTH_METERS = 0.5;
-
-const getSideRows = (tileCalculation: any, side: 'north' | 'south' | 'east' | 'west') => {
-  const rows = Number(tileCalculation?.[side]?.rows || 0);
-  return Number.isFinite(rows) ? Math.max(0, rows) : 0;
+const calcSideArea = (sideLength: number, sideConfig: any): number => {
+  const JOINT = 0.008;
+  const DEFAULT_W = 0.50;
+  let area = 0;
+  if (sideConfig?.firstRingType) {
+    const ringW = sideConfig.firstRingType === 'LOMO_BALLENA' ? 0.50 : 0.40;
+    area += sideLength * (ringW + JOINT);
+  }
+  const totalRows = Number(sideConfig?.rows || 0);
+  const extraRows = sideConfig?.firstRingType ? Math.max(0, totalRows - 1) : totalRows;
+  if (extraRows > 0) {
+    area += sideLength * ((DEFAULT_W + JOINT) * extraRows);
+  }
+  return area;
 };
 
 const getDisplaySidewalkArea = (project: Project) => {
-  const persistedSidewalkArea = Number(project.sidewalkArea || 0);
-  if (persistedSidewalkArea > 0) return persistedSidewalkArea;
-
   const tileCalculation = project.tileCalculation as any;
   const poolLength = Number(project.poolPreset?.length || 0);
   const poolWidth = Number(project.poolPreset?.width || 0);
-  if (!tileCalculation || !poolLength || !poolWidth) return 0;
-
-  const northRows = getSideRows(tileCalculation, 'north');
-  const southRows = getSideRows(tileCalculation, 'south');
-  const eastRows = getSideRows(tileCalculation, 'east');
-  const westRows = getSideRows(tileCalculation, 'west');
-
-  return (
-    (northRows * poolLength * TILE_ROW_WIDTH_METERS) +
-    (southRows * poolLength * TILE_ROW_WIDTH_METERS) +
-    (eastRows * poolWidth * TILE_ROW_WIDTH_METERS) +
-    (westRows * poolWidth * TILE_ROW_WIDTH_METERS)
-  );
+  if (tileCalculation && poolLength && poolWidth) {
+    return (
+      calcSideArea(poolLength, tileCalculation.north) +
+      calcSideArea(poolLength, tileCalculation.south) +
+      calcSideArea(poolWidth, tileCalculation.east) +
+      calcSideArea(poolWidth, tileCalculation.west)
+    );
+  }
+  return Number(project.sidewalkArea || 0);
 };
 
 export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({

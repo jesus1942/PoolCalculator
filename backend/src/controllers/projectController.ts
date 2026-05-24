@@ -934,11 +934,9 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const projectMaterials = (project.materials as any) || {};
     const needsMaterialsRefresh =
       project.tileCalculation &&
-      Object.keys(project.tileCalculation as any).length > 0 &&
-      !projectMaterials.fillReference;
+      Object.keys(project.tileCalculation as any).length > 0;
 
     if (needsMaterialsRefresh) {
       try {
