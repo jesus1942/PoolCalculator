@@ -61,13 +61,9 @@ const getDisplaySidewalkArea = (project: Project) => {
     const southW = getStripWidth(tc.south);
     const eastW  = getStripWidth(tc.east);
     const westW  = getStripWidth(tc.west);
-    const outerHeight = poolWidth + northW + southW;
-    return (
-      poolLength * northW +
-      poolLength * southW +
-      outerHeight * eastW +
-      outerHeight * westW
-    );
+    const outerLength = poolLength + westW + eastW;
+    const outerWidth  = poolWidth  + northW + southW;
+    return outerLength * outerWidth - poolLength * poolWidth;
   }
   return Number(project.sidewalkArea || 0);
 };

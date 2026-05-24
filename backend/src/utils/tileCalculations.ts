@@ -46,20 +46,17 @@ export function calculateTileMaterials(
   const poolWidth = poolPreset.width;
   const perimeter = 2 * (poolLength + poolWidth);
 
-  // Ancho de franja perpendicular de cada lado (sin multiplicar por largo)
+  // Largo/ancho exterior = pileta + franjas de losetas en cada lado
   const northStripW = getStripWidth(tileConfig.north, tilePresets);
   const southStripW = getStripWidth(tileConfig.south, tilePresets);
   const eastStripW  = getStripWidth(tileConfig.east,  tilePresets);
   const westStripW  = getStripWidth(tileConfig.west,  tilePresets);
 
-  // Norte/sur usan el largo interior; este/oeste incluyen esquinas (alto exterior completo)
-  const outerPoolHeight = poolWidth + northStripW + southStripW;
-  const northSidewalkArea = poolLength * northStripW;
-  const southSidewalkArea = poolLength * southStripW;
-  const eastSidewalkArea  = outerPoolHeight * eastStripW;
-  const westSidewalkArea  = outerPoolHeight * westStripW;
+  const outerLength = poolLength + westStripW + eastStripW;
+  const outerWidth  = poolWidth  + northStripW + southStripW;
 
-  const totalSidewalkArea = northSidewalkArea + southSidewalkArea + eastSidewalkArea + westSidewalkArea;
+  // Área vereda = rectángulo exterior − espejo de agua
+  const totalSidewalkArea = outerLength * outerWidth - poolLength * poolWidth;
 
   // Calcular cantidad de losetas
   const tiles = calculateTileQuantities(poolLength, poolWidth, tileConfig, tilePresets);
