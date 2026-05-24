@@ -232,7 +232,7 @@ export const RolesManager: React.FC = () => {
                     </div>
                   </div>
                 )}
-                {role.billingType === 'BOCA' && role.bocaRates && role.bocaRates.length > 0 && (
+                {role.bocaRates && role.bocaRates.length > 0 && (
                   <div className="border-t pt-3 space-y-1">
                     {role.bocaRates.map((rate) => (
                       <div key={rate.label} className="flex justify-between text-sm">
@@ -303,7 +303,7 @@ export const RolesManager: React.FC = () => {
                 <option value="DAY">Por día</option>
                 <option value="M2">Por m²</option>
                 <option value="ML">Por metro lineal</option>
-                <option value="BOCA">Por boca (electricidad)</option>
+                <option value="BOCA">Por boca / artefacto</option>
               </select>
             </div>
           </div>
@@ -353,59 +353,71 @@ export const RolesManager: React.FC = () => {
           )}
 
           {formData.billingType === 'BOCA' && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-gray-700">Tipos de boca y tarifas</div>
-              {formData.bocaRates.length === 0 && (
-                <div className="text-xs text-gray-500">Agregá al menos un tipo de boca.</div>
-              )}
-              {formData.bocaRates.map((rate, index) => (
-                <div key={`${rate.label}-${index}`} className="grid grid-cols-2 gap-2 items-center">
-                  <input
-                    value={rate.label}
-                    onChange={(e) => {
-                      const next = [...formData.bocaRates];
-                      next[index] = { ...next[index], label: e.target.value };
-                      setFormData({ ...formData, bocaRates: next });
-                    }}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    placeholder="Ej: Luz LED, Toma exterior"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={rate.price}
-                      onChange={(e) => {
-                        const next = [...formData.bocaRates];
-                        next[index] = { ...next[index], price: Number(e.target.value) };
-                        setFormData({ ...formData, bocaRates: next });
-                      }}
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      placeholder="0.00"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="danger"
-                      onClick={() => {
-                        const next = formData.bocaRates.filter((_, idx) => idx !== index);
-                        setFormData({ ...formData, bocaRates: next });
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <Input
+              label="Tarifa por día (opcional)"
+              type="number"
+              step="0.01"
+              value={formData.dailyRate}
+              onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
+              placeholder="0.00"
+            />
+          )}
+
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-gray-700">Tarifas por unidad (boca / artefacto)</div>
+                <div className="text-xs text-gray-500">Para cobrar por boca de gas, artefacto, toma eléctrica, etc.</div>
+              </div>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setFormData({ ...formData, bocaRates: [...formData.bocaRates, { label: '', price: 0 }] })}
               >
-                Agregar tipo de boca
+                <Plus size={14} className="mr-1" />
+                Agregar
               </Button>
             </div>
-          )}
+            {formData.bocaRates.map((rate, index) => (
+              <div key={`${rate.label}-${index}`} className="grid grid-cols-2 gap-2 items-center">
+                <input
+                  value={rate.label}
+                  onChange={(e) => {
+                    const next = [...formData.bocaRates];
+                    next[index] = { ...next[index], label: e.target.value };
+                    setFormData({ ...formData, bocaRates: next });
+                  }}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="Ej: Boca de gas, Artefacto"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={rate.price}
+                    onChange={(e) => {
+                      const next = [...formData.bocaRates];
+                      next[index] = { ...next[index], price: Number(e.target.value) };
+                      setFormData({ ...formData, bocaRates: next });
+                    }}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    placeholder="0.00"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      const next = formData.bocaRates.filter((_, idx) => idx !== index);
+                      setFormData({ ...formData, bocaRates: next });
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
 
           <div className="flex space-x-3 pt-4">
             <Button type="submit" className="flex-1">
