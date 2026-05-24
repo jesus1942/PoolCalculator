@@ -36,32 +36,37 @@ interface ImprovedOverviewProps {
   canViewFinancials?: boolean;
 }
 
-const calcSideArea = (sideLength: number, sideConfig: any): number => {
+const getStripWidth = (sideConfig: any): number => {
   const JOINT = 0.008;
   const DEFAULT_W = 0.50;
-  let area = 0;
+  let width = 0;
   if (sideConfig?.firstRingType) {
     const ringW = sideConfig.firstRingType === 'LOMO_BALLENA' ? 0.50 : 0.40;
-    area += sideLength * (ringW + JOINT);
+    width += ringW + JOINT;
   }
   const totalRows = Number(sideConfig?.rows || 0);
   const extraRows = sideConfig?.firstRingType ? Math.max(0, totalRows - 1) : totalRows;
   if (extraRows > 0) {
-    area += sideLength * ((DEFAULT_W + JOINT) * extraRows);
+    width += (DEFAULT_W + JOINT) * extraRows;
   }
-  return area;
+  return width;
 };
 
 const getDisplaySidewalkArea = (project: Project) => {
-  const tileCalculation = project.tileCalculation as any;
+  const tc = project.tileCalculation as any;
   const poolLength = Number(project.poolPreset?.length || 0);
   const poolWidth = Number(project.poolPreset?.width || 0);
-  if (tileCalculation && poolLength && poolWidth) {
+  if (tc && poolLength && poolWidth) {
+    const northW = getStripWidth(tc.north);
+    const southW = getStripWidth(tc.south);
+    const eastW  = getStripWidth(tc.east);
+    const westW  = getStripWidth(tc.west);
+    const outerHeight = poolWidth + northW + southW;
     return (
-      calcSideArea(poolLength, tileCalculation.north) +
-      calcSideArea(poolLength, tileCalculation.south) +
-      calcSideArea(poolWidth, tileCalculation.east) +
-      calcSideArea(poolWidth, tileCalculation.west)
+      poolLength * northW +
+      poolLength * southW +
+      outerHeight * eastW +
+      outerHeight * westW
     );
   }
   return Number(project.sidewalkArea || 0);

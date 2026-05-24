@@ -46,11 +46,18 @@ export function calculateTileMaterials(
   const poolWidth = poolPreset.width;
   const perimeter = 2 * (poolLength + poolWidth);
 
-  // Calcular área de cada lado de la vereda
-  const northSidewalkArea = calculateSidewalkArea(poolLength, tileConfig.north, tilePresets);
-  const southSidewalkArea = calculateSidewalkArea(poolLength, tileConfig.south, tilePresets);
-  const eastSidewalkArea = calculateSidewalkArea(poolWidth, tileConfig.east, tilePresets);
-  const westSidewalkArea = calculateSidewalkArea(poolWidth, tileConfig.west, tilePresets);
+  // Ancho de franja perpendicular de cada lado (sin multiplicar por largo)
+  const northStripW = getStripWidth(tileConfig.north, tilePresets);
+  const southStripW = getStripWidth(tileConfig.south, tilePresets);
+  const eastStripW  = getStripWidth(tileConfig.east,  tilePresets);
+  const westStripW  = getStripWidth(tileConfig.west,  tilePresets);
+
+  // Norte/sur usan el largo interior; este/oeste incluyen esquinas (alto exterior completo)
+  const outerPoolHeight = poolWidth + northStripW + southStripW;
+  const northSidewalkArea = poolLength * northStripW;
+  const southSidewalkArea = poolLength * southStripW;
+  const eastSidewalkArea  = outerPoolHeight * eastStripW;
+  const westSidewalkArea  = outerPoolHeight * westStripW;
 
   const totalSidewalkArea = northSidewalkArea + southSidewalkArea + eastSidewalkArea + westSidewalkArea;
 
@@ -134,6 +141,35 @@ export function calculateTileMaterials(
     },
     totalMaterialCost,
   };
+}
+
+function getStripWidth(sideConfig: SideConfig, tilePresets: any[]): number {
+  const jointSize = 0.008;
+  const DEFAULT_TILE_WIDTH_METERS = 0.50;
+  let width = 0;
+
+  if (sideConfig.firstRingType) {
+    let firstRingTileWidth = 0.40;
+    if (sideConfig.firstRingType === 'LOMO_BALLENA') firstRingTileWidth = 0.50;
+    else if (sideConfig.firstRingType === 'L_FINISH') firstRingTileWidth = 0.40;
+    else if (sideConfig.firstRingType === 'PERIMETER') firstRingTileWidth = 0.40;
+    width += firstRingTileWidth + jointSize;
+  }
+
+  const hasFirstRing = !!sideConfig.firstRingType;
+  const totalRows = sideConfig.rows || 0;
+  const extraRows = hasFirstRing ? Math.max(0, totalRows - 1) : totalRows;
+
+  if (extraRows > 0) {
+    let tileWidthMeters = DEFAULT_TILE_WIDTH_METERS;
+    if (sideConfig.selectedTileId) {
+      const tile = tilePresets.find((t: any) => t.id === sideConfig.selectedTileId);
+      if (tile) tileWidthMeters = tile.width / 100;
+    }
+    width += (tileWidthMeters + jointSize) * extraRows;
+  }
+
+  return width;
 }
 
 function calculateSidewalkArea(sideLength: number, sideConfig: SideConfig, tilePresets: any[]): number {
