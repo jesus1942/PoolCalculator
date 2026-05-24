@@ -124,7 +124,10 @@ export const calculateProjectFinancials = (project: Project | any, additionalsIn
 
   const baseMaterialCost = (project.materialCost || 0) + plumbingCosts + electricalCosts;
   const totalMaterialCost = baseMaterialCost + additionalsCosts.materialCost;
-  const totalLaborCost = baseLaborCost + effectiveAdditionalsLaborCost;
+
+  // MO de colocación de losetas/vereda — se guarda en materials.laborBreakdown al recalcular
+  const tileLaborCost = Number((project.materials as any)?.laborBreakdown?.tileInstaller?.cost || 0);
+  const totalLaborCost = baseLaborCost + effectiveAdditionalsLaborCost + tileLaborCost;
 
   return {
     additionals: dedupedAdditionals,
@@ -146,6 +149,7 @@ export const calculateProjectFinancials = (project: Project | any, additionalsIn
     additionalsTaskLaborCost,
     totalMaterialCost,
     totalLaborCost,
+    tileLaborCost,
     grandTotal: totalMaterialCost + totalLaborCost,
   };
 };
