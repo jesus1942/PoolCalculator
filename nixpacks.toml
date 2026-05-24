@@ -18,6 +18,7 @@ cmds = [
 
 [phases.build]
 cmds = [
+  "npm --prefix backend run prisma:generate",
   "npm --prefix frontend run build",
   "npm --prefix backend run build"
 ]
