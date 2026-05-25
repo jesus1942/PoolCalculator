@@ -73,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="flex-shrink-0">
               <div
                 onClick={handleImageClick}
-                className={`w-full sm:w-28 h-28 rounded-lg border-2 border-gray-200 overflow-hidden ${
+                className={`w-full sm:w-28 h-28 rounded-lg border border-zinc-700 overflow-hidden ${
                   allImages.length > 0 ? 'cursor-pointer hover:border-blue-400 transition-all' : ''
                 }`}
               >
@@ -82,19 +82,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     <img
                       src={getImageUrl(imageUrl) || undefined}
                       alt={name}
-                      className="w-full h-full object-contain bg-gray-50 group-hover:scale-105 transition-transform"
+                      className="w-full h-full object-contain bg-zinc-800/50 group-hover:scale-105 transition-transform"
                     />
                     {additionalImages.length > 0 && (
-                      <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      <div className="absolute top-1 right-1 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                         +{additionalImages.length}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
                     <div className="text-center">
-                      <Package className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-                      <p className="text-xs text-gray-500">Sin imagen</p>
+                      <Package className="w-8 h-8 text-zinc-500 mx-auto mb-1" />
+                      <p className="text-xs text-zinc-500">Sin imagen</p>
                     </div>
                   </div>
                 )}
@@ -106,15 +106,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate">{name}</h3>
+                  <h3 className="font-semibold text-white text-lg mb-1 truncate">{name}</h3>
                   <div className="flex flex-wrap gap-2 items-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
                       {type}
                     </span>
                     {filteredBadges.map((badge, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30"
                       >
                         {badge}
                       </span>
@@ -126,14 +126,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <div className="flex gap-1 ml-2">
                   <button
                     onClick={onEdit}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
                     title="Editar"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={onDelete}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Eliminar"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -147,17 +147,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   .filter(detail => detail.value)
                   .map((detail, index) => (
                     <div key={index} className="flex items-start text-sm">
-                      <span className="text-gray-600 mr-2">{detail.label}:</span>
-                      <span className="text-gray-900 font-medium">{detail.value}</span>
+                      <span className="text-zinc-500 mr-2">{detail.label}:</span>
+                      <span className="text-zinc-200 font-medium">{detail.value}</span>
                     </div>
                   ))}
               </div>
 
               {/* Price */}
-              <div className="pt-3 border-t border-gray-200">
+              <div className="pt-3 border-t border-zinc-700">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Precio:</span>
-                  <span className="text-lg font-bold text-blue-600">{formatPrice(price)}</span>
+                  <span className="text-sm text-zinc-500">Precio:</span>
+                  <span className="text-lg font-bold text-blue-400">{formatPrice(price)}</span>
                 </div>
               </div>
             </div>
@@ -175,13 +175,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {/* Close Button */}
             <button
               onClick={() => setShowGallery(false)}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              className="absolute -top-12 right-0 text-white hover:text-zinc-300 transition-colors"
             >
               <X className="w-8 h-8" />
             </button>
 
             {/* Image */}
-            <div className="bg-white rounded-lg p-4">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-4">
               <img
                 src={getImageUrl(allImages[currentImageIndex]) || undefined}
                 alt={`${name} - Imagen ${currentImageIndex + 1}`}
@@ -193,18 +193,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <div className="flex items-center justify-between mt-4">
                   <button
                     onClick={handlePrevImage}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-200"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
 
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-zinc-400">
                     {currentImageIndex + 1} / {allImages.length}
                   </span>
 
                   <button
                     onClick={handleNextImage}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-200"
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>
