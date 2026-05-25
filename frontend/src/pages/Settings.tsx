@@ -665,49 +665,47 @@ export const Settings: React.FC = () => {
   const formMaterialTypeOptions = materialTypeOptions.filter(opt => opt.value !== '');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="mb-6 flex items-start gap-3">
-            <div className="w-14 h-14 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-              <SettingsIcon className="h-7 w-7 text-white" />
+            <div className="w-14 h-14 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+              <SettingsIcon className="h-7 w-7 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white">
                 Configuración
               </h1>
-              <p className="mt-1 text-sm sm:text-base font-medium text-gray-700">
+              <p className="mt-1 text-sm sm:text-base font-medium text-zinc-300">
                 Gestiona presets, materiales y configuraciones del sistema
               </p>
             </div>
           </div>
 
           {!isAdmin && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-300">
               Estás viendo el catálogo en modo lectura. Para crear, editar, eliminar o subir imágenes necesitás un usuario administrador.
             </div>
           )}
         </div>
 
         {/* Tabs */}
-        <div className="mb-8 overflow-x-auto rounded-t-lg border-b border-gray-200 bg-white scrollbar-hide">
-          <div className="flex min-w-max space-x-2 px-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                className={`flex items-center space-x-2 rounded-t-lg px-4 py-3 border-b-2 transition-all duration-200 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                }`}
-              >
-                {tab.icon && <tab.icon size={18} />}
-                <span className="font-medium">{tab.label}</span>
-              </button>
-            ))}
-          </div>
+        <div className="mb-6 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all border ${
+                activeTab === tab.id
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              }`}
+            >
+              {tab.icon && <tab.icon size={15} />}
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Tab Content - Losetas */}
@@ -715,8 +713,8 @@ export const Settings: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Losetas y Venecitas</h2>
-                <p className="text-sm text-gray-700 mt-1">Administra los tipos de losetas disponibles</p>
+                <h2 className="text-2xl font-bold text-white">Losetas y Venecitas</h2>
+                <p className="text-sm text-zinc-300 mt-1">Administra los tipos de losetas disponibles</p>
               </div>
               <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
                 <Plus size={16} className="mr-2" />
@@ -725,12 +723,12 @@ export const Settings: React.FC = () => {
             </div>
 
             {/* Filtros para Losetas */}
-            <div className="mb-6 rounded-lg bg-white border border-gray-200 shadow-sm">
+            <div className="mb-6 rounded-lg bg-zinc-900/60 border border-zinc-800">
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Filtros de Búsqueda</h3>
+                    <Search size={20} className="text-blue-400" />
+                    <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -750,8 +748,8 @@ export const Settings: React.FC = () => {
                   </div>
 
                   {(tileSearchTerm || tileTypeFilter) && (
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                      <p className="text-sm text-gray-700">
+                    <div className="flex justify-between items-center pt-2 border-t border-zinc-800">
+                      <p className="text-sm text-zinc-400">
                         Mostrando {filteredTiles.length} de {tiles.length} losetas
                       </p>
                       <Button size="sm" variant="secondary" onClick={clearTileFilters}>
@@ -764,15 +762,15 @@ export const Settings: React.FC = () => {
             </div>
 
             {filteredTiles.length === 0 ? (
-              <div className="rounded-lg bg-white border border-gray-200 shadow-sm">
+              <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Filter size={48} className="text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <Filter size={48} className="text-zinc-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-white mb-2">
                     {tiles.length === 0 ? 'No hay losetas configuradas' : 'No se encontraron resultados'}
                   </h3>
-                  <p className="text-gray-700 mb-6">
+                  <p className="text-zinc-300 mb-6">
                     {tiles.length === 0
                       ? 'Crea tu primera loseta para comenzar'
                       : 'Intenta ajustar los filtros de busqueda'
@@ -861,9 +859,9 @@ export const Settings: React.FC = () => {
                 />
               </div>
 
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-medium text-amber-900">Cómo cargar dimensiones</p>
-                <p className="mt-1 text-sm text-amber-800">
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                <p className="text-sm font-medium text-amber-300">Cómo cargar dimensiones</p>
+                <p className="mt-1 text-sm text-amber-300/80">
                   Ingresar siempre en centímetros. Ejemplos: `50` para 50 cm, `120` para 1,20 m. No usar `0.5` para 50 cm ni `1.2` para 1,20 m.
                 </p>
               </div>
@@ -878,7 +876,7 @@ export const Settings: React.FC = () => {
               />
 
               {/* Checkbox para primer anillo */}
-              <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+              <div className="border rounded-lg p-4 bg-blue-500/10 border-blue-500/30">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -887,14 +885,14 @@ export const Settings: React.FC = () => {
                     className="w-4 h-4 text-blue-600 rounded"
                   />
                   <div>
-                    <p className="font-medium text-sm text-gray-900">Es para primer anillo perimetral</p>
-                    <p className="text-xs text-gray-700">Esta loseta se usa en la primera vuelta alrededor de la piscina</p>
+                    <p className="font-medium text-sm text-zinc-200">Es para primer anillo perimetral</p>
+                    <p className="text-xs text-zinc-400">Esta loseta se usa en la primera vuelta alrededor de la piscina</p>
                   </div>
                 </label>
               </div>
 
               {/* Sección de Esquineros */}
-              <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+              <div className="border rounded-lg p-4 bg-blue-500/10 border-blue-500/30">
                 <label className="flex items-center gap-3 cursor-pointer mb-3">
                   <input
                     type="checkbox"
@@ -903,13 +901,13 @@ export const Settings: React.FC = () => {
                     className="w-4 h-4 text-blue-600 rounded"
                   />
                   <div>
-                    <p className="font-medium text-sm text-gray-900">Lleva Esquineros</p>
-                    <p className="text-xs text-gray-700">Ej: Lomo Ballena lleva esquineros, Terminación L no</p>
+                    <p className="font-medium text-sm text-zinc-200">Lleva Esquineros</p>
+                    <p className="text-xs text-zinc-400">Ej: Lomo Ballena lleva esquineros, Terminación L no</p>
                   </div>
                 </label>
 
                 {tileFormData.hasCorner && (
-                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-blue-200">
+                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-blue-500/30">
                     <Input
                       label="Esquineros por Loseta"
                       type="number"
@@ -944,8 +942,8 @@ export const Settings: React.FC = () => {
 
               {/* Sección de Imágenes */}
               {editingTile && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                <div className="pt-4 border-t border-zinc-800">
+                  <h4 className="font-semibold mb-3 text-white">Imágenes del Producto</h4>
                   <HybridImageManager
                     productType="tiles"
                     productId={editingTile.id}
@@ -961,8 +959,8 @@ export const Settings: React.FC = () => {
               )}
 
               {!editingTile && (
-                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
+                <div className="pt-4 border-t border-zinc-800 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-200">
                     <strong>Nota:</strong> Primero guarda la loseta, luego podrás editarla para agregar imágenes.
                   </p>
                 </div>
@@ -993,8 +991,8 @@ export const Settings: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Accesorios</h2>
-                <p className="text-sm text-gray-700 mt-1">Administra los accesorios y complementos</p>
+                <h2 className="text-2xl font-bold text-white">Accesorios</h2>
+                <p className="text-sm text-zinc-300 mt-1">Administra los accesorios y complementos</p>
               </div>
               <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
                 <Plus size={16} className="mr-2" />
@@ -1003,12 +1001,12 @@ export const Settings: React.FC = () => {
             </div>
 
             {/* Filtros para Accesorios */}
-            <div className="mb-6 rounded-lg bg-white border border-gray-200 shadow-sm">
+            <div className="mb-6 rounded-lg bg-zinc-900/60 border border-zinc-800">
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Filtros de Búsqueda</h3>
+                    <Search size={20} className="text-blue-400" />
+                    <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1028,8 +1026,8 @@ export const Settings: React.FC = () => {
                   </div>
 
                   {(accessorySearchTerm || accessoryTypeFilter) && (
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                      <p className="text-sm text-gray-700">
+                    <div className="flex justify-between items-center pt-2 border-t border-zinc-800">
+                      <p className="text-sm text-zinc-400">
                         Mostrando {filteredAccessories.length} de {accessories.length} accesorios
                       </p>
                       <Button size="sm" variant="secondary" onClick={clearAccessoryFilters}>
@@ -1042,15 +1040,15 @@ export const Settings: React.FC = () => {
             </div>
 
             {filteredAccessories.length === 0 ? (
-              <div className="rounded-lg bg-white border border-gray-200 shadow-sm">
+              <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Filter size={48} className="text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <Filter size={48} className="text-zinc-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-white mb-2">
                     {accessories.length === 0 ? 'No hay accesorios configurados' : 'No se encontraron resultados'}
                   </h3>
-                  <p className="text-gray-700 mb-6">
+                  <p className="text-zinc-300 mb-6">
                     {accessories.length === 0
                       ? 'Crea tu primer accesorio para comenzar'
                       : 'Intenta ajustar los filtros de busqueda'
@@ -1129,8 +1127,8 @@ export const Settings: React.FC = () => {
 
               {/* Sección de Imágenes */}
               {editingAccessory && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                <div className="pt-4 border-t border-zinc-800">
+                  <h4 className="font-semibold mb-3 text-white">Imágenes del Producto</h4>
                   <HybridImageManager
                     productType="accessories"
                     productId={editingAccessory.id}
@@ -1146,8 +1144,8 @@ export const Settings: React.FC = () => {
               )}
 
               {!editingAccessory && (
-                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
+                <div className="pt-4 border-t border-zinc-800 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-200">
                     <strong>Nota:</strong> Primero guarda el accesorio, luego podrás editarlo para agregar imágenes.
                   </p>
                 </div>
@@ -1178,8 +1176,8 @@ export const Settings: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Equipos</h2>
-                <p className="text-sm text-gray-700 mt-1">Administra bombas, filtros, calentadores y mas</p>
+                <h2 className="text-2xl font-bold text-white">Equipos</h2>
+                <p className="text-sm text-zinc-300 mt-1">Administra bombas, filtros, calentadores y mas</p>
               </div>
             <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
               <Plus size={16} className="mr-2" />
@@ -1188,12 +1186,12 @@ export const Settings: React.FC = () => {
           </div>
 
             {/* Filtros para Equipos */}
-            <div className="mb-6 rounded-lg bg-white border border-gray-200 shadow-sm">
+            <div className="mb-6 rounded-lg bg-zinc-900/60 border border-zinc-800">
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Filtros de Búsqueda</h3>
+                    <Search size={20} className="text-blue-400" />
+                    <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1213,8 +1211,8 @@ export const Settings: React.FC = () => {
                   </div>
 
                   {(equipmentSearchTerm || equipmentTypeFilter) && (
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                      <p className="text-sm text-gray-700">
+                    <div className="flex justify-between items-center pt-2 border-t border-zinc-800">
+                      <p className="text-sm text-zinc-400">
                         Mostrando {filteredEquipment.length} de {equipment.length} equipos
                       </p>
                       <Button size="sm" variant="secondary" onClick={clearEquipmentFilters}>
@@ -1227,15 +1225,15 @@ export const Settings: React.FC = () => {
             </div>
 
             {filteredEquipment.length === 0 ? (
-              <div className="rounded-lg bg-white border border-gray-200 shadow-sm">
+              <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Filter size={48} className="text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <Filter size={48} className="text-zinc-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-white mb-2">
                     {equipment.length === 0 ? 'No hay equipos configurados' : 'No se encontraron resultados'}
                   </h3>
-                  <p className="text-gray-700 mb-6">
+                  <p className="text-zinc-300 mb-6">
                     {equipment.length === 0
                       ? 'Crea tu primer equipo para comenzar'
                       : 'Intenta ajustar los filtros de busqueda'
@@ -1342,8 +1340,8 @@ export const Settings: React.FC = () => {
 
               {/* Sección de Imágenes */}
               {editingEquipment && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                <div className="pt-4 border-t border-zinc-800">
+                  <h4 className="font-semibold mb-3 text-white">Imágenes del Producto</h4>
                   <HybridImageManager
                     productType="equipment"
                     productId={editingEquipment.id}
@@ -1359,8 +1357,8 @@ export const Settings: React.FC = () => {
               )}
 
               {!editingEquipment && (
-                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
+                <div className="pt-4 border-t border-zinc-800 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-200">
                     <strong>Nota:</strong> Primero guarda el equipo, luego podrás editarlo para agregar imágenes.
                   </p>
                 </div>
@@ -1391,8 +1389,8 @@ export const Settings: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Materiales de Construcción</h2>
-                <p className="text-sm text-gray-700 mt-1">Administra materiales, consumibles y revestimientos como losetas</p>
+                <h2 className="text-2xl font-bold text-white">Materiales de Construcción</h2>
+                <p className="text-sm text-zinc-300 mt-1">Administra materiales, consumibles y revestimientos como losetas</p>
               </div>
             <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
               <Plus size={16} className="mr-2" />
@@ -1401,12 +1399,12 @@ export const Settings: React.FC = () => {
           </div>
 
             {/* Filtros para Materiales */}
-            <div className="mb-6 rounded-lg bg-white border border-gray-200 shadow-sm">
+            <div className="mb-6 rounded-lg bg-zinc-900/60 border border-zinc-800">
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Filtros de Búsqueda</h3>
+                    <Search size={20} className="text-blue-400" />
+                    <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1432,8 +1430,8 @@ export const Settings: React.FC = () => {
                   </div>
 
                   {(materialSearchTerm || materialCategoryFilter || materialTypeFilter) && (
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                      <p className="text-sm text-gray-700">
+                    <div className="flex justify-between items-center pt-2 border-t border-zinc-800">
+                      <p className="text-sm text-zinc-400">
                         Mostrando {filteredMaterials.length} de {materials.length} materiales
                       </p>
                       <Button size="sm" variant="secondary" onClick={clearMaterialFilters}>
@@ -1446,15 +1444,15 @@ export const Settings: React.FC = () => {
             </div>
 
             {filteredMaterials.length === 0 ? (
-              <div className="rounded-lg bg-white border border-gray-200 shadow-sm">
+              <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Filter size={48} className="text-gray-400" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
+                    <Filter size={48} className="text-zinc-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-white mb-2">
                     {materials.length === 0 ? 'No hay materiales configurados' : 'No se encontraron resultados'}
                   </h3>
-                  <p className="text-gray-700 mb-6">
+                  <p className="text-zinc-300 mb-6">
                     {materials.length === 0
                       ? 'Crea tu primer material para comenzar'
                       : 'Intenta ajustar los filtros de busqueda'
@@ -1554,8 +1552,8 @@ export const Settings: React.FC = () => {
 
               {/* Sección de Imágenes */}
               {editingMaterial && (
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold mb-3 text-gray-900">Imágenes del Producto</h4>
+                <div className="pt-4 border-t border-zinc-800">
+                  <h4 className="font-semibold mb-3 text-white">Imágenes del Producto</h4>
                   <HybridImageManager
                     productType="materials"
                     productId={editingMaterial.id}
@@ -1571,8 +1569,8 @@ export const Settings: React.FC = () => {
               )}
 
               {!editingMaterial && (
-                <div className="pt-4 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">
+                <div className="pt-4 border-t border-zinc-800 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-200">
                     <strong>Nota:</strong> Primero guarda el material, luego podrás editarlo para agregar imágenes.
                   </p>
                 </div>
@@ -1603,12 +1601,11 @@ export const Settings: React.FC = () => {
 
         {/* Tab Content - Configuración de Cálculos MEJORADA */}
         {activeTab === 'calculations' && calcSettings && (
-          <div className="rounded-lg bg-white border border-gray-200 shadow-sm">
-            <div className="p-8">
+          <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-8">
               <div className="space-y-8">
-                <div className="pb-6 border-b border-gray-200">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Configuración de Cálculos Automáticos</h3>
-                  <p className="text-sm text-gray-700">
+                <div className="pb-6 border-b border-zinc-800">
+                  <h3 className="text-2xl font-bold text-white mb-2">Configuración de Cálculos Automáticos</h3>
+                  <p className="text-sm text-zinc-300">
                     Estos valores se usan para calcular automaticamente los materiales necesarios en cada proyecto.
                     Ajusta los parametros segun tus criterios de construccion.
                   </p>
@@ -1616,13 +1613,13 @@ export const Settings: React.FC = () => {
 
                 {/* SECCIÓN 1: VEREDA Y SOLARIUM */}
                 <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg">
-                    <h4 className="font-bold text-xl text-gray-900 mb-1">VEREDA Y SOLARIUM</h4>
-                    <p className="text-sm text-gray-700 mb-4">Configuración para el calculo de materiales de la vereda perimetral</p>
+                  <div className="bg-blue-500/10 border border-blue-500/30 p-5 rounded-lg">
+                    <h4 className="font-bold text-xl text-white mb-1">VEREDA Y SOLARIUM</h4>
+                    <p className="text-sm text-zinc-300 mb-4">Configuración para el calculo de materiales de la vereda perimetral</p>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Adhesivo para Losetas</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Adhesivo para Losetas</h5>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
                         type="number"
@@ -1632,13 +1629,13 @@ export const Settings: React.FC = () => {
                         onChange={(e) => setCalcFormData({...calcFormData, adhesiveKgPerM2: parseFloat(e.target.value)})}
                       />
                       <div className="flex items-end pb-2">
-                        <p className="text-xs text-gray-700">Valor tipico: 3-5 kg/m² segun tipo de loseta</p>
+                        <p className="text-xs text-zinc-500">Valor tipico: 3-5 kg/m² segun tipo de loseta</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Contrapiso de Vereda</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Contrapiso de Vereda</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     type="number"
@@ -1669,11 +1666,11 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, gravelM3PerM3: parseFloat(e.target.value)})}
                   />
                 </div>
-                    <p className="text-xs text-gray-700 mt-2">Dosificacion tipica: 1:3:3 (cemento:arena:piedra) = 200 kg cemento/m³</p>
+                    <p className="text-xs text-zinc-500 mt-2">Dosificacion tipica: 1:3:3 (cemento:arena:piedra) = 200 kg cemento/m³</p>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Pastina y Juntas</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Pastina y Juntas</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input
                     type="number"
@@ -1700,7 +1697,7 @@ export const Settings: React.FC = () => {
               </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Malla e Impermeabilizacion</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Malla e Impermeabilizacion</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input
                     type="number"
@@ -1724,63 +1721,63 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, waterproofingCoats: parseInt(e.target.value)})}
                   />
                 </div>
-                    <p className="text-xs text-gray-700 mt-2">Factor de malla incluye solapamiento (tipicamente 10-15%)</p>
+                    <p className="text-xs text-zinc-500 mt-2">Factor de malla incluye solapamiento (tipicamente 10-15%)</p>
                   </div>
 
                   {/* MANO DE OBRA — TASAS POR UNIDAD */}
-                  <div className="bg-amber-50 border border-amber-200 p-5 rounded-lg mt-4">
-                    <h4 className="font-bold text-xl text-gray-900 mb-1">MANO DE OBRA — NOMENCLADOR</h4>
-                    <p className="text-sm text-gray-500 mb-4">Tasas de mano de obra por unidad. Se aplican automáticamente al calcular vereda y losetas. Se exportan separadas de los materiales.</p>
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-5 rounded-lg mt-4">
+                    <h4 className="font-bold text-xl text-white mb-1">MANO DE OBRA — NOMENCLADOR</h4>
+                    <p className="text-sm text-zinc-500 mb-4">Tasas de mano de obra por unidad. Se aplican automáticamente al calcular vereda y losetas. Se exportan separadas de los materiales.</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Instalador de losetas y contrapiso ($ / m²)</label>
+                        <label className="block text-sm font-medium text-zinc-300 mb-1">Instalador de losetas y contrapiso ($ / m²)</label>
                         <input
                           type="number"
                           step="100"
                           min="0"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
                           value={calcFormData.tileInstallerRatePerM2 ?? 0}
                           onChange={(e) => setCalcFormData({...calcFormData, tileInstallerRatePerM2: parseFloat(e.target.value) || 0})}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Se multiplica por los m² de vereda calculados</p>
+                        <p className="text-xs text-zinc-500 mt-1">Se multiplica por los m² de vereda calculados</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Excavación ($ / m³)</label>
+                        <label className="block text-sm font-medium text-zinc-300 mb-1">Excavación ($ / m³)</label>
                         <input
                           type="number"
                           step="100"
                           min="0"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
                           value={calcFormData.excavationRatePerM3 ?? 0}
                           onChange={(e) => setCalcFormData({...calcFormData, excavationRatePerM3: parseFloat(e.target.value) || 0})}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Se multiplica por el volumen de excavación</p>
+                        <p className="text-xs text-zinc-500 mt-1">Se multiplica por el volumen de excavación</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Terminaciones ($ / m²)</label>
+                        <label className="block text-sm font-medium text-zinc-300 mb-1">Terminaciones ($ / m²)</label>
                         <input
                           type="number"
                           step="100"
                           min="0"
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
                           value={calcFormData.finishingRatePerM2 ?? 0}
                           onChange={(e) => setCalcFormData({...calcFormData, finishingRatePerM2: parseFloat(e.target.value) || 0})}
                         />
-                        <p className="text-xs text-gray-500 mt-1">Se multiplica por el área de terminaciones</p>
+                        <p className="text-xs text-zinc-500 mt-1">Se multiplica por el área de terminaciones</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* SECCIÓN 2: RELLENO Y FONDO */}
-                <div className="space-y-6 pt-6 border-t border-gray-200">
-                  <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg">
-                    <h4 className="font-bold text-xl text-gray-900 mb-1">RELLENO Y FONDO DE PISCINA</h4>
-                    <p className="text-sm text-gray-700 mb-4">Estos valores alimentan el cálculo automático del relleno con arena terciada, el fondo y la mezcla seca con cemento.</p>
+                <div className="space-y-6 pt-6 border-t border-zinc-800">
+                  <div className="bg-blue-500/10 border border-blue-500/30 p-5 rounded-lg">
+                    <h4 className="font-bold text-xl text-white mb-1">RELLENO Y FONDO DE PISCINA</h4>
+                    <p className="text-sm text-zinc-300 mb-4">Estos valores alimentan el cálculo automático del relleno con arena terciada, el fondo y la mezcla seca con cemento.</p>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Separación de Relleno</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Separación de Relleno</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     type="number"
@@ -1790,13 +1787,13 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, bedThicknessCm: parseFloat(e.target.value)})}
                   />
                       <div className="flex items-end pb-2">
-                        <p className="text-xs text-gray-700">Se usa igual en laterales y fondo. Valor recomendado actual: 20 cm.</p>
+                        <p className="text-xs text-zinc-500">Se usa igual en laterales y fondo. Valor recomendado actual: 20 cm.</p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Dosificación de Cemento</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Dosificación de Cemento</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input
                     type="number"
@@ -1813,14 +1810,14 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, bedCementBagWeight: parseFloat(e.target.value)})}
                   />
                       <div className="flex items-end pb-2">
-                        <p className="text-xs text-gray-700">La cantidad de bolsas surge de dividir los kg totales requeridos por el peso real de cada bolsa.</p>
+                        <p className="text-xs text-zinc-500">La cantidad de bolsas surge de dividir los kg totales requeridos por el peso real de cada bolsa.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                    <h5 className="font-semibold text-gray-900 mb-2">Fórmula aplicada hoy</h5>
-                    <div className="space-y-1 text-sm text-gray-700">
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                    <h5 className="font-semibold text-zinc-200 mb-2">Fórmula aplicada hoy</h5>
+                    <div className="space-y-1 text-sm text-zinc-300">
                       <p>Profundidad tomada: la más profunda de la pileta.</p>
                       <p>Excavación de cálculo: largo + 2 separaciones, ancho + 2 separaciones, profundidad + separación de fondo.</p>
                       <p>Arena terciada: volumen de excavación menos volumen del casco.</p>
@@ -1831,7 +1828,7 @@ export const Settings: React.FC = () => {
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Geomembrana y Mallas</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Geomembrana y Mallas</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     type="number"
@@ -1848,19 +1845,19 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, electroweldedMeshM2PerM2: parseFloat(e.target.value)})}
                   />
                 </div>
-                    <p className="text-xs text-gray-700 mt-2">Geomembrana: 1.0 (sin solapamiento) | Malla: 1.15 (con solapamiento 15%)</p>
+                    <p className="text-xs text-zinc-500 mt-2">Geomembrana: 1.0 (sin solapamiento) | Malla: 1.15 (con solapamiento 15%)</p>
                   </div>
                 </div>
 
                 {/* SECCIÓN 3: SISTEMA DE DRENAJE */}
-                <div className="space-y-6 pt-6 border-t border-gray-200">
-                  <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg">
-                    <h4 className="font-bold text-xl text-gray-900 mb-1">SISTEMA DE DRENAJE</h4>
-                    <p className="text-sm text-gray-700 mb-4">Configuración para cunetas de drenaje perimetral</p>
+                <div className="space-y-6 pt-6 border-t border-zinc-800">
+                  <div className="bg-blue-500/10 border border-blue-500/30 p-5 rounded-lg">
+                    <h4 className="font-bold text-xl text-white mb-1">SISTEMA DE DRENAJE</h4>
+                    <p className="text-sm text-zinc-300 mb-4">Configuración para cunetas de drenaje perimetral</p>
                   </div>
 
                   <div>
-                    <h5 className="font-semibold mb-3 text-gray-900">Dimensiones de Cuneta</h5>
+                    <h5 className="font-semibold mb-3 text-zinc-200">Dimensiones de Cuneta</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     type="number"
@@ -1877,12 +1874,12 @@ export const Settings: React.FC = () => {
                     onChange={(e) => setCalcFormData({...calcFormData, drainTrenchDepthCm: parseFloat(e.target.value)})}
                   />
                 </div>
-                    <p className="text-xs text-gray-700 mt-2">Dimensiones tipicas: 15cm x 15cm para drenaje perimetral</p>
+                    <p className="text-xs text-zinc-500 mt-2">Dimensiones tipicas: 15cm x 15cm para drenaje perimetral</p>
                   </div>
                 </div>
 
                 {/* BOTÓN GUARDAR */}
-                <div className="pt-6 border-t border-gray-200 flex justify-end space-x-3">
+                <div className="pt-6 border-t border-zinc-800 flex justify-end space-x-3">
                   <Button
                     variant="secondary"
                     onClick={() => setCalcFormData(calcSettings)}
@@ -1898,7 +1895,6 @@ export const Settings: React.FC = () => {
                   </Button>
                 </div>
               </div>
-            </div>
           </div>
         )}
       </div>
