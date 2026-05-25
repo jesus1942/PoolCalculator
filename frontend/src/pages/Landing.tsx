@@ -337,21 +337,13 @@ export const Landing: React.FC = () => {
             <div
               ref={projectsRef.ref}
               className={`text-center mb-12 transition-all duration-1000 ${
-                projectsRef.isVisible
-                  ? 'opacity-100 translate-y-0'
-                  : 'opacity-0 translate-y-10'
+                projectsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
               }`}
             >
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Proyectos Activos
-              </h3>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Mira algunos de los proyectos en construcción
-              </p>
+              <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Proyectos Activos</h3>
+              <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Mira algunos de los proyectos en construcción</p>
             </div>
-            <Suspense fallback={<LoadingSection />}>
-              <ProjectsCarousel />
-            </Suspense>
+            <Suspense fallback={<LoadingSection />}><ProjectsCarousel /></Suspense>
           </div>
         </section>
       )}
@@ -362,21 +354,13 @@ export const Landing: React.FC = () => {
           <div
             ref={modelsRef.ref}
             className={`text-center mb-12 transition-all duration-1000 ${
-              modelsRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              modelsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Catálogo de Modelos ACQUAM
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              24 modelos de piscinas de fibra de vidrio con especificaciones completas
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Catálogo de Modelos ACQUAM</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">24 modelos de piscinas de fibra de vidrio con especificaciones completas</p>
           </div>
-          <Suspense fallback={<LoadingSection />}>
-            <PoolModelsCarousel />
-          </Suspense>
+          <Suspense fallback={<LoadingSection />}><PoolModelsCarousel /></Suspense>
         </div>
       </section>
 
@@ -386,21 +370,13 @@ export const Landing: React.FC = () => {
           <div
             ref={calculatorRef.ref}
             className={`text-center mb-12 transition-all duration-1000 ${
-              calculatorRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              calculatorRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Calculador Inteligente
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Descubre qué modelos de piscina caben en tu espacio disponible
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Calculador Inteligente</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Descubrí qué modelos de piscina caben en tu espacio disponible</p>
           </div>
-          <Suspense fallback={<LoadingSection />}>
-            <PoolCalculatorWidget />
-          </Suspense>
+          <Suspense fallback={<LoadingSection />}><PoolCalculatorWidget /></Suspense>
         </div>
       </section>
 
@@ -410,25 +386,17 @@ export const Landing: React.FC = () => {
           <div
             ref={productShowcaseRef.ref}
             className={`text-center mb-16 transition-all duration-1000 ${
-              productShowcaseRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              productShowcaseRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-full mb-6">
               <Zap className="w-5 h-5" />
-              <span className="font-semibold">Descubre el Panel</span>
+              <span className="font-semibold">Descubrí el Panel</span>
             </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Mira cómo funciona por dentro
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Explora todas las funcionalidades que tendrás a tu disposición
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Mirá cómo funciona por dentro</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Explorá todas las funcionalidades que tendrás a tu disposición</p>
           </div>
-          <Suspense fallback={<LoadingSection />}>
-            <ProductShowcase />
-          </Suspense>
+          <Suspense fallback={<LoadingSection />}><ProductShowcase /></Suspense>
         </div>
       </section>
 
@@ -438,34 +406,26 @@ export const Landing: React.FC = () => {
           <div
             ref={featuresRef.ref}
             className={`text-center mb-16 transition-all duration-1000 ${
-              featuresRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              featuresRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Todo lo que necesitás en una plataforma
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Diseñado específicamente para instaladores profesionales de piscinas
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Todo lo que necesitás en una plataforma</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Diseñado específicamente para instaladores profesionales de piscinas</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <div
                 key={index}
                 className={`p-6 bg-white/5 rounded-xl border border-white/10 hover:border-cyan-400/50 hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 ${
-                  featuresRef.isVisible
-                    ? 'opacity-100 translate-y-0'
-                    : 'opacity-0 translate-y-10'
+                  featuresRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
                 }`}
                 style={{ transitionDelay: `${index * 100}ms` }}
               >
-                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-4">
+                <div className="w-14 h-14 bg-cyan-500/20 border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-400 mb-4">
                   {feature.icon}
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h4>
-                <p className="text-gray-600">{feature.description}</p>
+                <h4 className="text-xl font-bold text-white mb-2">{feature.title}</h4>
+                <p className="text-zinc-400">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -478,23 +438,17 @@ export const Landing: React.FC = () => {
           <div
             ref={quoteRef.ref}
             className={`text-center mb-12 transition-all duration-1000 ${
-              quoteRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              quoteRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <Calculator className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Solicitar Presupuesto
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Completa el formulario y recibe un presupuesto personalizado sin compromiso
-            </p>
+            <div className="w-16 h-16 bg-blue-500/20 border border-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Calculator className="w-8 h-8 text-blue-400" />
+            </div>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Solicitá un Presupuesto</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Completá el formulario y recibí un presupuesto personalizado sin compromiso</p>
           </div>
-          <div className="bg-white/5 rounded-2xl shadow-2xl p-8 border border-white/10">
-            <Suspense fallback={<LoadingSection />}>
-              <QuoteRequestForm />
-            </Suspense>
+          <div className="bg-white/5 rounded-2xl p-8 border border-white/10">
+            <Suspense fallback={<LoadingSection />}><QuoteRequestForm /></Suspense>
           </div>
         </div>
       </section>
@@ -505,23 +459,17 @@ export const Landing: React.FC = () => {
           <div
             ref={contactRef.ref}
             className={`text-center mb-12 transition-all duration-1000 ${
-              contactRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              contactRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <MessageSquare className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              ¿Tenés Preguntas?
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Envianos tu consulta y te responderemos a la brevedad
-            </p>
+            <div className="w-16 h-16 bg-cyan-500/20 border border-cyan-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <MessageSquare className="w-8 h-8 text-cyan-400" />
+            </div>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">¿Tenés Preguntas?</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Envianos tu consulta y te respondemos a la brevedad</p>
           </div>
-          <div className="bg-white/5 rounded-2xl shadow-2xl p-8 border border-white/10">
-            <Suspense fallback={<LoadingSection />}>
-              <ContactForm />
-            </Suspense>
+          <div className="bg-white/5 rounded-2xl p-8 border border-white/10">
+            <Suspense fallback={<LoadingSection />}><ContactForm /></Suspense>
           </div>
         </div>
       </section>
@@ -532,25 +480,17 @@ export const Landing: React.FC = () => {
           <div
             ref={testimonialsRef.ref}
             className={`text-center mb-12 transition-all duration-1000 ${
-              testimonialsRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              testimonialsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-full mb-6">
               <Star className="w-5 h-5 fill-yellow-400" />
               <span className="font-semibold">Clientes Satisfechos</span>
             </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Lo que dicen nuestros clientes
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Más de 100 profesionales confían en Pool Installer para gestionar sus proyectos
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Lo que dicen nuestros clientes</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Más de 100 profesionales confían en Pool Installer para gestionar sus proyectos</p>
           </div>
-          <Suspense fallback={<LoadingSection />}>
-            <Testimonials />
-          </Suspense>
+          <Suspense fallback={<LoadingSection />}><Testimonials /></Suspense>
         </div>
       </section>
 
@@ -560,25 +500,17 @@ export const Landing: React.FC = () => {
           <div
             ref={pricingRef.ref}
             className={`text-center mb-16 transition-all duration-1000 ${
-              pricingRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              pricingRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 text-green-300 rounded-full mb-6">
               <DollarSign className="w-5 h-5" />
               <span className="font-semibold">Planes y Precios</span>
             </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Elige el plan perfecto para ti
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Comienza gratis y actualiza cuando necesites más funcionalidades
-            </p>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Elegí el plan perfecto para vos</h3>
+            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Comenzá gratis y actualizá cuando necesités más funcionalidades</p>
           </div>
-          <Suspense fallback={<LoadingSection />}>
-            <PricingSection />
-          </Suspense>
+          <Suspense fallback={<LoadingSection />}><PricingSection /></Suspense>
         </div>
       </section>
 
@@ -588,36 +520,27 @@ export const Landing: React.FC = () => {
           <div
             ref={benefitsRef.ref}
             className={`grid md:grid-cols-2 gap-12 items-center transition-all duration-1000 ${
-              benefitsRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+              benefitsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
             <div>
-              <h3 className="text-3xl md:text-4xl font-bold mb-6">
-                Por qué elegir Pool Installer
-              </h3>
-              <p className="text-xl text-blue-100 mb-8">
-                Desarrollado por profesionales de la industria para profesionales de la industria
-              </p>
+              <h3 className="text-3xl md:text-4xl font-bold mb-6">Por qué elegir Pool Installer</h3>
+              <p className="text-xl text-zinc-300 mb-8">Desarrollado por profesionales de la industria para profesionales de la industria</p>
               <div className="space-y-4">
                 {benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start gap-3">
-                    <CheckCircle className="w-6 h-6 text-green-300 flex-shrink-0 mt-0.5" />
-                    <span className="text-lg">{benefit}</span>
+                    <CheckCircle className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-lg text-zinc-200">{benefit}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-              <h4 className="text-2xl font-bold mb-4">
-                {isAuthenticated ? 'Bienvenido de Nuevo' : 'Comienza Hoy'}
-              </h4>
-              <p className="text-blue-100 mb-6">
+              <h4 className="text-2xl font-bold mb-4">{isAuthenticated ? 'Bienvenido de Nuevo' : 'Comenzá Hoy'}</h4>
+              <p className="text-zinc-300 mb-6">
                 {isAuthenticated
-                  ? 'Accede a tu panel de control y gestiona tus proyectos'
-                  : 'Únete a los instaladores profesionales que ya confían en Pool Installer'
-                }
+                  ? 'Accedé a tu panel de control y gestioná tus proyectos'
+                  : 'Únete a los instaladores profesionales que ya confían en Pool Installer'}
               </p>
               <button
                 onClick={() => navigate(isAuthenticated ? '/dashboard' : '/register')}
@@ -625,37 +548,62 @@ export const Landing: React.FC = () => {
               >
                 {isAuthenticated ? 'Ir al Panel' : 'Crear Cuenta Gratis'}
               </button>
-              {!isAuthenticated && (
-                <p className="text-sm text-blue-200 mt-4 text-center">
-                  No requiere tarjeta de crédito
-                </p>
-              )}
+              {!isAuthenticated && <p className="text-sm text-zinc-400 mt-4 text-center">No requiere tarjeta de crédito</p>}
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-zinc-950 text-zinc-400 py-12 border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-black border border-white/10 flex items-center justify-center">
-                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-6 w-auto" />
+      <footer className="bg-zinc-950 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-black border border-white/10 flex items-center justify-center">
+                  <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-6 w-auto" />
+                </div>
+                <span className="text-white font-bold text-lg">Pool Installer</span>
               </div>
-              <div>
-                <p className="text-white font-semibold">Pool Installer</p>
-                <p className="text-sm">Sistema completo de cálculo de materiales</p>
+              <p className="text-zinc-500 text-sm leading-relaxed">
+                Sistema profesional de cálculo de materiales para montaje de piscinas de fibra de vidrio. Diseñado para instaladores en Patagonia y el resto de Argentina.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div>
+              <p className="text-zinc-300 font-semibold mb-4 text-sm uppercase tracking-wider">Acceso rápido</p>
+              <div className="space-y-2">
+                {[
+                  { label: 'Calculador', href: '#calculator' },
+                  { label: 'Catálogo de modelos', href: '#models' },
+                  { label: 'Precios', href: '#pricing' },
+                  { label: 'Contacto', href: '#contact' },
+                ].map(link => (
+                  <a key={link.href} href={link.href} className="block text-zinc-500 hover:text-cyan-400 transition-colors text-sm">
+                    {link.label}
+                  </a>
+                ))}
+                <a href="/login" className="block text-zinc-500 hover:text-cyan-400 transition-colors text-sm">Iniciar sesión</a>
               </div>
             </div>
-            <div className="text-center md:text-right">
-              <p className="text-white font-semibold mb-1">Desarrollado por</p>
-              <p className="text-sm">Jesús Olguín - Domotics & IoT Solutions</p>
-              <p className="text-sm">Professional Developer</p>
+
+            {/* Developer */}
+            <div>
+              <p className="text-zinc-300 font-semibold mb-4 text-sm uppercase tracking-wider">Desarrollador</p>
+              <p className="text-white font-medium">Jesús Olguín</p>
+              <p className="text-zinc-500 text-sm mb-3">Domotics & IoT Solutions</p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-xs text-cyan-400 font-medium">Sistema en producción</span>
+              </div>
             </div>
           </div>
-          <div className="border-t border-white/10 mt-8 pt-8 text-center text-sm">
-            © 2025 Pool Installer. Todos los derechos reservados.
+
+          <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">
+            <p>© 2026 Pool Installer. Todos los derechos reservados.</p>
+            <p>Hecho en Puerto Madryn, Chubut · Argentina 🇦🇷</p>
           </div>
         </div>
       </footer>
