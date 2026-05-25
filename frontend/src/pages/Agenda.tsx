@@ -155,7 +155,8 @@ export const Agenda: React.FC = () => {
     return d;
   };
 
-  const formatDateKey = (date: Date) => date.toISOString().slice(0, 10);
+  const formatDateKey = (date: Date) =>
+    `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
 
   const getAgendaEventDate = (event: AgendaEvent, field: 'startAt' | 'endAt') => {
     const rawValue = event?.[field];
