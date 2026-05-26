@@ -326,9 +326,11 @@ export const Landing: React.FC = () => {
               <div
                 key={i}
                 className={`text-center transition-all duration-700 ease-out ${
-                  statsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                  statsRef.isVisible
+                    ? 'opacity-100 translate-x-0'
+                    : i % 2 === 0 ? 'opacity-0 -translate-x-12' : 'opacity-0 translate-x-12'
                 }`}
-                style={{ transitionDelay: statsRef.isVisible ? `${i * 130 + 300}ms` : '0ms' }}
+                style={{ transitionDelay: statsRef.isVisible ? `${i * 110}ms` : '0ms' }}
               >
                 <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">{stat.value}</div>
                 <div className="text-sm text-zinc-400 sm:text-base">{stat.label}</div>
@@ -345,7 +347,7 @@ export const Landing: React.FC = () => {
             <div
               ref={projectsRef.ref}
               className={`text-center mb-12 transition-all duration-700 ease-out ${
-                projectsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                projectsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-16'
               }`}
             >
               <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Proyectos Activos</h3>
@@ -362,7 +364,7 @@ export const Landing: React.FC = () => {
           <div
             ref={modelsRef.ref}
             className={`text-center mb-12 transition-all duration-700 ease-out ${
-              modelsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              modelsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-16'
             }`}
           >
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Catálogo de Modelos ACQUAM</h3>
@@ -378,7 +380,7 @@ export const Landing: React.FC = () => {
           <div
             ref={calculatorRef.ref}
             className={`text-center mb-10 transition-all duration-700 ease-out ${
-              calculatorRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              calculatorRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-16'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-full mb-5">
@@ -436,7 +438,7 @@ export const Landing: React.FC = () => {
           <div
             ref={productShowcaseRef.ref}
             className={`text-center mb-16 transition-all duration-700 ease-out ${
-              productShowcaseRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              productShowcaseRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-16'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-full mb-6">
@@ -466,10 +468,12 @@ export const Landing: React.FC = () => {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`p-6 bg-white/5 rounded-xl border border-white/10 hover:border-cyan-400/50 hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 ${
-                  featuresRef.isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-14 scale-[0.95]'
+                className={`p-6 bg-white/5 rounded-xl border border-white/10 hover:border-cyan-400/50 hover:shadow-xl transition-all duration-700 hover:-translate-y-2 hover:scale-105 ${
+                  featuresRef.isVisible
+                    ? 'opacity-100 translate-x-0 scale-100'
+                    : index % 2 === 0 ? 'opacity-0 -translate-x-16 scale-[0.95]' : 'opacity-0 translate-x-16 scale-[0.95]'
                 }`}
-                style={{ transitionDelay: `${index * 100}ms` }}
+                style={{ transitionDelay: featuresRef.isVisible ? `${index * 90}ms` : '0ms' }}
               >
                 <div className="w-14 h-14 bg-cyan-500/20 border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-400 mb-4">
                   {feature.icon}
@@ -489,7 +493,7 @@ export const Landing: React.FC = () => {
           <div
             ref={testimonialsRef.ref}
             className={`text-center mb-12 transition-all duration-700 ease-out ${
-              testimonialsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              testimonialsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-16'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-full mb-6">
@@ -509,7 +513,7 @@ export const Landing: React.FC = () => {
           <div
             ref={pricingRef.ref}
             className={`text-center mb-16 transition-all duration-700 ease-out ${
-              pricingRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              pricingRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-16'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 text-green-300 rounded-full mb-6">
@@ -528,11 +532,12 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={benefitsRef.ref}
-            className={`grid md:grid-cols-2 gap-12 items-center transition-all duration-700 ease-out ${
-              benefitsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-            }`}
+            className="grid md:grid-cols-2 gap-12 items-center"
           >
-            <div>
+            {/* Columna texto — entra desde la izquierda */}
+            <div className={`transition-all duration-700 ease-out ${
+              benefitsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-16'
+            }`}>
               <h3 className="text-3xl md:text-4xl font-bold mb-6">Por qué elegir Pool Installer</h3>
               <p className="text-xl text-zinc-300 mb-8">Desarrollado por profesionales de la industria para profesionales de la industria</p>
               <div className="space-y-4">
@@ -550,7 +555,10 @@ export const Landing: React.FC = () => {
                 ))}
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+            {/* Tarjeta CTA — entra desde la derecha */}
+            <div className={`bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 transition-all duration-700 ease-out ${
+              benefitsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-16'
+            }`}>
               <h4 className="text-2xl font-bold mb-4">{isAuthenticated ? 'Bienvenido de Nuevo' : 'Comenzá Hoy'}</h4>
               <p className="text-zinc-300 mb-6">
                 {isAuthenticated
