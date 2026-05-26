@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { MessageSquare, Search, Send, ChevronRight, ChevronDown } from 'lucide-react';
+import { MessageSquare, Search, Send, ChevronRight, ChevronDown, Paperclip, X, CalendarClock, Image as ImageIcon } from 'lucide-react';
 import {
   conversationService,
   unreadService,
@@ -7,6 +7,7 @@ import {
   type ConversationMessage,
 } from '@/services/conversationService';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL } from '@/services/api';
 
 const CHANNELS = {
   PROJECT: { label: 'Interno', icon: '🔧' },
@@ -41,6 +42,25 @@ const formatTime = (iso: string) => {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
 };
 
+const resolveImageUrl = (src: string) => {
+  if (!src) return src;
+  if (src.startsWith('http://') || src.startsWith('https://')) return src;
+  return `${API_BASE_URL}${src.startsWith('/') ? '' : '/'}${src}`;
+};
+
+const VISIT_TEMPLATE = `📅 VISITA PROGRAMADA
+━━━━━━━━━━━━━━━━━━━
+📍 Lugar:
+🗓 Fecha:
+🕐 Hora:
+👷 Equipo:
+
+📋 Tareas:
+•
+•
+
+📸 Recordar subir foto al llegar y al terminar.`;
+
 export const Chat: React.FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
@@ -49,6 +69,9 @@ export const Chat: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [input, setInput] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -58,6 +81,7 @@ export const Chat: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedConversation = conversations.find(c => c.id === selectedId) ?? null;
 
@@ -125,6 +149,13 @@ export const Chat: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedId]);
 
+  // Revoke object URLs when pendingPreviews change
+  useEffect(() => {
+    return () => {
+      pendingPreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [pendingPreviews]);
+
   const handleSelectConversation = (conv: Conversation) => {
     setSelectedId(conv.id);
     unreadService.markRead(conv.id);
@@ -153,13 +184,32 @@ export const Chat: React.FC = () => {
     }
   };
 
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const previews = files.map(f => URL.createObjectURL(f));
+    setPendingFiles(prev => [...prev, ...files]);
+    setPendingPreviews(prev => [...prev, ...previews]);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
+  const removePendingFile = (index: number) => {
+    URL.revokeObjectURL(pendingPreviews[index]);
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+    setPendingPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async () => {
-    if (!selectedId || !input.trim() || sending) return;
+    if (!selectedId || (!input.trim() && pendingFiles.length === 0) || sending) return;
     const text = input.trim();
+    const files = [...pendingFiles];
     setInput('');
+    setPendingFiles([]);
+    setPendingPreviews([]);
     setSending(true);
     try {
-      const msg = await conversationService.sendMessage(selectedId, text);
+      const msg = await conversationService.sendMessage(selectedId, text, files.length > 0 ? files : undefined);
       setMessages(prev => [...prev, msg]);
       unreadService.markRead(selectedId);
     } catch {
@@ -174,6 +224,11 @@ export const Chat: React.FC = () => {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleVisitTemplate = () => {
+    setInput(VISIT_TEMPLATE);
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   return (
@@ -325,6 +380,7 @@ export const Chat: React.FC = () => {
                 const isOwn = msg.senderUserId === user?.id;
                 const senderName = msg.senderUser?.name ?? 'Sistema';
                 const showHeader = i === 0 || messages[i - 1].senderUserId !== msg.senderUserId;
+                const hasImages = Array.isArray(msg.images) && msg.images.length > 0;
 
                 return (
                   <div key={msg.id} className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}>
@@ -346,15 +402,43 @@ export const Chat: React.FC = () => {
                           <span className="text-xs text-zinc-600">{formatTime(msg.createdAt)}</span>
                         </div>
                       )}
-                      <div
-                        className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                          isOwn
-                            ? 'bg-blue-600 text-white rounded-br-sm'
-                            : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
-                        }`}
-                      >
-                        {msg.body}
-                      </div>
+                      {/* Image grid */}
+                      {hasImages && (
+                        <div className={`mb-1 grid gap-1 ${msg.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                          {msg.images.map((src, idx) => {
+                            const url = resolveImageUrl(src);
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => setLightboxSrc(url)}
+                                className="group relative overflow-hidden rounded-xl border border-zinc-700 hover:border-blue-500/50 transition-colors"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Foto ${idx + 1}`}
+                                  className="object-cover w-full max-h-48 rounded-xl"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <ImageIcon className="w-5 h-5 text-white opacity-0 group-hover:opacity-80 transition-opacity" />
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {/* Text bubble */}
+                      {msg.body && (
+                        <div
+                          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                            isOwn
+                              ? 'bg-blue-600 text-white rounded-br-sm'
+                              : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
+                          }`}
+                        >
+                          {msg.body}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -363,9 +447,59 @@ export const Chat: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
+          {/* Input area */}
           <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-950">
-            <div className="flex gap-3 items-end bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 focus-within:border-blue-500/50 transition-colors">
+            {/* Pending image previews */}
+            {pendingPreviews.length > 0 && (
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {pendingPreviews.map((src, idx) => (
+                  <div key={idx} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-zinc-700 shrink-0">
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removePendingFile(idx)}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/70 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Toolbar + textarea */}
+            <div className="flex gap-3 items-end bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-3 focus-within:border-blue-500/50 transition-colors">
+              {/* Toolbar buttons */}
+              <div className="flex flex-col gap-1.5 pb-0.5">
+                {/* Attach photo */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Adjuntar foto"
+                  className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                {/* Visit announcement template */}
+                <button
+                  type="button"
+                  onClick={handleVisitTemplate}
+                  title="Anunciar visita"
+                  className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFilesSelected}
+              />
+
               <textarea
                 ref={inputRef}
                 value={input}
@@ -378,12 +512,15 @@ export const Chat: React.FC = () => {
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || sending}
+                disabled={(!input.trim() && pendingFiles.length === 0) || sending}
                 className="p-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors text-white shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
+            <p className="text-[10px] text-zinc-700 mt-1.5 pl-1">
+              📎 Imágenes · 📅 Anunciar visita · Ctrl+Enter para enviar
+            </p>
           </div>
         </div>
       ) : (
@@ -391,6 +528,27 @@ export const Chat: React.FC = () => {
           <MessageSquare className="w-14 h-14 mb-4 opacity-15" />
           <p className="text-base font-medium">Seleccioná una conversación</p>
           <p className="text-sm mt-1 text-zinc-700">Elegí un canal de la lista para empezar</p>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            onClick={() => setLightboxSrc(null)}
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="Vista completa"
+            className="max-w-full max-h-full rounded-xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

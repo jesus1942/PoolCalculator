@@ -48,7 +48,16 @@ export const conversationService = {
     return response.data;
   },
 
-  sendMessage: async (conversationId: string, body: string): Promise<ConversationMessage> => {
+  sendMessage: async (conversationId: string, body: string, files?: File[]): Promise<ConversationMessage> => {
+    if (files && files.length > 0) {
+      const form = new FormData();
+      form.append('body', body);
+      files.forEach(f => form.append('images', f));
+      const response = await api.post(`/conversations/${conversationId}/messages`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    }
     const response = await api.post(`/conversations/${conversationId}/messages`, { body });
     return response.data;
   },
