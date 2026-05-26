@@ -164,6 +164,8 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
         title: title || project.name,
         clientName: project.clientName,
         location: project.location || null,
+        kind: kind || 'PROJECT',
+        visibility: visibility || 'INTERNAL',
       });
 
       await Promise.all(

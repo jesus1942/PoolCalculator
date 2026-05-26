@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity, Menu, X, MessageSquare } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -50,12 +50,14 @@ export const Layout: React.FC = () => {
     ? [
       { to: '/installer', icon: Calendar, label: 'Instalador' },
       { to: '/agenda', icon: Calendar, label: 'La Agenda' },
+      { to: '/chat', icon: MessageSquare, label: 'Mensajes' },
     ]
     : [
       { to: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
       { to: '/pool-models', icon: Waves, label: 'Modelos de Piscinas' },
       { to: '/projects', icon: FolderOpen, label: 'Proyectos' },
       { to: '/agenda', icon: Calendar, label: 'La Agenda' },
+      { to: '/chat', icon: MessageSquare, label: 'Mensajes' },
       { to: '/settings', icon: Settings, label: 'Configuración' },
     ];
 

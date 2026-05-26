@@ -9,6 +9,8 @@ type SyncProjectConversationInput = {
   title?: string | null;
   clientName?: string | null;
   location?: string | null;
+  kind?: string;
+  visibility?: string;
 };
 
 type SyncAgendaConversationInput = {
@@ -38,6 +40,7 @@ export const listConversationSummaries = async (filters: {
     },
     orderBy: { updatedAt: 'desc' },
     include: {
+      project: { select: { id: true, name: true, clientName: true } },
       participants: {
         where: { isActive: true },
         orderBy: { createdAt: 'asc' },
@@ -57,18 +60,21 @@ export const listConversationSummaries = async (filters: {
 };
 
 export const syncProjectConversation = async (input: SyncProjectConversationInput) => {
+  const conversationKind = input.kind || 'PROJECT';
+  const conversationVisibility = input.visibility || 'INTERNAL';
+
   const existing = await prismaAny.conversation.findFirst({
     where: {
       projectId: input.projectId,
-      kind: 'PROJECT',
+      kind: conversationKind,
     },
   });
 
   const payload = {
-    kind: 'PROJECT',
-    title: input.title || 'Canal del proyecto',
+    kind: conversationKind,
+    title: input.title || (conversationKind === 'CLIENT_PORTAL' ? 'Canal del cliente' : 'Canal del proyecto'),
     topic: input.clientName ? `Cliente: ${input.clientName}` : null,
-    visibility: 'INTERNAL',
+    visibility: conversationVisibility,
     organizationId: input.organizationId || null,
     projectId: input.projectId,
     createdById: input.createdById || null,
