@@ -2,6 +2,7 @@ import { Response } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { listConversationSummaries, syncAgendaConversation, syncProjectConversation } from '../services/conversationService';
+import { storeImageFile } from '../utils/imageStorage';
 
 const prismaAny = prisma as any;
 
@@ -275,10 +276,18 @@ export const addConversationMessage = async (req: AuthRequest, res: Response) =>
     const orgId = req.user?.orgId || null;
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-    const { body, images, visibility, metadata } = req.body || {};
-    if (!body?.trim() && !(Array.isArray(images) && images.length > 0)) {
+    const { body, visibility, metadata } = req.body || {};
+    const uploadedFiles = (req.files as Express.Multer.File[]) || [];
+
+    if (!body?.trim() && uploadedFiles.length === 0) {
       return res.status(400).json({ error: 'Mensaje vacío' });
     }
+
+    const uploadedUrls = await Promise.all(
+      uploadedFiles.map(file =>
+        storeImageFile(file, { folder: 'chat', localDir: 'chat', filenamePrefix: 'chat' })
+      )
+    );
 
     const conversation = await getConversationScoped(req.params.id, orgId);
     if (!conversation) {
@@ -296,7 +305,7 @@ export const addConversationMessage = async (req: AuthRequest, res: Response) =>
         senderUserId: userId,
         senderType: 'USER',
         body: body?.trim() || '',
-        images: Array.isArray(images) ? images : [],
+        images: uploadedUrls,
         visibility: isConversationAdmin ? (visibility || 'ALL') : 'ALL',
         metadata: metadata || undefined,
       },
