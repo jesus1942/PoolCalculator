@@ -243,23 +243,33 @@ export const Landing: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      <section className="relative px-4 py-14 overflow-hidden sm:px-6 sm:py-28 lg:px-8">
+        {/* Ambient glow orbs */}
+        <div className="pointer-events-none absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full bg-cyan-500/10 blur-3xl animate-float-slow" />
+        <div className="pointer-events-none absolute -bottom-40 -right-40 w-[420px] h-[420px] rounded-full bg-blue-500/10 blur-3xl animate-float-delay" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] rounded-full bg-cyan-400/5 blur-3xl animate-pulse-slow" />
+        {/* Dot grid */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.032]"
+          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }}
+        />
+        <div className="max-w-7xl mx-auto relative">
           <div
             ref={heroRef.ref}
-            className={`text-center mb-16 transition-all duration-1000 ${
+            className={`text-center mb-20 transition-all duration-1000 ease-out ${
               heroRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
+                ? 'opacity-100 translate-y-0 scale-100'
+                : 'opacity-0 translate-y-20 scale-[0.98]'
             }`}
           >
-            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-cyan-200 animate-pulse sm:mb-6 sm:px-4">
+            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-cyan-200 animate-float-slow sm:mb-6 sm:px-4">
               <Waves className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
               <span className="truncate text-sm font-semibold sm:text-base">Sistema Profesional de Cálculo</span>
             </div>
-            <h2 className="mb-5 text-3xl font-bold leading-tight text-white sm:text-4xl md:text-6xl">
-              Calcula Materiales para<br />
-              <span className="text-cyan-300">Piscinas de Fibra</span> en Minutos
+            <h2 className="mb-5 text-3xl font-bold leading-tight sm:text-4xl md:text-6xl">
+              <span className="bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">Calcula Materiales para</span><br />
+              <span className="bg-gradient-to-r from-cyan-300 via-teal-200 to-cyan-400 bg-clip-text text-transparent">Piscinas de Fibra</span>
+              <span className="bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent"> en Minutos</span>
             </h2>
             <p className="mx-auto mb-8 max-w-3xl text-base leading-relaxed text-zinc-300 sm:mb-10 sm:text-xl">
               Sistema completo para calcular materiales, presupuestar y gestionar proyectos
@@ -305,28 +315,25 @@ export const Landing: React.FC = () => {
           {/* Stats */}
           <div
             ref={statsRef.ref}
-            className={`mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 md:gap-8 transition-all duration-1000 delay-300 ${
-              statsRef.isVisible
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10'
-            }`}
+            className="mx-auto grid max-w-4xl grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4 md:gap-8"
           >
-            <div className="text-center">
-              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">24</div>
-              <div className="text-sm text-zinc-400 sm:text-base">Modelos ACQUAM</div>
-            </div>
-            <div className="text-center">
-              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">60%</div>
-              <div className="text-sm text-zinc-400 sm:text-base">Ahorro de Tiempo</div>
-            </div>
-            <div className="text-center">
-              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">100+</div>
-              <div className="text-sm text-zinc-400 sm:text-base">Materiales</div>
-            </div>
-            <div className="text-center">
-              <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">2025</div>
-              <div className="text-sm text-zinc-400 sm:text-base">Precios Actualizados</div>
-            </div>
+            {[
+              { value: '24', label: 'Modelos ACQUAM' },
+              { value: '60%', label: 'Ahorro de Tiempo' },
+              { value: '100+', label: 'Materiales' },
+              { value: '2025', label: 'Precios Actualizados' },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className={`text-center transition-all duration-700 ease-out ${
+                  statsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                }`}
+                style={{ transitionDelay: statsRef.isVisible ? `${i * 130 + 300}ms` : '0ms' }}
+              >
+                <div className="mb-2 text-3xl font-bold text-cyan-300 sm:text-4xl">{stat.value}</div>
+                <div className="text-sm text-zinc-400 sm:text-base">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -337,8 +344,8 @@ export const Landing: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div
               ref={projectsRef.ref}
-              className={`text-center mb-12 transition-all duration-1000 ${
-                projectsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+              className={`text-center mb-12 transition-all duration-700 ease-out ${
+                projectsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
               }`}
             >
               <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Proyectos Activos</h3>
@@ -354,8 +361,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={modelsRef.ref}
-            className={`text-center mb-12 transition-all duration-1000 ${
-              modelsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-12 transition-all duration-700 ease-out ${
+              modelsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Catálogo de Modelos ACQUAM</h3>
@@ -370,8 +377,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={calculatorRef.ref}
-            className={`text-center mb-10 transition-all duration-1000 ${
-              calculatorRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-10 transition-all duration-700 ease-out ${
+              calculatorRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-full mb-5">
@@ -428,8 +435,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={productShowcaseRef.ref}
-            className={`text-center mb-16 transition-all duration-1000 ${
-              productShowcaseRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-16 transition-all duration-700 ease-out ${
+              productShowcaseRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-full mb-6">
@@ -448,8 +455,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={featuresRef.ref}
-            className={`text-center mb-16 transition-all duration-1000 ${
-              featuresRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-16 transition-all duration-700 ease-out ${
+              featuresRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Todo lo que necesitás en una plataforma</h3>
@@ -460,7 +467,7 @@ export const Landing: React.FC = () => {
               <div
                 key={index}
                 className={`p-6 bg-white/5 rounded-xl border border-white/10 hover:border-cyan-400/50 hover:shadow-xl transition-all duration-500 transform hover:-translate-y-2 hover:scale-105 ${
-                  featuresRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                  featuresRef.isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-14 scale-[0.95]'
                 }`}
                 style={{ transitionDelay: `${index * 100}ms` }}
               >
@@ -481,8 +488,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={testimonialsRef.ref}
-            className={`text-center mb-12 transition-all duration-1000 ${
-              testimonialsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-12 transition-all duration-700 ease-out ${
+              testimonialsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-full mb-6">
@@ -501,8 +508,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={pricingRef.ref}
-            className={`text-center mb-16 transition-all duration-1000 ${
-              pricingRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`text-center mb-16 transition-all duration-700 ease-out ${
+              pricingRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 text-green-300 rounded-full mb-6">
@@ -521,8 +528,8 @@ export const Landing: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={benefitsRef.ref}
-            className={`grid md:grid-cols-2 gap-12 items-center transition-all duration-1000 ${
-              benefitsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            className={`grid md:grid-cols-2 gap-12 items-center transition-all duration-700 ease-out ${
+              benefitsRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
             <div>
@@ -530,7 +537,13 @@ export const Landing: React.FC = () => {
               <p className="text-xl text-zinc-300 mb-8">Desarrollado por profesionales de la industria para profesionales de la industria</p>
               <div className="space-y-4">
                 {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-start gap-3">
+                  <div
+                    key={index}
+                    className={`flex items-start gap-3 transition-all duration-500 ease-out ${
+                      benefitsRef.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
+                    }`}
+                    style={{ transitionDelay: benefitsRef.isVisible ? `${index * 80}ms` : '0ms' }}
+                  >
                     <CheckCircle className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-0.5" />
                     <span className="text-lg text-zinc-200">{benefit}</span>
                   </div>

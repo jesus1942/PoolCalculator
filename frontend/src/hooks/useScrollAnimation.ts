@@ -10,7 +10,7 @@ export const useScrollAnimation = (options: UseScrollAnimationOptions = {}) => {
   const {
     threshold = 0.1,
     triggerOnce = true,
-    rootMargin = '0px',
+    rootMargin = '-30px',
   } = options;
 
   const ref = useRef<HTMLDivElement>(null);
