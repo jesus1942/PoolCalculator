@@ -18,6 +18,7 @@ const ProductShowcase = lazy(() => import('@/components/landing/ProductShowcase'
 export const Landing: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const [ctaTab, setCtaTab] = useState<'calculator' | 'quote' | 'contact'>('calculator');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -157,7 +158,7 @@ export const Landing: React.FC = () => {
               <a href="#pricing" className="text-zinc-300 hover:text-cyan-300 font-medium transition-colors">
                 Precios
               </a>
-              <a href="#contact" className="text-zinc-300 hover:text-cyan-300 font-medium transition-colors">
+              <a href="#calculator" className="text-zinc-300 hover:text-cyan-300 font-medium transition-colors">
                 Contacto
               </a>
 
@@ -364,19 +365,61 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Calculator Widget Section */}
+      {/* Unified CTA Section: Calculator / Quote / Contact */}
       <section id="calculator" className="py-20 bg-zinc-950/40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={calculatorRef.ref}
-            className={`text-center mb-12 transition-all duration-1000 ${
+            className={`text-center mb-10 transition-all duration-1000 ${
               calculatorRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Calculador Inteligente</h3>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Descubrí qué modelos de piscina caben en tu espacio disponible</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-full mb-5">
+              <Zap className="w-4 h-4" />
+              <span className="font-semibold text-sm">Probá la aplicación</span>
+            </div>
+            <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">Calculador inteligente de piscinas</h3>
+            <p className="text-zinc-400 max-w-xl mx-auto">Ingresá las medidas disponibles y descubrí qué modelos ACQUAM entran. También podés pedir presupuesto o hacernos una consulta.</p>
           </div>
-          <Suspense fallback={<LoadingSection />}><PoolCalculatorWidget /></Suspense>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-8 bg-zinc-900/60 border border-zinc-800 rounded-xl p-1.5 w-fit mx-auto">
+            {([
+              { key: 'calculator', label: 'Calculador', icon: <Calculator className="w-4 h-4" /> },
+              { key: 'quote',      label: 'Presupuesto', icon: <FileText className="w-4 h-4" /> },
+              { key: 'contact',    label: 'Contacto',    icon: <MessageSquare className="w-4 h-4" /> },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setCtaTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  ctaTab === tab.key
+                    ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+            {ctaTab === 'calculator' && (
+              <Suspense fallback={<LoadingSection />}><PoolCalculatorWidget /></Suspense>
+            )}
+            {ctaTab === 'quote' && (
+              <div className="p-8">
+                <Suspense fallback={<LoadingSection />}><QuoteRequestForm /></Suspense>
+              </div>
+            )}
+            {ctaTab === 'contact' && (
+              <div className="p-8">
+                <Suspense fallback={<LoadingSection />}><ContactForm /></Suspense>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -432,49 +475,8 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Quote Request Section */}
-      <section id="quote" className="py-20 bg-zinc-950/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            ref={quoteRef.ref}
-            className={`text-center mb-12 transition-all duration-1000 ${
-              quoteRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-            }`}
-          >
-            <div className="w-16 h-16 bg-blue-500/20 border border-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Calculator className="w-8 h-8 text-blue-400" />
-            </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Solicitá un Presupuesto</h3>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Completá el formulario y recibí un presupuesto personalizado sin compromiso</p>
-          </div>
-          <div className="bg-white/5 rounded-2xl p-8 border border-white/10">
-            <Suspense fallback={<LoadingSection />}><QuoteRequestForm /></Suspense>
-          </div>
-        </div>
-      </section>
 
-      {/* Contact Form Section */}
-      <section id="contact" className="py-20 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div
-            ref={contactRef.ref}
-            className={`text-center mb-12 transition-all duration-1000 ${
-              contactRef.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-            }`}
-          >
-            <div className="w-16 h-16 bg-cyan-500/20 border border-cyan-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-8 h-8 text-cyan-400" />
-            </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">¿Tenés Preguntas?</h3>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto">Envianos tu consulta y te respondemos a la brevedad</p>
-          </div>
-          <div className="bg-white/5 rounded-2xl p-8 border border-white/10">
-            <Suspense fallback={<LoadingSection />}><ContactForm /></Suspense>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
+{/* Testimonials Section */}
       <section className="py-20 bg-zinc-950/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
