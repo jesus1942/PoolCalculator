@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { MessageSquare, Search, Send, ChevronRight, ChevronDown, Paperclip, X, CalendarClock, Image as ImageIcon } from 'lucide-react';
+import { MessageSquare, Search, Send, ChevronRight, ChevronDown, Paperclip, X, CalendarClock, Image as ImageIcon, MessageCircle, MapPin, Users as UsersIcon } from 'lucide-react';
 import {
   conversationService,
   unreadService,
   type Conversation,
   type ConversationMessage,
 } from '@/services/conversationService';
+import { agendaService } from '@/services/agendaService';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/services/api';
 
@@ -48,18 +49,70 @@ const resolveImageUrl = (src: string) => {
   return `${API_BASE_URL}${src.startsWith('/') ? '' : '/'}${src}`;
 };
 
-const VISIT_TEMPLATE = `📅 VISITA PROGRAMADA
-━━━━━━━━━━━━━━━━━━━
-📍 Lugar:
-🗓 Fecha:
-🕐 Hora:
-👷 Equipo:
+interface AgendaEventLite {
+  id: string;
+  title: string;
+  startAt: string;
+  endAt?: string | null;
+  location?: string | null;
+  status?: string;
+  type?: string;
+  project?: { id: string; name: string; clientName?: string | null; location?: string | null } | null;
+  assignees?: Array<{ user?: { id: string; name: string } | null }>;
+  crew?: { members?: Array<{ user?: { id: string; name: string } | null }> } | null;
+  checklist?: Array<{ id: string; label: string; done?: boolean }>;
+}
 
-📋 Tareas:
-•
-•
+const formatEventDateLong = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+};
 
-📸 Recordar subir foto al llegar y al terminar.`;
+const formatEventTime = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const buildVisitMessage = (event: AgendaEventLite): string => {
+  const lines: string[] = [];
+  lines.push(`📅 *VISITA PROGRAMADA*`);
+  lines.push('━━━━━━━━━━━━━━━━━━━');
+  lines.push(`📌 ${event.title}`);
+  if (event.project?.name) lines.push(`🏗 Proyecto: ${event.project.name}`);
+  lines.push(`🗓 ${formatEventDateLong(event.startAt)}`);
+  const startT = formatEventTime(event.startAt);
+  const endT = event.endAt ? formatEventTime(event.endAt) : null;
+  lines.push(`🕐 ${startT}${endT ? ` – ${endT}` : ''}`);
+  const place = event.location || event.project?.location;
+  if (place) lines.push(`📍 ${place}`);
+
+  const teamNames = new Set<string>();
+  event.assignees?.forEach(a => a.user?.name && teamNames.add(a.user.name));
+  event.crew?.members?.forEach(m => m.user?.name && teamNames.add(m.user.name));
+  if (teamNames.size > 0) {
+    lines.push('');
+    lines.push(`👷 Equipo: ${Array.from(teamNames).join(', ')}`);
+  }
+
+  if (event.checklist && event.checklist.length > 0) {
+    lines.push('');
+    lines.push('📋 Tareas:');
+    event.checklist.forEach(item => lines.push(`• ${item.label}`));
+  }
+
+  lines.push('');
+  lines.push('📸 Recordar subir foto al llegar y al terminar.');
+  return lines.join('\n');
+};
+
+const buildWhatsAppInvite = (projectName: string | undefined, channelLabel: string) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = `${origin}/chat`;
+  const project = projectName ? ` del proyecto *${projectName}*` : '';
+  return encodeURIComponent(
+    `Hola 👋 te sumo al canal *${channelLabel}*${project}.\n\nIngresá acá para ver los mensajes y subir fotos: ${url}`
+  );
+};
 
 export const Chat: React.FC = () => {
   const { user } = useAuth();
@@ -78,6 +131,9 @@ export const Chat: React.FC = () => {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
+  const [showVisitPicker, setShowVisitPicker] = useState(false);
+  const [agendaEvents, setAgendaEvents] = useState<AgendaEventLite[] | null>(null);
+  const [loadingAgenda, setLoadingAgenda] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -185,8 +241,9 @@ export const Chat: React.FC = () => {
   };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    const files: File[] = Array.from(fileList);
     const previews = files.map(f => URL.createObjectURL(f));
     setPendingFiles(prev => [...prev, ...files]);
     setPendingPreviews(prev => [...prev, ...previews]);
@@ -226,9 +283,59 @@ export const Chat: React.FC = () => {
     }
   };
 
-  const handleVisitTemplate = () => {
-    setInput(VISIT_TEMPLATE);
+  const openVisitPicker = async () => {
+    if (!selectedConversation) return;
+    setShowVisitPicker(true);
+    if (agendaEvents !== null && agendaEvents.length >= 0) {
+      // Re-fetch in background to keep fresh, but show cached immediately
+    }
+    setLoadingAgenda(true);
+    try {
+      const params: Record<string, any> = {};
+      if (selectedConversation.projectId) {
+        params.projectId = selectedConversation.projectId;
+      } else {
+        // No project bound — fetch upcoming month
+        const now = new Date();
+        const in30 = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 60);
+        params.start = now.toISOString();
+        params.end = in30.toISOString();
+      }
+      const data = await agendaService.list(params);
+      const arr: AgendaEventLite[] = Array.isArray(data) ? data : [];
+      // Sort: upcoming first (closest to today), past last
+      const now = Date.now();
+      arr.sort((a, b) => {
+        const da = new Date(a.startAt).getTime();
+        const db = new Date(b.startAt).getTime();
+        const aFuture = da >= now;
+        const bFuture = db >= now;
+        if (aFuture !== bFuture) return aFuture ? -1 : 1;
+        return aFuture ? da - db : db - da;
+      });
+      setAgendaEvents(arr);
+    } catch (err) {
+      console.error('Error al cargar agenda:', err);
+      setAgendaEvents([]);
+    } finally {
+      setLoadingAgenda(false);
+    }
+  };
+
+  const handlePickEvent = (event: AgendaEventLite) => {
+    setInput(buildVisitMessage(event));
+    setShowVisitPicker(false);
     setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!selectedConversation) return;
+    const channel = CHANNELS[selectedConversation.kind as ChannelKind];
+    const text = buildWhatsAppInvite(
+      selectedConversation.project?.name,
+      channel?.label ?? selectedConversation.title ?? 'Conversación'
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
   };
 
   return (
@@ -479,14 +586,23 @@ export const Chat: React.FC = () => {
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
-                {/* Visit announcement template */}
+                {/* Pick event from agenda */}
                 <button
                   type="button"
-                  onClick={handleVisitTemplate}
-                  title="Anunciar visita"
+                  onClick={openVisitPicker}
+                  title="Compartir visita desde la agenda"
                   className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
                 >
                   <CalendarClock className="w-4 h-4" />
+                </button>
+                {/* WhatsApp invite */}
+                <button
+                  type="button"
+                  onClick={handleWhatsAppShare}
+                  title="Invitar por WhatsApp"
+                  className="p-1.5 text-zinc-500 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
                 </button>
               </div>
 
@@ -519,7 +635,7 @@ export const Chat: React.FC = () => {
               </button>
             </div>
             <p className="text-[10px] text-zinc-700 mt-1.5 pl-1">
-              📎 Imágenes · 📅 Anunciar visita · Ctrl+Enter para enviar
+              📎 Fotos · 📅 Compartir evento de agenda · 💬 Invitar por WhatsApp · Ctrl+Enter para enviar
             </p>
           </div>
         </div>
@@ -528,6 +644,105 @@ export const Chat: React.FC = () => {
           <MessageSquare className="w-14 h-14 mb-4 opacity-15" />
           <p className="text-base font-medium">Seleccioná una conversación</p>
           <p className="text-sm mt-1 text-zinc-700">Elegí un canal de la lista para empezar</p>
+        </div>
+      )}
+
+      {/* Agenda event picker */}
+      {showVisitPicker && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          onClick={() => setShowVisitPicker(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <CalendarClock className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Compartir visita</h3>
+                  <p className="text-xs text-zinc-500">
+                    {selectedConversation?.project?.name
+                      ? `Eventos de "${selectedConversation.project.name}"`
+                      : 'Próximos eventos'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowVisitPicker(false)}
+                className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/10 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              {loadingAgenda && agendaEvents === null ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-16 bg-zinc-800 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : !agendaEvents || agendaEvents.length === 0 ? (
+                <div className="text-center text-zinc-500 py-12 text-sm">
+                  <CalendarClock className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                  <p>No hay eventos en la agenda para este proyecto.</p>
+                  <p className="text-xs text-zinc-600 mt-1">Creá uno desde la sección Agenda.</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {agendaEvents.map(event => {
+                    const isFuture = new Date(event.startAt).getTime() >= Date.now();
+                    const teamCount = new Set([
+                      ...(event.assignees?.map(a => a.user?.id).filter(Boolean) || []),
+                      ...(event.crew?.members?.map(m => m.user?.id).filter(Boolean) || []),
+                    ]).size;
+                    const place = event.location || event.project?.location;
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => handlePickEvent(event)}
+                        className="w-full text-left px-3 py-2.5 rounded-xl border border-zinc-800 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold text-white truncate">{event.title}</span>
+                              {!isFuture && (
+                                <span className="px-1.5 py-0.5 text-[9px] bg-zinc-800 text-zinc-500 rounded uppercase">Pasado</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <CalendarClock className="w-3 h-3" />
+                                {formatEventDateLong(event.startAt)} · {formatEventTime(event.startAt)}
+                              </span>
+                              {place && (
+                                <span className="flex items-center gap-1 truncate">
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{place}</span>
+                                </span>
+                              )}
+                              {teamCount > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <UsersIcon className="w-3 h-3" />
+                                  {teamCount}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center">
+                            Usar →
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
