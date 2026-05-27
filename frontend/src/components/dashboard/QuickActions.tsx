@@ -11,7 +11,7 @@ export const QuickActions: React.FC = () => {
       description: 'Crear un proyecto de piscina',
       icon: <Plus className="w-6 h-6" />,
       gradient: 'from-blue-600 to-cyan-600',
-      shadowColor: 'shadow-blue-500/50',
+      shadowColor: 'shadow-blue-500/20',
       onClick: () => navigate('/projects')
     },
     {
@@ -27,7 +27,7 @@ export const QuickActions: React.FC = () => {
       description: 'Explorar catálogo ACQUAM',
       icon: <Waves className="w-6 h-6" />,
       gradient: 'from-cyan-600 to-teal-600',
-      shadowColor: 'shadow-cyan-500/50',
+      shadowColor: 'shadow-cyan-500/20',
       onClick: () => navigate('/pool-models')
     },
     {
@@ -35,7 +35,7 @@ export const QuickActions: React.FC = () => {
       description: 'Ajustar precios y presets',
       icon: <Settings className="w-6 h-6" />,
       gradient: 'from-purple-600 to-pink-600',
-      shadowColor: 'shadow-purple-500/50',
+      shadowColor: 'shadow-purple-500/20',
       onClick: () => navigate('/settings')
     },
     {
@@ -43,7 +43,7 @@ export const QuickActions: React.FC = () => {
       description: 'Planificar visitas y trabajos',
       icon: <Calendar className="w-6 h-6" />,
       gradient: 'from-slate-600 to-cyan-600',
-      shadowColor: 'shadow-cyan-500/50',
+      shadowColor: 'shadow-cyan-500/20',
       onClick: () => navigate('/agenda')
     }
   ];
@@ -59,7 +59,7 @@ export const QuickActions: React.FC = () => {
           <div className="flex items-center gap-4 mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
-              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/50">
+              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
             </div>

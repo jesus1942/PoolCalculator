@@ -249,28 +249,28 @@ export const Dashboard: React.FC = () => {
       value: projects.length,
       icon: FolderOpen,
       gradient: 'from-blue-600 via-blue-500 to-cyan-500',
-      glowColor: 'shadow-blue-500/50',
+      glowColor: 'shadow-blue-500/20',
     },
     {
       title: 'Modelos de Piscinas',
       value: presets.length,
       icon: Waves,
       gradient: 'from-cyan-600 via-cyan-500 to-teal-500',
-      glowColor: 'shadow-cyan-500/50',
+      glowColor: 'shadow-cyan-500/20',
     },
     {
       title: 'En Progreso',
       value: projects.filter(p => p.status === 'IN_PROGRESS').length,
       icon: Clock,
       gradient: 'from-amber-600 via-amber-500 to-orange-500',
-      glowColor: 'shadow-amber-500/50',
+      glowColor: 'shadow-amber-500/20',
     },
     {
       title: 'Completados',
       value: projects.filter(p => p.status === 'COMPLETED').length,
       icon: CheckCircle2,
       gradient: 'from-emerald-600 via-green-500 to-teal-500',
-      glowColor: 'shadow-green-500/50',
+      glowColor: 'shadow-green-500/20',
     },
   ];
 
@@ -677,7 +677,7 @@ export const Dashboard: React.FC = () => {
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
-                      <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/50">
+                      <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
                         <Calendar className="h-6 w-6 text-white" />
                       </div>
                     </div>
@@ -1022,7 +1022,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-md opacity-50"></div>
-                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 shadow-xl shadow-cyan-500/50">
+                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 shadow-xl shadow-cyan-500/20">
                       <Calendar className="h-6 w-6 text-white" />
                     </div>
                   </div>
@@ -1117,7 +1117,7 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center gap-4 mb-8">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl blur-md opacity-50"></div>
-                  <div className="relative p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-xl shadow-purple-500/50">
+                  <div className="relative p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-xl shadow-purple-500/20">
                     <BarChart3 className="h-6 w-6 text-white" />
                   </div>
                 </div>
@@ -1133,7 +1133,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="h-4 bg-zinc-900/50 rounded-full overflow-hidden border border-zinc-800/50">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-full transition-all duration-1000 ease-out shadow-lg shadow-green-500/50"
+                      className="h-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-full transition-all duration-1000 ease-out shadow-lg shadow-green-500/20"
                       style={{ width: `${completionRate}%` }}
                     ></div>
                   </div>
@@ -1150,7 +1150,7 @@ export const Dashboard: React.FC = () => {
                   </div>
                   <div className="h-4 bg-zinc-900/50 rounded-full overflow-hidden border border-zinc-800/50">
                     <div
-                      className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-full transition-all duration-1000 ease-out shadow-lg shadow-amber-500/50"
+                      className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-full transition-all duration-1000 ease-out shadow-lg shadow-amber-500/20"
                       style={{ width: `${inProgressRate}%` }}
                     ></div>
                   </div>
@@ -1186,7 +1186,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-4 mb-6">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
-                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/50">
+                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
                       <FolderOpen className="h-5 w-5 text-white" />
                     </div>
                   </div>
@@ -1226,8 +1226,8 @@ export const Dashboard: React.FC = () => {
                                 <p className="text-sm text-zinc-300 font-light">{project.clientName}</p>
                               </div>
                               <span className={`px-4 py-2 text-xs font-light rounded-xl shadow-sm flex-shrink-0 ${
-                                project.status === 'COMPLETED' ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-green-500/30' :
-                                project.status === 'IN_PROGRESS' ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-amber-500/30' :
+                                project.status === 'COMPLETED' ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-green-500/15' :
+                                project.status === 'IN_PROGRESS' ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-amber-500/15' :
                                 'bg-zinc-800 text-zinc-300'
                               }`}>
                                 {project.status === 'COMPLETED' ? 'Completado' :
@@ -1281,7 +1281,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-4 mb-6">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-2xl blur-md opacity-50"></div>
-                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 shadow-xl shadow-cyan-500/50">
+                    <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 shadow-xl shadow-cyan-500/20">
                       <Waves className="h-5 w-5 text-white" />
                     </div>
                   </div>
@@ -1311,7 +1311,7 @@ export const Dashboard: React.FC = () => {
                             <div className="flex items-start gap-3">
                               <div className="relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-xl blur-sm opacity-50"></div>
-                                <div className="relative p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/30">
+                                <div className="relative p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/15">
                                   <Layers className="h-4 w-4 text-white" />
                                 </div>
                               </div>

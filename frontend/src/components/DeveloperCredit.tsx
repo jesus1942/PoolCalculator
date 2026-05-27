@@ -83,7 +83,7 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
         rel="noopener noreferrer"
         className="flex items-center gap-3 mb-3 group"
       >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black border border-white/10 group-hover:border-cyan-500/50 shadow-lg shadow-cyan-500/10 group-hover:shadow-cyan-500/30 transition-all">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black border border-white/10 group-hover:border-cyan-500/50 shadow-lg shadow-cyan-500/10 group-hover:shadow-cyan-500/15 transition-all">
           <img src={publicAssetUrl('logo-isotipo.png')} alt="Jesús Olguín" className="h-5 w-auto" />
         </span>
         <div>

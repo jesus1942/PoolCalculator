@@ -124,7 +124,7 @@ export const ResetPassword: React.FC = () => {
               </div>
               <Link
                 to="/forgot-password"
-                className="block w-full text-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-light hover:shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300"
+                className="block w-full text-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-light hover:shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300"
               >
                 Solicitar Nuevo Link
               </Link>
@@ -181,7 +181,7 @@ export const ResetPassword: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-light hover:shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-light hover:shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Actualizando...' : 'Resetear Contraseña'}
               </button>

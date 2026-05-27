@@ -557,7 +557,7 @@ export const PoolFitWizard: React.FC = () => {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl blur-md opacity-50"></div>
-                  <div className="relative p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-xl shadow-purple-500/50">
+                  <div className="relative p-4 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-xl shadow-purple-500/20">
                     <Sparkles className="h-8 w-8 text-white" />
                   </div>
                 </div>

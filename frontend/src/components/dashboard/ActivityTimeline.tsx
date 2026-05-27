@@ -102,7 +102,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
           <div className="flex items-center gap-4 mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl blur-md opacity-50"></div>
-              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-xl shadow-indigo-500/50">
+              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-xl shadow-indigo-500/20">
                 <Clock className="h-5 w-5 text-white" />
               </div>
             </div>

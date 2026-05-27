@@ -540,3 +540,50 @@
     }
   }
 }
+
+/* ─── Estilo "hand-drawn" global para iconos Lucide ──────────────────────────
+   Lucide React renders SVGs with class "lucide". Ajustamos stroke para que
+   se sienta menos polished, más a pulso, sin tocar componente por componente.
+*/
+.lucide {
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Ajustes finos por tamaño — iconos chicos necesitan stroke un poco más grueso
+   para mantenerse legibles, los grandes pueden ser más finos. */
+.lucide[width="12"], .lucide[width="14"], .lucide[width="16"] {
+  stroke-width: 1.75;
+}
+.lucide[width="32"], .lucide[width="36"], .lucide[width="40"],
+.lucide[width="48"], .lucide[width="56"], .lucide[width="64"] {
+  stroke-width: 1.45;
+}
+
+/* Bajamos el "shine" general de los glow shadows con color — los box-shadows
+   con colores saturados se sentían demasiado neón. */
+[class*="shadow-cyan-"],
+[class*="shadow-blue-"],
+[class*="shadow-purple-"],
+[class*="shadow-green-"],
+[class*="shadow-amber-"],
+[class*="shadow-rose-"],
+[class*="shadow-indigo-"] {
+  --tw-shadow-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Toque sutil de imperfección — leve rotación aleatoria por icono mediante
+   nth-child para que el set no se vea perfectamente alineado. Muy sutil. */
+.lucide-handwritten,
+[data-hand="true"] .lucide {
+  filter: drop-shadow(0 0 0 currentColor);
+}
+.lucide-handwritten:nth-child(2n),
+[data-hand="true"] .lucide:nth-child(2n) {
+  transform: rotate(-1deg);
+}
+.lucide-handwritten:nth-child(3n),
+[data-hand="true"] .lucide:nth-child(3n) {
+  transform: rotate(0.8deg);
+}
