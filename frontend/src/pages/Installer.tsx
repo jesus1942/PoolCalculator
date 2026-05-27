@@ -3,7 +3,8 @@ import { Calendar, MapPin, MessageCircle, Save, ImagePlus, CloudSun } from 'luci
 import { agendaService } from '@/services/agendaService';
 import { agendaMessageService } from '@/services/agendaMessageService';
 import { useAuth } from '@/context/AuthContext';
-import { weatherService, WeatherData, getWeatherDescription, getWeatherEmoji } from '@/services/weatherService';
+import { weatherService, WeatherData, getWeatherDescription } from '@/services/weatherService';
+import { WeatherIcon } from '@/components/ui/AnimatedWeatherIcon';
 
 type AgendaEvent = any;
 
@@ -141,7 +142,7 @@ export const Installer: React.FC = () => {
           </div>
           {weather ? (
             <div className="flex flex-wrap items-center gap-6">
-              <div className="text-3xl">{getWeatherEmoji(weather.current.weatherCode, true)}</div>
+              <WeatherIcon code={weather.current.weatherCode} isNight className="w-9 h-9" />
               <div>
                 <div className="text-2xl text-white">{weather.current.temperature}°</div>
                 <div className="text-xs text-zinc-400">

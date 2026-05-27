@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
-import { weatherService, WeatherData, HourlyWeatherData, getWeatherDescription, getWeatherEmoji, isGoodWorkingWeather, isNightTime } from '@/services/weatherService';
+import { weatherService, WeatherData, HourlyWeatherData, getWeatherDescription, isGoodWorkingWeather, isNightTime } from '@/services/weatherService';
+import { WeatherIcon } from '@/components/ui/AnimatedWeatherIcon';
 import { agendaService } from '@/services/agendaService';
 import { agendaChecklistService } from '@/services/agendaChecklistService';
 import { useReminders } from '@/context/RemindersContext';
@@ -501,9 +502,11 @@ export const Dashboard: React.FC = () => {
                               {getWeatherDescription(weather.current.weatherCode)}
                             </p>
                           </div>
-                          <div className="text-5xl sm:text-6xl opacity-90">
-                            {getWeatherEmoji(weather.current.weatherCode, true)}
-                          </div>
+                          <WeatherIcon
+                            code={weather.current.weatherCode}
+                            isNight={isNightTime()}
+                            className="w-14 h-14 sm:w-16 sm:h-16 opacity-90"
+                          />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -596,7 +599,7 @@ export const Dashboard: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <span className="text-zinc-300 font-light text-sm w-16">{hourStr}</span>
-                                    <span className="text-3xl">{getWeatherEmoji(hour.weatherCode, isHourNight)}</span>
+                                    <WeatherIcon code={hour.weatherCode} isNight={isHourNight} className="w-8 h-8" />
                                   </div>
                                   <div className="flex items-center gap-4">
                                     <div className="text-right">
@@ -717,8 +720,8 @@ export const Dashboard: React.FC = () => {
                                 <p className="text-zinc-600 text-xs mb-3 font-light">
                                   {date.getDate()}/{date.getMonth() + 1}
                                 </p>
-                                <div className="text-4xl mb-3 transform group-hover/day:scale-110 transition duration-300">
-                                  {getWeatherEmoji(day.weatherCode)}
+                                <div className="mb-3 flex justify-center transform group-hover/day:scale-110 transition duration-300">
+                                  <WeatherIcon code={day.weatherCode} className="w-10 h-10" />
                                 </div>
                                 <div className="text-white font-light text-2xl mb-1">
                                   {day.maxTemp}°
@@ -767,7 +770,7 @@ export const Dashboard: React.FC = () => {
                                           <div className="flex items-center justify-between">
                                             <span className="text-zinc-300 font-light text-xs">{hourStr}</span>
                                             <div className="flex items-center gap-1.5">
-                                              <span className="text-xl">{getWeatherEmoji(hour.weatherCode, isHourNight)}</span>
+                                              <WeatherIcon code={hour.weatherCode} isNight={isHourNight} className="w-6 h-6" />
                                               <span className="text-white font-light text-xs">{hour.temperature}°</span>
                                             </div>
                                           </div>
