@@ -116,6 +116,9 @@
     }
     .soft-pulse { animation: softPulse 2s ease-in-out infinite; }
 
+    /* Orbital rings rotation */
+    @keyframes sol-spin { to { transform: rotate(360deg); } }
+
     /* Scribble arrow */
     .scribble-arrow {
       display: inline-block;
@@ -186,94 +189,127 @@
   <main id="top" class="relative z-10">
 
     <!-- HERO -->
-    <section class="min-h-screen flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 relative">
-      <!-- Decorative hand-drawn stars/circles -->
-      <svg class="absolute top-32 left-[15%] w-8 h-8 text-cyan-500/30 hidden md:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+    <section class="min-h-screen flex flex-col justify-center px-6 pt-20 pb-16 relative overflow-hidden">
+      <!-- Decorative hand-drawn stars -->
+      <svg class="absolute top-32 left-[12%] w-8 h-8 text-cyan-500/25 hidden md:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
         <path d="M12 3 L12 9 M12 15 L12 21 M3 12 L9 12 M15 12 L21 12 M6 6 L9 9 M15 15 L18 18 M18 6 L15 9 M9 15 L6 18"/>
       </svg>
-      <svg class="absolute bottom-32 right-[18%] w-10 h-10 text-cyan-500/20 hidden md:block" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+      <svg class="absolute bottom-28 left-[20%] w-10 h-10 text-cyan-500/15 hidden md:block" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
         <path d="M20 4 Q22 14 30 18 Q22 22 20 32 Q18 22 10 18 Q18 14 20 4 Z"/>
       </svg>
-      <svg class="absolute top-1/2 right-[10%] w-6 h-6 text-cyan-500/25 hidden md:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <circle cx="12" cy="12" r="8"/>
-        <circle cx="12" cy="12" r="3"/>
+      <svg class="absolute top-1/3 left-[6%] w-5 h-5 text-cyan-500/20 hidden md:block" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="10" cy="10" r="7"/>
+        <circle cx="10" cy="10" r="2.5"/>
       </svg>
 
-      <div style="animation: draw 0.7s ease-out both;">
-        <!-- Avatar with logo -->
-        <div class="mx-auto mb-6 relative">
-          <div class="w-24 h-24 rounded-2xl bg-black border border-cyan-500/30 flex items-center justify-center shadow-2xl"
-               style="box-shadow: 0 20px 60px rgba(6,182,212,0.2)">
-            <img src="/logo-isotipo.png" alt="Jesús Olguín" class="h-12 w-auto" />
+      <div class="max-w-5xl mx-auto w-full" style="animation: draw 0.7s ease-out both;">
+        <div class="grid md:grid-cols-[1fr_280px] gap-10 md:gap-16 items-center">
+
+          <!-- TEXT SIDE -->
+          <div class="text-center md:text-left">
+
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-medium mb-6 soft-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+              Disponible para proyectos
+            </div>
+
+            <h1 class="text-5xl sm:text-7xl font-bold mb-4 tracking-tight leading-none">
+              <span class="grad-white">Jesús</span>
+              <span class="grad-cyan"> Olguín</span>
+            </h1>
+
+            <p class="text-zinc-400 text-lg sm:text-xl font-light mb-1">Full-Stack Developer</p>
+            <p class="text-zinc-500 text-sm font-light mb-7">
+              <span class="font-hand text-2xl text-cyan-300/80">&amp; </span>Soluciones IoT
+            </p>
+
+            <!-- Location -->
+            <div class="flex items-center justify-center md:justify-start gap-1.5 text-zinc-600 text-sm mb-8">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 21 Q5 14 5 10 Q5 5 9 4 Q13 3 16 5 Q19 7 19 10 Q19 14 12 21 Z"/>
+                <circle cx="12" cy="10" r="2.5"/>
+              </svg>
+              Puerto Madryn, Patagonia Argentina
+            </div>
+
+            <!-- CTAs -->
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <a href="https://wa.me/5492804018359?text=Hola%20Jesús%2C%20vi%20tu%20portfolio%20y%20me%20gustaría%20contactarte."
+                 target="_blank" rel="noopener"
+                 class="group flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:scale-105"
+                 style="background: linear-gradient(135deg, #0891b2, #0e7490); box-shadow: 0 8px 24px rgba(6,182,212,0.2)">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6 Q4 4 6 4 H18 Q20 4 20 6 V14 Q20 16 18 16 H10 L6 19.5 V16 H6 Q4 16 4 14 Z"/>
+                  <path d="M8 9 H16 M8 12 H14" stroke-width="1.3"/>
+                </svg>
+                Escribime por WhatsApp
+                <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12 L18 12 M14 8 L18 12 L14 16"/>
+                </svg>
+              </a>
+              <a href="https://github.com/jesus1942" target="_blank" rel="noopener"
+                 class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 7 L4 12 L9 17 M15 7 L20 12 L15 17"/>
+                </svg>
+                Código
+              </a>
+              <a href="https://linkedin.com/in/jesus-narciso-olguin-7bb22020a"
+                 target="_blank" rel="noopener"
+                 class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 6 Q4 4 6 4 H8 Q10 4 10 6 V18 Q10 20 8 20 H6 Q4 20 4 18 Z M10 10 Q10 8 12 8 Q16 8 18 10 Q20 12 20 16 V18 Q20 20 18 20 H16 Q14 20 14 18 V13"/>
+                  <circle cx="7" cy="4" r="1.2"/>
+                </svg>
+                LinkedIn
+              </a>
+            </div>
           </div>
-          <!-- Hand-drawn circle around avatar -->
-          <svg class="absolute -inset-3 w-30 h-30 text-cyan-400/40" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-            <path d="M60 8 Q90 10 108 38 Q116 65 100 92 Q78 112 50 108 Q20 100 10 70 Q6 38 30 18 Q45 8 60 8" stroke-dasharray="3 4"/>
-          </svg>
-        </div>
 
-        <!-- Available badge -->
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-medium mb-5 soft-pulse">
-          <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-          Disponible para proyectos
-        </div>
+          <!-- CIRCLE SIDE — decorativo, sin logo -->
+          <div class="hidden md:flex items-center justify-center">
+            <div class="relative w-64 h-64">
 
-        <h1 class="text-5xl sm:text-7xl font-bold mb-3 tracking-tight leading-none">
-          <span class="grad-white">Jesús</span>
-          <span class="grad-cyan"> Olguín</span>
-        </h1>
+              <!-- Anillo exterior — orgánico, líneas discontinuas -->
+              <svg class="absolute inset-0 w-full h-full text-cyan-400/35" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
+                   style="animation: sol-spin 60s linear infinite; transform-origin: center;">
+                <path d="M100 6 Q148 8 178 46 Q196 100 174 150 Q144 190 96 191 Q44 188 18 148 Q2 100 22 52 Q50 8 100 6" stroke-dasharray="4 5"/>
+              </svg>
 
-        <p class="text-zinc-400 text-lg sm:text-xl font-light mb-1">
-          Full-Stack Developer
-        </p>
-        <p class="text-zinc-500 text-sm font-light mb-2">
-          <span class="font-hand text-2xl text-cyan-300/80">&amp; </span>
-          Soluciones IoT
-        </p>
+              <!-- Anillo interior — más pequeño, rotación opuesta -->
+              <svg class="absolute inset-8 text-cyan-400/20" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"
+                   style="animation: sol-spin 40s linear infinite reverse; transform-origin: center;">
+                <path d="M60 5 Q85 7 100 28 Q112 60 98 88 Q78 108 50 105 Q24 100 14 72 Q5 44 22 22 Q40 4 60 5" stroke-dasharray="2 7"/>
+              </svg>
 
-        <!-- Location with hand-drawn pin -->
-        <div class="flex items-center justify-center gap-1.5 text-zinc-600 text-sm mb-8">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 21 Q5 14 5 10 Q5 5 9 4 Q13 3 16 5 Q19 7 19 10 Q19 14 12 21 Z"/>
-            <circle cx="12" cy="10" r="2.5"/>
-          </svg>
-          Puerto Madryn, Patagonia Argentina
-        </div>
+              <!-- Puntos dispersos — nodos -->
+              <svg class="absolute inset-0 w-full h-full text-cyan-500/30" viewBox="0 0 200 200" fill="currentColor">
+                <circle cx="100" cy="8"  r="1.8"/>
+                <circle cx="170" cy="58" r="1.4"/>
+                <circle cx="178" cy="130" r="1.6"/>
+                <circle cx="112" cy="190" r="1.4"/>
+                <circle cx="32"  cy="160" r="1.5"/>
+                <circle cx="18"  cy="80"  r="1.4"/>
+                <circle cx="46"  cy="14"  r="1.3"/>
+              </svg>
 
-        <!-- CTAs -->
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <a href="https://wa.me/5492804018359?text=Hola%20Jesús%2C%20vi%20tu%20portfolio%20y%20me%20gustaría%20contactarte."
-             target="_blank" rel="noopener"
-             class="group flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:scale-105"
-             style="background: linear-gradient(135deg, #0891b2, #0e7490); box-shadow: 0 8px 32px rgba(6,182,212,0.25)">
-            <!-- Hand-drawn chat bubble -->
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 6 Q4 4 6 4 H18 Q20 4 20 6 V14 Q20 16 18 16 H10 L6 19.5 V16 H6 Q4 16 4 14 Z"/>
-              <path d="M8 9 H16 M8 12 H14" stroke-width="1.3"/>
-            </svg>
-            Escribime por WhatsApp
-            <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12 L18 12 M14 8 L18 12 L14 16"/>
-            </svg>
-          </a>
-          <a href="https://github.com/jesus1942" target="_blank" rel="noopener"
-             class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
-            <!-- Hand-drawn brackets <> -->
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 7 L4 12 L9 17 M15 7 L20 12 L15 17"/>
-            </svg>
-            Código
-          </a>
-          <a href="https://linkedin.com/in/jesus-narciso-olguin-7bb22020a"
-             target="_blank" rel="noopener"
-             class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
-            LinkedIn
-          </a>
+              <!-- Cruz central — como mira de cámara -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-6 h-6 text-cyan-400/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+                  <path d="M12 7 L12 17 M7 12 L17 12"/>
+                  <circle cx="12" cy="12" r="2" stroke-width="1.2"/>
+                </svg>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </div>
 
       <!-- Scroll hint -->
-      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-35">
         <span class="text-xs text-zinc-500 tracking-widest uppercase">Scroll</span>
         <svg class="w-5 h-8" viewBox="0 0 20 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
           <path d="M10 4 L10 24 M5 18 L10 26 L15 18" />
