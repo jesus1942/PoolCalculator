@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, Globe, MapPin } from 'lucide-react';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 const WHATSAPP_NUMBER = '5492804018359';
 const WHATSAPP_GREETING = encodeURIComponent(
@@ -39,9 +40,14 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
           href={PORTFOLIO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-zinc-300 hover:text-cyan-400 transition-colors"
+          className="flex items-center gap-2 group"
         >
-          Jesús Olguín
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-black border border-white/10 group-hover:border-cyan-500/40 transition-colors">
+            <img src={publicAssetUrl('logo-isotipo.png')} alt="Jesús Olguín" className="h-4 w-auto" />
+          </span>
+          <span className="text-sm font-medium text-zinc-300 group-hover:text-cyan-400 transition-colors">
+            Jesús Olguín
+          </span>
         </a>
         <p className="text-[11px] text-zinc-500 -mt-1">Domotics &amp; IoT Solutions</p>
         <div className="flex items-center gap-2 mt-1">
@@ -77,9 +83,9 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
         rel="noopener noreferrer"
         className="flex items-center gap-3 mb-3 group"
       >
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-600/30 border border-cyan-500/30 group-hover:border-cyan-500/60 flex items-center justify-center text-white font-bold text-sm transition-colors">
-          JO
-        </div>
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black border border-white/10 group-hover:border-cyan-500/50 shadow-lg shadow-cyan-500/10 group-hover:shadow-cyan-500/30 transition-all">
+          <img src={publicAssetUrl('logo-isotipo.png')} alt="Jesús Olguín" className="h-5 w-auto" />
+        </span>
         <div>
           <p className="text-white font-medium leading-tight group-hover:text-cyan-400 transition-colors">
             Jesús Olguín
