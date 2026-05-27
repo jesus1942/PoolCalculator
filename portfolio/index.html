@@ -9,10 +9,11 @@
   <meta property="og:title" content="Jesús Olguín · Developer" />
   <meta property="og:description" content="Full-Stack Developer & IoT Solutions · Puerto Madryn, Argentina" />
   <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" href="/logo-isotipo.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -21,27 +22,22 @@
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
+            hand: ['Caveat', 'cursive'],
           },
           animation: {
             'float': 'float 6s ease-in-out infinite',
             'float-delay': 'float 6s ease-in-out 2s infinite',
             'float-slow': 'float 9s ease-in-out infinite',
-            'pulse-slow': 'pulse 4s ease-in-out infinite',
-            'fade-up': 'fadeUp 0.6s ease-out forwards',
-            'shimmer': 'shimmer 2.5s linear infinite',
+            'draw': 'draw 1.6s ease-out forwards',
           },
           keyframes: {
             float: {
               '0%, 100%': { transform: 'translateY(0px)' },
               '50%': { transform: 'translateY(-14px)' },
             },
-            fadeUp: {
-              '0%': { opacity: '0', transform: 'translateY(24px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            shimmer: {
-              '0%': { backgroundPosition: '-200% center' },
-              '100%': { backgroundPosition: '200% center' },
+            draw: {
+              '0%': { 'stroke-dashoffset': '1000' },
+              '100%': { 'stroke-dashoffset': '0' },
             },
           },
         },
@@ -54,11 +50,10 @@
 
     /* Dot grid */
     .dot-grid {
-      background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
       background-size: 28px 28px;
     }
 
-    /* Gradient text */
     .grad-cyan {
       background: linear-gradient(135deg, #67e8f9, #22d3ee, #06b6d4);
       -webkit-background-clip: text;
@@ -71,90 +66,90 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .grad-shimmer {
-      background: linear-gradient(90deg, #67e8f9, #a5f3fc, #e0f2fe, #a5f3fc, #67e8f9);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: shimmer 3s linear infinite;
-    }
 
-    /* Glass cards */
+    /* Glass */
     .glass {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.07);
       backdrop-filter: blur(12px);
     }
-    .glass-hover {
-      transition: all 0.3s ease;
-    }
+    .glass-hover { transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
     .glass-hover:hover {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(6,182,212,0.3);
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(103, 232, 249, 0.3);
       transform: translateY(-4px);
-      box-shadow: 0 20px 40px rgba(6,182,212,0.08);
+      box-shadow: 0 24px 48px -16px rgba(6,182,212,0.15);
     }
 
-    /* Scroll reveal */
+    /* Hand-drawn underline */
+    .hand-underline {
+      background-image: linear-gradient(transparent calc(100% - 2px), rgba(103,232,249,0.5) 2px);
+      background-position: 0 88%;
+      background-repeat: no-repeat;
+      background-size: 100% 4px;
+    }
+
+    /* Reveal */
     .reveal {
       opacity: 0;
-      transform: translateY(32px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
     }
     .reveal.visible {
       opacity: 1;
       transform: translateY(0);
     }
-    .reveal-left {
-      opacity: 0;
-      transform: translateX(-32px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+
+    /* Sketch line animation */
+    .sketch-stroke {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
     }
-    .reveal-left.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-    .reveal-right {
-      opacity: 0;
-      transform: translateX(32px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-    .reveal-right.visible {
-      opacity: 1;
-      transform: translateX(0);
+    .visible .sketch-stroke {
+      animation: draw 1.8s ease-out forwards;
     }
 
-    /* WhatsApp button pulse */
-    @keyframes waPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-      50% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+    /* Pulse for available badge */
+    @keyframes softPulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
     }
-    .wa-pulse { animation: waPulse 2.5s ease-in-out infinite; }
+    .soft-pulse { animation: softPulse 2s ease-in-out infinite; }
 
-    /* Project badge colors */
-    .badge-ts  { background: rgba(49,120,198,0.2); color: #93c5fd; border-color: rgba(49,120,198,0.3); }
-    .badge-js  { background: rgba(234,179,8,0.15); color: #fde047; border-color: rgba(234,179,8,0.3); }
-    .badge-py  { background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
-    .badge-html{ background: rgba(249,115,22,0.15); color: #fdba74; border-color: rgba(249,115,22,0.3); }
-    .badge-react{ background: rgba(6,182,212,0.15); color: #67e8f9; border-color: rgba(6,182,212,0.3); }
-    .badge-node{ background: rgba(34,197,94,0.12); color: #86efac; border-color: rgba(34,197,94,0.25); }
-    .badge-pwa { background: rgba(168,85,247,0.15); color: #d8b4fe; border-color: rgba(168,85,247,0.3); }
-    .badge-ws  { background: rgba(251,146,60,0.15); color: #fdba74; border-color: rgba(251,146,60,0.3); }
-    .badge-cap { background: rgba(34,211,238,0.12); color: #a5f3fc; border-color: rgba(34,211,238,0.25); }
-    .badge-astro{ background: rgba(139,92,246,0.15); color: #c4b5fd; border-color: rgba(139,92,246,0.3); }
-    .badge-prisma{ background: rgba(16,185,129,0.12); color: #6ee7b7; border-color: rgba(16,185,129,0.25); }
-    .badge-fastapi{ background: rgba(5,150,105,0.15); color: #6ee7b7; border-color: rgba(5,150,105,0.3); }
+    /* Scribble arrow */
+    .scribble-arrow {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    .group:hover .scribble-arrow {
+      transform: translateX(4px);
+    }
 
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #0a0a0a; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+
+    /* Project tag colors */
+    .tag { padding: 2px 8px; border-radius: 999px; font-size: 11px; border: 1px solid; font-weight: 500; }
+    .tag-ts  { background: rgba(49,120,198,0.15); color: #93c5fd; border-color: rgba(49,120,198,0.3); }
+    .tag-js  { background: rgba(234,179,8,0.12); color: #fde047; border-color: rgba(234,179,8,0.25); }
+    .tag-py  { background: rgba(59,130,246,0.12); color: #93c5fd; border-color: rgba(59,130,246,0.25); }
+    .tag-html{ background: rgba(249,115,22,0.12); color: #fdba74; border-color: rgba(249,115,22,0.25); }
+    .tag-react{ background: rgba(6,182,212,0.12); color: #67e8f9; border-color: rgba(6,182,212,0.25); }
+    .tag-node{ background: rgba(34,197,94,0.10); color: #86efac; border-color: rgba(34,197,94,0.22); }
+    .tag-pwa { background: rgba(168,85,247,0.12); color: #d8b4fe; border-color: rgba(168,85,247,0.25); }
+    .tag-ws  { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.25); }
+    .tag-cap { background: rgba(34,211,238,0.10); color: #a5f3fc; border-color: rgba(34,211,238,0.22); }
+    .tag-astro{ background: rgba(139,92,246,0.12); color: #c4b5fd; border-color: rgba(139,92,246,0.25); }
+    .tag-prisma{ background: rgba(16,185,129,0.10); color: #6ee7b7; border-color: rgba(16,185,129,0.22); }
+    .tag-fastapi{ background: rgba(5,150,105,0.12); color: #6ee7b7; border-color: rgba(5,150,105,0.25); }
+    .tag-postgres{ background: rgba(99,102,241,0.12); color: #a5b4fc; border-color: rgba(99,102,241,0.25); }
+    .tag-railway{ background: rgba(255,255,255,0.05); color: #d4d4d8; border-color: rgba(255,255,255,0.15); }
   </style>
 </head>
 <body class="antialiased">
 
-  <!-- Ambient background -->
+  <!-- Ambient -->
   <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
     <div class="animate-float absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full opacity-[0.07]"
          style="background: radial-gradient(circle, #06b6d4, transparent 70%)"></div>
@@ -162,40 +157,64 @@
          style="background: radial-gradient(circle, #3b82f6, transparent 70%)"></div>
     <div class="animate-float-slow absolute top-[40%] left-[50%] w-[400px] h-[400px] rounded-full opacity-[0.04] -translate-x-1/2 -translate-y-1/2"
          style="background: radial-gradient(circle, #8b5cf6, transparent 70%)"></div>
-    <div class="dot-grid absolute inset-0 opacity-100"></div>
+    <div class="dot-grid absolute inset-0"></div>
   </div>
 
   <!-- NAV -->
   <nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/5" style="background: rgba(3,5,8,0.85); backdrop-filter: blur(20px);">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-      <span class="font-mono text-sm text-zinc-400 tracking-wider">jesus<span class="text-cyan-400">@</span>olguin.dev</span>
+      <a href="#top" class="flex items-center gap-2.5">
+        <img src="/logo-isotipo.png" alt="Jesús Olguín" class="h-6 w-auto opacity-90" />
+        <span class="font-mono text-sm text-zinc-400 tracking-wider">jesus<span class="text-cyan-400">.</span>olguin</span>
+      </a>
       <div class="flex items-center gap-6">
         <a href="#proyectos" class="text-xs text-zinc-500 hover:text-cyan-400 transition-colors hidden sm:block">Proyectos</a>
         <a href="#skills" class="text-xs text-zinc-500 hover:text-cyan-400 transition-colors hidden sm:block">Skills</a>
         <a href="#contacto" class="text-xs text-zinc-500 hover:text-cyan-400 transition-colors hidden sm:block">Contacto</a>
         <a href="https://wa.me/5492804018359?text=Hola%20Jesús%2C%20vi%20tu%20portfolio%20y%20me%20gustaría%20contactarte."
            target="_blank" rel="noopener"
-           class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-300 text-xs font-medium hover:bg-green-500/20 transition-all wa-pulse">
-          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.464 3.488"/></svg>
-          WhatsApp
+           class="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/5 text-cyan-300 text-xs font-medium hover:bg-cyan-500/15 transition-all">
+          <span>Conversemos</span>
+          <svg class="w-3 h-3 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+          </svg>
         </a>
       </div>
     </div>
   </nav>
 
-  <main class="relative z-10">
+  <main id="top" class="relative z-10">
 
-    <!-- ═══════════════════ HERO ═══════════════════ -->
-    <section class="min-h-screen flex flex-col items-center justify-center text-center px-4 pt-20 pb-16">
-      <div style="animation: fadeUp 0.7s ease-out both">
-        <!-- Avatar initials -->
-        <div class="mx-auto mb-6 w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl"
-             style="background: linear-gradient(135deg, #0891b2, #2563eb); box-shadow: 0 20px 60px rgba(6,182,212,0.25)">
-          JO
+    <!-- HERO -->
+    <section class="min-h-screen flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 relative">
+      <!-- Decorative hand-drawn stars/circles -->
+      <svg class="absolute top-32 left-[15%] w-8 h-8 text-cyan-500/30 hidden md:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M12 3 L12 9 M12 15 L12 21 M3 12 L9 12 M15 12 L21 12 M6 6 L9 9 M15 15 L18 18 M18 6 L15 9 M9 15 L6 18"/>
+      </svg>
+      <svg class="absolute bottom-32 right-[18%] w-10 h-10 text-cyan-500/20 hidden md:block" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <path d="M20 4 Q22 14 30 18 Q22 22 20 32 Q18 22 10 18 Q18 14 20 4 Z"/>
+      </svg>
+      <svg class="absolute top-1/2 right-[10%] w-6 h-6 text-cyan-500/25 hidden md:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="8"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+
+      <div style="animation: draw 0.7s ease-out both;">
+        <!-- Avatar with logo -->
+        <div class="mx-auto mb-6 relative">
+          <div class="w-24 h-24 rounded-2xl bg-black border border-cyan-500/30 flex items-center justify-center shadow-2xl"
+               style="box-shadow: 0 20px 60px rgba(6,182,212,0.2)">
+            <img src="/logo-isotipo.png" alt="Jesús Olguín" class="h-12 w-auto" />
+          </div>
+          <!-- Hand-drawn circle around avatar -->
+          <svg class="absolute -inset-3 w-30 h-30 text-cyan-400/40" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+            <path d="M60 8 Q90 10 108 38 Q116 65 100 92 Q78 112 50 108 Q20 100 10 70 Q6 38 30 18 Q45 8 60 8" stroke-dasharray="3 4"/>
+          </svg>
         </div>
 
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-medium mb-5">
-          <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+        <!-- Available badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-xs font-medium mb-5 soft-pulse">
+          <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
           Disponible para proyectos
         </div>
 
@@ -204,34 +223,51 @@
           <span class="grad-cyan"> Olguín</span>
         </h1>
 
-        <p class="text-zinc-400 text-lg sm:text-xl font-light mb-2">
-          Full-Stack Developer &amp; IoT Solutions
+        <p class="text-zinc-400 text-lg sm:text-xl font-light mb-1">
+          Full-Stack Developer
+        </p>
+        <p class="text-zinc-500 text-sm font-light mb-2">
+          <span class="font-hand text-2xl text-cyan-300/80">&amp; </span>
+          Soluciones IoT
         </p>
 
-        <p class="flex items-center justify-center gap-1.5 text-zinc-600 text-sm mb-8">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          Puerto Madryn, Patagonia · Argentina 🇦🇷
-        </p>
+        <!-- Location with hand-drawn pin -->
+        <div class="flex items-center justify-center gap-1.5 text-zinc-600 text-sm mb-8">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21 Q5 14 5 10 Q5 5 9 4 Q13 3 16 5 Q19 7 19 10 Q19 14 12 21 Z"/>
+            <circle cx="12" cy="10" r="2.5"/>
+          </svg>
+          Puerto Madryn, Patagonia Argentina
+        </div>
 
+        <!-- CTAs -->
         <div class="flex flex-wrap items-center justify-center gap-3">
           <a href="https://wa.me/5492804018359?text=Hola%20Jesús%2C%20vi%20tu%20portfolio%20y%20me%20gustaría%20contactarte."
              target="_blank" rel="noopener"
-             class="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white wa-pulse transition-all hover:scale-105"
-             style="background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 0 30px rgba(34,197,94,0.2)">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.464 3.488"/></svg>
+             class="group flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:scale-105"
+             style="background: linear-gradient(135deg, #0891b2, #0e7490); box-shadow: 0 8px 32px rgba(6,182,212,0.25)">
+            <!-- Hand-drawn chat bubble -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6 Q4 4 6 4 H18 Q20 4 20 6 V14 Q20 16 18 16 H10 L6 19.5 V16 H6 Q4 16 4 14 Z"/>
+              <path d="M8 9 H16 M8 12 H14" stroke-width="1.3"/>
+            </svg>
             Escribime por WhatsApp
+            <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12 L18 12 M14 8 L18 12 L14 16"/>
+            </svg>
+          </a>
+          <a href="https://github.com/jesus1942" target="_blank" rel="noopener"
+             class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
+            <!-- Hand-drawn brackets <> -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 7 L4 12 L9 17 M15 7 L20 12 L15 17"/>
+            </svg>
+            Código
           </a>
           <a href="https://linkedin.com/in/jesus-narciso-olguin-7bb22020a"
              target="_blank" rel="noopener"
-             class="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+             class="group flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
             LinkedIn
-          </a>
-          <a href="https://github.com/jesus1942"
-             target="_blank" rel="noopener"
-             class="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/20 transition-all hover:scale-105">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            GitHub
           </a>
         </div>
       </div>
@@ -239,17 +275,22 @@
       <!-- Scroll hint -->
       <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
         <span class="text-xs text-zinc-500 tracking-widest uppercase">Scroll</span>
-        <div class="w-px h-8 bg-gradient-to-b from-zinc-500 to-transparent"></div>
+        <svg class="w-5 h-8" viewBox="0 0 20 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <path d="M10 4 L10 24 M5 18 L10 26 L15 18" />
+        </svg>
       </div>
     </section>
 
-    <!-- ═══════════════════ ABOUT ═══════════════════ -->
+    <!-- ABOUT -->
     <section id="sobre-mi" class="py-20 px-4">
       <div class="max-w-4xl mx-auto">
-        <div class="reveal grid md:grid-cols-5 gap-8 items-center">
+        <div class="reveal grid md:grid-cols-5 gap-8 items-start">
           <div class="md:col-span-3">
             <p class="text-xs font-mono text-cyan-400 tracking-wider mb-3">// sobre mí</p>
-            <h2 class="text-3xl font-bold grad-white mb-4">De la Patagonia al stack completo</h2>
+            <h2 class="text-3xl font-bold grad-white mb-4">
+              De la Patagonia al
+              <span class="font-hand text-cyan-300/90 text-5xl leading-none">stack completo</span>
+            </h2>
             <p class="text-zinc-400 leading-relaxed mb-4">
               Desarrollador autodidacta y egresado de Soy Henry, apasionado por construir herramientas que resuelven problemas reales.
               Me especializo en aplicaciones web completas, PWAs y sistemas IoT aplicados a la industria.
@@ -259,34 +300,55 @@
               Cada proyecto nace de una necesidad concreta — y termina siendo una herramienta real que la gente usa.
             </p>
           </div>
+
+          <!-- About sidebar with hand-drawn icons -->
           <div class="md:col-span-2">
-            <div class="glass rounded-2xl p-5 space-y-3">
-              <div class="flex items-center gap-3 py-2 border-b border-white/5">
-                <span class="text-lg">🎓</span>
+            <div class="glass rounded-2xl p-5 space-y-1">
+              <!-- Formación -->
+              <div class="flex items-center gap-3 py-2.5 border-b border-white/5">
+                <svg class="w-5 h-5 text-cyan-400/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9 L12 5 L21 9 L12 13 L3 9 Z"/>
+                  <path d="M7 11 L7 16 Q12 19 17 16 L17 11"/>
+                  <path d="M21 9 L21 14"/>
+                </svg>
                 <div>
                   <p class="text-xs text-zinc-500">Formación</p>
-                  <p class="text-sm text-zinc-200">Soy Henry Full-Stack Bootcamp</p>
+                  <p class="text-sm text-zinc-200">Soy Henry Full-Stack</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3 py-2 border-b border-white/5">
-                <span class="text-lg">📍</span>
+              <!-- Ubicación -->
+              <div class="flex items-center gap-3 py-2.5 border-b border-white/5">
+                <svg class="w-5 h-5 text-cyan-400/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 21 Q5 14 5 10 Q5 5 9 4 Q13 3 16 5 Q19 7 19 10 Q19 14 12 21 Z"/>
+                  <circle cx="12" cy="10" r="2.5"/>
+                </svg>
                 <div>
                   <p class="text-xs text-zinc-500">Ubicación</p>
-                  <p class="text-sm text-zinc-200">Puerto Madryn, Chubut · ARG</p>
+                  <p class="text-sm text-zinc-200">Puerto Madryn, Chubut</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3 py-2 border-b border-white/5">
-                <span class="text-lg">🚀</span>
+              <!-- Deploy -->
+              <div class="flex items-center gap-3 py-2.5 border-b border-white/5">
+                <svg class="w-5 h-5 text-cyan-400/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 21 L8 17 L12 15 L16 17 L16 21" />
+                  <path d="M12 15 L12 8 Q12 4 8 4 Q4 4 4 8 L4 14" />
+                  <path d="M12 15 L12 8 Q12 4 16 4 Q20 4 20 8 L20 14" />
+                  <circle cx="12" cy="9" r="1.5"/>
+                </svg>
                 <div>
                   <p class="text-xs text-zinc-500">Deploy favorito</p>
-                  <p class="text-sm text-zinc-200">Railway · GitHub Pages</p>
+                  <p class="text-sm text-zinc-200">Railway · GitHub</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3 py-2">
-                <span class="text-lg">💬</span>
+              <!-- Idiomas -->
+              <div class="flex items-center gap-3 py-2.5">
+                <svg class="w-5 h-5 text-cyan-400/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 7 Q4 5 6 5 H18 Q20 5 20 7 V14 Q20 16 18 16 H11 L7 19.5 V16 H6 Q4 16 4 14 Z"/>
+                  <path d="M8 10 H16 M8 13 H13"/>
+                </svg>
                 <div>
                   <p class="text-xs text-zinc-500">Idiomas</p>
-                  <p class="text-sm text-zinc-200">Español nativo · Inglés técnico</p>
+                  <p class="text-sm text-zinc-200">Español · Inglés técnico</p>
                 </div>
               </div>
             </div>
@@ -295,267 +357,413 @@
       </div>
     </section>
 
-    <!-- ═══════════════════ SKILLS ═══════════════════ -->
+    <!-- SKILLS -->
     <section id="skills" class="py-16 px-4">
       <div class="max-w-5xl mx-auto">
         <div class="reveal text-center mb-10">
           <p class="text-xs font-mono text-cyan-400 tracking-wider mb-2">// stack tecnológico</p>
-          <h2 class="text-3xl font-bold grad-white">Skills &amp; Tecnologías</h2>
+          <h2 class="text-3xl font-bold grad-white">
+            <span class="font-hand text-cyan-300/90 text-5xl leading-none">Skills</span> &amp; Tecnologías
+          </h2>
         </div>
+
         <div class="reveal grid grid-cols-2 sm:grid-cols-4 gap-3">
           <!-- Frontend -->
-          <div class="glass rounded-xl p-4">
-            <p class="text-[10px] font-mono text-cyan-400 uppercase tracking-widest mb-3">Frontend</p>
+          <div class="glass rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <rect x="3" y="4" width="18" height="14" rx="2" ry="2"/>
+                <path d="M3 8 L21 8 M6 6 H6.01 M9 6 H9.01"/>
+              </svg>
+              <p class="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">Frontend</p>
+            </div>
             <div class="space-y-2 text-sm text-zinc-300">
-              <div class="flex items-center gap-2"><span class="text-blue-400">⬡</span> React / TypeScript</div>
-              <div class="flex items-center gap-2"><span class="text-purple-400">⬡</span> Astro</div>
-              <div class="flex items-center gap-2"><span class="text-cyan-400">⬡</span> Tailwind CSS</div>
-              <div class="flex items-center gap-2"><span class="text-yellow-400">⬡</span> Vite</div>
-              <div class="flex items-center gap-2"><span class="text-orange-400">⬡</span> PWA / Service Worker</div>
+              <div>React / TypeScript</div>
+              <div>Astro</div>
+              <div>Tailwind CSS</div>
+              <div>Vite</div>
+              <div>PWA / Service Worker</div>
             </div>
           </div>
+
           <!-- Backend -->
-          <div class="glass rounded-xl p-4">
-            <p class="text-[10px] font-mono text-green-400 uppercase tracking-widest mb-3">Backend</p>
+          <div class="glass rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="6" rx="1"/>
+                <rect x="3" y="14" width="18" height="6" rx="1"/>
+                <circle cx="7" cy="7" r="0.5" fill="currentColor"/>
+                <circle cx="7" cy="17" r="0.5" fill="currentColor"/>
+              </svg>
+              <p class="text-[10px] font-mono text-green-400 uppercase tracking-widest">Backend</p>
+            </div>
             <div class="space-y-2 text-sm text-zinc-300">
-              <div class="flex items-center gap-2"><span class="text-green-400">⬡</span> Node.js / Express</div>
-              <div class="flex items-center gap-2"><span class="text-blue-400">⬡</span> Python / FastAPI</div>
-              <div class="flex items-center gap-2"><span class="text-emerald-400">⬡</span> Prisma ORM</div>
-              <div class="flex items-center gap-2"><span class="text-orange-400">⬡</span> WebSockets</div>
-              <div class="flex items-center gap-2"><span class="text-red-400">⬡</span> REST APIs</div>
+              <div>Node.js / Express</div>
+              <div>Python / FastAPI</div>
+              <div>Prisma ORM</div>
+              <div>WebSockets</div>
+              <div>REST APIs</div>
             </div>
           </div>
-          <!-- Data -->
-          <div class="glass rounded-xl p-4">
-            <p class="text-[10px] font-mono text-purple-400 uppercase tracking-widest mb-3">Datos &amp; Infra</p>
+
+          <!-- Data & Infra -->
+          <div class="glass rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="8" ry="2.5"/>
+                <path d="M4 5 L4 12 Q4 14.5 12 14.5 Q20 14.5 20 12 L20 5"/>
+                <path d="M4 12 L4 19 Q4 21.5 12 21.5 Q20 21.5 20 19 L20 12"/>
+              </svg>
+              <p class="text-[10px] font-mono text-purple-400 uppercase tracking-widest">Datos &amp; Infra</p>
+            </div>
             <div class="space-y-2 text-sm text-zinc-300">
-              <div class="flex items-center gap-2"><span class="text-blue-300">⬡</span> PostgreSQL</div>
-              <div class="flex items-center gap-2"><span class="text-cyan-300">⬡</span> Railway</div>
-              <div class="flex items-center gap-2"><span class="text-white">⬡</span> GitHub Actions</div>
-              <div class="flex items-center gap-2"><span class="text-blue-400">⬡</span> Docker</div>
-              <div class="flex items-center gap-2"><span class="text-orange-300">⬡</span> Cloudinary</div>
+              <div>PostgreSQL</div>
+              <div>Railway</div>
+              <div>GitHub Actions</div>
+              <div>Docker</div>
+              <div>Cloudinary</div>
             </div>
           </div>
-          <!-- IoT -->
-          <div class="glass rounded-xl p-4">
-            <p class="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-3">IoT &amp; Móvil</p>
+
+          <!-- IoT & Mobile -->
+          <div class="glass rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="7" y="3" width="10" height="18" rx="2"/>
+                <path d="M11 18 L13 18"/>
+                <path d="M2 8 Q5 5 8 8 M2 11 Q5 8 8 11 M16 8 Q19 5 22 8 M16 11 Q19 8 22 11"/>
+              </svg>
+              <p class="text-[10px] font-mono text-amber-400 uppercase tracking-widest">IoT &amp; Móvil</p>
+            </div>
             <div class="space-y-2 text-sm text-zinc-300">
-              <div class="flex items-center gap-2"><span class="text-cyan-400">⬡</span> Capacitor (Android)</div>
-              <div class="flex items-center gap-2"><span class="text-green-400">⬡</span> Domótica</div>
-              <div class="flex items-center gap-2"><span class="text-yellow-400">⬡</span> QR / NFC</div>
-              <div class="flex items-center gap-2"><span class="text-pink-400">⬡</span> MQTT</div>
-              <div class="flex items-center gap-2"><span class="text-red-400">⬡</span> Sensores &amp; actuadores</div>
+              <div>Capacitor (Android)</div>
+              <div>Domótica</div>
+              <div>QR / NFC</div>
+              <div>MQTT</div>
+              <div>Sensores &amp; actuadores</div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════ PROJECTS ═══════════════════ -->
+    <!-- PROJECTS -->
     <section id="proyectos" class="py-20 px-4">
       <div class="max-w-6xl mx-auto">
         <div class="reveal text-center mb-12">
           <p class="text-xs font-mono text-cyan-400 tracking-wider mb-2">// trabajo reciente</p>
-          <h2 class="text-3xl font-bold grad-white mb-3">Proyectos</h2>
+          <h2 class="text-3xl font-bold grad-white mb-3">
+            <span class="font-hand text-cyan-300/90 text-5xl leading-none">Proyectos</span>
+          </h2>
           <p class="text-zinc-500 text-sm max-w-xl mx-auto">
             Aplicaciones reales construidas para resolver problemas concretos.
-            Cada uno nació de una necesidad del mundo real.
+            Cada una nació de una necesidad del mundo real.
           </p>
         </div>
 
         <!-- Featured: Pool Installer -->
         <div class="reveal mb-6">
-          <div class="glass glass-hover rounded-2xl p-6 sm:p-8 relative overflow-hidden group">
-            <!-- Featured badge -->
+          <div class="glass glass-hover rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+            <!-- Live badge -->
             <div class="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-medium">
-              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 soft-pulse"></span>
               En producción
             </div>
-            <div class="grid md:grid-cols-2 gap-6 items-center">
+
+            <div class="grid md:grid-cols-2 gap-8 items-center">
               <div>
-                <div class="text-4xl mb-3">🏊</div>
-                <h3 class="text-xl font-bold text-white mb-2">Pool Installer</h3>
+                <!-- Hand-drawn pool sketch -->
+                <svg viewBox="0 0 320 180" class="w-32 h-20 text-cyan-400/60 mb-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 50 Q18 48 22 48 L300 50 Q303 50 301 52 L300 150 Q303 152 300 152 L22 150 Q18 152 20 150 Z"/>
+                  <path d="M50 80 Q80 75 110 80 T170 80 T230 80 T280 80" stroke-dasharray="3 4" opacity="0.7"/>
+                  <path d="M50 110 Q80 105 110 110 T170 110 T230 110 T280 110" stroke-dasharray="3 4" opacity="0.7"/>
+                  <path d="M30 50 L30 30 M42 50 L42 30 M30 38 L42 38 M30 44 L42 44"/>
+                </svg>
+
+                <h3 class="text-2xl font-bold text-white mb-2 hand-underline inline-block">Pool Installer</h3>
                 <p class="text-zinc-400 text-sm leading-relaxed mb-4">
                   Sistema integral de gestión para empresas instaladoras de piscinas de fibra de vidrio.
                   Cálculo automático de materiales, gestión de proyectos, agenda de instalaciones,
                   chat interno tipo Slack, portal de clientes con seguimiento en tiempo real y exports profesionales.
                 </p>
                 <div class="flex flex-wrap gap-1.5 mb-5">
-                  <span class="badge-react px-2 py-0.5 rounded-full text-[11px] border">React</span>
-                  <span class="badge-ts px-2 py-0.5 rounded-full text-[11px] border">TypeScript</span>
-                  <span class="badge-node px-2 py-0.5 rounded-full text-[11px] border">Node.js</span>
-                  <span class="badge-prisma px-2 py-0.5 rounded-full text-[11px] border">Prisma</span>
-                  <span class="px-2 py-0.5 rounded-full text-[11px] border" style="background:rgba(99,102,241,0.15);color:#a5b4fc;border-color:rgba(99,102,241,0.3)">PostgreSQL</span>
-                  <span class="px-2 py-0.5 rounded-full text-[11px] border" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25)">Railway</span>
+                  <span class="tag tag-react">React</span>
+                  <span class="tag tag-ts">TypeScript</span>
+                  <span class="tag tag-node">Node.js</span>
+                  <span class="tag tag-prisma">Prisma</span>
+                  <span class="tag tag-postgres">PostgreSQL</span>
+                  <span class="tag tag-railway">Railway</span>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-wrap gap-3">
                   <a href="https://poolcalculator-production.up.railway.app" target="_blank" rel="noopener"
-                     class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:scale-105"
-                     style="background: linear-gradient(135deg, #06b6d4, #0891b2)">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                     class="group flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:scale-105"
+                     style="background: linear-gradient(135deg, #0891b2, #0e7490)">
                     Ver aplicación
+                    <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+                    </svg>
                   </a>
                   <a href="https://github.com/jesus1942/PoolCalculator" target="_blank" rel="noopener"
-                     class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 transition-all hover:scale-105">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                     class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 transition-all hover:scale-105">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 7 L4 12 L9 17 M15 7 L20 12 L15 17"/>
+                    </svg>
                     Código
                   </a>
                 </div>
               </div>
+
               <div class="hidden md:block">
-                <div class="glass rounded-xl p-4 font-mono text-xs text-zinc-500 leading-relaxed">
-                  <div class="text-green-400 mb-2">// features principales</div>
-                  <div>✓ <span class="text-zinc-300">Cálculo automático de materiales</span></div>
-                  <div>✓ <span class="text-zinc-300">Multi-tenant / multi-empresa</span></div>
-                  <div>✓ <span class="text-zinc-300">Chat interno tipo Slack</span></div>
-                  <div>✓ <span class="text-zinc-300">Portal del cliente con timeline</span></div>
-                  <div>✓ <span class="text-zinc-300">Agenda + crew management</span></div>
-                  <div>✓ <span class="text-zinc-300">Exports PDF/Excel profesionales</span></div>
-                  <div>✓ <span class="text-zinc-300">Upload fotos en obra</span></div>
-                  <div class="mt-3 text-cyan-400">$ railway up --production</div>
+                <!-- Sketched feature list "page" -->
+                <div class="glass rounded-xl p-5 relative">
+                  <svg class="absolute -top-2 -left-2 w-8 h-8 text-cyan-500/50" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+                    <path d="M4 16 Q4 4 16 4 Q28 4 28 16 Q28 28 16 28 Q4 28 4 16 Z" stroke-dasharray="2 3"/>
+                  </svg>
+                  <p class="font-hand text-cyan-300/90 text-xl mb-3 leading-none">Features</p>
+                  <div class="space-y-2 text-xs text-zinc-400">
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Cálculo automático de materiales
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Multi-tenant / multi-empresa
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Chat interno tipo Slack
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Portal del cliente con timeline
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Agenda + crew management
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Exports PDF/Excel profesionales
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <svg class="w-3.5 h-3.5 text-cyan-400 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 12 L10 18 L20 6"/>
+                      </svg>
+                      Upload fotos en obra
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Grid: other projects -->
+        <!-- Other projects grid -->
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
           <!-- BCRA Consultas -->
           <div class="reveal glass glass-hover rounded-2xl p-5">
-            <div class="text-3xl mb-3">🏦</div>
+            <!-- Hand-drawn bank chart sketch -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 65 L150 65"/>
+              <path d="M20 65 L20 50 L30 50 L30 65" />
+              <path d="M40 65 L40 35 L50 35 L50 65" />
+              <path d="M60 65 L60 45 L70 45 L70 65" />
+              <path d="M80 65 L80 25 L90 25 L90 65" />
+              <path d="M100 65 L100 40 L110 40 L110 65" />
+              <path d="M120 65 L120 30 L130 30 L130 65"/>
+              <path d="M15 20 Q40 18 70 22 Q100 25 145 20" stroke-dasharray="3 3" opacity="0.6"/>
+            </svg>
             <h3 class="font-bold text-white mb-1">BCRA Consultas</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               PWA para consultar la Central de Deudores del BCRA en tiempo real.
               Historial de deudas, cheques rechazados y alertas automáticas de cambios.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-react px-2 py-0.5 rounded-full text-[10px] border">React</span>
-              <span class="badge-ts px-2 py-0.5 rounded-full text-[10px] border">TypeScript</span>
-              <span class="badge-pwa px-2 py-0.5 rounded-full text-[10px] border">PWA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] border" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25)">Railway</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-react">React</span>
+              <span class="tag tag-ts">TypeScript</span>
+              <span class="tag tag-pwa">PWA</span>
+              <span class="tag tag-railway">Railway</span>
             </div>
             <a href="https://github.com/jesus1942/bcra-consultas-pwa" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
               Ver en GitHub
+              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+              </svg>
             </a>
           </div>
 
           <!-- ReadBible -->
-          <div class="reveal glass glass-hover rounded-2xl p-5" style="transition-delay: 0.1s">
-            <div class="text-3xl mb-3">📖</div>
+          <div class="reveal glass glass-hover rounded-2xl p-5">
+            <!-- Hand-drawn open book -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M80 20 L80 70"/>
+              <path d="M20 25 Q20 22 22 22 L78 18 L80 20 L78 70 L22 70 Q20 70 20 68 Z"/>
+              <path d="M140 25 Q140 22 138 22 L82 18 L80 20 L82 70 L138 70 Q140 70 140 68 Z"/>
+              <path d="M30 30 L70 28 M30 38 L70 36 M30 46 L65 44 M30 54 L70 52 M30 62 L60 60"/>
+              <path d="M90 28 L130 30 M90 36 L130 38 M90 44 L125 46 M90 52 L130 54 M90 60 L120 62"/>
+            </svg>
             <h3 class="font-bold text-white mb-1">ReadBible PWA</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               Lector de Biblia minimalista, offline-first con múltiples versiones en español.
               Búsqueda rápida, versículo del día y compartir con imagen.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-js px-2 py-0.5 rounded-full text-[10px] border">JavaScript</span>
-              <span class="badge-py px-2 py-0.5 rounded-full text-[10px] border">Python</span>
-              <span class="badge-pwa px-2 py-0.5 rounded-full text-[10px] border">PWA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] border" style="background:rgba(255,255,255,0.05);color:#a1a1aa;border-color:rgba(255,255,255,0.1)">Offline</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-js">JavaScript</span>
+              <span class="tag tag-py">Python</span>
+              <span class="tag tag-pwa">PWA</span>
+              <span class="tag tag-railway">Offline</span>
             </div>
             <a href="https://github.com/jesus1942/readBible" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
               Ver en GitHub
+              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+              </svg>
             </a>
           </div>
 
           <!-- Tarjetitas -->
-          <div class="reveal glass glass-hover rounded-2xl p-5" style="transition-delay: 0.15s">
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-3xl">🍽️</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-400">Live</span>
+          <div class="reveal glass glass-hover rounded-2xl p-5">
+            <!-- Hand-drawn cards stack with QR -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="30" y="20" width="60" height="40" rx="3" transform="rotate(-5 60 40)"/>
+              <rect x="40" y="22" width="60" height="40" rx="3" transform="rotate(2 70 42)"/>
+              <rect x="50" y="20" width="60" height="40" rx="3"/>
+              <rect x="58" y="28" width="14" height="14" rx="1"/>
+              <path d="M60 30 L60 32 M62 30 L62 32 M64 30 L64 32 M60 34 L62 34 M64 34 L66 34 M60 36 L62 36 M64 36 L64 38 M60 38 L62 38 M60 40 L66 40"/>
+              <path d="M80 32 L100 32 M80 36 L95 36 M80 40 L90 40"/>
+            </svg>
+            <div class="flex items-start justify-between mb-1">
+              <h3 class="font-bold text-white">Tarjetitas</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] border border-green-500/30 bg-green-500/10 text-green-400">Live</span>
             </div>
-            <h3 class="font-bold text-white mb-1">Tarjetitas</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               Sistema de credenciales para comedores escolares. PWA para generación de tarjetas imprimibles
               con validación QR anti-fraude y panel de administración.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-html px-2 py-0.5 rounded-full text-[10px] border">HTML/CSS/JS</span>
-              <span class="badge-pwa px-2 py-0.5 rounded-full text-[10px] border">PWA</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] border" style="background:rgba(234,179,8,0.1);color:#fde047;border-color:rgba(234,179,8,0.25)">QR</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-html">HTML/CSS/JS</span>
+              <span class="tag tag-pwa">PWA</span>
+              <span class="tag tag-js">QR</span>
             </div>
-            <div class="flex gap-3">
+            <div class="flex gap-4">
               <a href="https://jesus1942.github.io/tarjetitas/" target="_blank" rel="noopener"
-                 class="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                 class="group inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
                 Ver demo
+                <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+                </svg>
               </a>
               <a href="https://github.com/jesus1942/tarjetitas" target="_blank" rel="noopener"
                  class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                 Código
               </a>
             </div>
           </div>
 
           <!-- AquaTech -->
-          <div class="reveal glass glass-hover rounded-2xl p-5" style="transition-delay: 0.05s">
-            <div class="text-3xl mb-3">🔵</div>
+          <div class="reveal glass glass-hover rounded-2xl p-5">
+            <!-- Hand-drawn water drop with monitor -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M55 15 Q40 35 40 50 Q40 65 55 65 Q70 65 70 50 Q70 35 55 15 Z"/>
+              <path d="M48 50 Q48 55 53 55"/>
+              <rect x="90" y="20" width="55" height="40" rx="2"/>
+              <path d="M97 50 L105 45 L113 47 L121 38 L129 42 L137 30"/>
+              <path d="M97 55 L137 55" stroke-dasharray="2 2"/>
+              <circle cx="105" cy="45" r="1.2" fill="currentColor"/>
+              <circle cx="121" cy="38" r="1.2" fill="currentColor"/>
+              <circle cx="137" cy="30" r="1.2" fill="currentColor"/>
+            </svg>
             <h3 class="font-bold text-white mb-1">AquaTech</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               App de seguimiento de mantenimiento de piscinas. Monitoreo de estado, alertas y registro histórico.
               Construida con Astro y empaquetada como app nativa con Capacitor.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-js px-2 py-0.5 rounded-full text-[10px] border">JavaScript</span>
-              <span class="badge-astro px-2 py-0.5 rounded-full text-[10px] border">Astro</span>
-              <span class="badge-cap px-2 py-0.5 rounded-full text-[10px] border">Capacitor</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] border" style="background:rgba(34,197,94,0.1);color:#86efac;border-color:rgba(34,197,94,0.2)">Android</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-js">JavaScript</span>
+              <span class="tag tag-astro">Astro</span>
+              <span class="tag tag-cap">Capacitor</span>
+              <span class="tag tag-node">Android</span>
             </div>
             <a href="https://github.com/jesus1942/AquaTech" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
               Ver en GitHub
+              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+              </svg>
             </a>
           </div>
 
           <!-- Tutti Frutti -->
-          <div class="reveal glass glass-hover rounded-2xl p-5" style="transition-delay: 0.1s">
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-3xl">🎮</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-400">Multiplayer</span>
+          <div class="reveal glass glass-hover rounded-2xl p-5">
+            <!-- Hand-drawn STOP card with letters -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M50 20 L80 14 L110 20 L116 50 L90 70 L70 70 L44 50 Z"/>
+              <text x="62" y="48" font-family="Caveat, cursive" font-size="22" font-weight="bold" fill="currentColor" stroke="none">STOP</text>
+              <path d="M20 25 Q15 30 22 35" stroke-width="1.8"/>
+              <text x="14" y="40" font-family="Caveat, cursive" font-size="14" fill="currentColor" stroke="none">A</text>
+              <path d="M135 30 Q140 35 137 42" stroke-width="1.8"/>
+              <text x="138" y="48" font-family="Caveat, cursive" font-size="14" fill="currentColor" stroke="none">B</text>
+            </svg>
+            <div class="flex items-start justify-between mb-1">
+              <h3 class="font-bold text-white">Tutti Frutti</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] border border-orange-500/30 bg-orange-500/10 text-orange-400">Multiplayer</span>
             </div>
-            <h3 class="font-bold text-white mb-1">Tutti Frutti</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               Juego de palabras en tiempo real multiplayer. Salas, puntuación, validación automática, chat y estadísticas.
               Backend WebSocket con FastAPI en Railway.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-py px-2 py-0.5 rounded-full text-[10px] border">Python</span>
-              <span class="badge-fastapi px-2 py-0.5 rounded-full text-[10px] border">FastAPI</span>
-              <span class="badge-ws px-2 py-0.5 rounded-full text-[10px] border">WebSockets</span>
-              <span class="badge-js px-2 py-0.5 rounded-full text-[10px] border">JS</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-py">Python</span>
+              <span class="tag tag-fastapi">FastAPI</span>
+              <span class="tag tag-ws">WebSockets</span>
+              <span class="tag tag-js">JS</span>
             </div>
             <a href="https://github.com/jesus1942/tutti-frutti" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
               Ver en GitHub
+              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+              </svg>
             </a>
           </div>
 
           <!-- Audio Visualizer -->
-          <div class="reveal glass glass-hover rounded-2xl p-5" style="transition-delay: 0.15s">
-            <div class="text-3xl mb-3">🎵</div>
+          <div class="reveal glass glass-hover rounded-2xl p-5">
+            <!-- Hand-drawn audio waveform -->
+            <svg viewBox="0 0 160 80" class="w-20 h-12 text-cyan-400/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 40 L10 40 M20 35 L20 45 M30 30 L30 50 M40 22 L40 58 M50 28 L50 52 M60 15 L60 65 M70 25 L70 55 M80 10 L80 70 M90 25 L90 55 M100 18 L100 62 M110 30 L110 50 M120 35 L120 45 M130 28 L130 52 M140 38 L140 42 M150 40 L150 40"/>
+            </svg>
             <h3 class="font-bold text-white mb-1">Audio Visualizer</h3>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               Visualizador de espectro de audio en el browser. Experimenta con la Web Audio API
               para renderizar el análisis de frecuencias en tiempo real.
             </p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span class="badge-js px-2 py-0.5 rounded-full text-[10px] border">JavaScript</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] border" style="background:rgba(236,72,153,0.12);color:#f9a8d4;border-color:rgba(236,72,153,0.25)">Web Audio API</span>
-              <span class="badge-html px-2 py-0.5 rounded-full text-[10px] border">Canvas</span>
+            <div class="flex flex-wrap gap-1.5 mb-4">
+              <span class="tag tag-js">JavaScript</span>
+              <span class="tag tag-pwa">Web Audio</span>
+              <span class="tag tag-html">Canvas</span>
             </div>
             <a href="https://github.com/jesus1942/audio-visualizer" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
               Ver en GitHub
+              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+              </svg>
             </a>
           </div>
 
@@ -563,32 +771,52 @@
       </div>
     </section>
 
-    <!-- ═══════════════════ CONTACT ═══════════════════ -->
+    <!-- CONTACT -->
     <section id="contacto" class="py-24 px-4">
-      <div class="max-w-2xl mx-auto text-center reveal">
+      <div class="max-w-2xl mx-auto text-center reveal relative">
+        <!-- Decorative hand-drawn brackets -->
+        <svg class="absolute -left-4 sm:-left-12 top-12 w-10 h-32 text-cyan-500/30 hidden sm:block" viewBox="0 0 40 120" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M30 5 Q10 5 10 30 L10 90 Q10 115 30 115"/>
+        </svg>
+        <svg class="absolute -right-4 sm:-right-12 top-12 w-10 h-32 text-cyan-500/30 hidden sm:block" viewBox="0 0 40 120" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 5 Q30 5 30 30 L30 90 Q30 115 10 115"/>
+        </svg>
+
         <p class="text-xs font-mono text-cyan-400 tracking-wider mb-3">// hablemos</p>
-        <h2 class="text-4xl font-bold grad-white mb-4">¿Tenés un proyecto?</h2>
-        <p class="text-zinc-400 leading-relaxed mb-8">
+        <h2 class="text-4xl font-bold grad-white mb-4">
+          ¿Tenés un
+          <span class="font-hand text-cyan-300/90 text-6xl leading-none">proyecto</span>?
+        </h2>
+        <p class="text-zinc-400 leading-relaxed mb-8 max-w-lg mx-auto">
           Estoy disponible para proyectos freelance, consultoría IoT y desarrollo a medida.
           Desde un MVP hasta sistemas en producción — escribime y lo charlamos.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <!-- WhatsApp CTA -->
           <a href="https://wa.me/5492804018359?text=Hola%20Jesús%2C%20vi%20tu%20portfolio%20y%20quiero%20contarte%20sobre%20un%20proyecto."
              target="_blank" rel="noopener"
-             class="flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-white transition-all hover:scale-105 group w-full sm:w-auto justify-center wa-pulse"
-             style="background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 8px 32px rgba(34,197,94,0.25)">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.464 3.488"/></svg>
+             class="group flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-white transition-all hover:scale-105 w-full sm:w-auto justify-center"
+             style="background: linear-gradient(135deg, #0891b2, #0e7490); box-shadow: 0 12px 32px rgba(6,182,212,0.3)">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6 Q4 4 6 4 H18 Q20 4 20 6 V14 Q20 16 18 16 H10 L6 19.5 V16 H6 Q4 16 4 14 Z"/>
+              <path d="M8 9 H16 M8 12 H14"/>
+            </svg>
             Escribime por WhatsApp
+            <svg class="w-4 h-4 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12 L18 12 M14 8 L18 12 L14 16"/>
+            </svg>
           </a>
 
           <a href="https://linkedin.com/in/jesus-narciso-olguin-7bb22020a" target="_blank" rel="noopener"
              class="flex items-center gap-2 px-6 py-4 rounded-2xl font-medium text-sm border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 transition-all hover:scale-105 w-full sm:w-auto justify-center">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
             LinkedIn
           </a>
         </div>
+
+        <!-- Phone number hand-drawn -->
+        <p class="mt-8 text-zinc-600 text-sm font-hand text-2xl">
+          +54 9 280 401-8359
+        </p>
       </div>
     </section>
 
@@ -598,18 +826,19 @@
   <footer class="relative z-10 border-t border-white/5 py-8 px-4">
     <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
       <span>© 2026 Jesús Olguín · Domotics &amp; IoT Solutions</span>
-      <span class="flex items-center gap-1.5">
-        Hecho con ♥ en Puerto Madryn, Patagonia
-        <span>🇦🇷</span>
+      <span class="font-hand text-base text-zinc-500">
+        Hecho en Puerto Madryn, Patagonia
       </span>
-      <a href="https://github.com/jesus1942" target="_blank" rel="noopener" class="hover:text-cyan-400 transition-colors">
+      <a href="https://github.com/jesus1942" target="_blank" rel="noopener" class="group inline-flex items-center gap-1.5 hover:text-cyan-400 transition-colors">
         github.com/jesus1942
+        <svg class="w-3 h-3 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+        </svg>
       </a>
     </div>
   </footer>
 
   <script>
-    // Scroll reveal
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -617,14 +846,7 @@
         }
       });
     }, { threshold: 0.08, rootMargin: '-20px' });
-
-    document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
-
-    // Stagger project cards
-    document.querySelectorAll('.reveal[style*="transition-delay"]').forEach(el => {
-      const delay = el.style.transitionDelay || '0s';
-      el.style.transitionDelay = delay;
-    });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
   </script>
 </body>
 </html>
