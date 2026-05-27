@@ -95,7 +95,7 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
       </a>
       <p className="flex items-center gap-1.5 text-xs text-zinc-500 mb-3">
         <MapPin className="w-3 h-3" />
-        Puerto Madryn, Chubut · Argentina 🇦🇷
+        Puerto Madryn, Chubut · Argentina
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <a

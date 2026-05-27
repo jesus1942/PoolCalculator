@@ -830,7 +830,7 @@ export const PoolFitWizard: React.FC = () => {
                   <Sparkles className="text-purple-600 flex-shrink-0 mt-1" size={20} />
                   <div>
                     <p className="text-sm font-semibold text-gray-800 mb-1">
-                      🎯 Recomendaciones Profesionales
+                      Recomendaciones Profesionales
                     </p>
                     <p className="text-xs text-gray-700">
                       El sistema ha calculado automáticamente los equipos óptimos para una piscina de <strong>{selectedPool.length}m x {selectedPool.width}m x {selectedPool.depth}m</strong> ({(selectedPool.length * selectedPool.width * selectedPool.depth).toFixed(1)} m³).
@@ -901,7 +901,7 @@ export const PoolFitWizard: React.FC = () => {
                     <div className="flex items-center gap-1 mb-1">
                       <strong>{selectedEquipment.pump.name}</strong>
                       {selectedEquipment.pump.id === recommendedEquipment.pump?.id && (
-                        <span className="text-xs text-purple-600 font-semibold">✓ Óptimo</span>
+                        <span className="text-xs text-purple-600 font-semibold">Óptimo</span>
                       )}
                     </div>
                     <div className="text-xs text-gray-600">
@@ -974,7 +974,7 @@ export const PoolFitWizard: React.FC = () => {
                     <div className="flex items-center gap-1 mb-1">
                       <strong>{selectedEquipment.filter.name}</strong>
                       {selectedEquipment.filter.id === recommendedEquipment.filter?.id && (
-                        <span className="text-xs text-purple-600 font-semibold">✓ Óptimo</span>
+                        <span className="text-xs text-purple-600 font-semibold">Óptimo</span>
                       )}
                     </div>
                   </div>

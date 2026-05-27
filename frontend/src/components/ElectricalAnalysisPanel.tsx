@@ -332,7 +332,7 @@ export const ElectricalAnalysisPanel: React.FC<ElectricalAnalysisPanelProps> = (
         </div>
         {analysis.cable.warning && (
           <div className="mt-4 bg-yellow-50 p-3 rounded-lg text-yellow-700">
-            ⚠️ {analysis.cable.warning}
+            {analysis.cable.warning}
           </div>
         )}
       </Card>

@@ -622,7 +622,7 @@ export const Landing: React.FC = () => {
 
           <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">
             <p>© 2026 Pool Installer. Todos los derechos reservados.</p>
-            <p>Hecho en Puerto Madryn, Chubut · Argentina 🇦🇷</p>
+            <p>Hecho en Puerto Madryn, Chubut · Argentina</p>
           </div>
         </div>
       </footer>

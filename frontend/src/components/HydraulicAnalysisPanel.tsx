@@ -289,7 +289,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
               </span>
             </div>
             {analysis.suctionPipeLoss.warning && (
-              <p className="text-sm text-yellow-600 mt-1">⚠️ {analysis.suctionPipeLoss.warning}</p>
+              <p className="text-sm text-yellow-600 mt-1">{analysis.suctionPipeLoss.warning}</p>
             )}
           </div>
 
@@ -320,7 +320,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
               </span>
             </div>
             {analysis.returnPipeLoss.warning && (
-              <p className="text-sm text-yellow-600 mt-1">⚠️ {analysis.returnPipeLoss.warning}</p>
+              <p className="text-sm text-yellow-600 mt-1">{analysis.returnPipeLoss.warning}</p>
             )}
           </div>
         </div>

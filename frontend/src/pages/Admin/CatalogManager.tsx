@@ -172,7 +172,7 @@ export const CatalogManager: React.FC = () => {
         replaceExisting
       });
 
-      alert(`✅ Guardado exitoso:\n\n📊 Estadísticas:\n- ✨ Creados: ${response.data.stats.created}\n- 🔄 Actualizados: ${response.data.stats.updated}\n- ⏭️  Omitidos: ${response.data.stats.skipped}`);
+      alert(`Guardado exitoso:\n\nEstadísticas:\n- Creados: ${response.data.stats.created}\n- Actualizados: ${response.data.stats.updated}\n- Omitidos: ${response.data.stats.skipped}`);
 
       // Recargar lista de trabajos
       loadJobs();
@@ -528,14 +528,14 @@ export const CatalogManager: React.FC = () => {
                               disabled={loading}
                               className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
                             >
-                              💾 Guardar Nuevos
+                              Guardar Nuevos
                             </button>
                             <button
                               onClick={() => handleSaveJobPools(job, true)}
                               disabled={loading}
                               className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
                             >
-                              🔄 Guardar y Reemplazar
+                              Guardar y Reemplazar
                             </button>
                           </div>
                         </div>

@@ -11,8 +11,8 @@ import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/services/api';
 
 const CHANNELS = {
-  PROJECT: { label: 'Interno', icon: '🔧' },
-  CLIENT_PORTAL: { label: 'Cliente', icon: '👤' },
+  PROJECT: { label: 'Interno', icon: 'INT' },
+  CLIENT_PORTAL: { label: 'Cliente', icon: 'CLI' },
 } as const;
 
 type ChannelKind = keyof typeof CHANNELS;
@@ -75,33 +75,33 @@ const formatEventTime = (iso: string) => {
 
 const buildVisitMessage = (event: AgendaEventLite): string => {
   const lines: string[] = [];
-  lines.push(`📅 *VISITA PROGRAMADA*`);
+  lines.push(`*VISITA PROGRAMADA*`);
   lines.push('━━━━━━━━━━━━━━━━━━━');
-  lines.push(`📌 ${event.title}`);
-  if (event.project?.name) lines.push(`🏗 Proyecto: ${event.project.name}`);
-  lines.push(`🗓 ${formatEventDateLong(event.startAt)}`);
+  lines.push(`${event.title}`);
+  if (event.project?.name) lines.push(`Proyecto: ${event.project.name}`);
+  lines.push(formatEventDateLong(event.startAt));
   const startT = formatEventTime(event.startAt);
   const endT = event.endAt ? formatEventTime(event.endAt) : null;
-  lines.push(`🕐 ${startT}${endT ? ` – ${endT}` : ''}`);
+  lines.push(`Horario: ${startT}${endT ? ` – ${endT}` : ''}`);
   const place = event.location || event.project?.location;
-  if (place) lines.push(`📍 ${place}`);
+  if (place) lines.push(`Lugar: ${place}`);
 
   const teamNames = new Set<string>();
   event.assignees?.forEach(a => a.user?.name && teamNames.add(a.user.name));
   event.crew?.members?.forEach(m => m.user?.name && teamNames.add(m.user.name));
   if (teamNames.size > 0) {
     lines.push('');
-    lines.push(`👷 Equipo: ${Array.from(teamNames).join(', ')}`);
+    lines.push(`Equipo: ${Array.from(teamNames).join(', ')}`);
   }
 
   if (event.checklist && event.checklist.length > 0) {
     lines.push('');
-    lines.push('📋 Tareas:');
+    lines.push('Tareas:');
     event.checklist.forEach(item => lines.push(`• ${item.label}`));
   }
 
   lines.push('');
-  lines.push('📸 Recordar subir foto al llegar y al terminar.');
+  lines.push('Recordar subir foto al llegar y al terminar.');
   return lines.join('\n');
 };
 
@@ -110,7 +110,7 @@ const buildWhatsAppInvite = (projectName: string | undefined, channelLabel: stri
   const url = `${origin}/chat`;
   const project = projectName ? ` del proyecto *${projectName}*` : '';
   return encodeURIComponent(
-    `Hola 👋 te sumo al canal *${channelLabel}*${project}.\n\nIngresá acá para ver los mensajes y subir fotos: ${url}`
+    `Hola, te sumo al canal *${channelLabel}*${project}.\n\nIngresá acá para ver los mensajes y subir fotos: ${url}`
   );
 };
 
@@ -408,7 +408,7 @@ export const Chat: React.FC = () => {
                                 : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200 border border-transparent'
                             }`}
                           >
-                            <span className="text-sm shrink-0">{ch?.icon ?? '💬'}</span>
+                            <span className="text-[10px] font-bold shrink-0 text-zinc-500">{ch?.icon ?? 'CH'}</span>
                             <span className="text-xs font-medium truncate flex-1">{ch?.label ?? conv.title ?? 'Canal'}</span>
                             {isUnread && !isSelected && (
                               <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
@@ -428,7 +428,7 @@ export const Chat: React.FC = () => {
                             disabled={creating === key}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-600 hover:text-zinc-400 hover:bg-white/5 transition-colors text-left"
                           >
-                            <span className="text-sm opacity-40 shrink-0">{ch.icon}</span>
+                            <span className="text-[10px] font-bold opacity-40 shrink-0">{ch.icon}</span>
                             <span className="italic">{creating === key ? 'Creando…' : `+ ${ch.label}`}</span>
                           </button>
                         );
@@ -447,8 +447,8 @@ export const Chat: React.FC = () => {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Thread header */}
           <div className="px-6 py-3 border-b border-zinc-800 flex items-center gap-3 bg-zinc-950">
-            <span className="text-xl">
-              {CHANNELS[selectedConversation.kind as ChannelKind]?.icon ?? '💬'}
+            <span className="text-[11px] font-bold text-zinc-400 bg-zinc-800 px-2 py-1 rounded">
+              {CHANNELS[selectedConversation.kind as ChannelKind]?.icon ?? 'CH'}
             </span>
             <div>
               <h2 className="font-semibold text-white text-sm">
@@ -635,7 +635,7 @@ export const Chat: React.FC = () => {
               </button>
             </div>
             <p className="text-[10px] text-zinc-700 mt-1.5 pl-1">
-              📎 Fotos · 📅 Compartir evento de agenda · 💬 Invitar por WhatsApp · Ctrl+Enter para enviar
+              Fotos · Compartir evento · Invitar por WhatsApp · Ctrl+Enter para enviar
             </p>
           </div>
         </div>

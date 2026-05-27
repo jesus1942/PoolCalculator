@@ -481,29 +481,29 @@ export function generateWaterMaintenanceGuide(
 
   // Checklist semanal
   const weeklyChecklist = [
-    '✓ Testear pH y cloro (2-3 veces)',
-    '✓ Agregar cloro según lectura',
-    '✓ Limpiar skimmers y pre-filtro de bomba',
-    '✓ Aspirar fondo si hay suciedad',
-    '✓ Cepillar paredes',
-    '✓ Agregar alguicida',
-    '✓ Revisar nivel de agua',
-    '✓ Verificar presión del filtro',
-    '✓ Inspeccionar visualmente claridad del agua'
+    '- Testear pH y cloro (2-3 veces)',
+    '- Agregar cloro según lectura',
+    '- Limpiar skimmers y pre-filtro de bomba',
+    '- Aspirar fondo si hay suciedad',
+    '- Cepillar paredes',
+    '- Agregar alguicida',
+    '- Revisar nivel de agua',
+    '- Verificar presión del filtro',
+    '- Inspeccionar visualmente claridad del agua'
   ];
 
   // Checklist mensual
   const monthlyChecklist = [
-    '✓ Test completo de agua (alcalinidad, dureza, estabilizador)',
-    '✓ Retrolavado del filtro',
-    '✓ Limpieza profunda de filtro',
-    '✓ Choque de cloro (cloración intensiva)',
-    '✓ Revisar y limpiar sistema de drenaje',
-    '✓ Inspeccionar boquillas de retorno y aspiración',
-    '✓ Limpiar línea de flotación',
-    '✓ Revisar funcionamiento de equipos (bomba, calentador)',
-    '✓ Agregar anticalcáreo',
-    '✓ Registrar costos de químicos'
+    '- Test completo de agua (alcalinidad, dureza, estabilizador)',
+    '- Retrolavado del filtro',
+    '- Limpieza profunda de filtro',
+    '- Choque de cloro (cloración intensiva)',
+    '- Revisar y limpiar sistema de drenaje',
+    '- Inspeccionar boquillas de retorno y aspiración',
+    '- Limpiar línea de flotación',
+    '- Revisar funcionamiento de equipos (bomba, calentador)',
+    '- Agregar anticalcáreo',
+    '- Registrar costos de químicos'
   ];
 
   // Costo anual total
