@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Home, FolderKanban, Settings, LogOut } from 'lucide-react';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -82,15 +83,7 @@ export const Footer: React.FC = () => {
 
           <div>
             <h3 className="text-lg font-light text-white mb-4 tracking-wide">Desarrollador</h3>
-            <div className="text-sm space-y-2">
-              <p className="text-white font-light">Jesús Olguín</p>
-              <p className="text-zinc-400 text-xs font-light">Domotics & IoT Solutions</p>
-              <div className="pt-2">
-                <div className="inline-block px-3 py-1 rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
-                  <span className="text-xs text-cyan-400 font-light">Professional Developer</span>
-                </div>
-              </div>
-            </div>
+            <DeveloperCredit variant="full" />
           </div>
         </div>
 
@@ -99,9 +92,7 @@ export const Footer: React.FC = () => {
             <p className="text-zinc-500 text-sm font-light">
               © {currentYear} Pool Installer. Todos los derechos reservados.
             </p>
-            <p className="text-zinc-600 text-xs font-light">
-              Desarrollado por <span className="font-normal text-cyan-400">Jesús Olguín</span> - Domotics & IoT Solutions
-            </p>
+            <DeveloperCredit variant="inline" className="text-zinc-600 text-xs font-light" />
           </div>
         </div>
       </div>

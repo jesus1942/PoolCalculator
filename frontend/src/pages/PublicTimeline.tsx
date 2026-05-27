@@ -4,6 +4,7 @@ import api from '@/services/api';
 import { Clock, AlertTriangle, CheckCircle, FileText, Eye, Package, Home, Calendar, MessageCircle, Download } from 'lucide-react';
 import { API_BASE_URL } from '@/services/api';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 interface ProjectUpdate {
   id: string;
@@ -367,15 +368,13 @@ export const PublicTimeline: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <h3 className="text-lg font-semibold mb-2">Pool Installer</h3>
-            <p className="text-zinc-400 text-sm mb-4">
+            <p className="text-zinc-400 text-sm mb-6">
               Sistema completo de cálculo de materiales para montaje de piscinas de fibra de vidrio
             </p>
-            <div className="border-t border-white/10 pt-6">
-              <p className="text-zinc-400 text-sm mb-2">
+            <div className="border-t border-white/10 pt-6 flex flex-col items-center gap-4">
+              <DeveloperCredit variant="compact" />
+              <p className="text-zinc-600 text-xs mt-2">
                 © {new Date().getFullYear()} Pool Installer. Todos los derechos reservados.
-              </p>
-              <p className="text-zinc-500 text-xs">
-                Desarrollado por <span className="font-semibold text-cyan-300">Jesús Olguín</span> - Domotics & IoT Solutions
               </p>
             </div>
           </div>

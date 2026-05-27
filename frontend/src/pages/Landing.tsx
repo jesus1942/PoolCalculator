@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Waves, Calculator, DollarSign, FileText, Users, Zap, CheckCircle, ArrowRight, MessageSquare, Send, Menu, X, Star } from 'lucide-react';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 // Lazy load componentes pesados para mejorar rendimiento
 const ProjectsCarousel = lazy(() => import('@/components/landing/ProjectsCarousel').then(m => ({ default: m.ProjectsCarousel })));
@@ -615,12 +616,7 @@ export const Landing: React.FC = () => {
             {/* Developer */}
             <div>
               <p className="text-zinc-300 font-semibold mb-4 text-sm uppercase tracking-wider">Desarrollador</p>
-              <p className="text-white font-medium">Jesús Olguín</p>
-              <p className="text-zinc-500 text-sm mb-3">Domotics & IoT Solutions</p>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-xs text-cyan-400 font-medium">Sistema en producción</span>
-              </div>
+              <DeveloperCredit variant="full" />
             </div>
           </div>
 

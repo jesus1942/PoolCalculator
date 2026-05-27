@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, User, Waves, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import api from '@/services/api';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 export const ClientLogin: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -213,13 +214,8 @@ export const ClientLogin: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center space-y-1">
-          <p className="text-xs text-zinc-600">
-            Sistema desarrollado por
-          </p>
-          <p className="text-xs font-medium text-zinc-500">
-            Jesús Olguín · Domotics & IoT Solutions
-          </p>
+        <div className="mt-8">
+          <DeveloperCredit variant="compact" />
         </div>
       </div>
 
