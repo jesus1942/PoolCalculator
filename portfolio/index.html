@@ -586,7 +586,10 @@
               <path d="M120 65 L120 30 L130 30 L130 65"/>
               <path d="M15 20 Q40 18 70 22 Q100 25 145 20" stroke-dasharray="3 3" opacity="0.6"/>
             </svg>
-            <h3 class="font-bold text-white mb-1">BCRA Consultas</h3>
+            <div class="flex items-start justify-between mb-1">
+              <h3 class="font-bold text-white">BCRA Consultas</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] border border-green-500/30 bg-green-500/10 text-green-400">Live</span>
+            </div>
             <p class="text-zinc-500 text-xs leading-relaxed mb-3">
               PWA para consultar la Central de Deudores del BCRA en tiempo real.
               Historial de deudas, cheques rechazados y alertas automáticas de cambios.
@@ -597,13 +600,22 @@
               <span class="tag tag-pwa">PWA</span>
               <span class="tag tag-railway">Railway</span>
             </div>
-            <a href="https://github.com/jesus1942/bcra-consultas-pwa" target="_blank" rel="noopener"
-               class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
-              Ver en GitHub
-              <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
-              </svg>
-            </a>
+            <div class="flex gap-4">
+              <a href="https://bcra-consultas-pwa-production.up.railway.app" target="_blank" rel="noopener"
+                 class="group inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
+                Ver demo
+                <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+                </svg>
+              </a>
+              <a href="https://github.com/jesus1942/bcra-consultas-pwa" target="_blank" rel="noopener"
+                 class="group inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-400 transition-colors">
+                GitHub
+                <svg class="w-3.5 h-3.5 scribble-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12 Q11 11.5 18 12 M14 8 Q17 11 18 12 Q17 13 14 16"/>
+                </svg>
+              </a>
+            </div>
           </div>
 
           <!-- ReadBible -->
