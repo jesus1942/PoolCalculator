@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jesús Olguín — Servicios técnicos e instalaciones</title>
+  <meta name="description" content="Instalación y mantenimiento de calefacción, piscinas, bombas, riego, cisternas, electricidad industrial y tableros en Puerto Madryn y zona." />
+  <meta name="theme-color" content="#F97316" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #f97316;
+      --navy: #0f172a;
+      --slate: #475569;
+      --muted: #64748b;
+      --paper: #fafaf7;
+      --cream: #fff7ed;
+      --white: #ffffff;
+      --line: #cbd5e1;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      color: var(--navy);
+      background: var(--paper);
+      line-height: 1.45;
+    }
+    a { color: inherit; }
+    .mono { font-family: "Space Mono", monospace; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    .stamp {
+      border: 4px solid var(--navy);
+      box-shadow: 8px 8px 0 var(--navy);
+      background: var(--white);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 13px 22px;
+      border: 3px solid var(--navy);
+      box-shadow: 5px 5px 0 var(--navy);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 900;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .btn:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--navy); }
+    .btn-primary { color: var(--white); background: var(--orange); }
+    .btn-light { color: var(--navy); background: var(--white); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border: 3px solid var(--orange);
+      background: var(--cream);
+      color: var(--orange);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 7px 12px;
+    }
+    .tape {
+      height: 34px;
+      border-bottom: 4px solid var(--navy);
+      background: repeating-linear-gradient(-45deg, var(--orange), var(--orange) 20px, var(--navy) 20px, var(--navy) 40px);
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--navy);
+      color: var(--white);
+      border-bottom: 4px solid var(--navy);
+    }
+    nav .wrap {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      color: var(--orange);
+      font-size: 22px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-links a {
+      color: #cbd5e1;
+      text-decoration: none;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      padding: 8px;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-links .btn { min-height: auto; padding: 8px 14px; font-size: 12px; box-shadow: 3px 3px 0 var(--orange); }
+    header {
+      padding: 70px 0 54px;
+      border-bottom: 4px solid var(--navy);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) 360px;
+      gap: 36px;
+      align-items: center;
+    }
+    h1, h2, h3 {
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(42px, 7vw, 82px);
+      margin: 18px 0 18px;
+    }
+    h1 span, .orange { color: var(--orange); }
+    .lead {
+      max-width: 720px;
+      color: var(--slate);
+      font-size: clamp(17px, 2vw, 22px);
+      margin-bottom: 26px;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 14px; }
+    .hero-card { padding: 24px; }
+    .hero-card .label { color: var(--orange); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; }
+    .hero-card ul { margin-top: 14px; list-style: none; display: grid; gap: 10px; }
+    .hero-card li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: var(--slate);
+      font-weight: 700;
+    }
+    .check {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+      margin-top: 2px;
+      border: 3px solid var(--navy);
+      background: var(--orange);
+      box-shadow: 2px 2px 0 var(--navy);
+    }
+    section { padding: 62px 0; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .section-head h2 { font-size: clamp(30px, 4vw, 48px); }
+    .section-head p { max-width: 500px; color: var(--slate); font-size: 17px; }
+    .grid { display: grid; gap: 18px; }
+    .g3 { grid-template-columns: repeat(3, 1fr); }
+    .g2 { grid-template-columns: repeat(2, 1fr); }
+    .card { padding: 24px; }
+    .card h3 { font-size: 21px; margin: 10px 0 8px; }
+    .card p { color: var(--slate); font-size: 15px; }
+    .num {
+      display: inline-flex;
+      color: var(--orange);
+      font-family: "Space Mono", monospace;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+    .dark {
+      background: var(--navy);
+      color: var(--white);
+      border-top: 4px solid var(--navy);
+      border-bottom: 4px solid var(--navy);
+    }
+    .dark .section-head p, .dark .card p { color: #cbd5e1; }
+    .dark .card { background: #1e293b; border-color: #334155; box-shadow: 8px 8px 0 #020617; }
+    .dark .card h3 { color: var(--orange); }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+      background: var(--white);
+      border: 3px solid var(--navy);
+      box-shadow: 4px 4px 0 var(--navy);
+      padding: 9px 14px;
+      color: var(--navy);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .process { counter-reset: step; }
+    .step {
+      display: grid;
+      grid-template-columns: 62px 1fr;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 3px solid #e2e8f0;
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      color: var(--white);
+      background: var(--orange);
+      border: 4px solid var(--navy);
+      box-shadow: 4px 4px 0 var(--navy);
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .step h3 { font-size: 20px; margin-bottom: 5px; }
+    .step p { color: var(--slate); }
+    .cta {
+      background: var(--orange);
+      border-top: 4px solid var(--navy);
+      border-bottom: 4px solid var(--navy);
+    }
+    .cta-box {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      align-items: center;
+      gap: 28px;
+      padding: 32px;
+    }
+    .cta h2 { font-size: clamp(30px, 5vw, 56px); color: var(--white); margin-bottom: 12px; }
+    .cta p { color: var(--white); font-size: 18px; max-width: 680px; }
+    .qr {
+      width: 220px;
+      height: 220px;
+      display: grid;
+      place-items: center;
+      background: var(--white);
+      border: 4px solid var(--navy);
+      box-shadow: 8px 8px 0 var(--navy);
+      justify-self: end;
+    }
+    .qr img { width: 185px; height: 185px; image-rendering: pixelated; }
+    footer {
+      padding: 32px 0;
+      color: #cbd5e1;
+      background: var(--navy);
+      text-align: center;
+      font-size: 14px;
+    }
+    footer .brand { display: block; margin-bottom: 6px; }
+    @media (max-width: 860px) {
+      .hero, .cta-box, .g2, .g3 { grid-template-columns: 1fr; }
+      .hero-card, .qr { justify-self: stretch; }
+      .qr { width: 100%; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 10px; }
+      .nav-links a:not(.btn) { display: none; }
+      header { padding-top: 44px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="tape"></div>
+
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="/">Jesús Olguín</a>
+      <div class="nav-links">
+        <a href="#servicios">Servicios</a>
+        <a href="#metodo">Método</a>
+        <a href="#contacto" class="btn btn-primary">WhatsApp</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <div class="wrap hero">
+      <div>
+        <span class="tag">Puerto Madryn · Chubut</span>
+        <h1>Instalaciones técnicas <span>sin improvisar</span>.</h1>
+        <p class="lead">
+          Instalación, mantenimiento y automatismos para calefacción, piscinas, bombas, riego,
+          cisternas, electricidad industrial y tableros. Trabajo técnico, prolijo y pensado para durar.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://wa.me/5492804018359?text=Hola%20Jes%C3%BAs%2C%20vi%20tu%20presentaci%C3%B3n%20de%20servicios%20y%20quiero%20consultarte%20por%20un%20trabajo." target="_blank" rel="noopener">Consultar por WhatsApp</a>
+          <a class="btn btn-light" href="#servicios">Ver servicios</a>
+        </div>
+      </div>
+      <aside class="hero-card stamp">
+        <p class="label">Qué hago</p>
+        <ul>
+          <li><span class="check"></span><span>Diagnóstico técnico antes de presupuestar.</span></li>
+          <li><span class="check"></span><span>Instalaciones con criterio de mantenimiento futuro.</span></li>
+          <li><span class="check"></span><span>Automatismos, sensores y control cuando la instalación lo necesita.</span></li>
+          <li><span class="check"></span><span>Experiencia cruzada entre obra, agua, energía, tableros e industria.</span></li>
+        </ul>
+      </aside>
+    </div>
+  </header>
+
+  <main>
+    <section id="servicios">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Servicios</h2>
+          <p>Una base técnica amplia para resolver instalaciones completas, mantenimiento y mejoras de sistemas existentes.</p>
+        </div>
+        <div class="grid g3">
+          <article class="card stamp">
+            <span class="num">01</span>
+            <h3>Calefacción</h3>
+            <p>Calderas, calefacción central, piso radiante, radiadores, distribución, regulación, purgado, revisión y mantenimiento preventivo.</p>
+          </article>
+          <article class="card stamp">
+            <span class="num">02</span>
+            <h3>Piscinas</h3>
+            <p>Instalación de piscinas, calefacción de piscina, filtrado, bombas, conexiones, puesta en marcha y mejoras del circuito hidráulico.</p>
+          </article>
+          <article class="card stamp">
+            <span class="num">03</span>
+            <h3>Bombas y agua</h3>
+            <p>Bombas de filtrado, presurización, riego, cisternas, automatismos de nivel, tableros de comando y protecciones.</p>
+          </article>
+          <article class="card stamp">
+            <span class="num">04</span>
+            <h3>Electricidad industrial</h3>
+            <p>Instalaciones eléctricas industriales, tableros, protecciones, contactores, comandos, ordenamiento y diagnóstico de fallas.</p>
+          </article>
+          <article class="card stamp">
+            <span class="num">05</span>
+            <h3>Tablerista</h3>
+            <p>Armado y mejora de tableros para bombas, calefacción, filtrado, automatismos, control de cargas y maniobra segura.</p>
+          </article>
+          <article class="card stamp">
+            <span class="num">06</span>
+            <h3>Automatismos y control</h3>
+            <p>Sensores, flotantes, presostatos, temporizadores, contactores, protecciones y comandos para que el sistema trabaje mejor.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="dark">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Especialidades conectadas</h2>
+          <p>No son rubros separados: muchas fallas aparecen donde se cruzan agua, energía, temperatura y control.</p>
+        </div>
+        <div class="chips">
+          <span class="chip">Calderas</span>
+          <span class="chip">Piso radiante</span>
+          <span class="chip">Radiadores</span>
+          <span class="chip">Calefacción central</span>
+          <span class="chip">Calefacción de piscina</span>
+          <span class="chip">Bombas de filtrado</span>
+          <span class="chip">Riego</span>
+          <span class="chip">Cisternas</span>
+          <span class="chip">Piscinas</span>
+          <span class="chip">Electricidad industrial</span>
+          <span class="chip">Tableros</span>
+          <span class="chip">Automatización</span>
+          <span class="chip">Sensores</span>
+          <span class="chip">Sensores</span>
+          <span class="chip">Mantenimiento</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="metodo">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Cómo trabajo</h2>
+          <p>Antes de cambiar piezas o prometer soluciones, reviso el sistema completo y ubico la causa real.</p>
+        </div>
+        <div class="process stamp" style="padding: 10px 28px;">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div><h3>Relevamiento</h3><p>Fotos, medidas, estado actual, uso real del sistema y prioridad del problema.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div><h3>Diagnóstico</h3><p>Revisión técnica de hidráulica, electricidad, control, seguridad y mantenimiento.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div><h3>Propuesta</h3><p>Opciones claras: reparación, mejora, automatización o instalación nueva.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div><h3>Ejecución</h3><p>Trabajo prolijo, probado, documentado y pensado para que después sea mantenible.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contacto" class="cta">
+      <div class="wrap">
+        <div class="cta-box stamp">
+          <div>
+            <h2>Contame qué necesitás resolver.</h2>
+            <p>
+              Mandame fotos, ubicación y una descripción corta del problema o instalación.
+              Te respondo por WhatsApp para coordinar el siguiente paso.
+            </p>
+            <div class="actions" style="margin-top: 22px;">
+              <a class="btn btn-primary" href="https://wa.me/5492804018359?text=Hola%20Jes%C3%BAs%2C%20vi%20tu%20presentaci%C3%B3n%20de%20servicios%20y%20quiero%20consultarte%20por%20un%20trabajo." target="_blank" rel="noopener">+54 9 280 401-8359</a>
+            </div>
+          </div>
+          <div class="qr">
+            <img src="/servicios-qr-limpio.png" alt="QR para abrir esta presentación de servicios" />
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span class="brand">Jesús Olguín</span>
+    Servicios técnicos · Instalaciones · Mantenimiento · Electricidad industrial · Tableros
+  </footer>
+</body>
+</html>
