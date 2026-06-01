@@ -2,7 +2,7 @@ providers = []
 
 [phases.setup]
 nixPkgs = [
-  "nodejs_20",
+  "nodejs_22",
   "python311",
   "python311Packages.pip",
   "libjpeg",
@@ -12,8 +12,12 @@ nixPkgs = [
 [phases.install]
 cmds = [
   "pip3 install --no-cache-dir --break-system-packages --target /app/backend/.python-packages openpyxl Pillow",
-  "npm --prefix frontend ci --include=dev",
-  "npm --prefix backend ci --include=dev"
+  "npm config set fetch-retries 5",
+  "npm config set fetch-retry-factor 2",
+  "npm config set fetch-retry-mintimeout 20000",
+  "npm config set fetch-retry-maxtimeout 120000",
+  "npm --prefix frontend ci --include=dev --no-audit --no-fund",
+  "npm --prefix backend ci --include=dev --no-audit --no-fund"
 ]
 
 [phases.build]
