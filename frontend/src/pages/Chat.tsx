@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { MessageSquare, Search, Send, ChevronRight, ChevronDown, Paperclip, X, CalendarClock, Image as ImageIcon, MessageCircle, MapPin, Users as UsersIcon } from 'lucide-react';
+import { MessageSquare, Search, Send, ChevronRight, ChevronDown, ChevronLeft, Paperclip, X, CalendarClock, Image as ImageIcon, MessageCircle, MapPin, Users as UsersIcon } from 'lucide-react';
 import {
   conversationService,
   unreadService,
@@ -126,6 +126,7 @@ export const Chat: React.FC = () => {
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [mobilePanelView, setMobilePanelView] = useState<'list' | 'chat'>('list');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
@@ -215,6 +216,7 @@ export const Chat: React.FC = () => {
   const handleSelectConversation = (conv: Conversation) => {
     setSelectedId(conv.id);
     unreadService.markRead(conv.id);
+    setMobilePanelView('chat');
   };
 
   const toggleProject = (projectId: string) => {
@@ -342,7 +344,7 @@ export const Chat: React.FC = () => {
     <div className="flex h-[calc(100dvh-60px)] lg:h-screen overflow-hidden bg-zinc-950">
 
       {/* ── LEFT: Lista de proyectos y canales ── */}
-      <div className="w-72 shrink-0 border-r border-zinc-800 flex flex-col bg-zinc-950">
+      <div className={`${mobilePanelView === 'chat' ? 'hidden' : 'flex'} lg:flex flex-col w-full lg:w-72 lg:shrink-0 border-r border-zinc-800 bg-zinc-950`}>
         <div className="px-4 py-4 border-b border-zinc-800">
           <h1 className="text-base font-bold text-white mb-3 flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-blue-400" />
@@ -444,17 +446,24 @@ export const Chat: React.FC = () => {
 
       {/* ── RIGHT: Hilo de mensajes ── */}
       {selectedConversation ? (
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`${mobilePanelView === 'list' ? 'hidden' : 'flex'} lg:flex flex-1 flex-col min-w-0`}>
           {/* Thread header */}
-          <div className="px-6 py-3 border-b border-zinc-800 flex items-center gap-3 bg-zinc-950">
-            <span className="text-[11px] font-bold text-zinc-400 bg-zinc-800 px-2 py-1 rounded">
+          <div className="px-4 py-3 border-b border-zinc-800 flex items-center gap-3 bg-zinc-950">
+            <button
+              className="lg:hidden -ml-1 mr-1 flex items-center justify-center w-8 h-8 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              onClick={() => setMobilePanelView('list')}
+              aria-label="Volver a mensajes"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-[11px] font-bold text-zinc-400 bg-zinc-800 px-2 py-1 rounded shrink-0">
               {CHANNELS[selectedConversation.kind as ChannelKind]?.icon ?? 'CH'}
             </span>
-            <div>
-              <h2 className="font-semibold text-white text-sm">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-white text-sm truncate">
                 {CHANNELS[selectedConversation.kind as ChannelKind]?.label ?? selectedConversation.title}
               </h2>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-500 truncate">
                 {selectedConversation.project?.name}
                 {selectedConversation.participants?.length
                   ? ` · ${selectedConversation.participants.length} participantes`
@@ -464,7 +473,7 @@ export const Chat: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-3">
             {loadingMsgs ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
@@ -640,7 +649,7 @@ export const Chat: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-zinc-600 select-none">
+        <div className="hidden lg:flex flex-1 flex-col items-center justify-center text-zinc-600 select-none">
           <MessageSquare className="w-14 h-14 mb-4 opacity-15" />
           <p className="text-base font-medium">Seleccioná una conversación</p>
           <p className="text-sm mt-1 text-zinc-700">Elegí un canal de la lista para empezar</p>
