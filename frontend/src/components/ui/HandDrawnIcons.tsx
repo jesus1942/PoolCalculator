@@ -26,7 +26,7 @@ const Svg: React.FC<{ size: number; className: string; style?: React.CSSProperti
     stroke="currentColor"
     strokeLinecap="round"
     strokeLinejoin="round"
-    style={{ width: '100%', height: '100%', display: 'block', ...style }}
+    style={{ display: 'block', flexShrink: 0, ...style }}
     aria-hidden
     className={className}
   >
