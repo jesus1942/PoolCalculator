@@ -4,7 +4,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Waves, Calculator, DollarSign, FileText, Users, Zap, CheckCircle, ArrowRight, MessageSquare, Send, Menu, X, Star } from 'lucide-react';
 import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
-import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 // Lazy load componentes pesados para mejorar rendimiento
 const ProjectsCarousel = lazy(() => import('@/components/landing/ProjectsCarousel').then(m => ({ default: m.ProjectsCarousel })));
@@ -263,10 +262,6 @@ export const Landing: React.FC = () => {
                 : 'opacity-0 translate-y-20 scale-[0.98]'
             }`}
           >
-            <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-cyan-200 animate-float-slow sm:mb-6 sm:px-4">
-              <Waves className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" />
-              <span className="truncate text-sm font-semibold sm:text-base">Sistema Profesional de Cálculo</span>
-            </div>
             <h2 className="mb-5 text-3xl font-bold leading-tight sm:text-4xl md:text-6xl">
               <span className="bg-gradient-to-br from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">Calcula Materiales para</span><br />
               <span className="bg-gradient-to-r from-cyan-300 via-teal-200 to-cyan-400 bg-clip-text text-transparent">Piscinas de Fibra</span>
@@ -581,7 +576,7 @@ export const Landing: React.FC = () => {
       {/* Footer */}
       <footer className="bg-zinc-950 border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
             {/* Brand */}
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -613,11 +608,6 @@ export const Landing: React.FC = () => {
               </div>
             </div>
 
-            {/* Developer */}
-            <div>
-              <p className="text-zinc-300 font-semibold mb-4 text-sm uppercase tracking-wider">Desarrollador</p>
-              <DeveloperCredit variant="full" />
-            </div>
           </div>
 
           <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">

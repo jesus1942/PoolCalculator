@@ -549,6 +549,7 @@
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+  filter: url(#hand-drawn-filter);
 }
 
 /* Ajustes finos por tamaño — iconos chicos necesitan stroke un poco más grueso

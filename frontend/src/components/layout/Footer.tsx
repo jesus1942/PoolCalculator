@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Home, FolderKanban, Settings, LogOut } from 'lucide-react';
-import { DeveloperCredit } from '@/components/DeveloperCredit';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -25,7 +24,7 @@ export const Footer: React.FC = () => {
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div>
             <h3 className="text-lg font-light text-white mb-4 tracking-wide">Pool Installer</h3>
             <p className="text-zinc-400 text-sm font-light leading-relaxed">
@@ -80,20 +79,12 @@ export const Footer: React.FC = () => {
               </ul>
             )}
           </div>
-
-          <div>
-            <h3 className="text-lg font-light text-white mb-4 tracking-wide">Desarrollador</h3>
-            <DeveloperCredit variant="full" />
-          </div>
         </div>
 
-        <div className="border-t border-zinc-800/50 pt-8">
-          <div className="text-center space-y-2">
-            <p className="text-zinc-500 text-sm font-light">
-              © {currentYear} Pool Installer. Todos los derechos reservados.
-            </p>
-            <DeveloperCredit variant="inline" className="text-zinc-600 text-xs font-light" />
-          </div>
+        <div className="border-t border-zinc-800/50 pt-8 text-center">
+          <p className="text-zinc-500 text-sm font-light">
+            © {currentYear} Pool Installer. Todos los derechos reservados.
+          </p>
         </div>
       </div>
     </footer>
