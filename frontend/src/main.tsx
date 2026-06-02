@@ -30,3 +30,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 );
+
+// Fade out the Mundial splash once React has painted its first frame
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(() => { splash.style.display = 'none'; }, 600);
+    }
+  });
+});

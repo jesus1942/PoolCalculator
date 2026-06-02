@@ -38,8 +38,8 @@ function GlobalSvgFilters() {
     <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
       <defs>
         <filter id="hand-drawn-filter" x="-4%" y="-4%" width="108%" height="108%" colorInterpolationFilters="linearRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.035 0.065" numOctaves="2" seed="6" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.85" xChannelSelector="R" yChannelSelector="G" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.028 0.048" numOctaves="3" seed="6" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </defs>
     </svg>

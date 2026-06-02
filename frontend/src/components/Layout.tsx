@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Waves, FolderOpen, Settings, LogOut, Database, FileText, Calendar, Users, Building2, Activity, Menu, X, MessageSquare } from 'lucide-react';
+import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX } from '@/components/ui/HandDrawnIcons';
+import { LogOut } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -48,32 +49,31 @@ export const Layout: React.FC = () => {
 
   const navItems = user?.role === 'INSTALLER'
     ? [
-      { to: '/installer', icon: Calendar, label: 'Instalador' },
-      { to: '/agenda', icon: Calendar, label: 'La Agenda' },
-      { to: '/chat', icon: MessageSquare, label: 'Mensajes' },
+      { to: '/installer', icon: HdCalendar, label: 'Instalador' },
+      { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },
+      { to: '/chat', icon: HdMessageBubble, label: 'Mensajes' },
     ]
     : [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
-      { to: '/pool-models', icon: Waves, label: 'Modelos de Piscinas' },
-      { to: '/projects', icon: FolderOpen, label: 'Proyectos' },
-      { to: '/agenda', icon: Calendar, label: 'La Agenda' },
-      { to: '/chat', icon: MessageSquare, label: 'Mensajes' },
-      { to: '/settings', icon: Settings, label: 'Configuración' },
+      { to: '/dashboard', icon: HdLayoutGrid, label: 'Panel' },
+      { to: '/pool-models', icon: HdWaves, label: 'Modelos de Piscinas' },
+      { to: '/projects', icon: HdFolderOpen, label: 'Proyectos' },
+      { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },
+      { to: '/chat', icon: HdMessageBubble, label: 'Mensajes' },
+      { to: '/settings', icon: HdGear, label: 'Configuración' },
     ];
 
   if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
-    navItems.push({ to: '/admin/users', icon: Users, label: 'Usuarios' });
+    navItems.push({ to: '/admin/users', icon: HdUsers, label: 'Usuarios' });
   }
 
   if (user?.role === 'SUPERADMIN') {
-    navItems.push({ to: '/admin/tenants', icon: Building2, label: 'Tenants' });
-    navItems.push({ to: '/admin/ops', icon: Activity, label: 'Ops' });
-    navItems.push({ to: '/admin/docs', icon: FileText, label: 'Documentación' });
+    navItems.push({ to: '/admin/tenants', icon: HdBuilding, label: 'Tenants' });
+    navItems.push({ to: '/admin/ops', icon: HdActivity, label: 'Ops' });
+    navItems.push({ to: '/admin/docs', icon: HdFileText, label: 'Documentación' });
   }
 
-  // Agregar opción de catálogos para administradores
   if (user?.role === 'ADMIN' || user?.email === 'admin@poolcalculator.com') {
-    navItems.push({ to: '/admin/catalogs', icon: Database, label: 'Catálogos' });
+    navItems.push({ to: '/admin/catalogs', icon: HdDatabase, label: 'Catálogos' });
   }
 
   return (
@@ -113,7 +113,7 @@ export const Layout: React.FC = () => {
               className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 lg:hidden"
               aria-label="Cerrar menú"
             >
-              <X size={18} />
+              <HdX size={18} />
             </button>
           </div>
 
@@ -185,7 +185,7 @@ export const Layout: React.FC = () => {
             className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-zinc-200 hover:bg-white/10"
             aria-label="Abrir menú"
           >
-            <Menu size={20} />
+            <HdMenu size={20} />
           </button>
           <span className="text-sm font-medium text-zinc-100">Panel</span>
         </div>

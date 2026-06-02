@@ -4,15 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- SEO Meta Tags -->
     <meta name="description" content="Sistema profesional de cálculo de materiales para piscinas de fibra de vidrio ACQUAM. Calcula excavación, materiales y presupuestos en minutos. 24 modelos disponibles." />
     <meta name="keywords" content="piscinas, fibra de vidrio, calculadora piscinas, ACQUAM, materiales piscina, presupuesto piscina, instalación piscinas, Argentina" />
     <meta name="author" content="Jesús Olguín - Domotics & IoT Solutions" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="Spanish" />
-
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://poolcalculator.com/" />
     <meta property="og:title" content="Pool Installer - Calculadora Profesional de Materiales para Piscinas" />
@@ -20,25 +16,192 @@
     <meta property="og:image" content="https://poolcalculator.com/og-image.png" />
     <meta property="og:locale" content="es_AR" />
     <meta property="og:site_name" content="Pool Installer" />
-
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://poolcalculator.com/" />
     <meta name="twitter:title" content="Pool Installer - Calculadora Profesional de Materiales para Piscinas" />
     <meta name="twitter:description" content="Sistema completo para calcular materiales, presupuestar y gestionar proyectos de montaje de piscinas de fibra de vidrio." />
     <meta name="twitter:image" content="https://poolcalculator.com/twitter-image.png" />
-
-    <!-- Canonical URL -->
     <link rel="canonical" href="https://poolcalculator.com/" />
-
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#2563EB" />
+    <meta name="theme-color" content="#080c14" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
     <title>Pool Installer - Calculadora Profesional de Materiales para Piscinas ACQUAM</title>
+
+    <style>
+      /* ── Splash Mundial 2026 ── */
+      html, body { margin: 0; padding: 0; background: #080c14; }
+
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        background: radial-gradient(ellipse at 50% 60%, #0d1a2e 0%, #080c14 70%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        transition: opacity 0.55s ease, transform 0.55s ease;
+      }
+      #splash.fade-out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+
+      /* Background stars */
+      #splash::before {
+        content: '';
+        position: absolute; inset: 0;
+        background-image:
+          radial-gradient(circle at 18% 25%, rgba(255,255,255,.9) 0 1px, transparent 2px),
+          radial-gradient(circle at 72% 15%, rgba(255,255,255,.7) 0 1px, transparent 2px),
+          radial-gradient(circle at 40% 8%,  rgba(255,255,255,.8) 0 1px, transparent 2px),
+          radial-gradient(circle at 85% 35%, rgba(255,255,255,.6) 0 1px, transparent 2px),
+          radial-gradient(circle at 12% 70%, rgba(255,255,255,.5) 0 1px, transparent 2px),
+          radial-gradient(circle at 60% 80%, rgba(255,255,255,.7) 0 1px, transparent 2px),
+          radial-gradient(circle at 90% 75%, rgba(255,255,255,.6) 0 1px, transparent 2px),
+          radial-gradient(circle at 30% 90%, rgba(255,255,255,.4) 0 1px, transparent 2px);
+        pointer-events: none;
+      }
+
+      .sp-content {
+        display: flex; flex-direction: column; align-items: center;
+        animation: sp-rise 0.7s cubic-bezier(0.16,1,0.3,1) 0.05s both;
+      }
+      @keyframes sp-rise {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Stars */
+      .sp-stars { display: flex; gap: 16px; margin-bottom: 30px; }
+      .sp-star {
+        width: 50px; height: 50px; color: #FBBF24;
+        filter: drop-shadow(0 0 10px rgba(251,191,36,.6));
+        animation: star-glow 2.8s ease-in-out infinite;
+      }
+      .sp-star:nth-child(2) { animation-delay: 0.22s; }
+      .sp-star:nth-child(3) { animation-delay: 0.44s; }
+      @keyframes star-glow {
+        0%,100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(251,191,36,.5)); }
+        50%      { transform: scale(1.12); filter: drop-shadow(0 0 20px rgba(251,191,36,.9)); }
+      }
+
+      /* Flags */
+      .sp-flags { display: flex; gap: 28px; align-items: center; }
+      .sp-flag {
+        border-radius: 3px; overflow: hidden;
+        box-shadow: 0 12px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
+      }
+      .sp-flag-l { animation: wave-l 3.2s ease-in-out infinite; }
+      .sp-flag-r { animation: wave-r 3.2s ease-in-out 0.55s infinite; }
+      @keyframes wave-l {
+        0%,100% { transform: rotate(-4deg) skewX(0deg); }
+        50%      { transform: rotate(-4.8deg) skewX(2.8deg); }
+      }
+      @keyframes wave-r {
+        0%,100% { transform: rotate(4deg) skewX(0deg); }
+        50%      { transform: rotate(4.8deg) skewX(-2.8deg); }
+      }
+
+      /* Text */
+      .sp-country {
+        margin-top: 26px;
+        font-size: 16px; font-weight: 700; letter-spacing: .35em;
+        color: rgba(255,255,255,.8); text-transform: uppercase;
+      }
+      .sp-mundial {
+        margin-top: 5px;
+        font-size: 11px; letter-spacing: .22em;
+        color: rgba(116,172,223,.65); text-transform: uppercase;
+      }
+      .sp-brand {
+        margin-top: 22px;
+        font-size: 10px; letter-spacing: .28em;
+        color: rgba(255,255,255,.18); text-transform: uppercase;
+      }
+    </style>
   </head>
   <body>
+    <!-- ── Splash Mundial 2026 ── -->
+    <div id="splash">
+      <div class="sp-content">
+
+        <!-- Tres estrellas ★★★ -->
+        <div class="sp-stars">
+          <svg class="sp-star" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l2.6 7.9H23l-6.8 5 2.6 7.9L12 18.7l-6.8 4.1 2.6-7.9L1 9.9h8.4L12 2z"/>
+          </svg>
+          <svg class="sp-star" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l2.6 7.9H23l-6.8 5 2.6 7.9L12 18.7l-6.8 4.1 2.6-7.9L1 9.9h8.4L12 2z"/>
+          </svg>
+          <svg class="sp-star" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l2.6 7.9H23l-6.8 5 2.6 7.9L12 18.7l-6.8 4.1 2.6-7.9L1 9.9h8.4L12 2z"/>
+          </svg>
+        </div>
+
+        <!-- Dos banderas argentinas -->
+        <div class="sp-flags">
+          <!-- Bandera izquierda -->
+          <div class="sp-flag sp-flag-l">
+            <svg viewBox="0 0 90 60" width="138" height="92" style="display:block">
+              <rect width="90" height="20" fill="#74ACDF"/>
+              <rect y="20" width="90" height="20" fill="#ffffff"/>
+              <rect y="40" width="90" height="20" fill="#74ACDF"/>
+              <!-- Sol de Mayo -->
+              <g transform="translate(45,30)">
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(45)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(90)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(135)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(180)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(225)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(270)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(315)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(22.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(67.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(112.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(157.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(202.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(247.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(292.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(337.5)"/>
+                <circle r="5.6" fill="#F6B40E" stroke="#85340A" stroke-width="0.3"/>
+                <circle r="3.9" fill="none" stroke="#85340A" stroke-width="0.25"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Bandera derecha -->
+          <div class="sp-flag sp-flag-r">
+            <svg viewBox="0 0 90 60" width="138" height="92" style="display:block">
+              <rect width="90" height="20" fill="#74ACDF"/>
+              <rect y="20" width="90" height="20" fill="#ffffff"/>
+              <rect y="40" width="90" height="20" fill="#74ACDF"/>
+              <g transform="translate(45,30)">
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(45)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(90)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(135)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(180)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(225)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(270)"/>
+                <path d="M-1.3 -8 L0 -14 L1.3 -8 Z" fill="#F6B40E" transform="rotate(315)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(22.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(67.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(112.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(157.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(202.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(247.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(292.5)"/>
+                <path d="M-1 -8 Q-2.8 -11 0 -13 Q2.8 -11 1 -8 Z" fill="#F6B40E" transform="rotate(337.5)"/>
+                <circle r="5.6" fill="#F6B40E" stroke="#85340A" stroke-width="0.3"/>
+                <circle r="3.9" fill="none" stroke="#85340A" stroke-width="0.25"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <p class="sp-country">Argentina</p>
+        <p class="sp-mundial">Mundial 2026</p>
+        <p class="sp-brand">Pool Installer</p>
+      </div>
+    </div>
+    <!-- ── Fin splash ── -->
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
