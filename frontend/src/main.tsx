@@ -31,13 +31,20 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 );
 
-// Fade out the Mundial splash once React has painted its first frame
+// Fade out the Mundial splash — wait at least 3.5s so the full animation plays
+const splashStart = Date.now();
+const MIN_SPLASH_MS = 3500;
+
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    const splash = document.getElementById('splash');
-    if (splash) {
-      splash.classList.add('fade-out');
-      setTimeout(() => { splash.style.display = 'none'; }, 600);
-    }
+    const elapsed = Date.now() - splashStart;
+    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+    setTimeout(() => {
+      const splash = document.getElementById('splash');
+      if (splash) {
+        splash.classList.add('fade-out');
+        setTimeout(() => { splash.style.display = 'none'; }, 650);
+      }
+    }, remaining);
   });
 });
