@@ -86,3 +86,6 @@ PoolCalculatorRN/
 # Mobile apps no longer tracked
 android-app/
 mobile/
+
+# Claude Code internal
+.claude/
