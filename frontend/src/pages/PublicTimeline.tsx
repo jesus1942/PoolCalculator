@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/services/api';
-import { Clock, AlertTriangle, CheckCircle, FileText, Eye, Package, Home, Calendar, MessageCircle, Download } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, FileText, Eye, Package, Calendar, MessageCircle, Download, X } from 'lucide-react';
 import { API_BASE_URL } from '@/services/api';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { DeveloperCredit } from '@/components/DeveloperCredit';
@@ -52,6 +52,40 @@ interface ProjectData {
   showDetails: boolean;
 }
 
+const CATEGORY_MAP = {
+  PROGRESS:   { label: 'Progreso',    icon: Clock,          dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-300 border-blue-400/20' },
+  MILESTONE:  { label: 'Hito',        icon: CheckCircle,    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20' },
+  ISSUE:      { label: 'Problema',    icon: AlertTriangle,  dot: 'bg-rose-400',    badge: 'bg-rose-400/10 text-rose-300 border-rose-400/20' },
+  NOTE:       { label: 'Nota',        icon: FileText,       dot: 'bg-zinc-400',    badge: 'bg-zinc-400/10 text-zinc-300 border-zinc-400/20' },
+  INSPECTION: { label: 'Inspección',  icon: Eye,            dot: 'bg-violet-400',  badge: 'bg-violet-400/10 text-violet-300 border-violet-400/20' },
+  DELIVERY:   { label: 'Entrega',     icon: Package,        dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-300 border-amber-400/20' },
+  OTHER:      { label: 'Novedad',     icon: FileText,       dot: 'bg-zinc-400',    badge: 'bg-zinc-400/10 text-zinc-300 border-zinc-400/20' },
+} as const;
+
+const TIMELINE_TYPE_MAP = {
+  AGENDA_MESSAGE: { label: 'Mensaje', icon: MessageCircle, dot: 'bg-teal-400',   badge: 'bg-teal-400/10 text-teal-300 border-teal-400/20' },
+  AGENDA_EVENT:   { label: 'Evento',  icon: Calendar,      dot: 'bg-indigo-400', badge: 'bg-indigo-400/10 text-indigo-300 border-indigo-400/20' },
+};
+
+function getItemMeta(item: TimelineItem) {
+  if (item.type === 'PROJECT_UPDATE') {
+    return CATEGORY_MAP[item.category ?? 'OTHER'] ?? CATEGORY_MAP.OTHER;
+  }
+  return TIMELINE_TYPE_MAP[item.type as keyof typeof TIMELINE_TYPE_MAP] ?? CATEGORY_MAP.OTHER;
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffHours < 1) return 'Hace menos de 1 hora';
+  if (diffHours < 24) return `Hace ${diffHours}h`;
+  if (diffDays < 7) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
+  return date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export const PublicTimeline: React.FC = () => {
   const { shareToken } = useParams<{ shareToken: string }>();
   const navigate = useNavigate();
@@ -61,101 +95,23 @@ export const PublicTimeline: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Verificar si hay token de cliente en sessionStorage
     const clientToken = sessionStorage.getItem('clientShareToken');
-
-    // Si no hay token o no coincide con el shareToken de la URL, redirigir al login
     if (!clientToken || clientToken !== shareToken) {
       navigate(`/client-login?returnUrl=/timeline/${shareToken}`);
       return;
     }
-
-    loadTimeline();
+    api.get(`/public/timeline/${shareToken}`)
+      .then(r => setProjectData(r.data))
+      .catch(e => setError(e.response?.data?.error || 'No se pudo cargar el timeline'))
+      .finally(() => setLoading(false));
   }, [shareToken, navigate]);
-
-  const loadTimeline = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get(`/public/timeline/${shareToken}`);
-      setProjectData(response.data);
-    } catch (error: any) {
-      console.error('Error loading timeline:', error);
-      setError(error.response?.data?.error || 'No se pudo cargar el timeline del proyecto');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getCategoryInfo = (category: ProjectUpdate['category']) => {
-    const categories = {
-      PROGRESS: { label: 'Progreso', icon: Clock, color: 'blue' },
-      MILESTONE: { label: 'Hito', icon: CheckCircle, color: 'green' },
-      ISSUE: { label: 'Problema', icon: AlertTriangle, color: 'red' },
-      NOTE: { label: 'Nota', icon: FileText, color: 'gray' },
-      INSPECTION: { label: 'Inspección', icon: Eye, color: 'purple' },
-      DELIVERY: { label: 'Entrega', icon: Package, color: 'orange' },
-      OTHER: { label: 'Otro', icon: FileText, color: 'gray' },
-    };
-    return categories[category] || categories.OTHER;
-  };
-
-  const getTimelineInfo = (item: TimelineItem) => {
-    if (item.type === 'PROJECT_UPDATE') {
-      return getCategoryInfo(item.category || 'OTHER');
-    }
-    if (item.type === 'AGENDA_MESSAGE') {
-      return { label: 'Mensaje', icon: MessageCircle, color: 'emerald' };
-    }
-    return { label: 'La Agenda', icon: Calendar, color: 'indigo' };
-  };
-
-  const getRoleLabel = (role?: string | null) => {
-    if (!role) return '';
-    const map: Record<string, string> = {
-      SUPERADMIN: 'Superadmin',
-      ADMIN: 'Admin',
-      INSTALLER: 'Instalador',
-      USER: 'Usuario',
-      VIEWER: 'Lector',
-    };
-    return map[role] || role;
-  };
-
-  const timelineSource = projectData?.timeline || projectData?.updates || [];
-  const timelineItems = timelineSource.filter((item: any) => !item?.type || item.type === 'PROJECT_UPDATE');
-  const exportUrl = shareToken
-    ? `${API_BASE_URL}/api/public/timeline/${shareToken}/export`
-    : '';
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 24) {
-      if (diffHours < 1) return 'Hace menos de 1 hora';
-      return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-    } else if (diffDays < 7) {
-      return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`;
-    } else {
-      return date.toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-cyan-300 mx-auto"></div>
-          <p className="text-zinc-300 mt-4 text-lg">Cargando timeline del proyecto...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto" />
+          <p className="text-zinc-400 mt-4 text-sm">Cargando...</p>
         </div>
       </div>
     );
@@ -163,18 +119,16 @@ export const PublicTimeline: React.FC = () => {
 
   if (error || !projectData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 flex items-center justify-center p-4">
-        <div className="bg-white/5 rounded-lg shadow-2xl p-8 max-w-md text-center border border-white/10">
-          <AlertTriangle size={64} className="mx-auto text-red-400 mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Acceso Denegado</h1>
-          <p className="text-zinc-400 mb-6">
-            {error || 'No se pudo cargar el timeline. Verifica que el enlace sea correcto.'}
-          </p>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="bg-white/5 rounded-2xl p-8 max-w-sm w-full text-center border border-white/10">
+          <AlertTriangle size={40} className="mx-auto text-rose-400 mb-4" />
+          <p className="text-white font-semibold mb-1">Acceso no disponible</p>
+          <p className="text-zinc-400 text-sm mb-6">{error || 'Verificá que el enlace sea correcto.'}</p>
           <button
             onClick={() => navigate('/login')}
-            className="px-6 py-2 bg-cyan-400 text-zinc-950 rounded-lg hover:bg-cyan-300 transition-colors font-semibold"
+            className="px-5 py-2 bg-cyan-400 text-zinc-950 rounded-lg text-sm font-semibold hover:bg-cyan-300 transition-colors"
           >
-            Volver al Inicio
+            Volver al inicio
           </button>
         </div>
       </div>
@@ -182,226 +136,160 @@ export const PublicTimeline: React.FC = () => {
   }
 
   const projectName = projectData.projectName || (projectData as any).project?.name || 'Proyecto';
-  const clientName = projectData.clientName || (projectData as any).project?.clientName || 'Cliente';
+  const timelineSource = projectData.timeline || projectData.updates || [];
+  const items = timelineSource.filter((item: any) => !item?.type || item.type === 'PROJECT_UPDATE');
+  const exportUrl = shareToken ? `${API_BASE_URL}/api/public/timeline/${shareToken}/export` : '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-zinc-950/80 shadow-2xl backdrop-blur-xl">
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8 sm:py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="break-words text-2xl font-bold text-white sm:text-3xl">{projectName}</h1>
-              <p className="mt-1 text-sm text-zinc-400 sm:text-base">Cliente: {clientName}</p>
-            </div>
-            <div className="flex items-center gap-3 text-cyan-300 sm:justify-end">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black">
-                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-5 w-auto" />
-              </div>
-              <span className="text-base font-semibold text-white sm:text-lg">Pool Installer</span>
-            </div>
+    <div className="min-h-screen bg-zinc-950">
+      {/* Header sticky compacto */}
+      <header className="sticky top-0 z-20 border-b border-white/8 bg-zinc-950/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-2xl px-4 py-3 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-zinc-900 shrink-0">
+            <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-4 w-auto" />
           </div>
+          <div className="min-w-0">
+            <p className="text-xs text-zinc-500 leading-none mb-0.5">Pool Installer</p>
+            <h1 className="text-sm font-semibold text-white truncate">{projectName}</h1>
+          </div>
+          {exportUrl && items.length > 0 && (
+            <button
+              onClick={() => { window.location.href = exportUrl; }}
+              className="ml-auto shrink-0 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Exportar</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Timeline Content */}
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 sm:py-12">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-4 shadow-2xl backdrop-blur-xl sm:p-8">
-          <div className="mb-6 sm:mb-8">
-            <h2 className="mb-2 text-2xl font-bold text-white">Timeline del Proyecto</h2>
-            <p className="text-sm text-zinc-400 sm:text-base">
-              Registro cronológico de actualizaciones y eventos del proyecto
-            </p>
-            {timelineItems.length > 0 && (
-              <p className="text-sm text-zinc-500 mt-2">
-                Total de items: {timelineItems.length}
-              </p>
-            )}
+      {/* Timeline */}
+      <main className="mx-auto max-w-2xl px-4 py-6">
+        {items.length === 0 ? (
+          <div className="text-center py-20">
+            <Clock size={40} className="mx-auto text-zinc-600 mb-4" />
+            <p className="text-zinc-300 font-medium mb-1">Sin actualizaciones aún</p>
+            <p className="text-zinc-500 text-sm">El equipo irá agregando novedades a medida que avance la obra.</p>
           </div>
+        ) : (
+          <div className="relative">
+            {/* Línea vertical */}
+            <div className="absolute left-3.5 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/30 via-white/8 to-transparent" />
 
-          {timelineItems.length === 0 ? (
-            <div className="text-center py-16 bg-white/5 rounded-lg border border-white/10">
-              <Clock size={64} className="mx-auto text-zinc-500 mb-4" />
-              <p className="text-zinc-300 text-lg mb-2">No hay actualizaciones registradas</p>
-              <p className="text-sm text-zinc-500">
-                El constructor agregará actualizaciones a medida que avance el proyecto
-              </p>
-            </div>
-          ) : (
-            <div className="relative">
-              {/* Línea vertical del timeline */}
-              <div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gradient-to-b from-cyan-500/40 via-blue-500/30 to-transparent sm:left-8"></div>
+            <div className="space-y-4">
+              {items.map((item, index) => {
+                const meta = getItemMeta(item);
+                const Icon = meta.icon;
+                const isLatest = index === 0;
 
-              {/* Lista de actualizaciones */}
-              <div className="space-y-8">
-                {timelineItems.map((item, index) => {
-                  const categoryInfo = getTimelineInfo(item);
-                  const CategoryIcon = categoryInfo.icon;
-                  const isFirst = index === 0;
-
-                  return (
-                    <div key={item.id} className="relative pl-12 sm:pl-20">
-                      {/* Icono en la línea del timeline */}
-                      <div
-                        className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-zinc-950 shadow-md sm:left-4 ${
-                          categoryInfo.color === 'blue' ? 'bg-blue-500/20' :
-                          categoryInfo.color === 'green' ? 'bg-emerald-500/20' :
-                          categoryInfo.color === 'red' ? 'bg-rose-500/20' :
-                          categoryInfo.color === 'purple' ? 'bg-indigo-500/20' :
-                          categoryInfo.color === 'orange' ? 'bg-amber-500/20' :
-                          'bg-white/10'
-                        }`}
-                      >
-                        <CategoryIcon
-                          size={16}
-                          className={`${
-                            categoryInfo.color === 'blue' ? 'text-blue-200' :
-                            categoryInfo.color === 'green' ? 'text-emerald-200' :
-                            categoryInfo.color === 'red' ? 'text-rose-200' :
-                            categoryInfo.color === 'purple' ? 'text-indigo-200' :
-                            categoryInfo.color === 'orange' ? 'text-amber-200' :
-                            'text-zinc-300'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Contenido de la actualización */}
-                      <div className={`rounded-lg border bg-white/5 p-4 shadow-md transition-all hover:shadow-xl sm:p-6 ${
-                        isFirst ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10'
-                      }`}>
-                        <div className="mb-3 flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                              <h3 className="text-base font-bold text-white sm:text-lg">{item.title}</h3>
-                              <span
-                                className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                                  categoryInfo.color === 'blue' ? 'bg-blue-500/15 text-blue-200' :
-                                  categoryInfo.color === 'green' ? 'bg-emerald-500/15 text-emerald-200' :
-                                  categoryInfo.color === 'red' ? 'bg-rose-500/15 text-rose-200' :
-                                  categoryInfo.color === 'purple' ? 'bg-indigo-500/15 text-indigo-200' :
-                                  categoryInfo.color === 'orange' ? 'bg-amber-500/15 text-amber-200' :
-                                  'bg-white/10 text-zinc-200'
-                                }`}
-                              >
-                                {categoryInfo.label}
-                              </span>
-                            </div>
-                            <p className="text-sm text-zinc-400">{formatDate(item.createdAt)}</p>
-                          </div>
-                        </div>
-
-                        {item.description && (
-                          <p className="text-zinc-200 mb-4 leading-relaxed">{item.description}</p>
-                        )}
-
-                        {item.event && (
-                          <div className="text-sm text-zinc-300 bg-white/5 border border-white/10 rounded-lg p-3 mb-4">
-                            <div className="font-medium text-white">Evento</div>
-                            <div className="mt-1">
-                              {new Date(item.event.startAt).toLocaleString('es-AR')} -{' '}
-                              {new Date(item.event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                            {item.event.location && (
-                              <div className="mt-1 text-xs text-zinc-500">Ubicación: {item.event.location}</div>
-                            )}
-                            <div className="mt-1 text-xs text-zinc-500">
-                              {item.event.type} · {item.event.status}
-                            </div>
-                          </div>
-                        )}
-
-                        {item.message && (
-                          <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-lg p-3 mb-4 text-sm text-emerald-100">
-                            <div className="font-medium">Mensaje</div>
-                            {item.message.user && (
-                              <div className="text-xs text-emerald-200 mt-1">
-                                {item.message.user.name || item.message.user.email || 'Usuario'}{item.message.user.role ? ` · ${getRoleLabel(item.message.user.role)}` : ''}
-                              </div>
-                            )}
-                            <div className="mt-1">{item.message.body}</div>
-                          </div>
-                        )}
-
-                        {/* Galería de imágenes */}
-                        {item.images && item.images.length > 0 && (
-                          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                            {(item.images as string[]).map((image, imgIndex) => (
-                              <div
-                                key={imgIndex}
-                                className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-md hover:shadow-lg"
-                                onClick={() => setSelectedImage(image)}
-                              >
-                                <img
-                                  src={image}
-                                  alt={`${item.title} - ${imgIndex + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                return (
+                  <div key={item.id} className="relative flex gap-4">
+                    {/* Dot */}
+                    <div className={`relative z-10 mt-3.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-zinc-950 ${meta.dot} bg-opacity-20`}
+                         style={{ background: 'var(--dot-bg)' }}>
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center ${meta.dot.replace('bg-', 'bg-').replace('-400', '-400/15')}`}>
+                        <Icon size={13} className={meta.dot.replace('bg-', 'text-')} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Card */}
+                    <div className={`flex-1 min-w-0 rounded-xl border p-4 transition-colors ${
+                      isLatest ? 'border-cyan-400/30 bg-cyan-500/5' : 'border-white/8 bg-white/3 hover:bg-white/5'
+                    }`}>
+                      {/* Título + badge + fecha */}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                        {isLatest && (
+                          <span className="shrink-0 text-[10px] font-semibold text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 rounded-full px-2 py-0.5">
+                            Nuevo
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`text-[11px] font-medium border rounded-full px-2 py-0.5 ${meta.badge}`}>
+                          {meta.label}
+                        </span>
+                        <span className="text-[11px] text-zinc-500">{formatDate(item.createdAt)}</span>
+                      </div>
+
+                      {item.description && (
+                        <p className="text-sm text-zinc-300 leading-relaxed mb-3">{item.description}</p>
+                      )}
+
+                      {/* Evento: solo hora y lugar, sin tipo/estado interno */}
+                      {item.event && (
+                        <div className="text-xs text-zinc-400 bg-white/5 border border-white/8 rounded-lg p-3 mb-3 space-y-0.5">
+                          <p className="text-zinc-200 font-medium">
+                            {new Date(item.event.startAt).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                          </p>
+                          <p>
+                            {new Date(item.event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                            {' – '}
+                            {new Date(item.event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          {item.event.location && <p className="text-zinc-500">{item.event.location}</p>}
+                        </div>
+                      )}
+
+                      {/* Mensaje: sin rol interno */}
+                      {item.message && (
+                        <div className="text-sm bg-teal-500/8 border border-teal-400/15 rounded-lg p-3 mb-3">
+                          {item.message.user?.name && (
+                            <p className="text-xs text-teal-300 font-medium mb-1">{item.message.user.name}</p>
+                          )}
+                          <p className="text-zinc-200 leading-relaxed">{item.message.body}</p>
+                        </div>
+                      )}
+
+                      {/* Imágenes */}
+                      {item.images && item.images.length > 0 && (
+                        <div className={`grid gap-2 ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                          {(item.images as string[]).map((img, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedImage(img)}
+                              className="relative aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                            >
+                              <img src={img} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-          {exportUrl && timelineItems.length > 0 && (
-            <div className="mt-8 flex justify-stretch sm:justify-end">
-              <button
-                onClick={() => {
-                  window.location.href = exportUrl;
-                }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-zinc-950 transition hover:bg-cyan-300 sm:w-auto"
-              >
-                <Download size={16} />
-                Descargar CSV
-              </button>
-            </div>
-          )}
+          </div>
+        )}
+
+        {/* Footer mínimo */}
+        <div className="mt-12 pt-6 border-t border-white/8 flex flex-col items-center gap-3">
+          <DeveloperCredit variant="compact" />
+          <p className="text-zinc-600 text-xs">© {new Date().getFullYear()} Pool Installer</p>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-zinc-950 text-white mt-12 border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Pool Installer</h3>
-            <p className="text-zinc-400 text-sm mb-6">
-              Sistema completo de cálculo de materiales para montaje de piscinas de fibra de vidrio
-            </p>
-            <div className="border-t border-white/10 pt-6 flex flex-col items-center gap-4">
-              <DeveloperCredit variant="compact" />
-              <p className="text-zinc-600 text-xs mt-2">
-                © {new Date().getFullYear()} Pool Installer. Todos los derechos reservados.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Modal para ver imagen completa */}
+      {/* Lightbox */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-6xl max-h-[90vh]">
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 bg-white/10 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-white/20 transition-colors shadow-lg border border-white/10"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-            <img
-              src={selectedImage}
-              alt="Vista completa"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-            />
-          </div>
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 text-white/60 hover:text-white bg-white/10 rounded-full p-2 transition-colors"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={selectedImage}
+            alt=""
+            className="max-w-full max-h-[90vh] object-contain rounded-xl"
+            onClick={e => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
