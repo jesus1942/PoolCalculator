@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX } from '@/components/ui/HandDrawnIcons';
-import { HdArrowOut } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -169,7 +168,7 @@ export const Layout: React.FC = () => {
               onClick={handleLogout}
               className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-zinc-300 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-all border border-transparent hover:border-red-500/30"
             >
-              <LogOut size={16} />
+              <HdArrowOut size={16} />
               <span>Cerrar sesión</span>
             </button>
           </div>

@@ -78,7 +78,7 @@ const PoolPresetCard: React.FC<{
               {/* Header */}
               <div className="flex items-start gap-3 min-h-[68px]">
                 <div className="p-2 rounded-lg bg-blue-500/20 border border-blue-500/30 flex-shrink-0">
-                  <Layers className="h-5 w-5 text-blue-400" />
+                  <HdLayers className="h-5 w-5 text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-xl font-bold text-white leading-tight">

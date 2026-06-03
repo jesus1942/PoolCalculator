@@ -181,7 +181,7 @@ export const PoolPresets: React.FC = () => {
           <p className="mt-2 text-sm sm:text-base text-gray-600">Administrá los modelos de piscinas</p>
         </div>
         <Button onClick={() => setShowModal(true)} className="flex w-full items-center justify-center space-x-2 sm:w-auto">
-          <Plus size={20} />
+          <HdPlus size={20} />
           <span>Nuevo Preset</span>
         </Button>
       </div>
@@ -189,7 +189,7 @@ export const PoolPresets: React.FC = () => {
       {/* Filtro por fabricante */}
       {vendors.length > 0 && (
         <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-          <Filter size={20} className="text-gray-500" />
+          <HdFilter size={20} className="text-gray-500" />
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedVendor('all')}
@@ -308,7 +308,7 @@ export const PoolPresets: React.FC = () => {
                   onClick={() => handleEdit(preset)}
                   className="flex-1 flex items-center justify-center space-x-1"
                 >
-                  <Edit size={16} />
+                  <HdEdit size={16} />
                   <span>Editar</span>
                 </Button>
                 <Button
@@ -317,7 +317,7 @@ export const PoolPresets: React.FC = () => {
                   onClick={() => handleDelete(preset.id)}
                   className="flex items-center justify-center"
                 >
-                  <Trash2 size={16} />
+                  <HdTrash size={16} />
                 </Button>
               </div>
             </div>

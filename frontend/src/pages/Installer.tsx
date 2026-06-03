@@ -138,7 +138,7 @@ export const Installer: React.FC = () => {
 
         <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500">
-            <CloudSun size={14} />
+            <HdSun size={14} />
             Clima de hoy
           </div>
           {weather ? (

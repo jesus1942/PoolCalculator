@@ -145,7 +145,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
     return (
       <Card className="p-6">
         <div className="flex items-center text-red-600 mb-4">
-          <AlertTriangle className="w-5 h-5 mr-2" />
+          <HdAlertTriangle className="w-5 h-5 mr-2" />
           <span>{error}</span>
         </div>
         <Button onClick={loadAnalysis}>
@@ -175,7 +175,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Droplet className="w-6 h-6 text-blue-600 mr-2" />
+            <HdDroplet className="w-6 h-6 text-blue-600 mr-2" />
             <h3 className="text-xl font-bold">Análisis Hidráulico Profesional</h3>
           </div>
           <Button
@@ -183,7 +183,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
             size="sm"
             onClick={() => setShowSettings(!showSettings)}
           >
-            <Settings className="w-4 h-4 mr-2" />
+            <HdSettings className="w-4 h-4 mr-2" />
             Configuración
           </Button>
         </div>
@@ -258,7 +258,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
       {/* Pérdidas por fricción */}
       <Card className="p-6">
         <h4 className="text-lg font-semibold mb-4 flex items-center">
-          <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+          <HdTrendingUp className="w-5 h-5 mr-2 text-blue-600" />
           Pérdidas por Fricción
         </h4>
         <div className="space-y-4">
@@ -282,9 +282,9 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
               }`}>
                 {analysis.suctionPipeLoss.velocity.toFixed(2)} m/s
                 {analysis.suctionPipeLoss.isValid ? (
-                  <CheckCircle className="w-4 h-4 inline ml-1" />
+                  <HdCheck className="w-4 h-4 inline ml-1" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 inline ml-1" />
+                  <HdAlertTriangle className="w-4 h-4 inline ml-1" />
                 )}
               </span>
             </div>
@@ -313,9 +313,9 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
               }`}>
                 {analysis.returnPipeLoss.velocity.toFixed(2)} m/s
                 {analysis.returnPipeLoss.isValid ? (
-                  <CheckCircle className="w-4 h-4 inline ml-1" />
+                  <HdCheck className="w-4 h-4 inline ml-1" />
                 ) : (
-                  <AlertTriangle className="w-4 h-4 inline ml-1" />
+                  <HdAlertTriangle className="w-4 h-4 inline ml-1" />
                 )}
               </span>
             </div>
@@ -415,7 +415,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
           {analysis.errors.length > 0 && (
             <div className="mb-4">
               <h4 className="text-lg font-semibold text-red-600 mb-2 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2" />
+                <HdAlertTriangle className="w-5 h-5 mr-2" />
                 Errores Críticos
               </h4>
               <ul className="space-y-2">
@@ -431,7 +431,7 @@ export const HydraulicAnalysisPanel: React.FC<HydraulicAnalysisPanelProps> = ({ 
           {analysis.warnings.length > 0 && (
             <div>
               <h4 className="text-lg font-semibold text-yellow-600 mb-2 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2" />
+                <HdAlertTriangle className="w-5 h-5 mr-2" />
                 Advertencias
               </h4>
               <ul className="space-y-2">

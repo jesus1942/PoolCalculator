@@ -1111,7 +1111,7 @@ export const Agenda: React.FC = () => {
                               <div className="mt-2 flex flex-wrap gap-3 text-sm text-zinc-300">
                                 {projectName && (
                                   <span className="inline-flex items-center gap-1">
-                                    <Briefcase className="h-4 w-4 text-cyan-300" />
+                                    <HdBriefcase className="h-4 w-4 text-cyan-300" />
                                     {projectName}
                                   </span>
                                 )}
@@ -1258,7 +1258,7 @@ export const Agenda: React.FC = () => {
                           disabled={savingCrewMemberId === crew.id || !memberToAddByCrew[crew.id]}
                           className="inline-flex items-center justify-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-200 transition-colors hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <UserPlus className="h-4 w-4" />
+                          <HdUser className="h-4 w-4" />
                           {savingCrewMemberId === crew.id ? 'Agregando...' : 'Agregar'}
                         </button>
                       </div>

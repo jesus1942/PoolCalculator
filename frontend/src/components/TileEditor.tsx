@@ -193,7 +193,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
       {/* Header informativo */}
       <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
         <div className="flex items-start gap-3">
-          <Calculator size={24} className="text-zinc-200 flex-shrink-0 mt-1" />
+          <HdCalculator size={24} className="text-zinc-200 flex-shrink-0 mt-1" />
           <div>
             <h3 className="text-xl font-semibold text-white mb-1">Configurador Visual de Losetas</h3>
             <p className="text-base text-zinc-300">
@@ -221,7 +221,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
               onClick={() => setShowDetailedView(!showDetailedView)}
               className="flex items-center gap-2"
             >
-              <Eye size={16} />
+              <HdEye size={16} />
               {showDetailedView ? 'Vista Detallada' : 'Vista Simple'}
             </Button>
             {showDetailedView && (
@@ -232,7 +232,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
                   onClick={() => setViewMode(viewMode === 'planta' ? 'cad' : 'planta')}
                   className="flex items-center gap-2"
                 >
-                  <Grid3x3 size={16} />
+                  <HdGrid size={16} />
                   {viewMode === 'planta' ? 'Vista CAD' : 'Vista Planta'}
                 </Button>
                 <Button
@@ -241,7 +241,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
                   onClick={handleExportVisualization}
                   className="flex items-center gap-2"
                 >
-                  <Download size={16} />
+                  <HdDownload size={16} />
                   Exportar Imagen
                 </Button>
               </>
@@ -489,11 +489,11 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
           {/* Acciones */}
           <div className="flex justify-end space-x-3">
             <Button variant="secondary" onClick={handleReset}>
-              <RotateCcw size={16} className="mr-2" />
+              <HdRotateCcw size={16} className="mr-2" />
               Resetear
             </Button>
             <Button onClick={handleSave}>
-              <Save size={16} className="mr-2" />
+              <HdSave size={16} className="mr-2" />
               Guardar y Calcular Materiales
             </Button>
           </div>

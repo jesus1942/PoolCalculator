@@ -14,11 +14,11 @@ interface EquipmentSelectorProps {
 }
 
 const EQUIPMENT_TYPES = [
-  { value: 'PUMP', label: 'Bombas', icon: Zap },
-  { value: 'FILTER', label: 'Filtros', icon: Filter },
-  { value: 'CHLORINATOR', label: 'Cloradores', icon: Droplets },
-  { value: 'HEATER', label: 'Calefactores', icon: Sun },
-  { value: 'HEAT_PUMP', label: 'Bombas de Calor', icon: Sun },
+  { value: 'PUMP', label: 'Bombas', icon: HdZap },
+  { value: 'FILTER', label: 'Filtros', icon: HdFilter },
+  { value: 'CHLORINATOR', label: 'Cloradores', icon: HdDroplet },
+  { value: 'HEATER', label: 'Calefactores', icon: HdSun },
+  { value: 'HEAT_PUMP', label: 'Bombas de Calor', icon: HdSun },
 ];
 
 export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
@@ -97,7 +97,7 @@ export const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({
   };
 
   const activeTypeData = EQUIPMENT_TYPES.find(t => t.value === activeType);
-  const Icon = activeTypeData?.icon || Zap;
+  const Icon = activeTypeData?.icon || HdZap;
 
   return (
     <div className="space-y-6">
@@ -231,7 +231,7 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-16 h-16 text-gray-400" />
+            <HdImage className="w-16 h-16 text-gray-400" />
           </div>
         )}
         {isSelected && (
@@ -308,7 +308,7 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center space-x-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm text-gray-700 transition-colors"
             >
-              <Download className="w-4 h-4" />
+              <HdDownload className="w-4 h-4" />
               <span>Ficha técnica</span>
             </a>
           )}
@@ -320,7 +320,7 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({
               className="inline-flex items-center justify-center px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm text-gray-700 transition-colors"
               title="Ver en catálogo"
             >
-              <ExternalLink className="w-4 h-4" />
+              <HdExternalLink className="w-4 h-4" />
             </a>
           )}
         </div>
@@ -339,7 +339,7 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({
               className="w-full text-red-600 hover:bg-red-50"
               size="sm"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <HdTrash className="w-4 h-4 mr-2" />
               Quitar del Proyecto
             </Button>
           )}

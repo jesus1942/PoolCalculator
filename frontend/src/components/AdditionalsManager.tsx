@@ -232,7 +232,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
           </p>
         </div>
         <Button onClick={handleAddAdditional}>
-          <Plus size={20} className="mr-2" />
+          <HdPlus size={20} className="mr-2" />
           Agregar Adicional
         </Button>
       </div>
@@ -240,7 +240,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
       {additionals.length === 0 ? (
         <Card>
           <div className="text-center py-12">
-            <Package size={48} className="mx-auto text-gray-400 mb-4" />
+            <HdPackage size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600">No hay adicionales en este proyecto</p>
             <p className="text-sm text-gray-500 mt-2">
               Los adicionales te permiten agregar items extra al preset base
@@ -274,7 +274,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon className="w-10 h-10 text-gray-300" />
+                            <HdImage className="w-10 h-10 text-gray-300" />
                           </div>
                         )}
                       </div>
@@ -306,7 +306,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
                         {additional.dependencies && additional.dependencies.length > 0 && (
                           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
                             <div className="flex items-start gap-2">
-                              <AlertCircle size={16} className="text-yellow-600 mt-0.5" />
+                              <HdAlertTriangle size={16} className="text-yellow-600 mt-0.5" />
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-yellow-800 mb-1">
                                   Dependencias detectadas:
@@ -330,7 +330,7 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
                         onClick={() => handleDeleteAdditional(additional.id)}
                         className="text-red-600 hover:text-red-800 ml-4"
                       >
-                        <Trash2 size={18} />
+                        <HdTrash size={18} />
                       </button>
                     </div>
                   </div>

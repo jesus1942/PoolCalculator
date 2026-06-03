@@ -194,7 +194,7 @@ export const PlumbingManager: React.FC = () => {
           </p>
         </div>
         <Button onClick={() => setShowModal(true)}>
-          <Plus size={16} className="mr-2" />
+          <HdPlus size={16} className="mr-2" />
           Nuevo Item
         </Button>
       </div>
@@ -203,7 +203,7 @@ export const PlumbingManager: React.FC = () => {
       <Card>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
-            <Search size={20} className="text-gray-400" />
+            <HdSearch size={20} className="text-gray-400" />
             <h3 className="font-semibold">Filtros de Búsqueda</h3>
           </div>
           
@@ -214,7 +214,7 @@ export const PlumbingManager: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <HdSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
             
             <Select
@@ -246,7 +246,7 @@ export const PlumbingManager: React.FC = () => {
       {/* Lista de items */}
       {filteredItems.length === 0 ? (
         <Card className="text-center py-12">
-          <Filter size={48} className="mx-auto text-gray-400 mb-4" />
+          <HdFilter size={48} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {items.length === 0 ? 'No hay items configurados' : 'No se encontraron resultados'}
           </h3>

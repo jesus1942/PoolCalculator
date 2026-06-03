@@ -146,7 +146,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
     return (
       <Card className="p-6 bg-blue-50 border-blue-200">
         <div className="flex items-start">
-          <AlertCircle className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
+          <HdAlertTriangle className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-blue-900 mb-1">Guardar producto primero</p>
             <p className="text-sm text-blue-700">
@@ -163,7 +163,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
     return (
       <Card className="p-6 bg-amber-50 border-amber-200">
         <div className="flex items-start">
-          <AlertCircle className="w-5 h-5 text-amber-600 mr-3 flex-shrink-0 mt-0.5" />
+          <HdAlertTriangle className="w-5 h-5 text-amber-600 mr-3 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-amber-900 mb-1">ID de producto requerido</p>
             <p className="text-sm text-amber-700">
@@ -179,7 +179,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
     <div className="space-y-6">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
-          <X className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <HdX className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
         </div>
       )}
@@ -196,7 +196,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Upload className="w-4 h-4 inline mr-2" />
+            <HdUpload className="w-4 h-4 inline mr-2" />
             Subir Archivo
           </button>
           <button
@@ -208,7 +208,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Link className="w-4 h-4 inline mr-2" />
+            <HdLink className="w-4 h-4 inline mr-2" />
             Ingresar URL
           </button>
         </div>
@@ -260,13 +260,13 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
                 />
                 {validatingMainUrl && (
-                  <Loader className="absolute right-3 top-3 w-5 h-5 text-gray-400 animate-spin" />
+                  <span className="inline-block h-[var(--sz,1em)] w-[var(--sz,1em)] animate-spin rounded-full border-2 border-zinc-600 border-t-white absolute right-3 top-3" style={{ '--sz': '20px' } as any} />
                 )}
                 {!validatingMainUrl && mainUrlValid === true && (
-                  <Check className="absolute right-3 top-3 w-5 h-5 text-green-600" />
+                  <HdCheck className="absolute right-3 top-3 w-5 h-5 text-green-600" />
                 )}
                 {!validatingMainUrl && mainUrlValid === false && mainImageUrl && (
-                  <X className="absolute right-3 top-3 w-5 h-5 text-red-600" />
+                  <HdX className="absolute right-3 top-3 w-5 h-5 text-red-600" />
                 )}
               </div>
 
@@ -281,12 +281,12 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
               >
                 {savingMainUrl ? (
                   <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="inline-block h-[var(--sz,1em)] w-[var(--sz,1em)] animate-spin rounded-full border-2 border-zinc-600 border-t-white mr-2" style={{ '--sz': '16px' } as any} />
                     Guardando...
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4 mr-2" />
+                    <HdCheck className="w-4 h-4 mr-2" />
                     Guardar URL
                   </>
                 )}
@@ -333,7 +333,7 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Eliminar"
                     >
-                      <X className="w-5 h-5" />
+                      <HdX className="w-5 h-5" />
                     </button>
                   )}
                 </div>
@@ -360,12 +360,12 @@ export const HybridImageManager: React.FC<HybridImageManagerProps> = ({
               >
                 {savingAdditionalUrls ? (
                   <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="inline-block h-[var(--sz,1em)] w-[var(--sz,1em)] animate-spin rounded-full border-2 border-zinc-600 border-t-white mr-2" style={{ '--sz': '16px' } as any} />
                     Guardando...
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4 mr-2" />
+                    <HdCheck className="w-4 h-4 mr-2" />
                     Guardar URLs
                   </>
                 )}

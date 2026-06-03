@@ -49,7 +49,7 @@ export const Login: React.FC = () => {
             to="/"
             className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <HdArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-medium">Volver al inicio</span>
           </Link>
         </div>
@@ -71,7 +71,7 @@ export const Login: React.FC = () => {
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <HdAlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-red-700 text-sm font-medium">{error}</p>
               </div>
             )}

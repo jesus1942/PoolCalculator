@@ -122,7 +122,7 @@ export const ClientLogin: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <User className="w-4 h-4 text-zinc-500" />
+                  <HdUser className="w-4 h-4 text-zinc-500" />
                 </div>
                 <input
                   type="text"
@@ -143,7 +143,7 @@ export const ClientLogin: React.FC = () => {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="w-4 h-4 text-zinc-500" />
+                  <HdLock className="w-4 h-4 text-zinc-500" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -160,7 +160,7 @@ export const ClientLogin: React.FC = () => {
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-500 hover:text-zinc-300 transition-colors"
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <HdEyeOff className="w-4 h-4" /> : <HdEye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const ClientLogin: React.FC = () => {
             {/* Error */}
             {error && (
               <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                <HdAlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-red-300">{error}</p>
               </div>
             )}
@@ -195,7 +195,7 @@ export const ClientLogin: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Waves className="w-4 h-4" />
+                    <HdWaves className="w-4 h-4" />
                     Ver mi proyecto
                   </>
                 )}

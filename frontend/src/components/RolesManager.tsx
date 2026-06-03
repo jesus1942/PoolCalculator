@@ -161,7 +161,7 @@ export const RolesManager: React.FC = () => {
             {applyingReference ? 'Aplicando...' : 'Cargar referencia Puerto Madryn'}
           </Button>
           <Button onClick={() => setShowModal(true)}>
-            <Plus size={16} className="mr-2" />
+            <HdPlus size={16} className="mr-2" />
             Nuevo Rol
           </Button>
         </div>
@@ -183,7 +183,7 @@ export const RolesManager: React.FC = () => {
 
       {roles.length === 0 ? (
         <Card className="text-center py-12">
-          <Users size={48} className="mx-auto text-gray-400 mb-4" />
+          <HdUsers size={48} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No tenés roles configurados
           </h3>
@@ -250,7 +250,7 @@ export const RolesManager: React.FC = () => {
                     onClick={() => handleEdit(role)}
                     className="flex-1"
                   >
-                    <Edit size={14} className="mr-1" />
+                    <HdEdit size={14} className="mr-1" />
                     Editar
                   </Button>
                   <Button
@@ -258,7 +258,7 @@ export const RolesManager: React.FC = () => {
                     variant="danger"
                     onClick={() => handleDelete(role.id)}
                   >
-                    <Trash2 size={14} />
+                    <HdTrash size={14} />
                   </Button>
                 </div>
               </div>
@@ -374,7 +374,7 @@ export const RolesManager: React.FC = () => {
                 variant="secondary"
                 onClick={() => setFormData({ ...formData, bocaRates: [...formData.bocaRates, { label: '', price: 0 }] })}
               >
-                <Plus size={14} className="mr-1" />
+                <HdPlus size={14} className="mr-1" />
                 Agregar
               </Button>
             </div>
@@ -412,7 +412,7 @@ export const RolesManager: React.FC = () => {
                       setFormData({ ...formData, bocaRates: next });
                     }}
                   >
-                    <Trash2 size={14} />
+                    <HdTrash size={14} />
                   </Button>
                 </div>
               </div>

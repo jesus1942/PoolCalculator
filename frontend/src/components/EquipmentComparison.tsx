@@ -88,13 +88,13 @@ export const EquipmentComparison: React.FC<EquipmentComparisonProps> = ({
   const comparison = getComparisonStatus();
 
   const StatusIcon = {
-    none: Info,
-    missing: AlertTriangle,
-    unknown: Info,
-    error: XCircle,
-    warning: AlertTriangle,
-    ok: CheckCircle,
-    perfect: CheckCircle
+    none: HdInfo,
+    missing: HdAlertTriangle,
+    unknown: HdInfo,
+    error: HdX,
+    warning: HdAlertTriangle,
+    ok: HdCheck,
+    perfect: HdCheck
   }[comparison.status];
 
   const statusColors = {
@@ -123,7 +123,7 @@ export const EquipmentComparison: React.FC<EquipmentComparisonProps> = ({
               <ul className="mt-2 space-y-1 text-sm">
                 {comparison.issues.map((issue, idx) => (
                   <li key={idx} className="flex items-start space-x-2">
-                    <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <HdX className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>{issue}</span>
                   </li>
                 ))}
@@ -133,7 +133,7 @@ export const EquipmentComparison: React.FC<EquipmentComparisonProps> = ({
               <ul className="mt-2 space-y-1 text-sm">
                 {comparison.warnings.map((warning, idx) => (
                   <li key={idx} className="flex items-start space-x-2">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <HdAlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <span>{warning}</span>
                   </li>
                 ))}
@@ -213,7 +213,7 @@ export const EquipmentComparison: React.FC<EquipmentComparisonProps> = ({
 
             {/* Flecha de comparación */}
             <div className="hidden md:flex items-center justify-center">
-              <ArrowRight className="w-8 h-8 text-gray-400" />
+              <HdArrowRight className="w-8 h-8 text-gray-400" />
             </div>
 
             {/* Equipo recomendado */}

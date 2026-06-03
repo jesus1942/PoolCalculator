@@ -76,7 +76,7 @@ export const TrendCharts: React.FC<TrendChartsProps> = ({ projects }) => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl blur-md opacity-50"></div>
                 <div className="relative p-2 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 shadow-lg">
-                  <TrendingUp className="w-5 h-5 text-white" />
+                  <HdTrendingUp className="w-5 h-5 text-white" />
                 </div>
               </div>
               <h3 className="text-lg font-light text-white tracking-wide">Tendencia de Proyectos</h3>
@@ -145,7 +145,7 @@ export const TrendCharts: React.FC<TrendChartsProps> = ({ projects }) => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl blur-md opacity-50"></div>
                 <div className="relative p-2 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 shadow-lg">
-                  <Activity className="w-5 h-5 text-white" />
+                  <HdActivity className="w-5 h-5 text-white" />
                 </div>
               </div>
               <h3 className="text-lg font-light text-white tracking-wide">Volumen de Agua</h3>

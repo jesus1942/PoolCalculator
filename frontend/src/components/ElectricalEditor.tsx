@@ -207,7 +207,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
           }`}
         >
           <div className="flex items-center justify-center gap-2">
-            <Calculator size={20} />
+            <HdCalculator size={20} />
             <span>Cálculo Automático</span>
           </div>
           <p className="text-xs mt-1 opacity-90">Recomendado - Basado en el preset de la piscina</p>
@@ -221,7 +221,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
           }`}
         >
           <div className="flex items-center justify-center gap-2">
-            <Settings size={20} />
+            <HdSettings size={20} />
             <span>Configuración Manual</span>
           </div>
           <p className="text-xs mt-1 opacity-90">Agrega items eléctricos personalizados</p>
@@ -234,7 +234,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
           {/* Resumen de instalación */}
           <Card>
         <div className="flex items-center gap-2 mb-4">
-          <Zap className="text-yellow-600" size={24} />
+          <HdZap className="text-yellow-600" size={24} />
           <h3 className="text-lg font-semibold">Resumen Eléctrico</h3>
         </div>
 
@@ -281,7 +281,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
 
         {config.recommendedCableSection && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start gap-2">
-            <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
+            <HdAlertTriangle size={20} className="text-yellow-600 mt-0.5" />
             <div>
               <p className="font-medium text-yellow-800">Sección de Cable Recomendada</p>
               <p className="text-sm text-yellow-700">
@@ -296,11 +296,11 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
       <Card>
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <Lightbulb className="text-blue-600" size={24} />
+            <HdLightbulb className="text-blue-600" size={24} />
             <h3 className="text-lg font-semibold">Items Eléctricos</h3>
           </div>
           <Button onClick={() => setShowAddModal(true)} size="sm">
-            <Plus size={16} className="mr-2" />
+            <HdPlus size={16} className="mr-2" />
             Agregar Item
           </Button>
         </div>
@@ -332,7 +332,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
                   onClick={() => handleRemoveItem(item.id)}
                   className="text-red-600 hover:text-red-800"
                 >
-                  <Trash2 size={18} />
+                  <HdTrash size={18} />
                 </button>
               </div>
             ))}
@@ -429,7 +429,7 @@ export const ElectricalEditor: React.FC<ElectricalEditorProps> = ({ project, onS
       {calculationMode === 'manual' && (
         <Card>
           <div className="text-center py-16">
-            <Settings size={64} className="mx-auto text-gray-300 mb-4" />
+            <HdSettings size={64} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Configuración Manual Personalizada</h3>
             <p className="text-gray-600 max-w-md mx-auto">
               Esta función permite configurar manualmente todos los componentes eléctricos sin usar los valores automáticos del preset.

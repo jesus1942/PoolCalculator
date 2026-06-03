@@ -29,7 +29,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
         title: 'Nuevo Proyecto Creado',
         description: `${project.name} - ${project.clientName}`,
         time: new Date(project.createdAt),
-        icon: <FolderOpen className="w-4 h-4" />,
+        icon: <HdFolderOpen className="w-4 h-4" />,
         color: 'from-blue-600 to-cyan-600'
       });
 
@@ -40,7 +40,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
           title: 'Proyecto Completado',
           description: project.name,
           time: new Date(project.updatedAt),
-          icon: <CheckCircle2 className="w-4 h-4" />,
+          icon: <HdCheck className="w-4 h-4" />,
           color: 'from-emerald-600 to-green-600'
         });
       } else if (project.status === 'IN_PROGRESS') {
@@ -50,7 +50,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
           title: 'Proyecto En Progreso',
           description: project.name,
           time: new Date(project.updatedAt),
-          icon: <Clock className="w-4 h-4" />,
+          icon: <HdClock className="w-4 h-4" />,
           color: 'from-amber-600 to-orange-600'
         });
       }
@@ -64,7 +64,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
         title: 'Nuevo Modelo Agregado',
         description: `${preset.name} - ${preset.length}x${preset.width}m`,
         time: new Date(preset.createdAt),
-        icon: <Waves className="w-4 h-4" />,
+        icon: <HdWaves className="w-4 h-4" />,
         color: 'from-cyan-600 to-teal-600'
       });
     });
@@ -103,7 +103,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl blur-md opacity-50"></div>
               <div className="relative p-3 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-xl shadow-indigo-500/20">
-                <Clock className="h-5 w-5 text-white" />
+                <HdClock className="h-5 w-5 text-white" />
               </div>
             </div>
             <h2 className="text-xl font-light text-white tracking-wide">Actividad Reciente</h2>
@@ -112,7 +112,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ projects, pr
           {activities.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center">
-                <Clock className="h-8 w-8 text-zinc-700" />
+                <HdClock className="h-8 w-8 text-zinc-700" />
               </div>
               <p className="text-zinc-500 font-light">No hay actividad reciente</p>
             </div>

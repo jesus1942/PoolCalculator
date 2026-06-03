@@ -89,7 +89,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    <Calendar size={18} />
+                    <HdCalendar size={18} />
                     <span>La Agenda</span>
                   </Link>
                   <Link
@@ -100,7 +100,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    <Waves size={18} />
+                    <HdWaves size={18} />
                     <span>Modelos</span>
                   </Link>
                   <Link
@@ -111,7 +111,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    <Settings size={18} />
+                    <HdSettings size={18} />
                     <span>Presets</span>
                   </Link>
                   {user?.role === 'SUPERADMIN' && (
@@ -123,7 +123,7 @@ export const Header: React.FC = () => {
                           : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                       }`}
                     >
-                      <Database size={18} />
+                      <HdDatabase size={18} />
                       <span>Catálogos</span>
                     </Link>
                   )}
@@ -132,7 +132,7 @@ export const Header: React.FC = () => {
                   <div className="flex items-center space-x-3 border-l border-zinc-800 pl-4 ml-2">
                     <div className="flex items-center space-x-2 bg-zinc-900/50 border border-zinc-800/50 px-3 py-2 rounded-xl backdrop-blur-sm">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                        <User size={14} className="text-white" />
+                        <HdUser size={14} className="text-white" />
                       </div>
                       <span className="text-sm text-zinc-300 font-light">{user?.name}</span>
                     </div>
@@ -140,7 +140,7 @@ export const Header: React.FC = () => {
                       onClick={handleLogout}
                       className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all duration-200 font-light"
                     >
-                      <LogOut size={16} />
+                      <HdArrowOut size={16} />
                       <span>Salir</span>
                     </button>
                   </div>
@@ -205,7 +205,7 @@ export const Header: React.FC = () => {
               {/* User Info */}
               <div className="flex items-center space-x-3 pb-4 border-b border-zinc-800/50">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
-                  <User size={18} className="text-white" />
+                  <HdUser size={18} className="text-white" />
                 </div>
                 <div>
                   <p className="text-sm text-zinc-300 font-light">{user?.name}</p>
@@ -225,7 +225,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    <Calendar size={20} />
+                    <HdCalendar size={20} />
                     <span>Instalador</span>
                   </Link>
                 ) : (
@@ -239,7 +239,7 @@ export const Header: React.FC = () => {
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                   }`}
                 >
-                  <Layout size={20} />
+                  <HdLayoutGrid size={20} />
                   <span>Panel</span>
                 </Link>
                 <Link
@@ -251,7 +251,7 @@ export const Header: React.FC = () => {
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                   }`}
                 >
-                  <Droplets size={20} />
+                  <HdDroplet size={20} />
                   <span>Proyectos</span>
                 </Link>
                 <Link
@@ -263,7 +263,7 @@ export const Header: React.FC = () => {
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                   }`}
                 >
-                  <Calendar size={20} />
+                  <HdCalendar size={20} />
                   <span>La Agenda</span>
                 </Link>
                 <Link
@@ -275,7 +275,7 @@ export const Header: React.FC = () => {
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                   }`}
                 >
-                  <Waves size={20} />
+                  <HdWaves size={20} />
                   <span>Modelos</span>
                 </Link>
                 <Link
@@ -287,7 +287,7 @@ export const Header: React.FC = () => {
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                   }`}
                 >
-                  <Settings size={20} />
+                  <HdSettings size={20} />
                   <span>Presets</span>
                 </Link>
                 {user?.role === 'SUPERADMIN' && (
@@ -300,7 +300,7 @@ export const Header: React.FC = () => {
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent'
                     }`}
                   >
-                    <Database size={20} />
+                    <HdDatabase size={20} />
                       <span>Catálogos</span>
                     </Link>
                   )}
@@ -313,7 +313,7 @@ export const Header: React.FC = () => {
                 onClick={handleLogout}
                 className="flex items-center justify-center space-x-2 w-full px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all duration-200 font-light"
               >
-                <LogOut size={18} />
+                <HdArrowOut size={18} />
                 <span>Cerrar Sesión</span>
               </button>
             </div>

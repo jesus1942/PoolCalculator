@@ -154,7 +154,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           message: `Clima desfavorable para trabajos en exterior. Viento: ${today.windSpeed}km/h`,
           timestamp: new Date(),
           read: false,
-          icon: <Cloud className="w-4 h-4" />,
+          icon: <HdCloud className="w-4 h-4" />,
         });
       }
 
@@ -167,7 +167,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           message: `Condiciones ideales para trabajar. Temp: ${tomorrow.maxTemp}°C`,
           timestamp: new Date(),
           read: false,
-          icon: <Cloud className="w-4 h-4" />,
+          icon: <HdCloud className="w-4 h-4" />,
         });
       }
 
@@ -181,7 +181,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           message: `Se esperan ${rainyDays.length} día${rainyDays.length > 1 ? 's' : ''} con lluvia en los próximos 3 días`,
           timestamp: new Date(),
           read: false,
-          icon: <Cloud className="w-4 h-4" />,
+          icon: <HdCloud className="w-4 h-4" />,
         });
       }
     }

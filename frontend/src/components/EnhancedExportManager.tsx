@@ -7,8 +7,7 @@ import { plumbingCalculationService } from '@/services/plumbingCalculationServic
 import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
 import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
-import { HdFileText, HdDownload, HdPrinter, HdDollarSign, HdMessageBubble } from '@/components/ui/HandDrawnIcons';
-import { HdFileSpreadsheet, HdBriefcase, HdUser, HdSettings, HdDownload, HdFileText } from '@/components/ui/HandDrawnIcons';
+import { HdFileText, HdDownload, HdPrinter, HdDollarSign, HdMessageBubble, HdFileSpreadsheet, HdBriefcase, HdUser, HdSettings } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -408,19 +407,19 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       id: 'client' as ExportTemplate,
       name: 'Propuesta Comercial',
       description: 'Documento comercial para presentar la instalación recomendada al cliente',
-      icon: User,
+      icon: HdUser,
     },
     {
       id: 'professional' as ExportTemplate,
       name: 'Especificaciones Técnicas',
       description: 'Ficha técnica de obra con criterios de instalación y equipamiento',
-      icon: Briefcase,
+      icon: HdBriefcase,
     },
     {
       id: 'materials' as ExportTemplate,
       name: 'Lista de Materiales',
       description: 'Listado completo de materiales necesarios para el proyecto',
-      icon: Wrench,
+      icon: HdSettings,
     },
     {
       id: 'budget' as ExportTemplate,
@@ -438,13 +437,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       id: 'overview' as ExportTemplate,
       name: 'Vista General',
       description: 'Resumen visual del proyecto, el cliente y el alcance de instalación',
-      icon: File,
+      icon: HdFileText,
     },
     {
       id: 'hydraulic' as ExportTemplate,
       name: 'Hidráulica',
       description: 'Esquema técnico hidráulico sin controles para exportar o imprimir',
-      icon: Wrench,
+      icon: HdSettings,
     },
   ];
 
@@ -4927,7 +4926,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <div className="bg-white/[0.06] p-3 rounded-2xl border border-white/10 shadow-inner">
-                <FileDown size={30} className="text-white" />
+                <HdDownload size={30} className="text-white" />
               </div>
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight">Exportación de Documentos</h2>
@@ -5028,7 +5027,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   onClick={() => handleExportPDF(selectedTemplate)}
                   className="flex flex-col items-center gap-2 p-4 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm"
                 >
-                  <FileDown size={20} />
+                  <HdDownload size={20} />
                   <span className="font-semibold text-xs">PDF</span>
                 </button>
 
@@ -5061,7 +5060,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 onClick={() => setShowExcelDialog(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
               >
-                <FileSpreadsheet size={18} />
+                <HdFileSpreadsheet size={18} />
                 Excel Técnico
               </button>
 

@@ -125,7 +125,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
     <div className="space-y-6">
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start">
-          <X className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+          <HdX className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
         </div>
       )}
@@ -133,7 +133,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
       {/* Main Image Section */}
       <Card className="p-6">
         <h4 className="text-lg font-semibold mb-4 flex items-center">
-          <ImageIcon className="w-5 h-5 mr-2 text-blue-600" />
+          <HdImage className="w-5 h-5 mr-2 text-blue-600" />
           Imagen Principal
         </h4>
 
@@ -151,13 +151,13 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
                 className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-2 hover:bg-red-700 transition-colors"
                 title="Eliminar imagen"
               >
-                <X className="w-4 h-4" />
+                <HdX className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <div className="w-64 h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
               <div className="text-center">
-                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <HdImage className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-500">Sin imagen</p>
               </div>
             </div>
@@ -179,12 +179,12 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
             >
               {uploading ? (
                 <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  <span className="inline-block h-[var(--sz,1em)] w-[var(--sz,1em)] animate-spin rounded-full border-2 border-zinc-600 border-t-white mr-2" style={{ '--sz': '16px' } as any} />
                   Subiendo...
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 mr-2" />
+                  <HdUpload className="w-4 h-4 mr-2" />
                   {currentImageUrl ? 'Cambiar Imagen' : 'Subir Imagen'}
                 </>
               )}
@@ -199,7 +199,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
       {/* Additional Images Section */}
       <Card className="p-6">
         <h4 className="text-lg font-semibold mb-4 flex items-center">
-          <ImageIcon className="w-5 h-5 mr-2 text-purple-600" />
+          <HdImage className="w-5 h-5 mr-2 text-purple-600" />
           Imágenes Adicionales
         </h4>
 
@@ -218,7 +218,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
                   className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                   title="Eliminar imagen"
                 >
-                  <X className="w-3 h-3" />
+                  <HdX className="w-3 h-3" />
                 </button>
               </div>
             ))}
@@ -227,7 +227,7 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
 
         {currentAdditionalImages.length === 0 && (
           <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+            <HdImage className="w-12 h-12 text-gray-400 mx-auto mb-2" />
             <p className="text-sm text-gray-500">No hay imágenes adicionales</p>
           </div>
         )}
@@ -249,12 +249,12 @@ export const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
           >
             {uploadingMultiple ? (
               <>
-                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                <span className="inline-block h-[var(--sz,1em)] w-[var(--sz,1em)] animate-spin rounded-full border-2 border-zinc-600 border-t-white mr-2" style={{ '--sz': '16px' } as any} />
                 Subiendo...
               </>
             ) : (
               <>
-                <Upload className="w-4 h-4 mr-2" />
+                <HdUpload className="w-4 h-4 mr-2" />
                 Subir Imágenes Adicionales
               </>
             )}

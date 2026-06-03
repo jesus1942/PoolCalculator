@@ -3247,7 +3247,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
           }`}
         >
           <div className="flex items-center justify-center gap-2">
-            <Calculator size={20} />
+            <HdCalculator size={20} />
             <span className="text-base">Cálculo Automático</span>
           </div>
           <p className="text-sm mt-1 opacity-90">Recomendado - Calcula caños automáticamente</p>
@@ -3261,7 +3261,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
           }`}
         >
           <div className="flex items-center justify-center gap-2">
-            <Search size={20} />
+            <HdSearch size={20} />
             <span className="text-base">Selección Manual</span>
           </div>
           <p className="text-sm mt-1 opacity-90">Selecciona items específicos del catálogo</p>
@@ -3399,7 +3399,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                 onClick={() => setShowTechnicalPreview(true)}
                 className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 hover:border-zinc-500"
               >
-                <ScanLine size={16} />
+                <HdSearch size={16} />
                 Vista técnica flotante
               </button>
             </div>
@@ -3459,7 +3459,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
             onClick={() => setShowTechnicalPreview(true)}
             className="shrink-0"
           >
-            <ScanLine size={16} className="mr-2" />
+            <HdSearch size={16} className="mr-2" />
             Abrir ventana flotante
           </Button>
         </div>
@@ -3488,7 +3488,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
       {calculationMode === 'automatic' && pipeCalculation && (
         <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
           <div className="flex items-center gap-2 mb-4">
-            <Calculator size={20} className="text-zinc-200" />
+            <HdCalculator size={20} className="text-zinc-200" />
             <h3 className="text-xl font-semibold text-white">Cálculo Automático de Caños</h3>
           </div>
 
@@ -3536,7 +3536,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                   {req.recommendations.length > 0 && (
                     <div className="mt-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle size={16} className="text-zinc-300 mt-0.5 flex-shrink-0" />
+                        <HdAlertTriangle size={16} className="text-zinc-300 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-zinc-200 mb-1">Recomendaciones:</p>
                           <ul className="text-sm text-zinc-300 space-y-1">
@@ -3578,7 +3578,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <HdSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
 
               <Select
@@ -3610,7 +3610,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                       size="sm"
                       onClick={() => handleAddItem(item)}
                     >
-                      <Plus size={14} className="mr-1" />
+                      <HdPlus size={14} className="mr-1" />
                       Agregar
                     </Button>
                   </div>
@@ -3655,7 +3655,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
                           variant="danger"
                           onClick={() => handleRemoveItem(item.itemId)}
                         >
-                          <Trash2 size={14} />
+                          <HdTrash size={14} />
                         </Button>
                       </div>
                     </div>
@@ -3702,7 +3702,7 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
 
       <div className="flex justify-end space-x-3">
         <Button onClick={handleSave}>
-          <Save size={16} className="mr-2" />
+          <HdSave size={16} className="mr-2" />
           {calculationMode === 'automatic' ? 'Guardar Configuración Automática' : 'Guardar Configuración'}
         </Button>
       </div>

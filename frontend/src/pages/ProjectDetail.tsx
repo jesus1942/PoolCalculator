@@ -335,15 +335,15 @@ export const ProjectDetail: React.FC = () => {
     { id: 'overview', label: 'Vista General', icon: HdFileText },
     { id: 'status', label: 'Estado', icon: HdActivity },
     { id: 'tiles', label: 'Losetas', icon: HdEdit },
-    { id: 'plumbing', label: 'Hidráulica', icon: Hammer },
+    { id: 'plumbing', label: 'Hidráulica', icon: HdHammer },
     { id: 'electrical', label: 'Eléctrica', icon: HdZap },
     { id: 'hydraulic_pro', label: 'Análisis Hidráulico', icon: HdActivity },
     { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: HdZap },
-    { id: 'tasks', label: 'Tareas', icon: Hammer },
+    { id: 'tasks', label: 'Tareas', icon: HdHammer },
     { id: 'roles', label: 'Roles', icon: HdUsers },
-    { id: 'systems', label: 'Sistemas', icon: Cpu },
+    { id: 'systems', label: 'Sistemas', icon: HdCpu },
     { id: 'additionals', label: 'Adicionales', icon: HdPackage },
-    { id: 'export', label: 'Exportar', icon: FileSpreadsheet },
+    { id: 'export', label: 'Exportar', icon: HdFileSpreadsheet },
   ];
   const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id));
   const visibleActiveTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';

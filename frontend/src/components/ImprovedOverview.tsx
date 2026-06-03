@@ -337,7 +337,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
       {/* ESPECIFICACIONES DE LA PISCINA */}
       <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
         <div className="flex items-center gap-2 mb-4">
-          <Droplets className="text-zinc-200" size={24} />
+          <HdDroplet className="text-zinc-200" size={24} />
           <h3 className="text-2xl font-bold text-white">Especificaciones de la Piscina</h3>
         </div>
 
@@ -644,7 +644,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
       {hasMaterials && (
         <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
           <div className="flex items-center gap-2 mb-4">
-            <Layers className="text-zinc-200" size={24} />
+            <HdLayers className="text-zinc-200" size={24} />
             <h3 className="text-xl font-bold text-white">Materiales Calculados</h3>
           </div>
 
@@ -809,7 +809,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
         {hasPlumbing && (
           <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
             <div className="flex items-center gap-2 mb-4">
-              <Wrench className="text-zinc-200" size={24} />
+              <HdSettings className="text-zinc-200" size={24} />
               <h3 className="text-lg font-bold text-white">Instalación Hidráulica</h3>
             </div>
             {plumbingConfig.distanceToEquipment && (
