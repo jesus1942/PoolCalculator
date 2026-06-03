@@ -324,7 +324,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
 
             <div className="relative">
               <div className="flex items-center gap-3 mb-6">
-                <Info className="w-6 h-6 text-purple-400" />
+                <HdInfo className="w-6 h-6 text-purple-400" />
                 <h3 className="text-xl font-light text-white">Análisis Hidráulico Profesional</h3>
               </div>
 
@@ -348,15 +348,15 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               {/* Recomendaciones */}
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-4 bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
-                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <HdCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <p className="text-zinc-300 font-light">La bomba seleccionada puede manejar el TDH calculado de {recommendation.hydraulicAnalysis.totalDynamicHead.toFixed(1)}m con {recommendation.equipment.pump.maxHead}m de altura máxima</p>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
-                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <HdCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <p className="text-zinc-300 font-light">El caudal de {recommendation.equipment.pump.flowRate} m³/h es adecuado para recircular {volume.toFixed(1)} m³ en {circulationTime} horas</p>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-zinc-900/30 rounded-2xl border border-zinc-800/50">
-                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <HdCheck className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                   <p className="text-zinc-300 font-light">Sistema dimensionado según normativas profesionales para instalaciones hidráulicas de piscinas</p>
                 </div>
               </div>
