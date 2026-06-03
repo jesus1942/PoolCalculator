@@ -1,78 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/services/api';
-import { Clock, AlertTriangle, CheckCircle, FileText, Eye, Package, Calendar, MessageCircle, Download, X } from 'lucide-react';
 import { API_BASE_URL } from '@/services/api';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
-import { DeveloperCredit } from '@/components/DeveloperCredit';
-
-interface ProjectUpdate {
-  id: string;
-  projectId: string;
-  title: string;
-  description?: string;
-  category: 'PROGRESS' | 'MILESTONE' | 'ISSUE' | 'NOTE' | 'INSPECTION' | 'DELIVERY' | 'OTHER';
-  images: string[];
-  metadata?: any;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface TimelineItem {
   id: string;
-  type: 'PROJECT_UPDATE' | 'AGENDA_EVENT' | 'AGENDA_MESSAGE';
+  type?: string;
   createdAt: string;
   title: string;
   description?: string | null;
-  category?: ProjectUpdate['category'];
+  category?: string;
   images?: string[];
-  event?: {
-    id: string;
-    title: string;
-    startAt: string;
-    endAt: string;
-    status: string;
-    type: string;
-    location?: string | null;
-  };
-  message?: {
-    id: string;
-    body: string;
-    images: string[];
-    user?: { id: string; name?: string | null; email?: string | null; role?: string | null };
-  };
 }
 
 interface ProjectData {
   projectName: string;
   clientName: string;
-  updates: ProjectUpdate[];
+  updates?: TimelineItem[];
   timeline?: TimelineItem[];
-  showCosts: boolean;
-  showDetails: boolean;
 }
 
-const CATEGORY_MAP = {
-  PROGRESS:   { label: 'Progreso',    icon: Clock,          dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-300 border-blue-400/20' },
-  MILESTONE:  { label: 'Hito',        icon: CheckCircle,    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20' },
-  ISSUE:      { label: 'Problema',    icon: AlertTriangle,  dot: 'bg-rose-400',    badge: 'bg-rose-400/10 text-rose-300 border-rose-400/20' },
-  NOTE:       { label: 'Nota',        icon: FileText,       dot: 'bg-zinc-400',    badge: 'bg-zinc-400/10 text-zinc-300 border-zinc-400/20' },
-  INSPECTION: { label: 'Inspección',  icon: Eye,            dot: 'bg-violet-400',  badge: 'bg-violet-400/10 text-violet-300 border-violet-400/20' },
-  DELIVERY:   { label: 'Entrega',     icon: Package,        dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-300 border-amber-400/20' },
-  OTHER:      { label: 'Novedad',     icon: FileText,       dot: 'bg-zinc-400',    badge: 'bg-zinc-400/10 text-zinc-300 border-zinc-400/20' },
-} as const;
-
-const TIMELINE_TYPE_MAP = {
-  AGENDA_MESSAGE: { label: 'Mensaje', icon: MessageCircle, dot: 'bg-teal-400',   badge: 'bg-teal-400/10 text-teal-300 border-teal-400/20' },
-  AGENDA_EVENT:   { label: 'Evento',  icon: Calendar,      dot: 'bg-indigo-400', badge: 'bg-indigo-400/10 text-indigo-300 border-indigo-400/20' },
+const CATEGORY_DOT: Record<string, string> = {
+  PROGRESS:   'bg-blue-400',
+  MILESTONE:  'bg-emerald-400',
+  ISSUE:      'bg-rose-400',
+  NOTE:       'bg-zinc-500',
+  INSPECTION: 'bg-violet-400',
+  DELIVERY:   'bg-amber-400',
+  OTHER:      'bg-zinc-500',
 };
-
-function getItemMeta(item: TimelineItem) {
-  if (item.type === 'PROJECT_UPDATE') {
-    return CATEGORY_MAP[item.category ?? 'OTHER'] ?? CATEGORY_MAP.OTHER;
-  }
-  return TIMELINE_TYPE_MAP[item.type as keyof typeof TIMELINE_TYPE_MAP] ?? CATEGORY_MAP.OTHER;
-}
 
 function formatDate(dateString: string) {
   const date = new Date(dateString);
@@ -109,10 +66,7 @@ export const PublicTimeline: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto" />
-          <p className="text-zinc-400 mt-4 text-sm">Cargando...</p>
-        </div>
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-zinc-700 border-t-cyan-400" />
       </div>
     );
   }
@@ -121,8 +75,7 @@ export const PublicTimeline: React.FC = () => {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
         <div className="bg-white/5 rounded-2xl p-8 max-w-sm w-full text-center border border-white/10">
-          <AlertTriangle size={40} className="mx-auto text-rose-400 mb-4" />
-          <p className="text-white font-semibold mb-1">Acceso no disponible</p>
+          <p className="text-white font-semibold mb-2">Acceso no disponible</p>
           <p className="text-zinc-400 text-sm mb-6">{error || 'Verificá que el enlace sea correcto.'}</p>
           <button
             onClick={() => navigate('/login')}
@@ -135,69 +88,66 @@ export const PublicTimeline: React.FC = () => {
     );
   }
 
-  const projectName = projectData.projectName || (projectData as any).project?.name || 'Proyecto';
-  const timelineSource = projectData.timeline || projectData.updates || [];
-  const items = timelineSource.filter((item: any) => !item?.type || item.type === 'PROJECT_UPDATE');
+  const projectName = projectData.projectName || 'Proyecto';
+  const source = projectData.timeline || projectData.updates || [];
+  const items = source.filter((item: any) => !item.type || item.type === 'PROJECT_UPDATE');
   const exportUrl = shareToken ? `${API_BASE_URL}/api/public/timeline/${shareToken}/export` : '';
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Header sticky compacto */}
+
+      {/* Header */}
       <header className="sticky top-0 z-20 border-b border-white/8 bg-zinc-950/90 backdrop-blur-xl">
-        <div className="mx-auto max-w-2xl px-4 py-3 flex items-center gap-3">
+        <div className="mx-auto max-w-lg px-4 py-3 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-zinc-900 shrink-0">
             <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="h-4 w-auto" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs text-zinc-500 leading-none mb-0.5">Pool Installer</p>
-            <h1 className="text-sm font-semibold text-white truncate">{projectName}</h1>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-zinc-600 leading-none mb-0.5 uppercase tracking-wider">Pool Installer</p>
+            <h1 className="text-sm font-semibold text-white truncate leading-tight">{projectName}</h1>
           </div>
           {exportUrl && items.length > 0 && (
-            <button
-              onClick={() => { window.location.href = exportUrl; }}
-              className="ml-auto shrink-0 flex items-center gap-1.5 text-xs text-zinc-400 hover:text-cyan-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
+            <a
+              href={exportUrl}
+              className="shrink-0 text-xs text-zinc-500 hover:text-cyan-300 transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5"
             >
-              <Download size={14} />
-              <span className="hidden sm:inline">Exportar</span>
-            </button>
+              Exportar
+            </a>
           )}
         </div>
       </header>
 
       {/* Timeline */}
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-lg px-4 py-6 pb-16">
         {items.length === 0 ? (
           <div className="text-center py-20">
-            <Clock size={40} className="mx-auto text-zinc-600 mb-4" />
-            <p className="text-zinc-300 font-medium mb-1">Sin actualizaciones aún</p>
-            <p className="text-zinc-500 text-sm">El equipo irá agregando novedades a medida que avance la obra.</p>
+            <p className="text-zinc-400 font-medium mb-1">Sin actualizaciones aún</p>
+            <p className="text-zinc-600 text-sm">El equipo irá publicando novedades a medida que avance la obra.</p>
           </div>
         ) : (
           <div className="relative">
             {/* Línea vertical */}
-            <div className="absolute left-3.5 top-0 bottom-0 w-px bg-gradient-to-b from-cyan-500/30 via-white/8 to-transparent" />
+            <div className="absolute left-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-cyan-500/40 via-white/6 to-transparent" />
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {items.map((item, index) => {
-                const meta = getItemMeta(item);
-                const Icon = meta.icon;
+                const dotColor = CATEGORY_DOT[item.category ?? 'OTHER'] ?? 'bg-zinc-500';
                 const isLatest = index === 0;
 
                 return (
                   <div key={item.id} className="relative flex gap-4">
                     {/* Dot */}
-                    <div className={`relative z-10 mt-3.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-zinc-950 ${meta.dot} bg-opacity-20`}
-                         style={{ background: 'var(--dot-bg)' }}>
-                      <div className={`h-7 w-7 rounded-full flex items-center justify-center ${meta.dot.replace('bg-', 'bg-').replace('-400', '-400/15')}`}>
-                        <Icon size={13} className={meta.dot.replace('bg-', 'text-')} />
-                      </div>
+                    <div className="shrink-0 mt-3.5 relative z-10">
+                      <div className={`h-[18px] w-[18px] rounded-full ${dotColor} ring-2 ring-zinc-950`} />
                     </div>
 
                     {/* Card */}
-                    <div className={`flex-1 min-w-0 rounded-xl border p-4 transition-colors ${
-                      isLatest ? 'border-cyan-400/30 bg-cyan-500/5' : 'border-white/8 bg-white/3 hover:bg-white/5'
+                    <div className={`flex-1 min-w-0 rounded-xl border p-4 ${
+                      isLatest
+                        ? 'border-cyan-400/25 bg-cyan-500/5'
+                        : 'border-white/7 bg-white/3'
                     }`}>
-                      {/* Título + badge + fecha */}
+
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
                         {isLatest && (
@@ -207,50 +157,21 @@ export const PublicTimeline: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className={`text-[11px] font-medium border rounded-full px-2 py-0.5 ${meta.badge}`}>
-                          {meta.label}
-                        </span>
-                        <span className="text-[11px] text-zinc-500">{formatDate(item.createdAt)}</span>
-                      </div>
+                      <p className="text-[11px] text-zinc-500 mb-3">{formatDate(item.createdAt)}</p>
 
                       {item.description && (
-                        <p className="text-sm text-zinc-300 leading-relaxed mb-3">{item.description}</p>
+                        <p className="text-sm text-zinc-300 leading-relaxed mb-3 whitespace-pre-line">
+                          {item.description}
+                        </p>
                       )}
 
-                      {/* Evento: solo hora y lugar, sin tipo/estado interno */}
-                      {item.event && (
-                        <div className="text-xs text-zinc-400 bg-white/5 border border-white/8 rounded-lg p-3 mb-3 space-y-0.5">
-                          <p className="text-zinc-200 font-medium">
-                            {new Date(item.event.startAt).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long' })}
-                          </p>
-                          <p>
-                            {new Date(item.event.startAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                            {' – '}
-                            {new Date(item.event.endAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          {item.event.location && <p className="text-zinc-500">{item.event.location}</p>}
-                        </div>
-                      )}
-
-                      {/* Mensaje: sin rol interno */}
-                      {item.message && (
-                        <div className="text-sm bg-teal-500/8 border border-teal-400/15 rounded-lg p-3 mb-3">
-                          {item.message.user?.name && (
-                            <p className="text-xs text-teal-300 font-medium mb-1">{item.message.user.name}</p>
-                          )}
-                          <p className="text-zinc-200 leading-relaxed">{item.message.body}</p>
-                        </div>
-                      )}
-
-                      {/* Imágenes */}
                       {item.images && item.images.length > 0 && (
-                        <div className={`grid gap-2 ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                        <div className={`grid gap-2 ${item.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                           {(item.images as string[]).map((img, i) => (
                             <button
                               key={i}
                               onClick={() => setSelectedImage(img)}
-                              className="relative aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                              className="relative aspect-video rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                             >
                               <img src={img} alt="" className="w-full h-full object-cover" />
                             </button>
@@ -265,11 +186,9 @@ export const PublicTimeline: React.FC = () => {
           </div>
         )}
 
-        {/* Footer mínimo */}
-        <div className="mt-12 pt-6 border-t border-white/8 flex flex-col items-center gap-3">
-          <DeveloperCredit variant="compact" />
-          <p className="text-zinc-600 text-xs">© {new Date().getFullYear()} Pool Installer</p>
-        </div>
+        <p className="text-center text-zinc-700 text-xs mt-10">
+          © {new Date().getFullYear()} Pool Installer
+        </p>
       </main>
 
       {/* Lightbox */}
@@ -280,9 +199,12 @@ export const PublicTimeline: React.FC = () => {
         >
           <button
             onClick={() => setSelectedImage(null)}
-            className="absolute top-4 right-4 text-white/60 hover:text-white bg-white/10 rounded-full p-2 transition-colors"
+            className="absolute top-4 right-4 text-white/50 hover:text-white bg-white/10 rounded-full p-2 transition-colors"
+            aria-label="Cerrar"
           >
-            <X size={20} />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
           </button>
           <img
             src={selectedImage}
