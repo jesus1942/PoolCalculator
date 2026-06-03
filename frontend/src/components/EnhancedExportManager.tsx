@@ -7,7 +7,8 @@ import { plumbingCalculationService } from '@/services/plumbingCalculationServic
 import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
 import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
-import { FileText, FileSpreadsheet, Download, Printer, Briefcase, User, Wrench, DollarSign, MessageCircle, FileDown, File } from 'lucide-react';
+import { HdFileText, HdDownload, HdPrinter, HdDollarSign, HdMessageBubble } from '@/components/ui/HandDrawnIcons';
+import { FileSpreadsheet, Briefcase, User, Wrench, FileDown, File } from 'lucide-react';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -425,13 +426,13 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       id: 'budget' as ExportTemplate,
       name: 'Presupuesto Detallado',
       description: 'Presupuesto completo con costos unitarios y subtotales',
-      icon: DollarSign,
+      icon: HdDollarSign,
     },
     {
       id: 'complete' as ExportTemplate,
       name: 'Dossier del Proyecto',
       description: 'Documento integral con resumen, alcance comercial y respaldo técnico',
-      icon: FileText,
+      icon: HdFileText,
     },
     {
       id: 'overview' as ExportTemplate,
@@ -5035,7 +5036,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   onClick={() => handleExport('html', selectedTemplate)}
                   className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
-                  <Download size={20} />
+                  <HdDownload size={20} />
                   <span className="font-semibold text-xs">HTML</span>
                 </button>
 
@@ -5043,7 +5044,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   onClick={() => handlePrint(selectedTemplate)}
                   className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
-                  <Printer size={20} />
+                  <HdPrinter size={20} />
                   <span className="font-semibold text-xs">Imprimir</span>
                 </button>
 
@@ -5051,7 +5052,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   onClick={handleWhatsAppShare}
                   className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm"
                 >
-                  <MessageCircle size={20} />
+                  <HdMessageBubble size={20} />
                   <span className="font-semibold text-xs">WhatsApp</span>
                 </button>
               </div>
@@ -5070,7 +5071,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   disabled={generatingPackage}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm text-sm font-semibold"
                 >
-                  <FileText size={18} />
+                  <HdFileText size={18} />
                   {generatingPackage ? 'Generando expediente...' : 'Generar expediente'}
                 </button>
 
@@ -5079,7 +5080,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   disabled={downloadingPackage}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white disabled:opacity-60 text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
                 >
-                  <Download size={18} />
+                  <HdDownload size={18} />
                   {downloadingPackage ? 'Preparando ZIP...' : 'Descargar ZIP'}
                 </button>
               </div>

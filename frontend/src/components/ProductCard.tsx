@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { productImageService } from '@/services/productImageService';
-import { Edit, Trash2, Package, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { HdEdit, HdTrash, HdPackage, HdX, HdChevronLeft, HdChevronRight } from '@/components/ui/HandDrawnIcons';
 import { Card } from '@/components/ui/Card';
 
 interface ProductCardProps {
@@ -93,7 +93,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
                     <div className="text-center">
-                      <Package className="w-8 h-8 text-zinc-500 mx-auto mb-1" />
+                      <HdPackage size={32} className="w-8 h-8 text-zinc-500 mx-auto mb-1" />
                       <p className="text-xs text-zinc-500">Sin imagen</p>
                     </div>
                   </div>
@@ -129,14 +129,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
                     title="Editar"
                   >
-                    <Edit className="w-4 h-4" />
+                    <HdEdit size={16} className="w-4 h-4" />
                   </button>
                   <button
                     onClick={onDelete}
                     className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Eliminar"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <HdTrash size={16} className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               onClick={() => setShowGallery(false)}
               className="absolute -top-12 right-0 text-white hover:text-zinc-300 transition-colors"
             >
-              <X className="w-8 h-8" />
+              <HdX size={32} className="w-8 h-8" />
             </button>
 
             {/* Image */}
@@ -195,7 +195,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     onClick={handlePrevImage}
                     className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-200"
                   >
-                    <ChevronLeft className="w-6 h-6" />
+                    <HdChevronLeft size={24} className="w-6 h-6" />
                   </button>
 
                   <span className="text-sm text-zinc-400">
@@ -206,7 +206,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     onClick={handleNextImage}
                     className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-200"
                   >
-                    <ChevronRight className="w-6 h-6" />
+                    <HdChevronRight size={24} className="w-6 h-6" />
                   </button>
                 </div>
               )}

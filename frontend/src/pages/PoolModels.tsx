@@ -7,7 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { poolPresetService } from '@/services/poolPresetService';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { EquipmentPreset, PoolPreset, PoolShape } from '@/types';
-import { Plus, Edit, Trash2, Upload, X, Waves, Layers, ChevronLeft, ChevronRight, Image as ImageIcon, Search } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdUpload, HdX, HdWaves, HdChevronLeft, HdChevronRight, HdImage, HdSearch } from '@/components/ui/HandDrawnIcons';
+import { Layers } from 'lucide-react';
 import FlipCard from '@/components/ui/FlipCard';
 import { getImageUrl } from '@/utils/imageUtils';
 import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';
@@ -63,7 +64,7 @@ const PoolPresetCard: React.FC<{
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-zinc-600">
-                  <ImageIcon className="h-10 w-10" />
+                  <HdImage size={40} className="h-10 w-10" />
                 </div>
               )}
               {hasAdditionalContent && (
@@ -176,7 +177,7 @@ const PoolPresetCard: React.FC<{
                   }}
                   className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition-all duration-200 flex items-center justify-center gap-2"
                 >
-                  <Edit size={16} />
+                  <HdEdit size={16} />
                   <span>Editar</span>
                 </button>
                 <button
@@ -186,7 +187,7 @@ const PoolPresetCard: React.FC<{
                   }}
                   className="px-4 py-2.5 rounded-lg bg-red-600/80 text-white font-semibold hover:bg-red-600 transition-all duration-200 flex items-center justify-center"
                 >
-                  <Trash2 size={16} />
+                  <HdTrash size={16} />
                 </button>
               </div>
             </div>
@@ -213,13 +214,13 @@ const PoolPresetCard: React.FC<{
                   onClick={prevImage}
                   className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-all"
                 >
-                  <ChevronLeft size={20} />
+                  <HdChevronLeft size={20} />
                 </button>
                 <button
                   onClick={nextImage}
                   className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-all"
                 >
-                  <ChevronRight size={20} />
+                  <HdChevronRight size={20} />
                 </button>
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                   {additionalImages.map((_, idx) => (
@@ -242,7 +243,7 @@ const PoolPresetCard: React.FC<{
           {/* Descripción del reverso */}
           <div className="flex-1 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <ImageIcon className="h-5 w-5 text-blue-400" />
+              <HdImage size={20} className="h-5 w-5 text-blue-400" />
               <h3 className="text-lg font-bold text-white">{preset.name}</h3>
             </div>
 
@@ -531,7 +532,7 @@ export const PoolModels: React.FC = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="w-14 h-14 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                <Waves className="h-7 w-7 text-blue-400" />
+                <HdWaves size={28} className="h-7 w-7 text-blue-400" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-3xl sm:text-4xl font-bold text-white">
@@ -546,7 +547,7 @@ export const PoolModels: React.FC = () => {
               onClick={() => setShowModal(true)}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold transition-all duration-200 hover:bg-blue-500 sm:w-auto"
             >
-              <Plus size={20} />
+              <HdPlus size={20} />
               <span>Nuevo Modelo</span>
             </button>
           </div>
@@ -556,7 +557,7 @@ export const PoolModels: React.FC = () => {
         <div className="mb-6 bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+              <HdSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por nombre o descripción..."
@@ -599,7 +600,7 @@ export const PoolModels: React.FC = () => {
         {/* Grid de Modelos */}
         {filteredPresets.length === 0 ? (
           <div className="text-center py-20 text-zinc-500">
-            <Waves className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <HdWaves size={48} className="h-12 w-12 mx-auto mb-4 opacity-30" />
             <p className="text-lg font-medium">No hay modelos que coincidan</p>
             <p className="text-sm mt-1">Probá con otro término o limpiá los filtros</p>
           </div>
@@ -635,18 +636,18 @@ export const PoolModels: React.FC = () => {
                   <div className="relative">
                     <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg border border-zinc-700" />
                     <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-500">
-                      <X size={16} />
+                      <HdX size={16} />
                     </button>
                   </div>
                 ) : (
                   <div className="w-32 h-32 border-2 border-dashed border-zinc-700 rounded-lg flex items-center justify-center bg-zinc-800/50">
-                    <Upload size={32} className="text-zinc-600" />
+                    <HdUpload size={32} className="text-zinc-600" />
                   </div>
                 )}
                 <div>
                   <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" id="image-upload" />
                   <label htmlFor="image-upload" className="cursor-pointer inline-flex items-center px-4 py-2 border border-zinc-700 rounded-lg text-sm font-medium text-zinc-300 bg-white/5 hover:bg-white/10 transition-colors">
-                    <Upload size={16} className="mr-2" />Subir imagen
+                    <HdUpload size={16} className="mr-2" />Subir imagen
                   </label>
                   <p className="text-xs text-zinc-500 mt-2">JPG, PNG, GIF o WEBP. Máximo 5MB.</p>
                 </div>
@@ -679,7 +680,7 @@ export const PoolModels: React.FC = () => {
                           }
                           setAdditionalImagePreviews(previews => previews.filter((_, i) => i !== idx));
                         }} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-500">
-                          <X size={14} />
+                          <HdX size={14} />
                         </button>
                       </div>
                     ))}
@@ -688,7 +689,7 @@ export const PoolModels: React.FC = () => {
                 <div>
                   <input type="file" accept="image/*" multiple onChange={handleAdditionalImagesChange} className="hidden" id="additional-images-upload" />
                   <label htmlFor="additional-images-upload" className="cursor-pointer inline-flex items-center px-4 py-2 border border-zinc-700 rounded-lg text-sm font-medium text-zinc-300 bg-white/5 hover:bg-white/10 transition-colors">
-                    <Upload size={16} className="mr-2" />Agregar imágenes (máx. 5)
+                    <HdUpload size={16} className="mr-2" />Agregar imágenes (máx. 5)
                   </label>
                   <p className="text-xs text-zinc-500 mt-2">Planos, isométricos, vistas adicionales. JPG, PNG. Máximo 5 imágenes.</p>
                 </div>

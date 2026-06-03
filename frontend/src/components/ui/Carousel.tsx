@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { HdChevronLeft, HdChevronRight } from '@/components/ui/HandDrawnIcons';
 
 interface CarouselProps {
   children: React.ReactNode[];
@@ -74,14 +74,14 @@ export const Carousel: React.FC<CarouselProps> = ({
             className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
             aria-label="Previous slide"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <HdChevronLeft size={24} className="w-6 h-6" />
           </button>
           <button
             onClick={goToNext}
             className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 rounded-full p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
             aria-label="Next slide"
           >
-            <ChevronRight className="w-6 h-6" />
+            <HdChevronRight size={24} className="w-6 h-6" />
           </button>
         </>
       )}

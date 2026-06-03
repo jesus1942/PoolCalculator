@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Image as ImageIcon, X, Clock, FileText, AlertTriangle, CheckCircle, Package, Eye, EyeOff, Trash2, Edit2, Share2, Calendar, MessageCircle } from 'lucide-react';
+import { HdPlus, HdImage, HdX, HdClock, HdFileText, HdAlertTriangle, HdCheck, HdPackage, HdEye, HdEyeOff, HdTrash, HdEdit, HdShare, HdCalendar, HdMessageBubble } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 import { ShareTimelineModal } from './ShareTimelineModal';
 
@@ -247,13 +247,13 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
 
   const getCategoryInfo = (category: ProjectUpdate['category']) => {
     const categories = {
-      PROGRESS: { label: 'Progreso', icon: Clock, color: 'blue' },
-      MILESTONE: { label: 'Hito', icon: CheckCircle, color: 'green' },
-      ISSUE: { label: 'Problema', icon: AlertTriangle, color: 'red' },
-      NOTE: { label: 'Nota', icon: FileText, color: 'gray' },
-      INSPECTION: { label: 'Inspección', icon: Eye, color: 'purple' },
-      DELIVERY: { label: 'Entrega', icon: Package, color: 'orange' },
-      OTHER: { label: 'Otro', icon: FileText, color: 'gray' },
+      PROGRESS: { label: 'Progreso', icon: HdClock, color: 'blue' },
+      MILESTONE: { label: 'Hito', icon: HdCheck, color: 'green' },
+      ISSUE: { label: 'Problema', icon: HdAlertTriangle, color: 'red' },
+      NOTE: { label: 'Nota', icon: HdFileText, color: 'gray' },
+      INSPECTION: { label: 'Inspección', icon: HdEye, color: 'purple' },
+      DELIVERY: { label: 'Entrega', icon: HdPackage, color: 'orange' },
+      OTHER: { label: 'Otro', icon: HdFileText, color: 'gray' },
     };
     return categories[category] || categories.OTHER;
   };
@@ -263,9 +263,9 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
       return getCategoryInfo(item.category || 'OTHER');
     }
     if (item.type === 'AGENDA_MESSAGE') {
-      return { label: 'Mensaje', icon: MessageCircle, color: 'emerald' };
+      return { label: 'Mensaje', icon: HdMessageBubble, color: 'emerald' };
     }
-    return { label: 'La Agenda', icon: Calendar, color: 'indigo' };
+    return { label: 'La Agenda', icon: HdCalendar, color: 'indigo' };
   };
 
   const getRoleLabel = (role?: string | null) => {
@@ -317,12 +317,12 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
           <div className="flex gap-2">
             {timelineItems.length > 0 && (
               <Button variant="secondary" onClick={() => setShowExportModal(true)}>
-                <Share2 size={18} className="mr-2" />
+                <HdShare size={18} className="mr-2" />
                 Compartir Timeline
               </Button>
             )}
             <Button onClick={() => setShowAddModal(true)}>
-              <Plus size={18} className="mr-2" />
+              <HdPlus size={18} className="mr-2" />
               Agregar Actualización
             </Button>
           </div>
@@ -335,7 +335,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
           </div>
         ) : timelineItems.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Clock size={48} className="mx-auto text-gray-400 mb-4" />
+            <HdClock size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600 mb-2">No hay actualizaciones registradas</p>
             <p className="text-sm text-gray-500">Comienza agregando la primera actualización del proyecto</p>
           </div>
@@ -391,21 +391,21 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                               className={`${item.isPublic ? 'text-green-600 hover:text-green-800' : 'text-gray-400 hover:text-gray-600'} p-1`}
                               title={item.isPublic ? 'Visible para clientes (click para ocultar)' : 'Oculto para clientes (click para mostrar)'}
                             >
-                              {item.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
+                              {item.isPublic ? <HdEye size={16} /> : <HdEyeOff size={16} />}
                             </button>
                             <button
                               onClick={() => handleEditClick(item as unknown as ProjectUpdate)}
                               className="text-blue-600 hover:text-blue-800 p-1"
                               title="Editar actualización"
                             >
-                              <Edit2 size={16} />
+                              <HdEdit size={16} />
                             </button>
                             <button
                               onClick={() => handleDeleteUpdate(item.id)}
                               className="text-red-600 hover:text-red-800 p-1"
                               title="Eliminar actualización"
                             >
-                              <Trash2 size={16} />
+                              <HdTrash size={16} />
                             </button>
                           </div>
                         )}
@@ -538,7 +538,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
               htmlFor="image-upload"
               className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
             >
-              <ImageIcon size={20} className="text-gray-400" />
+              <HdImage size={20} className="text-gray-400" />
               <span className="text-sm text-gray-600">Seleccionar imágenes</span>
             </label>
 
@@ -551,7 +551,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                       onClick={() => handleRemoveImage(index)}
                       className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
                     >
-                      <X size={12} />
+                      <HdX size={12} />
                     </button>
                   </div>
                 ))}

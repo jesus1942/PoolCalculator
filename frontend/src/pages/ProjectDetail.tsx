@@ -22,7 +22,8 @@ import type { Project, ProjectStatus as ProjectStatusType, PoolPreset, ProjectTa
 import {
   buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
-import { ArrowLeft, Edit, FileText, Hammer, Users, FileSpreadsheet, Package, Zap, Activity, Cpu, AlertTriangle } from 'lucide-react';
+import { HdArrowLeft, HdEdit, HdFileText, HdUsers, HdPackage, HdZap, HdActivity, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
+import { Hammer, FileSpreadsheet, Cpu } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);
@@ -271,7 +272,7 @@ export const ProjectDetail: React.FC = () => {
         <div className="bg-white/10 rounded-lg border border-white/15 shadow-2xl max-w-md w-full">
           <div className="p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-              <FileText className="h-8 w-8 text-zinc-400" />
+              <HdFileText size={32} className="h-8 w-8 text-zinc-400" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Proyecto no encontrado</h3>
             <p className="text-zinc-400 mb-6">El proyecto que buscas no existe o fue eliminado.</p>
@@ -330,18 +331,18 @@ export const ProjectDetail: React.FC = () => {
               ? 'bg-rose-500/15 text-rose-200 border border-rose-400/30'
               : 'bg-white/10 text-zinc-200 border border-white/20';
 
-  const allTabs: Array<{ id: ProjectTabId; label: string; icon: typeof FileText }> = [
-    { id: 'overview', label: 'Vista General', icon: FileText },
-    { id: 'status', label: 'Estado', icon: Activity },
-    { id: 'tiles', label: 'Losetas', icon: Edit },
+  const allTabs: Array<{ id: ProjectTabId; label: string; icon: React.FC<any> }> = [
+    { id: 'overview', label: 'Vista General', icon: HdFileText },
+    { id: 'status', label: 'Estado', icon: HdActivity },
+    { id: 'tiles', label: 'Losetas', icon: HdEdit },
     { id: 'plumbing', label: 'Hidráulica', icon: Hammer },
-    { id: 'electrical', label: 'Eléctrica', icon: Zap },
-    { id: 'hydraulic_pro', label: 'Análisis Hidráulico', icon: Activity },
-    { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: Zap },
+    { id: 'electrical', label: 'Eléctrica', icon: HdZap },
+    { id: 'hydraulic_pro', label: 'Análisis Hidráulico', icon: HdActivity },
+    { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: HdZap },
     { id: 'tasks', label: 'Tareas', icon: Hammer },
-    { id: 'roles', label: 'Roles', icon: Users },
+    { id: 'roles', label: 'Roles', icon: HdUsers },
     { id: 'systems', label: 'Sistemas', icon: Cpu },
-    { id: 'additionals', label: 'Adicionales', icon: Package },
+    { id: 'additionals', label: 'Adicionales', icon: HdPackage },
     { id: 'export', label: 'Exportar', icon: FileSpreadsheet },
   ];
   const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id));
@@ -357,7 +358,7 @@ export const ProjectDetail: React.FC = () => {
                 onClick={() => navigate('/projects')}
                 className="group p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
               >
-                <ArrowLeft className="h-5 w-5 text-zinc-300 group-hover:text-white transition-colors" />
+                <HdArrowLeft size={20} className="h-5 w-5 text-zinc-300 group-hover:text-white transition-colors" />
               </button>
               <div className="min-w-0">
                 <h1 className="mb-1 break-words text-xl font-bold text-white sm:text-2xl">{project.name}</h1>
@@ -412,7 +413,7 @@ export const ProjectDetail: React.FC = () => {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-3">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-200">
-                  <AlertTriangle className="h-5 w-5" />
+                  <HdAlertTriangle size={20} className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-amber-100">Actualización diaria pendiente</p>

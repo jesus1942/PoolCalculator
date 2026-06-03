@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Project } from '@/types';
-import { Plus, Edit, Trash2, Clock, DollarSign, Users, ChevronDown, ChevronUp, AlertTriangle, Lock, Unlock, EyeOff, Eye } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdClock, HdDollarSign, HdUsers, HdChevronDown, HdAlertTriangle, HdLock, HdUnlock, HdEyeOff, HdEye } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 
 interface ProfessionRole {
@@ -480,11 +480,11 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                   <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/75">Mano de Obra</p>
                   <p className="text-lg font-semibold text-white">${cleanLaborCost.toLocaleString('es-AR')}</p>
                 </div>
-                {budgetWidgetCollapsed ? <ChevronUp size={18} className="text-zinc-300" /> : <ChevronDown size={18} className="text-zinc-300" />}
+                {budgetWidgetCollapsed ? <HdChevronDown size={18} className="text-zinc-300" style={{ transform: "rotate(180deg)" }} /> : <HdChevronDown size={18} className="text-zinc-300" />}
               </button>
               {duplicateCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
-                  <AlertTriangle size={12} />
+                  <HdAlertTriangle size={12} />
                   {duplicateCount} dup.
                 </span>
               )}
@@ -494,7 +494,7 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                 className="rounded-full border border-white/10 p-1 text-zinc-400 transition hover:border-white/20 hover:text-white"
                 title="Ocultar atajo"
               >
-                <EyeOff size={14} />
+                <HdEyeOff size={14} />
               </button>
             </div>
 
@@ -544,17 +544,17 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
         <h3 className="text-lg font-semibold">Gestión de Tareas del Proyecto</h3>
         <div className="flex items-center gap-3">
           <Button variant="secondary" onClick={() => handleBudgetWidgetVisibility(!budgetWidgetHidden)}>
-            {budgetWidgetHidden ? <Eye size={18} className="mr-2" /> : <EyeOff size={18} className="mr-2" />}
+            {budgetWidgetHidden ? <HdEye size={18} className="mr-2" /> : <HdEyeOff size={18} className="mr-2" />}
             {budgetWidgetHidden ? 'Mostrar atajo' : 'Ocultar atajo'}
           </Button>
           {duplicateCount > 0 && (
             <Button variant="outline" onClick={handleRemoveDuplicates}>
-              <AlertTriangle size={18} className="mr-2" />
+              <HdAlertTriangle size={18} className="mr-2" />
               Limpiar duplicadas
             </Button>
           )}
           <Button onClick={handleAddTask}>
-            <Plus size={20} className="mr-2" />
+            <HdPlus size={20} className="mr-2" />
             Nueva Tarea
           </Button>
         </div>
@@ -569,7 +569,7 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
             </p>
           </div>
           <Button variant={taskAutomationLocked ? 'secondary' : 'outline'} onClick={handleAutomationToggle} disabled={savingAutomationSetting}>
-            {taskAutomationLocked ? <Lock size={18} className="mr-2" /> : <Unlock size={18} className="mr-2" />}
+            {taskAutomationLocked ? <HdLock size={18} className="mr-2" /> : <HdUnlock size={18} className="mr-2" />}
             {taskAutomationLocked ? 'Automático bloqueado' : 'Automático activo'}
           </Button>
         </div>
@@ -585,11 +585,11 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
               <h4 className="text-md font-semibold">{category.label}</h4>
               <div className="flex gap-4 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
-                  <Clock size={16} />
+                  <HdClock size={16} />
                   {totalHours.toFixed(1)} hs
                 </span>
                 <span className="flex items-center gap-1">
-                  <DollarSign size={16} />
+                  <HdDollarSign size={16} />
                   ${totalCost.toLocaleString('es-AR')}
                 </span>
               </div>
@@ -611,20 +611,20 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                         <div className="flex gap-4 text-xs text-gray-500">
                           {task.estimatedHours && (
                             <span className="flex items-center gap-1">
-                              <Clock size={12} />
+                              <HdClock size={12} />
                               {task.estimatedHours} horas
                             </span>
                           )}
                           {task.quantity && (
                             <span className="flex items-center gap-1">
-                              <Users size={12} />
+                              <HdUsers size={12} />
                               {task.quantity} {task.unit || ''}
                               {task.bocaType ? ` · ${task.bocaType}` : ''}
                             </span>
                           )}
                           {task.laborCost && (
                             <span className="flex items-center gap-1">
-                              <DollarSign size={12} />
+                              <HdDollarSign size={12} />
                               ${task.laborCost.toLocaleString('es-AR')}
                             </span>
                           )}
@@ -643,13 +643,13 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                           onClick={() => handleEditTask(category.id, task)}
                           className="text-blue-600 hover:text-blue-800"
                         >
-                          <Edit size={18} />
+                          <HdEdit size={18} />
                         </button>
                         <button
                           onClick={() => handleDeleteTask(category.id, task.id)}
                           className="text-red-600 hover:text-red-800"
                         >
-                          <Trash2 size={18} />
+                          <HdTrash size={18} />
                         </button>
                       </div>
                     </div>

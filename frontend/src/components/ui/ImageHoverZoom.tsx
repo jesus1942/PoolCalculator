@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { HdX, HdChevronLeft, HdChevronRight } from '@/components/ui/HandDrawnIcons';
 
 interface ImageHoverZoomProps {
   src: string;
@@ -170,7 +170,7 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
             className="absolute top-6 right-6 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-3 transition-all duration-200 backdrop-blur-sm hover:scale-110"
             aria-label="Cerrar"
           >
-            <X className="w-6 h-6" />
+            <HdX size={24} className="w-6 h-6" />
           </button>
 
           {/* Navegación izquierda */}
@@ -183,7 +183,7 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
               className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-4 transition-all duration-200 backdrop-blur-sm hover:scale-110"
               aria-label="Anterior"
             >
-              <ChevronLeft className="w-8 h-8" />
+              <HdChevronLeft size={32} className="w-8 h-8" />
             </button>
           )}
 
@@ -197,7 +197,7 @@ export const ImageHoverZoom: React.FC<ImageHoverZoomProps> = ({
               className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-4 transition-all duration-200 backdrop-blur-sm hover:scale-110"
               aria-label="Siguiente"
             >
-              <ChevronRight className="w-8 h-8" />
+              <HdChevronRight size={32} className="w-8 h-8" />
             </button>
           )}
 

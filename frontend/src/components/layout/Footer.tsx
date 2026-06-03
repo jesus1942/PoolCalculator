@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Home, FolderKanban, Settings, LogOut } from 'lucide-react';
+import { HdHome, HdFolderOpen, HdGear, HdArrowOut } from '@/components/ui/HandDrawnIcons';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -38,19 +38,19 @@ export const Footer: React.FC = () => {
               <ul className="space-y-3 text-sm">
                 <li>
                   <Link to="/projects" className="text-zinc-400 hover:text-cyan-400 transition-colors flex items-center gap-2 font-light group">
-                    <Home size={14} className="group-hover:scale-110 transition-transform" />
+                    <HdHome size={14} className="group-hover:scale-110 transition-transform" />
                     Mis Proyectos
                   </Link>
                 </li>
                 <li>
                   <Link to="/pool-models" className="text-zinc-400 hover:text-cyan-400 transition-colors flex items-center gap-2 font-light group">
-                    <FolderKanban size={14} className="group-hover:scale-110 transition-transform" />
+                    <HdFolderOpen size={14} className="group-hover:scale-110 transition-transform" />
                     Modelos de Piscinas
                   </Link>
                 </li>
                 <li>
                   <Link to="/settings" className="text-zinc-400 hover:text-cyan-400 transition-colors flex items-center gap-2 font-light group">
-                    <Settings size={14} className="group-hover:scale-110 transition-transform" />
+                    <HdGear size={14} className="group-hover:scale-110 transition-transform" />
                     Configuración
                   </Link>
                 </li>
@@ -59,7 +59,7 @@ export const Footer: React.FC = () => {
                     onClick={handleLogout}
                     className="text-zinc-400 hover:text-red-400 transition-colors flex items-center gap-2 font-light group"
                   >
-                    <LogOut size={14} className="group-hover:scale-110 transition-transform" />
+                    <HdArrowOut size={14} className="group-hover:scale-110 transition-transform" />
                     Cerrar Sesión
                   </button>
                 </li>

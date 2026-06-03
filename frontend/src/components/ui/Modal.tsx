@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { HdX } from '@/components/ui/HandDrawnIcons';
 
 interface ModalProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
                   onClick={onClose}
                   className="text-zinc-300 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/15"
                 >
-                  <X size={24} />
+                  <HdX size={24} />
                 </button>
               </div>
               <div className="text-zinc-100">

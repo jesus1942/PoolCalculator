@@ -9,7 +9,7 @@ import { poolPresetService } from '@/services/poolPresetService';
 import { Project, PoolPreset, ProjectStatus } from '@/types';
 import { calculateProjectFinancials } from '@/utils/projectCosting';
 import { buildProjectAutoConfigurations } from '@/utils/presetAutoConfig';
-import { Plus, Edit, Trash2, Eye, FileText, FolderOpen, Waves, CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdEye, HdFileText, HdFolderOpen, HdWaves, HdCheck, HdClock, HdAlertTriangle, HdX } from '@/components/ui/HandDrawnIcons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -189,12 +189,12 @@ export const Projects: React.FC = () => {
 
   const getStatusIcon = (status: ProjectStatus) => {
     const icons = {
-      DRAFT: FileText,
-      BUDGETED: AlertCircle,
-      APPROVED: CheckCircle2,
-      IN_PROGRESS: Clock,
-      COMPLETED: CheckCircle2,
-      CANCELLED: XCircle,
+      DRAFT: HdFileText,
+      BUDGETED: HdAlertTriangle,
+      APPROVED: HdCheck,
+      IN_PROGRESS: HdClock,
+      COMPLETED: HdCheck,
+      CANCELLED: HdX,
     };
     return icons[status] || icons.DRAFT;
   };
@@ -242,7 +242,7 @@ export const Projects: React.FC = () => {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                <FolderOpen className="h-6 w-6 text-white" />
+                <HdFolderOpen size={24} className="h-6 w-6 text-white" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
@@ -256,7 +256,7 @@ export const Projects: React.FC = () => {
                 onClick={() => setShowModal(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-3 text-white font-medium shadow-lg transition-all duration-200 hover:from-blue-600 hover:to-blue-700 sm:w-auto"
               >
-                <Plus size={20} />
+                <HdPlus size={20} />
                 <span>Nuevo Proyecto</span>
               </button>
             )}
@@ -268,7 +268,7 @@ export const Projects: React.FC = () => {
           <div className="bg-white/10 rounded-xl border border-white/15 shadow-2xl">
             <div className="text-center py-16 px-6">
               <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
-                <FolderOpen className="h-8 w-8 text-zinc-300" />
+                <HdFolderOpen size={32} className="h-8 w-8 text-zinc-300" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">
                 No tenes proyectos todavia
@@ -281,7 +281,7 @@ export const Projects: React.FC = () => {
                   onClick={() => setShowModal(true)}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg"
                 >
-                  <Plus size={20} />
+                  <HdPlus size={20} />
                   <span>Crear Primer Proyecto</span>
                 </button>
               )}
@@ -325,7 +325,7 @@ export const Projects: React.FC = () => {
                     {project.poolPreset && (
                       <div className="border-t border-white/20 pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Waves className="h-4 w-4 text-cyan-300" />
+                          <HdWaves size={16} className="h-4 w-4 text-cyan-300" />
                           <p className="text-xs font-medium text-zinc-300 uppercase tracking-wide">Modelo de Piscina</p>
                         </div>
                         <p className="font-semibold text-white">{project.poolPreset.name}</p>
@@ -351,7 +351,7 @@ export const Projects: React.FC = () => {
                         onClick={() => handleView(project.id)}
                         className="flex-1 px-4 py-2 bg-cyan-400 text-zinc-950 font-semibold rounded-lg hover:bg-cyan-300 transition-colors duration-200 flex items-center justify-center gap-2"
                       >
-                        <Eye size={16} />
+                        <HdEye size={16} />
                         <span>Ver</span>
                       </button>
                       {canEditProject && (
@@ -360,14 +360,14 @@ export const Projects: React.FC = () => {
                             onClick={() => handleEdit(project)}
                             className="px-4 py-2 bg-white/10 text-zinc-200 hover:bg-white/10 rounded-lg transition-colors duration-200 border border-white/20"
                           >
-                            <Edit size={16} />
+                            <HdEdit size={16} />
                           </button>
                           {canDeleteProject && (
                             <button
                               onClick={() => handleDelete(project.id)}
                               className="px-4 py-2 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 rounded-lg transition-colors duration-200 border border-rose-400/30"
                             >
-                              <Trash2 size={16} />
+                              <HdTrash size={16} />
                             </button>
                           )}
                         </>

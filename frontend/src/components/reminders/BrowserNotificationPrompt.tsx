@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BellRing, X } from 'lucide-react';
+import { HdBell, HdX } from '@/components/ui/HandDrawnIcons';
 import { pushNotificationService } from '@/services/pushNotificationService';
 
 const DISMISSED_KEY = 'browser-notification-permission-dismissed';
@@ -64,7 +64,7 @@ export const BrowserNotificationPrompt: React.FC = () => {
     <div className="fixed bottom-6 left-6 z-[65] max-w-md rounded-2xl border border-cyan-500/30 bg-zinc-950/95 p-4 shadow-2xl shadow-cyan-500/10 backdrop-blur-xl">
       <div className="flex items-start gap-3">
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2">
-          <BellRing className="h-5 w-5 text-cyan-300" />
+          <HdBell size={20} className="h-5 w-5 text-cyan-300" />
         </div>
         <div className="flex-1">
           <div className="text-sm font-medium text-white">Activar notificaciones</div>
@@ -95,7 +95,7 @@ export const BrowserNotificationPrompt: React.FC = () => {
           aria-label="Cerrar aviso de notificaciones"
           className="text-zinc-500 transition-colors hover:text-zinc-200"
         >
-          <X className="h-4 w-4" />
+          <HdX size={16} className="h-4 w-4" />
         </button>
       </div>
     </div>

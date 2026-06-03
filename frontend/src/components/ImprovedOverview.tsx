@@ -8,25 +8,26 @@ import { professionalCalculationsService } from '@/services/professionalCalculat
 import { productImageService } from '@/services/productImageService';
 import { calculateProjectFinancials, getAdditionalName, summarizeHydraulicSystem } from '@/utils/projectCosting';
 import {
-  DollarSign,
   Droplets,
-  Ruler,
-  Package,
-  Zap,
   Wrench,
-  Users,
-  PlusCircle,
-  CheckCircle2,
   Layers,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  AlertTriangle,
-  Grid3x3,
-  Image as ImageIcon,
-  Eye,
-  EyeOff
 } from 'lucide-react';
+import {
+  HdDollarSign,
+  HdRuler,
+  HdPackage,
+  HdZap,
+  HdUsers,
+  HdPlus,
+  HdCheck,
+  HdDownload,
+  HdChevronDown,
+  HdAlertTriangle,
+  HdGrid,
+  HdImage,
+  HdEye,
+  HdEyeOff,
+} from '@/components/ui/HandDrawnIcons';
 
 interface ImprovedOverviewProps {
   project: Project;
@@ -309,7 +310,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                     aria-label={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
                     title={showGrandTotal ? 'Ocultar total del proyecto' : 'Mostrar total del proyecto'}
                   >
-                    {showGrandTotal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showGrandTotal ? <HdEyeOff size={16} className="h-4 w-4" /> : <HdEye size={16} className="h-4 w-4" />}
                   </button>
                 </div>
                 <p className="min-h-[40px] max-w-full overflow-hidden break-all text-2xl font-bold leading-tight tracking-tight sm:min-h-[56px] sm:text-4xl lg:text-5xl">
@@ -317,11 +318,11 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                 </p>
                 <div className="mt-3 flex flex-col gap-2 text-sm text-zinc-50 sm:text-base lg:items-end">
                   <span className="flex min-w-0 items-center gap-1">
-                    <Package className="h-4 w-4 shrink-0" />
+                    <HdPackage size={16} className="h-4 w-4 shrink-0" />
                     <span className="break-all">Materiales: ${totalMaterialCost.toLocaleString('es-AR')}</span>
                   </span>
                   <span className="flex min-w-0 items-center gap-1">
-                    <Users className="h-4 w-4 shrink-0" />
+                    <HdUsers size={16} className="h-4 w-4 shrink-0" />
                     <span className="break-all">M.O.: ${totalLaborCost.toLocaleString('es-AR')}</span>
                   </span>
                 </div>
@@ -350,7 +351,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             <p className="font-bold text-xl text-white">{project.poolPreset?.name}</p>
           </div>
           <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800">
-            <Ruler className="text-zinc-300 mb-2" size={20} />
+            <HdRuler className="text-zinc-300 mb-2" size={20} />
             <p className="text-base text-zinc-300 mb-1">Dimensiones</p>
             <p className="font-semibold text-lg text-zinc-50">{project.poolPreset?.length}m × {project.poolPreset?.width}m × {poolDepthLabel}</p>
           </div>
@@ -390,7 +391,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           onClick={() => setShowEquipmentComparison(!showEquipmentComparison)}
         >
           <div className="flex items-center gap-2">
-            <Zap className="text-zinc-200" size={24} />
+            <HdZap className="text-zinc-200" size={24} />
             <h3 className="text-2xl font-bold text-white">Comparación de Equipos</h3>
             <span className="text-base bg-zinc-900 text-zinc-200 border border-zinc-700 px-3 py-1 rounded-full">
               Selección vs Recomendación
@@ -398,9 +399,9 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
           </div>
           <button className="p-2 hover:bg-zinc-800 rounded-full transition-colors">
             {showEquipmentComparison ? (
-              <ChevronUp className="text-zinc-200" size={20} />
+              <HdChevronDown className="text-zinc-200" size={20} style={{ transform: 'rotate(180deg)' }} />
             ) : (
-              <ChevronDown className="text-zinc-200" size={20} />
+              <HdChevronDown className="text-zinc-200" size={20} />
             )}
           </button>
         </div>
@@ -448,7 +449,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-5">
               <div className="flex items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2">
-                  <Users className="text-zinc-200" size={24} />
+                  <HdUsers className="text-zinc-200" size={24} />
                   <h3 className="text-lg font-bold text-white">Mano de Obra</h3>
                 </div>
                 <div className="flex gap-1 rounded-lg bg-zinc-900 p-1 border border-zinc-800">
@@ -513,7 +514,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             {/* Materiales */}
             <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-4">
               <div className="flex items-center gap-2 mb-4">
-                <Package className="text-zinc-200" size={24} />
+                <HdPackage className="text-zinc-200" size={24} />
                 <h3 className="text-lg font-bold text-white">Materiales</h3>
               </div>
               <div className="space-y-2">
@@ -549,7 +550,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             {/* Total Proyecto */}
             <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100 lg:col-span-3">
               <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="text-zinc-200" size={24} />
+                <HdDollarSign className="text-zinc-200" size={24} />
                 <h3 className="text-lg font-bold text-white">Total Proyecto</h3>
               </div>
               <div className="py-4">
@@ -579,7 +580,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
 
           <Card className="bg-zinc-950 border border-amber-800/40 text-zinc-100">
             <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="text-amber-300" size={22} />
+              <HdAlertTriangle className="text-amber-300" size={22} />
               <h3 className="text-lg font-bold text-white">Auditoría de Costos</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -656,7 +657,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-zinc-200 flex items-center gap-2">
-                  <CheckCircle2 size={18} className="text-zinc-300" />
+                  <HdCheck size={18} className="text-zinc-300" />
                   Losetas y Cerámicos
                 </h4>
                 <div className="flex flex-wrap items-center gap-2">
@@ -666,7 +667,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                     onClick={() => setViewMode(viewMode === 'planta' ? 'cad' : 'planta')}
                     className="flex w-full items-center justify-center gap-2 sm:w-auto"
                   >
-                    <Grid3x3 size={16} />
+                    <HdGrid size={16} />
                     {viewMode === 'planta' ? 'Vista CAD' : 'Vista Planta'}
                   </Button>
                   <Button
@@ -675,7 +676,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                     onClick={() => canvasRef.current && exportCanvasToImage(canvasRef.current, `pool-${project.name.replace(/\s+/g, '-')}-visualization.png`)}
                     className="flex w-full items-center justify-center gap-2 sm:w-auto"
                   >
-                    <Download size={16} />
+                    <HdDownload size={16} />
                     Exportar Dibujo
                   </Button>
                 </div>
@@ -818,7 +819,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             {plumbingConfig.distanceToEquipment && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 mb-3">
                 <p className="text-sm text-zinc-300 flex items-center gap-2">
-                  <Ruler className="w-4 h-4" />
+                  <HdRuler size={16} className="w-4 h-4" />
                   Distancia a cabecera: <strong>{plumbingConfig.distanceToEquipment} metros</strong>
                 </p>
               </div>
@@ -859,7 +860,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
         {hasElectrical && (
           <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="text-zinc-200" size={24} />
+              <HdZap className="text-zinc-200" size={24} />
               <h3 className="text-lg font-bold text-white">Instalación Eléctrica</h3>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -875,7 +876,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             {electricalConfig.recommendedCableSection && (
               <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-lg mb-3">
                 <p className="text-sm text-zinc-300 flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
+                  <HdZap size={16} className="w-4 h-4" />
                   Cable recomendado: <strong>{electricalConfig.recommendedCableSection}</strong>
                 </p>
               </div>
@@ -912,7 +913,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
       {hasAdditionals && (
         <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
           <div className="flex items-center gap-2 mb-4">
-            <PlusCircle className="text-zinc-200" size={24} />
+            <HdPlus className="text-zinc-200" size={24} />
             <h3 className="text-lg font-bold text-white">Items Adicionales</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -967,7 +968,7 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon className="w-8 h-8 text-zinc-500" />
+                            <HdImage className="w-8 h-8 text-zinc-500" size={32} />
                           </div>
                         )}
                       </div>

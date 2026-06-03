@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCircle2, AlertTriangle, X, Cloud, FolderOpen, Settings, TrendingUp, ClipboardList } from 'lucide-react';
+import { HdBell, HdCheck, HdAlertTriangle, HdX, HdFolderOpen, HdGear, HdTrendingUp, HdFileText } from '@/components/ui/HandDrawnIcons';
+import { Cloud } from 'lucide-react';
 import { Project } from '@/types';
 import { WeatherData, isGoodWorkingWeather } from '@/services/weatherService';
 import { useReminders } from '@/context/RemindersContext';
@@ -79,7 +80,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: `Tenés ${inProgressProjects.length} proyecto${inProgressProjects.length > 1 ? 's' : ''} en progreso`,
         timestamp: new Date(),
         read: false,
-        icon: <FolderOpen className="w-4 h-4" />,
+        icon: <HdFolderOpen size={16} className="w-4 h-4" />,
         actionUrl: '/projects'
       });
     }
@@ -100,7 +101,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: `${project.name} no tiene avance registrado hoy`,
         timestamp: new Date(),
         read: false,
-        icon: <ClipboardList className="w-4 h-4" />,
+        icon: <HdFileText size={16} className="w-4 h-4" />,
         actionUrl: `/projects/${project.id}`
       });
     });
@@ -113,7 +114,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: `${projectsMissingDailyUpdate.length - 5} proyecto${projectsMissingDailyUpdate.length - 5 > 1 ? 's' : ''} más sin actualización diaria`,
         timestamp: new Date(),
         read: false,
-        icon: <AlertTriangle className="w-4 h-4" />,
+        icon: <HdAlertTriangle size={16} className="w-4 h-4" />,
         actionUrl: '/projects'
       });
     }
@@ -134,7 +135,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: `${recentlyCompleted.length} proyecto${recentlyCompleted.length > 1 ? 's completados' : ' completado'} esta semana`,
         timestamp: new Date(recentlyCompleted[0].updatedAt),
         read: false,
-        icon: <CheckCircle2 className="w-4 h-4" />,
+        icon: <HdCheck size={16} className="w-4 h-4" />,
         actionUrl: '/projects'
       });
     }
@@ -203,7 +204,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           message: `${reminder.event.title} · ${startLabel}`,
           timestamp: new Date(reminder.remindAt),
           read: false,
-          icon: <Bell className="w-4 h-4" />,
+          icon: <HdBell size={16} className="w-4 h-4" />,
           actionUrl: '/agenda',
           actions: [
             { label: 'Posponer 1h', onClick: () => snooze(reminder.id, 60) },
@@ -231,7 +232,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: `${staleProjects.length} proyecto${staleProjects.length > 1 ? 's' : ''} sin actividad hace más de 30 días`,
         timestamp: new Date(),
         read: false,
-        icon: <AlertTriangle className="w-4 h-4" />,
+        icon: <HdAlertTriangle size={16} className="w-4 h-4" />,
         actionUrl: '/projects'
       });
     }
@@ -246,7 +247,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         message: 'Agregá más modelos de piscinas para ofrecer más opciones a tus clientes',
         timestamp: new Date(),
         read: false,
-        icon: <Settings className="w-4 h-4" />,
+        icon: <HdGear size={16} className="w-4 h-4" />,
         actionUrl: '/pool-models'
       });
     }
@@ -262,7 +263,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           message: `Tasa de completitud del ${completionRate.toFixed(0)}%. ¡Seguí así!`,
           timestamp: new Date(),
           read: false,
-          icon: <TrendingUp className="w-4 h-4" />,
+          icon: <HdTrendingUp size={16} className="w-4 h-4" />,
         });
       }
     }
@@ -347,7 +348,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-xl bg-zinc-900/50 border border-zinc-800/50 hover:bg-zinc-900/80 hover:border-zinc-700/50 transition-all duration-200 group"
       >
-        <Bell className="w-5 h-5 text-zinc-400 group-hover:text-cyan-400 transition-colors" />
+        <HdBell size={20} className="w-5 h-5 text-zinc-400 group-hover:text-cyan-400 transition-colors" />
 
         {/* Badge */}
         {unreadCount > 0 && (
@@ -388,7 +389,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
           <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/50">
             {notifications.length === 0 ? (
               <div className="p-8 text-center">
-                <Bell className="w-12 h-12 mx-auto mb-3 text-zinc-700" />
+                <HdBell size={48} className="w-12 h-12 mx-auto mb-3 text-zinc-700" />
                 <p className="text-zinc-500 font-light">No hay notificaciones</p>
               </div>
             ) : (
@@ -457,7 +458,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ projects, weather 
                           }}
                           className="p-1 rounded-lg hover:bg-zinc-800/50 transition-colors flex-shrink-0"
                         >
-                          <X className="w-3 h-3 text-zinc-600 hover:text-zinc-400" />
+                          <HdX size={12} className="w-3 h-3 text-zinc-600 hover:text-zinc-400" />
                         </button>
                       </div>
                     </div>

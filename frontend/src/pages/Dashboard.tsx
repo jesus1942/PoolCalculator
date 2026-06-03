@@ -8,7 +8,8 @@ import { agendaService } from '@/services/agendaService';
 import { agendaChecklistService } from '@/services/agendaChecklistService';
 import { useReminders } from '@/context/RemindersContext';
 import { Project, PoolPreset } from '@/types';
-import { Droplets, Layers, FolderOpen, Waves, TrendingUp, Clock, CheckCircle2, ChevronRight, ChevronDown, BarChart3, Activity, Wind, Umbrella, Calendar, AlertTriangle, ListTodo, Circle, Plus, Trash2, Bell, Sparkles } from 'lucide-react';
+import { HdFolderOpen, HdWaves, HdTrendingUp, HdClock, HdCheck, HdActivity, HdCalendar, HdAlertTriangle, HdPlus, HdTrash, HdBell, HdChevronDown, HdChevronRight } from '@/components/ui/HandDrawnIcons';
+import { Droplets, Layers, BarChart3, Wind, Umbrella, ListTodo, Circle, Sparkles } from 'lucide-react';
 import FlipCard from '@/components/ui/FlipCard';
 import { PoolFitWizard } from '@/components/PoolFitWizard';
 import { ProjectsChart } from '@/components/dashboard/ProjectsChart';
@@ -247,28 +248,28 @@ export const Dashboard: React.FC = () => {
     {
       title: 'Proyectos Totales',
       value: projects.length,
-      icon: FolderOpen,
+      icon: HdFolderOpen,
       gradient: 'from-blue-600 via-blue-500 to-cyan-500',
       glowColor: 'shadow-blue-500/20',
     },
     {
       title: 'Modelos de Piscinas',
       value: presets.length,
-      icon: Waves,
+      icon: HdWaves,
       gradient: 'from-cyan-600 via-cyan-500 to-teal-500',
       glowColor: 'shadow-cyan-500/20',
     },
     {
       title: 'En Progreso',
       value: projects.filter(p => p.status === 'IN_PROGRESS').length,
-      icon: Clock,
+      icon: HdClock,
       gradient: 'from-amber-600 via-amber-500 to-orange-500',
       glowColor: 'shadow-amber-500/20',
     },
     {
       title: 'Completados',
       value: projects.filter(p => p.status === 'COMPLETED').length,
-      icon: CheckCircle2,
+      icon: HdCheck,
       gradient: 'from-emerald-600 via-green-500 to-teal-500',
       glowColor: 'shadow-green-500/20',
     },
@@ -485,7 +486,7 @@ export const Dashboard: React.FC = () => {
                   <div className="p-6 sm:p-8">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
-                        <Activity className="h-5 w-5 text-cyan-400" />
+                        <HdActivity size={20} className="h-5 w-5 text-cyan-400" />
                       </div>
                       <h2 className="text-lg font-light text-white tracking-wide">Clima Actual</h2>
                       <span className="ml-auto text-xs text-zinc-300 font-light">Click para ver por hora</span>
@@ -543,11 +544,11 @@ export const Dashboard: React.FC = () => {
                           <div className="flex items-center gap-3">
                             {isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? (
                               <div className="p-2 rounded-xl bg-emerald-500/10">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                                <HdCheck size={20} className="h-5 w-5 text-emerald-400" />
                               </div>
                             ) : (
                               <div className="p-2 rounded-xl bg-red-500/10">
-                                <AlertTriangle className="h-5 w-5 text-red-400" />
+                                <HdAlertTriangle size={20} className="h-5 w-5 text-red-400" />
                               </div>
                             )}
                       <span className={`font-light text-sm ${isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? 'text-emerald-300' : 'text-red-300'}`}>
@@ -574,7 +575,7 @@ export const Dashboard: React.FC = () => {
                   <div className="p-8 h-full flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
-                        <Clock className="h-5 w-5 text-purple-400" />
+                        <HdClock size={20} className="h-5 w-5 text-purple-400" />
                       </div>
                       <h2 className="text-lg font-light text-white tracking-wide">Clima por Hora</h2>
                       <span className="ml-auto text-xs text-zinc-300 font-light">Click para volver</span>
@@ -644,7 +645,7 @@ export const Dashboard: React.FC = () => {
                         <stat.icon className="h-7 w-7 text-white" />
                       </div>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <TrendingUp className="h-5 w-5 text-cyan-500" />
+                        <HdTrendingUp size={20} className="h-5 w-5 text-cyan-500" />
                       </div>
                     </div>
 
@@ -678,13 +679,13 @@ export const Dashboard: React.FC = () => {
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
                       <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
-                        <Calendar className="h-6 w-6 text-white" />
+                        <HdCalendar size={24} className="h-6 w-6 text-white" />
                       </div>
                     </div>
                     <h2 className="text-xl sm:text-2xl font-light text-white tracking-wide">Pronóstico de 7 días</h2>
                   </div>
                   <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-zinc-900/80 border border-zinc-800/50">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                    <HdCheck size={20} className="h-5 w-5 text-emerald-400" />
                     <span className="text-sm font-light text-zinc-300">
                       {workableDays} días buenos para trabajar
                     </span>
@@ -829,7 +830,7 @@ export const Dashboard: React.FC = () => {
               {reminders.length > 0 && (
                 <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                   <div className="flex items-center gap-2 text-xs text-emerald-200 mb-3">
-                    <Bell className="h-4 w-4" />
+                    <HdBell size={16} className="h-4 w-4" />
                     Recordatorios activos (12h antes)
                   </div>
                   <div className="space-y-3">
@@ -963,7 +964,7 @@ export const Dashboard: React.FC = () => {
                                     onClick={() => toggleChecklistItem(event.id, item)}
                                     className="text-zinc-300 hover:text-emerald-300 transition-colors"
                                   >
-                                    {item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4" />}
+                                    {item.done ? <HdCheck size={16} className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4" />}
                                   </button>
                                   <span className={item.done ? 'line-through text-zinc-300' : ''}>{item.label}</span>
                                   <button
@@ -971,7 +972,7 @@ export const Dashboard: React.FC = () => {
                                     onClick={() => removeChecklistItem(event.id, item.id)}
                                     className="ml-auto text-zinc-600 hover:text-red-300 transition-colors"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <HdTrash size={16} className="h-4 w-4" />
                                   </button>
                                 </div>
                               ))}
@@ -996,7 +997,7 @@ export const Dashboard: React.FC = () => {
                               onClick={() => addChecklistItem(event.id)}
                               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500/40 text-emerald-200 text-xs hover:bg-emerald-500/10 transition-colors"
                             >
-                              <Plus className="h-4 w-4" />
+                              <HdPlus size={16} className="h-4 w-4" />
                               Agregar
                             </button>
                           </div>
@@ -1023,7 +1024,7 @@ export const Dashboard: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-md opacity-50"></div>
                     <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 shadow-xl shadow-cyan-500/20">
-                      <Calendar className="h-6 w-6 text-white" />
+                      <HdCalendar size={24} className="h-6 w-6 text-white" />
                     </div>
                   </div>
                   <div>
@@ -1187,7 +1188,7 @@ export const Dashboard: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
                     <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
-                      <FolderOpen className="h-5 w-5 text-white" />
+                      <HdFolderOpen size={20} className="h-5 w-5 text-white" />
                     </div>
                   </div>
                   <h2 className="text-xl font-light text-white tracking-wide">Proyectos Recientes</h2>
@@ -1196,7 +1197,7 @@ export const Dashboard: React.FC = () => {
                 {projects.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center">
-                      <FolderOpen className="h-10 w-10 text-zinc-700" />
+                      <HdFolderOpen size={40} className="h-10 w-10 text-zinc-700" />
                     </div>
                     <p className="text-zinc-300 font-light">
                       Todavía no tenés proyectos creados
@@ -1218,9 +1219,9 @@ export const Dashboard: React.FC = () => {
                                 <div className="flex items-center gap-2 mb-2">
                                   <h4 className="font-light text-white text-lg">{project.name}</h4>
                                   {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4 text-cyan-400" />
+                                    <HdChevronDown size={16} className="h-4 w-4 text-cyan-400" />
                                   ) : (
-                                    <ChevronRight className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
+                                    <HdChevronRight size={16} className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
                                   )}
                                 </div>
                                 <p className="text-sm text-zinc-300 font-light">{project.clientName}</p>
@@ -1282,7 +1283,7 @@ export const Dashboard: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-2xl blur-md opacity-50"></div>
                     <div className="relative p-3 rounded-2xl bg-gradient-to-br from-cyan-600 to-teal-600 shadow-xl shadow-cyan-500/20">
-                      <Waves className="h-5 w-5 text-white" />
+                      <HdWaves size={20} className="h-5 w-5 text-white" />
                     </div>
                   </div>
                   <h2 className="text-xl font-light text-white tracking-wide">Modelos Disponibles</h2>
@@ -1291,7 +1292,7 @@ export const Dashboard: React.FC = () => {
                 {presets.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-zinc-900/50 border border-zinc-800/50 flex items-center justify-center">
-                      <Waves className="h-10 w-10 text-zinc-700" />
+                      <HdWaves size={40} className="h-10 w-10 text-zinc-700" />
                     </div>
                     <p className="text-zinc-300 font-light">
                       No hay modelos de piscinas disponibles
@@ -1319,9 +1320,9 @@ export const Dashboard: React.FC = () => {
                                 <div className="flex items-center gap-2 mb-1">
                                   <h4 className="font-light text-white text-lg">{preset.name}</h4>
                                   {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4 text-cyan-400" />
+                                    <HdChevronDown size={16} className="h-4 w-4 text-cyan-400" />
                                   ) : (
-                                    <ChevronRight className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
+                                    <HdChevronRight size={16} className="h-4 w-4 text-zinc-600 group-hover/item:text-cyan-400 transition-colors" />
                                   )}
                                 </div>
                                 <p className="text-sm text-zinc-300 font-light">

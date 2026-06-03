@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Calendar, Clock, MapPin, X } from 'lucide-react';
+import { HdBell, HdCalendar, HdClock, HdMapPin, HdX } from '@/components/ui/HandDrawnIcons';
 import { useReminders } from '@/context/RemindersContext';
 
 export const ReminderToasts: React.FC = () => {
@@ -32,7 +32,7 @@ export const ReminderToasts: React.FC = () => {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                    <Bell className="h-4 w-4 text-emerald-300 animate-pulse" />
+                    <HdBell size={16} className="h-4 w-4 text-emerald-300 animate-pulse" />
                   </div>
                   <div>
                     <div className="text-sm text-white font-light">Recordatorio de agenda</div>
@@ -45,24 +45,24 @@ export const ReminderToasts: React.FC = () => {
                   className="text-zinc-500 hover:text-zinc-200 transition-colors"
                   aria-label="Descartar recordatorio"
                 >
-                  <X className="h-4 w-4" />
+                  <HdX size={16} className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="mt-3 space-y-2 text-xs text-zinc-400">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5" />
+                  <HdCalendar size={14} className="h-3.5 w-3.5" />
                   <span>{startLabel}</span>
                 </div>
                 {reminder.event.location && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5" />
+                    <HdMapPin size={14} className="h-3.5 w-3.5" />
                     <span>{reminder.event.location}</span>
                   </div>
                 )}
                 {reminder.event.project?.name && (
                   <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" />
+                    <HdClock size={14} className="h-3.5 w-3.5" />
                     <span>Proyecto: {reminder.event.project.name}</span>
                   </div>
                 )}

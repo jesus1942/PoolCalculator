@@ -20,7 +20,7 @@ import {
   MaterialType,
   MaterialCategory
 } from '@/types';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Save, Search, Filter } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdGear, HdSave, HdSearch, HdFilter } from '@/components/ui/HandDrawnIcons';
 import { PlumbingManager } from '@/components/PlumbingManager';
 import { HybridImageManager } from '@/components/HybridImageManager';
 import { ProductCard } from '@/components/ProductCard';
@@ -595,7 +595,7 @@ export const Settings: React.FC = () => {
     { id: 'equipment', label: 'Equipos' },
     { id: 'materials', label: 'Materiales' },
     { id: 'plumbing', label: 'Plomería' },
-    { id: 'calculations', label: 'Config. Cálculos', icon: SettingsIcon },
+    { id: 'calculations', label: 'Config. Cálculos', icon: HdGear },
   ];
 
   const tileTypeOptions = [
@@ -671,7 +671,7 @@ export const Settings: React.FC = () => {
         <div className="mb-8">
           <div className="mb-6 flex items-start gap-3">
             <div className="w-14 h-14 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-              <SettingsIcon className="h-7 w-7 text-blue-400" />
+              <HdGear size={28} className="h-7 w-7 text-blue-400" />
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white">
@@ -717,7 +717,7 @@ export const Settings: React.FC = () => {
                 <p className="text-sm text-zinc-300 mt-1">Administra los tipos de losetas disponibles</p>
               </div>
               <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
-                <Plus size={16} className="mr-2" />
+                <HdPlus size={16} className="mr-2" />
                 Nueva Loseta
               </Button>
             </div>
@@ -727,7 +727,7 @@ export const Settings: React.FC = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-400" />
+                    <HdSearch size={20} className="text-blue-400" />
                     <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
@@ -765,7 +765,7 @@ export const Settings: React.FC = () => {
               <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <Filter size={48} className="text-zinc-600" />
+                    <HdFilter size={48} className="text-zinc-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">
                     {tiles.length === 0 ? 'No hay losetas configuradas' : 'No se encontraron resultados'}
@@ -995,7 +995,7 @@ export const Settings: React.FC = () => {
                 <p className="text-sm text-zinc-300 mt-1">Administra los accesorios y complementos</p>
               </div>
               <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
-                <Plus size={16} className="mr-2" />
+                <HdPlus size={16} className="mr-2" />
                 Nuevo Accesorio
               </Button>
             </div>
@@ -1005,7 +1005,7 @@ export const Settings: React.FC = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-400" />
+                    <HdSearch size={20} className="text-blue-400" />
                     <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
@@ -1043,7 +1043,7 @@ export const Settings: React.FC = () => {
               <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <Filter size={48} className="text-zinc-600" />
+                    <HdFilter size={48} className="text-zinc-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">
                     {accessories.length === 0 ? 'No hay accesorios configurados' : 'No se encontraron resultados'}
@@ -1180,7 +1180,7 @@ export const Settings: React.FC = () => {
                 <p className="text-sm text-zinc-300 mt-1">Administra bombas, filtros, calentadores y mas</p>
               </div>
             <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
-              <Plus size={16} className="mr-2" />
+              <HdPlus size={16} className="mr-2" />
               Nuevo Equipo
             </Button>
           </div>
@@ -1190,7 +1190,7 @@ export const Settings: React.FC = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-400" />
+                    <HdSearch size={20} className="text-blue-400" />
                     <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
@@ -1228,7 +1228,7 @@ export const Settings: React.FC = () => {
               <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <Filter size={48} className="text-zinc-600" />
+                    <HdFilter size={48} className="text-zinc-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">
                     {equipment.length === 0 ? 'No hay equipos configurados' : 'No se encontraron resultados'}
@@ -1393,7 +1393,7 @@ export const Settings: React.FC = () => {
                 <p className="text-sm text-zinc-300 mt-1">Administra materiales, consumibles y revestimientos como losetas</p>
               </div>
             <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
-              <Plus size={16} className="mr-2" />
+              <HdPlus size={16} className="mr-2" />
               Nuevo Material
             </Button>
           </div>
@@ -1403,7 +1403,7 @@ export const Settings: React.FC = () => {
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Search size={20} className="text-blue-400" />
+                    <HdSearch size={20} className="text-blue-400" />
                     <h3 className="font-semibold text-zinc-200">Filtros de Búsqueda</h3>
                   </div>
 
@@ -1447,7 +1447,7 @@ export const Settings: React.FC = () => {
               <div className="rounded-lg bg-zinc-900/60 border border-zinc-800">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-zinc-800 flex items-center justify-center">
-                    <Filter size={48} className="text-zinc-600" />
+                    <HdFilter size={48} className="text-zinc-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-white mb-2">
                     {materials.length === 0 ? 'No hay materiales configurados' : 'No se encontraron resultados'}
@@ -1890,7 +1890,7 @@ export const Settings: React.FC = () => {
                     onClick={handleSaveCalculations}
                     className="flex items-center space-x-2"
                   >
-                    <Save size={16} />
+                    <HdSave size={16} />
                     <span>Guardar Configuración</span>
                   </Button>
                 </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, Plus, Filter, Lock, Shield, Users, Bell, Clock, MapPin, Briefcase, UserPlus } from 'lucide-react';
+import { HdCalendar, HdPlus, HdFilter, HdLock, HdShield, HdUsers, HdBell, HdClock, HdMapPin } from '@/components/ui/HandDrawnIcons';
+import { Briefcase, UserPlus } from 'lucide-react';
 import { agendaService } from '@/services/agendaService';
 import { crewService } from '@/services/crewService';
 import { userService } from '@/services/userService';
@@ -551,7 +552,7 @@ export const Agenda: React.FC = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50" />
               <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 sm:h-14 sm:w-14">
-                <Calendar className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                <HdCalendar size={24} className="h-6 w-6 text-white sm:h-7 sm:w-7" />
               </div>
             </div>
             <div className="min-w-0">
@@ -572,7 +573,7 @@ export const Agenda: React.FC = () => {
               }}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 transition-all hover:bg-cyan-500/20 sm:w-auto sm:px-5"
             >
-              <Plus className="h-5 w-5" />
+              <HdPlus size={20} className="h-5 w-5" />
               Nuevo evento
             </button>
           )}
@@ -581,7 +582,7 @@ export const Agenda: React.FC = () => {
               onClick={() => setShowCrewCreate(true)}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-300 transition-all hover:bg-cyan-500/20 sm:w-auto sm:px-5"
             >
-              <Plus className="h-5 w-5" />
+              <HdPlus size={20} className="h-5 w-5" />
               Nueva cuadrilla
             </button>
           )}
@@ -649,7 +650,7 @@ export const Agenda: React.FC = () => {
                   onClick={() => setFiltersOpen((prev) => !prev)}
                   className="inline-flex items-center gap-2 text-sm text-zinc-300 transition-colors hover:text-white"
                 >
-                  <Filter className="h-4 w-4" />
+                  <HdFilter size={16} className="h-4 w-4" />
                   Filtros
                 </button>
               </div>
@@ -810,7 +811,7 @@ export const Agenda: React.FC = () => {
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate">{event.title}</span>
                               {remindersByEvent.has(event.id) && (
-                                <Bell className="h-3 w-3 text-emerald-300" />
+                                <HdBell size={12} className="h-3 w-3 text-emerald-300" />
                               )}
                             </div>
                           </div>
@@ -892,7 +893,7 @@ export const Agenda: React.FC = () => {
                                 {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                            {remindersByEvent.has(event.id) && <HdBell size={16} className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
                           </div>
                         </button>
                       ))}
@@ -951,7 +952,7 @@ export const Agenda: React.FC = () => {
                               <div className="flex items-center justify-between gap-2">
                                 <span className="truncate">{event.title}</span>
                                 {remindersByEvent.has(event.id) && (
-                                  <Bell className="h-3 w-3 text-emerald-300" />
+                                  <HdBell size={12} className="h-3 w-3 text-emerald-300" />
                                 )}
                               </div>
                             </div>
@@ -1031,7 +1032,7 @@ export const Agenda: React.FC = () => {
                                 {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                            {remindersByEvent.has(event.id) && <HdBell size={16} className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
                           </div>
                         </button>
                       ))}
@@ -1071,7 +1072,7 @@ export const Agenda: React.FC = () => {
                 {getEventsForDate(anchorDate).length === 0 ? (
                   <div className="rounded-[1.75rem] border border-dashed border-zinc-700 bg-zinc-900/35 p-10 text-center">
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-800 text-zinc-300">
-                      <Calendar className="h-6 w-6" />
+                      <HdCalendar size={24} className="h-6 w-6" />
                     </div>
                     <div className="text-lg font-light text-white">No hay eventos para este día</div>
                     <div className="mt-1 text-sm text-zinc-400">Usá el botón de agendar para crear una visita, instalación o mantenimiento.</div>
@@ -1100,7 +1101,7 @@ export const Agenda: React.FC = () => {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-2 py-1">
-                                  <Clock className="h-3.5 w-3.5" />
+                                  <HdClock size={14} className="h-3.5 w-3.5" />
                                   {formatEventTime(event)}
                                 </span>
                                 <span className="rounded-full bg-white/5 px-2 py-1">{EVENT_TYPES.find((item) => item.value === event.type)?.label || event.type}</span>
@@ -1116,13 +1117,13 @@ export const Agenda: React.FC = () => {
                                 )}
                                 {event.location && (
                                   <span className="inline-flex items-center gap-1">
-                                    <MapPin className="h-4 w-4 text-cyan-300" />
+                                    <HdMapPin size={16} className="h-4 w-4 text-cyan-300" />
                                     {event.location}
                                   </span>
                                 )}
                               </div>
                             </div>
-                            {remindersByEvent.has(event.id) && <Bell className="mt-1 h-5 w-5 flex-shrink-0 text-emerald-300" />}
+                            {remindersByEvent.has(event.id) && <HdBell size={20} className="mt-1 h-5 w-5 flex-shrink-0 text-emerald-300" />}
                           </div>
                         </button>
                       );
@@ -1171,7 +1172,7 @@ export const Agenda: React.FC = () => {
                                 {getAgendaEventDate(event, 'startAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {getAgendaEventDate(event, 'endAt').toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
-                            {remindersByEvent.has(event.id) && <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
+                            {remindersByEvent.has(event.id) && <HdBell size={16} className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />}
                           </div>
                         </button>
                       ))}
@@ -1336,7 +1337,7 @@ export const Agenda: React.FC = () => {
             {editingReminder && (
               <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
                 <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2">
-                  <Bell className="h-4 w-4" />
+                  <HdBell size={16} className="h-4 w-4" />
                   Recordatorio activo (12h antes)
                 </div>
                 <div className="flex flex-wrap gap-2">

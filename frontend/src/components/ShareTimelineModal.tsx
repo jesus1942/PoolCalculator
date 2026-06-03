@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Link2, Copy, Check, Settings, Eye, EyeOff, X, Download } from 'lucide-react';
+import { HdLink, HdCopy, HdCheck, HdGear, HdEye, HdEyeOff, HdX, HdDownload } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 
 interface ShareTimelineModalProps {
@@ -180,7 +180,7 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-green-800">
-                <Link2 size={18} />
+                <HdLink size={18} />
                 <span className="font-semibold text-sm">Link Activo</span>
               </div>
               <button
@@ -199,13 +199,13 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
                 className="flex-1 px-3 py-2 border rounded-md text-sm bg-white"
               />
               <Button variant="secondary" onClick={handleCopyLink} className="flex-shrink-0">
-                {copied ? <Check size={18} /> : <Copy size={18} />}
+                {copied ? <HdCheck size={18} /> : <HdCopy size={18} />}
               </Button>
             </div>
 
             <div className="mt-3 space-y-2">
               <Button variant="secondary" onClick={handleUpdateShare} className="w-full" disabled={loading}>
-                <Settings size={18} className="mr-2" />
+                <HdGear size={18} className="mr-2" />
                 Actualizar Configuración
               </Button>
               <Button
@@ -214,7 +214,7 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
                 className="w-full"
                 disabled={loading}
               >
-                <Download size={18} className="mr-2" />
+                <HdDownload size={18} className="mr-2" />
                 Exportar Timeline (CSV)
               </Button>
             </div>
@@ -257,7 +257,7 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
             </div>
 
             <Button onClick={handleCreateShare} className="w-full" disabled={loading}>
-              <Link2 size={18} className="mr-2" />
+              <HdLink size={18} className="mr-2" />
               {loading ? 'Generando...' : 'Generar Link Compartible'}
             </Button>
           </div>

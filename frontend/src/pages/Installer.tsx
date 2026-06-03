@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, MapPin, MessageCircle, Save, ImagePlus, CloudSun } from 'lucide-react';
+import { HdCalendar, HdMapPin, HdMessageBubble, HdSave, HdImage } from '@/components/ui/HandDrawnIcons';
+import { CloudSun } from 'lucide-react';
 import { agendaService } from '@/services/agendaService';
 import { agendaMessageService } from '@/services/agendaMessageService';
 import { useAuth } from '@/context/AuthContext';
@@ -167,7 +168,7 @@ export const Installer: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
           <aside className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 h-full">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500 mb-3">
-              <Calendar size={14} />
+              <HdCalendar size={14} />
               Próximos 14 días
             </div>
             {loading && <p className="text-sm text-zinc-500">Cargando eventos...</p>}
@@ -209,7 +210,7 @@ export const Installer: React.FC = () => {
                       <p className="text-xs text-zinc-400">{selectedEvent.type} · {selectedEvent.status}</p>
                     </div>
                     <div className="text-xs text-zinc-400 flex items-center gap-2">
-                      <MapPin size={14} />
+                      <HdMapPin size={14} />
                       {selectedEvent.location || 'Sin ubicación'}
                     </div>
                   </div>
@@ -253,14 +254,14 @@ export const Installer: React.FC = () => {
                     onClick={handleSave}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/30"
                   >
-                    <Save size={16} />
+                    <HdSave size={16} />
                     Guardar avance
                   </button>
                 </div>
 
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 space-y-4">
                   <div className="flex items-center gap-2">
-                    <MessageCircle size={18} />
+                    <HdMessageBubble size={18} />
                     <h3 className="text-lg font-semibold">Mensajes</h3>
                   </div>
                   <div className="space-y-2 max-h-64 overflow-auto pr-1">
@@ -318,7 +319,7 @@ export const Installer: React.FC = () => {
                     )}
                     <div className="flex items-center justify-between gap-3">
                       <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
-                        <ImagePlus size={14} />
+                        <HdImage size={14} />
                         {messageImages.length > 0 ? `${messageImages.length} imagen${messageImages.length === 1 ? '' : 'es'} adjuntas` : 'Adjuntar imágenes'}
                         <input
                           type="file"

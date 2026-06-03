@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, Waves, Settings, BarChart3, Calendar } from 'lucide-react';
+import { HdPlus, HdFolderOpen, HdWaves, HdGear, HdCalendar, HdActivity } from '@/components/ui/HandDrawnIcons';
 
 export const QuickActions: React.FC = () => {
   const navigate = useNavigate();
@@ -9,7 +9,7 @@ export const QuickActions: React.FC = () => {
     {
       title: 'Nuevo Proyecto',
       description: 'Crear un proyecto de piscina',
-      icon: <Plus className="w-6 h-6" />,
+      icon: <HdPlus size={24} className="w-6 h-6" />,
       gradient: 'from-blue-600 to-cyan-600',
       shadowColor: 'shadow-blue-500/20',
       onClick: () => navigate('/projects')
@@ -17,7 +17,7 @@ export const QuickActions: React.FC = () => {
     {
       title: 'Ver Proyectos',
       description: 'Gestionar proyectos activos',
-      icon: <FolderOpen className="w-6 h-6" />,
+      icon: <HdFolderOpen size={24} className="w-6 h-6" />,
       gradient: 'from-emerald-600 to-green-600',
       shadowColor: 'shadow-emerald-500/50',
       onClick: () => navigate('/projects')
@@ -25,7 +25,7 @@ export const QuickActions: React.FC = () => {
     {
       title: 'Modelos',
       description: 'Explorar catálogo ACQUAM',
-      icon: <Waves className="w-6 h-6" />,
+      icon: <HdWaves size={24} className="w-6 h-6" />,
       gradient: 'from-cyan-600 to-teal-600',
       shadowColor: 'shadow-cyan-500/20',
       onClick: () => navigate('/pool-models')
@@ -33,7 +33,7 @@ export const QuickActions: React.FC = () => {
     {
       title: 'Configuración',
       description: 'Ajustar precios y presets',
-      icon: <Settings className="w-6 h-6" />,
+      icon: <HdGear size={24} className="w-6 h-6" />,
       gradient: 'from-purple-600 to-pink-600',
       shadowColor: 'shadow-purple-500/20',
       onClick: () => navigate('/settings')
@@ -41,7 +41,7 @@ export const QuickActions: React.FC = () => {
     {
       title: 'La Agenda',
       description: 'Planificar visitas y trabajos',
-      icon: <Calendar className="w-6 h-6" />,
+      icon: <HdCalendar size={24} className="w-6 h-6" />,
       gradient: 'from-slate-600 to-cyan-600',
       shadowColor: 'shadow-cyan-500/20',
       onClick: () => navigate('/agenda')
@@ -60,7 +60,7 @@ export const QuickActions: React.FC = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
               <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl shadow-blue-500/20">
-                <BarChart3 className="h-5 w-5 text-white" />
+                <HdActivity size={20} className="h-5 w-5 text-white" />
               </div>
             </div>
             <h2 className="text-xl font-light text-white tracking-wide">Acciones Rápidas</h2>
