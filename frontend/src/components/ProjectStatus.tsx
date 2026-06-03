@@ -1,401 +1,203 @@
 import React from 'react';
-import { Card } from '@/components/ui/Card';
 import { Project } from '@/types';
-import { CheckCircle2, Circle, Clock, AlertCircle, TrendingUp, Calendar } from 'lucide-react';
 import { ProjectTimeline } from './ProjectTimeline';
-import { calculateProjectFinancials } from '@/utils/projectCosting';
 
 interface ProjectStatusProps {
   project: Project;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string }> = {
+  DRAFT:       { label: 'Borrador',      dot: 'bg-zinc-400',    badge: 'bg-zinc-400/10 text-zinc-300 border-zinc-400/20' },
+  BUDGETED:    { label: 'Presupuestado', dot: 'bg-blue-400',    badge: 'bg-blue-400/10 text-blue-300 border-blue-400/20' },
+  APPROVED:    { label: 'Aprobado',      dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20' },
+  IN_PROGRESS: { label: 'En Progreso',   dot: 'bg-amber-400',   badge: 'bg-amber-400/10 text-amber-300 border-amber-400/20' },
+  COMPLETED:   { label: 'Completado',    dot: 'bg-emerald-400', badge: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20' },
+  CANCELLED:   { label: 'Cancelado',     dot: 'bg-rose-400',    badge: 'bg-rose-400/10 text-rose-300 border-rose-400/20' },
+};
+
+const TASK_STATUS_COLORS: Record<string, string> = {
+  completed:   'border-l-emerald-400',
+  in_progress: 'border-l-amber-400',
+  pending:     'border-l-zinc-700',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  excavation: 'Excavación',
+  hydraulic:  'Hidráulica',
+  electrical: 'Eléctrica',
+  floor:      'Solado',
+  tiles:      'Losetas',
+  finishes:   'Terminaciones',
+  additionals: 'Adicionales',
+  other:      'Otros',
+};
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export const ProjectStatus: React.FC<ProjectStatusProps> = ({ project }) => {
   const tasks = project.tasks as any;
   const hasTasks = tasks && Object.keys(tasks).length > 0;
 
-  // Calcular estadísticas de tareas
   const taskStats = React.useMemo(() => {
-    let total = 0;
-    let pending = 0;
-    let inProgress = 0;
-    let completed = 0;
-    let totalHours = 0;
-
+    let total = 0, pending = 0, inProgress = 0, completed = 0, totalHours = 0;
     if (hasTasks) {
-      Object.values(tasks).forEach((categoryTasks: any) => {
-        if (Array.isArray(categoryTasks)) {
-          categoryTasks.forEach((task: any) => {
-            total++;
-            totalHours += task.estimatedHours || 0;
-            if (task.status === 'pending') pending++;
-            else if (task.status === 'in_progress') inProgress++;
-            else if (task.status === 'completed') completed++;
-          });
-        } else if (categoryTasks && typeof categoryTasks === 'object') {
+      Object.values(tasks).forEach((catTasks: any) => {
+        const arr = Array.isArray(catTasks) ? catTasks : (catTasks ? [catTasks] : []);
+        arr.forEach((t: any) => {
           total++;
-          totalHours += categoryTasks.estimatedHours || 0;
-          if (categoryTasks.status === 'pending') pending++;
-          else if (categoryTasks.status === 'in_progress') inProgress++;
-          else if (categoryTasks.status === 'completed') completed++;
-        }
+          totalHours += t.estimatedHours || 0;
+          if (t.status === 'pending') pending++;
+          else if (t.status === 'in_progress') inProgress++;
+          else if (t.status === 'completed') completed++;
+        });
       });
     }
-
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-
-    return { total, pending, inProgress, completed, progress, totalHours };
+    return { total, pending, inProgress, completed, totalHours, progress: total > 0 ? (completed / total) * 100 : 0 };
   }, [tasks, hasTasks]);
 
-  const categoryLabels: Record<string, string> = {
-    excavation: 'Excavación',
-    hydraulic: 'Instalación Hidráulica',
-    electrical: 'Instalación Eléctrica',
-    floor: 'Solado y Cama',
-    tiles: 'Colocación de Losetas',
-    finishes: 'Terminaciones',
-    additionals: 'Adicionales',
-    other: 'Otros',
-  };
+  const materials      = project.materials as any;
+  const hasMaterials   = materials && Object.keys(materials).length > 0;
+  const plumbing       = project.plumbingConfig as any;
+  const hasPlumbing    = plumbing?.selectedItems?.length > 0;
+  const electrical     = project.electricalConfig as any;
+  const hasElectrical  = electrical?.items?.length > 0;
 
-  // Calcular progreso de materiales
-  const materials = project.materials as any;
-  const hasMaterials = materials && Object.keys(materials).length > 0;
+  const statusCfg = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.DRAFT;
+  const daysSince = Math.floor((Date.now() - new Date(project.createdAt).getTime()) / 86_400_000);
 
-  // Calcular progreso de instalaciones
-  const plumbingConfig = project.plumbingConfig as any;
-  const hasPlumbing = plumbingConfig && plumbingConfig.selectedItems && plumbingConfig.selectedItems.length > 0;
-
-  const electricalConfig = project.electricalConfig as any;
-  const hasElectrical = electricalConfig && electricalConfig.items && electricalConfig.items.length > 0;
-
-  const financialSummary = React.useMemo(() => {
-    const { totalMaterialCost, totalLaborCost } = calculateProjectFinancials(project);
-
-    return {
-      materialCost: totalMaterialCost,
-      laborCost: totalLaborCost,
-      totalCost: totalMaterialCost + totalLaborCost,
-    };
-  }, [project]);
-
-  // Estado general del proyecto
-  const getProjectStatusInfo = () => {
-    switch (project.status) {
-      case 'DRAFT':
-        return { label: 'Borrador', color: 'gray', icon: Circle };
-      case 'BUDGETED':
-        return { label: 'Presupuestado', color: 'blue', icon: Clock };
-      case 'APPROVED':
-        return { label: 'Aprobado', color: 'green', icon: CheckCircle2 };
-      case 'IN_PROGRESS':
-        return { label: 'En Progreso', color: 'yellow', icon: TrendingUp };
-      case 'COMPLETED':
-        return { label: 'Completado', color: 'green', icon: CheckCircle2 };
-      case 'CANCELLED':
-        return { label: 'Cancelado', color: 'red', icon: AlertCircle };
-      default:
-        return { label: project.status, color: 'gray', icon: Circle };
-    }
-  };
-
-  const statusInfo = getProjectStatusInfo();
-  const StatusIcon = statusInfo.icon;
-
-  // Calcular fechas
-  const createdDate = new Date(project.createdAt).toLocaleDateString('es-AR');
-  const updatedDate = new Date(project.updatedAt).toLocaleDateString('es-AR');
-  const daysSinceCreation = Math.floor((Date.now() - new Date(project.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const checklist = [
+    { label: 'Materiales',         ok: hasMaterials },
+    { label: 'Hidráulica',         ok: hasPlumbing },
+    { label: 'Eléctrica',          ok: hasElectrical },
+    { label: `Tareas (${taskStats.total})`, ok: hasTasks && taskStats.total > 0 },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Estado General */}
-      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
-        <h3 className="text-xl font-semibold text-white mb-4">Estado General del Proyecto</h3>
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-4 rounded-full bg-zinc-900 border border-zinc-800">
-            <StatusIcon size={32} className="text-zinc-100" />
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-white">{statusInfo.label}</p>
-            <p className="text-zinc-400 text-base">Estado actual</p>
-          </div>
+    <div className="space-y-4">
+
+      {/* ── Estado + Fechas ── */}
+      <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider">Estado del proyecto</p>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold border rounded-full px-3 py-1 ${statusCfg.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+            {statusCfg.label}
+          </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar size={20} className="text-zinc-300" />
-              <p className="text-base text-zinc-300">Creado</p>
-            </div>
-            <p className="font-semibold text-lg text-white">{createdDate}</p>
-            <p className="text-sm text-zinc-500">{daysSinceCreation} días atrás</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/3 rounded-lg p-3 border border-white/6">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1">Creado</p>
+            <p className="text-sm font-medium text-white">{formatDate(project.createdAt)}</p>
+            <p className="text-xs text-zinc-500">{daysSince} días</p>
           </div>
-
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar size={20} className="text-zinc-300" />
-              <p className="text-base text-zinc-300">Última actualización</p>
-            </div>
-            <p className="font-semibold text-lg text-white">{updatedDate}</p>
-          </div>
-
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={20} className="text-zinc-300" />
-              <p className="text-base text-zinc-300">Progreso</p>
-            </div>
-            <p className="font-semibold text-lg text-white">{taskStats.progress.toFixed(0)}%</p>
-            <p className="text-sm text-zinc-500">{taskStats.completed}/{taskStats.total} tareas</p>
+          <div className="bg-white/3 rounded-lg p-3 border border-white/6">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide mb-1">Actualizado</p>
+            <p className="text-sm font-medium text-white">{formatDate(project.updatedAt)}</p>
           </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Progreso de Tareas */}
-      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
-        <h3 className="text-xl font-semibold text-white mb-4">Progreso de Tareas</h3>
+      {/* ── Progreso de Tareas ── */}
+      <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-4">
+        <p className="text-xs text-zinc-500 uppercase tracking-wider">Progreso de tareas</p>
 
         {hasTasks && taskStats.total > 0 ? (
           <>
-            {/* Barra de progreso */}
-            <div className="mb-6">
-              <div className="flex justify-between mb-2">
-                <span className="text-base font-medium text-zinc-200">Completadas</span>
-                <span className="text-base font-medium text-zinc-100">{taskStats.progress.toFixed(0)}%</span>
+            <div>
+              <div className="flex justify-between text-xs text-zinc-400 mb-1.5">
+                <span>{taskStats.completed} completadas</span>
+                <span className="font-semibold text-white">{taskStats.progress.toFixed(0)}%</span>
               </div>
-              <div className="w-full bg-zinc-800 rounded-full h-4">
+              <div className="w-full bg-zinc-800 rounded-full h-2">
                 <div
-                  className="bg-zinc-200 h-4 rounded-full transition-all duration-300"
+                  className="bg-emerald-400 h-2 rounded-full transition-all duration-500"
                   style={{ width: `${taskStats.progress}%` }}
-                ></div>
+                />
               </div>
             </div>
 
-            {/* Estadísticas de tareas */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Circle size={20} className="text-zinc-300" />
-                  <p className="text-base text-zinc-300">Total</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { label: 'Total',       value: taskStats.total,       color: 'text-white' },
+                { label: 'Pendientes',  value: taskStats.pending,     color: 'text-zinc-400' },
+                { label: 'En progreso', value: taskStats.inProgress,  color: 'text-amber-400' },
+                { label: 'Completadas', value: taskStats.completed,   color: 'text-emerald-400' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="bg-white/3 rounded-lg p-3 border border-white/6 text-center">
+                  <p className={`text-xl font-bold ${color}`}>{value}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{label}</p>
                 </div>
-                <p className="text-2xl font-bold text-white">{taskStats.total}</p>
-              </div>
-
-              <div className="text-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Clock size={20} className="text-zinc-300" />
-                  <p className="text-base text-zinc-300">Pendientes</p>
-                </div>
-                <p className="text-2xl font-bold text-white">{taskStats.pending}</p>
-              </div>
-
-              <div className="text-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <TrendingUp size={20} className="text-zinc-300" />
-                  <p className="text-base text-zinc-300">En Progreso</p>
-                </div>
-                <p className="text-2xl font-bold text-white">{taskStats.inProgress}</p>
-              </div>
-
-              <div className="text-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <CheckCircle2 size={20} className="text-zinc-300" />
-                  <p className="text-base text-zinc-300">Completadas</p>
-                </div>
-                <p className="text-2xl font-bold text-white">{taskStats.completed}</p>
-              </div>
-
-              <div className="text-center p-4 bg-zinc-900 rounded-xl border border-zinc-800">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Clock size={20} className="text-zinc-300" />
-                  <p className="text-base text-zinc-300">Horas Totales</p>
-                </div>
-                <p className="text-2xl font-bold text-white">{taskStats.totalHours}</p>
-              </div>
+              ))}
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-zinc-400">
-            <Clock size={48} className="mx-auto mb-4 text-zinc-500" />
-            <p>No hay tareas registradas en este proyecto</p>
-          </div>
+          <p className="text-sm text-zinc-500 py-2">Sin tareas registradas</p>
         )}
-      </Card>
+      </div>
 
+      {/* ── Detalle por Categoría ── */}
       {hasTasks && taskStats.total > 0 && (
-        <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
-          <h3 className="text-xl font-semibold text-white mb-4">Detalle de Tareas</h3>
-          <div className="space-y-4">
-            {Object.entries(tasks).map(([category, categoryTasks]: [string, any]) => {
-              if (!Array.isArray(categoryTasks) || categoryTasks.length === 0) return null;
+        <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-3">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider">Detalle por categoría</p>
+          {Object.entries(tasks).map(([cat, catTasks]: [string, any]) => {
+            const arr = Array.isArray(catTasks) ? catTasks : (catTasks ? [catTasks] : []);
+            if (arr.length === 0) return null;
+            const done = arr.filter((t: any) => t.status === 'completed').length;
+            const pct  = (done / arr.length) * 100;
 
-              const categoryStats = categoryTasks.reduce((acc: any, task: any) => {
-                acc.total++;
-                if (task.status === 'completed') acc.completed++;
-                else if (task.status === 'in_progress') acc.inProgress++;
-                else acc.pending++;
-                acc.hours += task.estimatedHours || 0;
-                return acc;
-              }, { total: 0, completed: 0, inProgress: 0, pending: 0, hours: 0 });
-
-              const categoryProgress = categoryStats.total > 0
-                ? (categoryStats.completed / categoryStats.total) * 100
-                : 0;
-
-              return (
-                <div key={category} className="border border-zinc-800 rounded-lg p-4 bg-zinc-900 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-white">{categoryLabels[category] || category}</h4>
-                    <div className="flex items-center gap-3 text-base">
-                      <span className="text-zinc-400">{categoryStats.completed}/{categoryStats.total} tareas</span>
-                      <span className="font-bold text-zinc-200">{categoryProgress.toFixed(0)}%</span>
-                    </div>
-                  </div>
-
-                  <div className="w-full bg-zinc-800 rounded-full h-2 mb-3">
-                    <div
-                      className="bg-zinc-300 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${categoryProgress}%` }}
-                    ></div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {categoryTasks.map((task: any, index: number) => (
-                      <div
-                        key={task.id || index}
-                        className={`p-3 rounded-lg border-l-4 ${
-                          task.status === 'completed'
-                            ? 'bg-zinc-950 border-zinc-300'
-                            : task.status === 'in_progress'
-                            ? 'bg-zinc-950 border-zinc-400'
-                            : 'bg-zinc-950 border-zinc-700'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {task.status === 'completed' ? (
-                                <CheckCircle2 size={18} className="text-zinc-200" />
-                              ) : task.status === 'in_progress' ? (
-                                <Clock size={18} className="text-zinc-300" />
-                              ) : (
-                                <Circle size={18} className="text-zinc-500" />
-                              )}
-                              <p className="font-medium text-base text-white">{task.name}</p>
-                            </div>
-                            {task.description && (
-                              <p className="text-sm text-zinc-300 ml-6">{task.description}</p>
-                            )}
-                            {(task.assignedRole || task.suggestedRoleType) && (
-                              <span className="inline-block ml-6 mt-1 px-3 py-1 text-sm rounded-full bg-zinc-900 text-zinc-100 border border-zinc-700">
-                                {task.assignedRole || task.suggestedRoleType}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-right ml-4">
-                            <p className="text-base font-semibold text-zinc-50">
-                              {task.estimatedHours}hs
-                            </p>
-                            {task.laborCost > 0 && (
-                              <p className="text-sm text-zinc-300">
-                                ${task.laborCost.toLocaleString('es-AR')}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            return (
+              <div key={cat} className="bg-white/3 rounded-lg border border-white/6 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <p className="text-sm font-medium text-white">{CATEGORY_LABELS[cat] ?? cat}</p>
+                  <p className="text-xs text-zinc-400">{done}/{arr.length}</p>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
+                <div className="h-1 bg-zinc-800">
+                  <div className="h-1 bg-emerald-400/70 transition-all" style={{ width: `${pct}%` }} />
+                </div>
+
+                <div className="divide-y divide-white/5">
+                  {arr.map((task: any, i: number) => (
+                    <div
+                      key={task.id ?? i}
+                      className={`flex items-start justify-between px-3 py-2.5 border-l-2 ${TASK_STATUS_COLORS[task.status] ?? 'border-l-zinc-700'}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white leading-snug">{task.name}</p>
+                        {task.description && (
+                          <p className="text-xs text-zinc-500 mt-0.5 truncate">{task.description}</p>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400 ml-3 shrink-0">{task.estimatedHours}h</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* Checklist de Configuración */}
-      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
-        <h3 className="text-xl font-semibold text-white mb-4">Checklist de Configuración</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            {hasMaterials ? (
-              <CheckCircle2 size={24} className="text-emerald-400 flex-shrink-0" />
-            ) : (
-              <Circle size={24} className="text-zinc-500 flex-shrink-0" />
-            )}
-            <div>
-              <p className="font-medium text-white">Materiales de Construcción</p>
-              <p className="text-sm text-zinc-400">
-                {hasMaterials ? 'Materiales calculados y configurados' : 'Pendiente de configuración'}
-              </p>
+      {/* ── Checklist de Configuración ── */}
+      <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-2">
+        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Configuración del proyecto</p>
+        {checklist.map(({ label, ok }) => (
+          <div key={label} className="flex items-center gap-3 py-1">
+            <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${ok ? 'bg-emerald-400/15' : 'bg-zinc-800'}`}>
+              {ok
+                ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round"><path d="M2 6l3 3 5-5"/></svg>
+                : <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+              }
             </div>
+            <p className={`text-sm ${ok ? 'text-white' : 'text-zinc-500'}`}>{label}</p>
+            <p className={`text-xs ml-auto ${ok ? 'text-emerald-400' : 'text-zinc-600'}`}>{ok ? '✓' : 'Pendiente'}</p>
           </div>
+        ))}
+      </div>
 
-          <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            {hasPlumbing ? (
-              <CheckCircle2 size={24} className="text-emerald-400 flex-shrink-0" />
-            ) : (
-              <Circle size={24} className="text-zinc-500 flex-shrink-0" />
-            )}
-            <div>
-              <p className="font-medium text-white">Instalación Hidráulica</p>
-              <p className="text-sm text-zinc-400">
-                {hasPlumbing ? 'Instalación configurada' : 'Pendiente de configuración'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            {hasElectrical ? (
-              <CheckCircle2 size={24} className="text-emerald-400 flex-shrink-0" />
-            ) : (
-              <Circle size={24} className="text-zinc-500 flex-shrink-0" />
-            )}
-            <div>
-              <p className="font-medium text-white">Instalación Eléctrica</p>
-              <p className="text-sm text-zinc-400">
-                {hasElectrical ? 'Instalación configurada' : 'Pendiente de configuración'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            {hasTasks && taskStats.total > 0 ? (
-              <CheckCircle2 size={24} className="text-emerald-400 flex-shrink-0" />
-            ) : (
-              <Circle size={24} className="text-zinc-500 flex-shrink-0" />
-            )}
-            <div>
-              <p className="font-medium text-white">Tareas del Proyecto</p>
-              <p className="text-sm text-zinc-400">
-                {hasTasks && taskStats.total > 0 ? `${taskStats.total} tareas registradas` : 'Pendiente de configuración'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Resumen Financiero */}
-      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
-        <h3 className="text-xl font-semibold text-white mb-4">Resumen Financiero</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            <p className="text-sm text-zinc-400 mb-1">Materiales</p>
-            <p className="text-2xl font-bold text-white">${financialSummary.materialCost.toLocaleString('es-AR')}</p>
-          </div>
-
-          <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-            <p className="text-sm text-zinc-400 mb-1">Mano de Obra</p>
-            <p className="text-2xl font-bold text-white">${financialSummary.laborCost.toLocaleString('es-AR')}</p>
-          </div>
-
-          <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-700">
-            <p className="text-sm text-zinc-400 mb-1">Total Proyecto</p>
-            <p className="text-2xl font-bold text-white">${financialSummary.totalCost.toLocaleString('es-AR')}</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Timeline del Proyecto */}
+      {/* ── Timeline ── */}
       <ProjectTimeline
         projectId={project.id}
         projectName={project.name}
