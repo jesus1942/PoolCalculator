@@ -1,7 +1,7 @@
 import React from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Project } from '@/types';
-import { TrendingUp, Activity } from 'lucide-react';
+import { HdTrendingUp, HdActivity } from '@/components/ui/HandDrawnIcons';
 
 interface TrendChartsProps {
   projects: Project[];

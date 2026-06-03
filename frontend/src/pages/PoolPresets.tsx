@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { poolPresetService } from '@/services/poolPresetService';
 import { PoolPreset, PoolShape } from '@/types';
-import { Plus, Edit, Trash2, Calculator, Filter } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdCalculator, HdFilter } from '@/components/ui/HandDrawnIcons';
 import { getImageUrl } from '@/utils/imageUtils';
 import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';
 

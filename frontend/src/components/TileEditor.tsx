@@ -7,7 +7,7 @@ import { Project, TilePreset } from '@/types';
 import { tilePresetService } from '@/services/tilePresetService';
 import { productImageService } from '@/services/productImageService';
 import { PoolVisualizationCanvas, exportCanvasToImage } from '@/components/PoolVisualizationCanvas';
-import { Save, RotateCcw, Calculator, Layers, Download, Eye, Grid3x3 } from 'lucide-react';
+import { HdSave, HdRotateCcw, HdCalculator, HdLayers, HdDownload, HdEye, HdGrid } from '@/components/ui/HandDrawnIcons';
 
 interface TileEditorProps {
   project: Project;

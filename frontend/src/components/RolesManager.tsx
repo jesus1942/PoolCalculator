@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdUsers } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 
 interface ProfessionRole {

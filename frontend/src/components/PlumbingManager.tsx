@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { plumbingItemService, PlumbingItem } from '@/services/plumbingItemService';
-import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdSearch, HdFilter } from '@/components/ui/HandDrawnIcons';
 import { HybridImageManager } from '@/components/HybridImageManager';
 import { ProductCard } from '@/components/ProductCard';
 

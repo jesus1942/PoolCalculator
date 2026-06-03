@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { EquipmentPreset } from '@/types';
-import { CheckCircle, AlertTriangle, XCircle, ArrowRight, Info } from 'lucide-react';
+import { HdCheck, HdAlertTriangle, HdX, HdArrowRight, HdInfo } from '@/components/ui/HandDrawnIcons';
 
 type ComparableEquipment = Partial<EquipmentPreset> & {
   id: string;

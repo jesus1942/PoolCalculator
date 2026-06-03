@@ -8,7 +8,7 @@ import { poolPresetService } from '@/services/poolPresetService';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { EquipmentPreset, PoolPreset, PoolShape } from '@/types';
 import { HdPlus, HdEdit, HdTrash, HdUpload, HdX, HdWaves, HdChevronLeft, HdChevronRight, HdImage, HdSearch } from '@/components/ui/HandDrawnIcons';
-import { Layers } from 'lucide-react';
+import { HdLayers } from '@/components/ui/HandDrawnIcons';
 import FlipCard from '@/components/ui/FlipCard';
 import { getImageUrl } from '@/utils/imageUtils';
 import { ImageHoverZoom } from '@/components/ui/ImageHoverZoom';

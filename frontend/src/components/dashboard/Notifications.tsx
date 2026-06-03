@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HdBell, HdCheck, HdAlertTriangle, HdX, HdFolderOpen, HdGear, HdTrendingUp, HdFileText } from '@/components/ui/HandDrawnIcons';
-import { Cloud } from 'lucide-react';
+import { HdCloud } from '@/components/ui/HandDrawnIcons';
 import { Project } from '@/types';
 import { WeatherData, isGoodWorkingWeather } from '@/services/weatherService';
 import { useReminders } from '@/context/RemindersContext';

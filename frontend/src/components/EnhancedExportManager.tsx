@@ -8,7 +8,7 @@ import { projectService } from '@/services/projectService';
 import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
 import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
 import { HdFileText, HdDownload, HdPrinter, HdDollarSign, HdMessageBubble } from '@/components/ui/HandDrawnIcons';
-import { FileSpreadsheet, Briefcase, User, Wrench, FileDown, File } from 'lucide-react';
+import { HdFileSpreadsheet, HdBriefcase, HdUser, HdSettings, HdDownload, HdFileText } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';

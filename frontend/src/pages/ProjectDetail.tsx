@@ -23,7 +23,7 @@ import {
   buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
 import { HdArrowLeft, HdEdit, HdFileText, HdUsers, HdPackage, HdZap, HdActivity, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
-import { Hammer, FileSpreadsheet, Cpu } from 'lucide-react';
+import { HdHammer, HdFileSpreadsheet, HdCpu } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
 
 const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);

@@ -6,7 +6,7 @@ import { professionalCalculationsService, HydraulicParams } from '@/services/pro
 import { productImageService } from '@/services/productImageService';
 import { additionalsService } from '@/services/additionalsService';
 import { EquipmentComparison } from '@/components/EquipmentComparison';
-import { AlertTriangle, CheckCircle, Droplet, TrendingUp, Settings } from 'lucide-react';
+import { HdAlertTriangle, HdCheck, HdDroplet, HdTrendingUp, HdSettings } from '@/components/ui/HandDrawnIcons';
 
 interface HydraulicAnalysisPanelProps {
   projectId: string;

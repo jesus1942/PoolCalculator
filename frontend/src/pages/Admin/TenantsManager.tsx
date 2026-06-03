@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, PlusCircle, RefreshCw, Save } from 'lucide-react';
+import { HdBuilding, HdPlus, HdRefresh, HdSave } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
 import { organizationService, OrganizationAdminItem } from '@/services/organizationService';
 
@@ -86,7 +86,7 @@ export const TenantsManager: React.FC = () => {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700/70 text-zinc-300 hover:text-white hover:border-zinc-500/70 transition"
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <HdRefresh size={16} className={loading ? 'animate-spin' : ''} />
             <span>Actualizar</span>
           </button>
         </div>
@@ -99,7 +99,7 @@ export const TenantsManager: React.FC = () => {
 
         <section className="bg-zinc-900/60 border border-zinc-800/70 rounded-2xl p-5">
           <div className="flex items-center gap-2 text-zinc-300 mb-4">
-            <PlusCircle size={18} />
+            <HdPlus size={18} />
             <span className="text-sm uppercase tracking-wider">Nuevo tenant</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -141,7 +141,7 @@ export const TenantsManager: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-400/60 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 transition"
               disabled={saving}
             >
-              <Save size={16} />
+              <HdSave size={16} />
               <span>{saving ? 'Guardando...' : 'Crear tenant'}</span>
             </button>
           </div>
@@ -149,7 +149,7 @@ export const TenantsManager: React.FC = () => {
 
         <section className="bg-zinc-900/60 border border-zinc-800/70 rounded-2xl p-5">
           <div className="flex items-center gap-2 text-zinc-300 mb-4">
-            <Building2 size={18} />
+            <HdBuilding size={18} />
             <span className="text-sm uppercase tracking-wider">Tenants actuales</span>
           </div>
           <div className="overflow-auto">

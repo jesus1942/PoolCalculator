@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, RefreshCw, ShieldAlert } from 'lucide-react';
+import { HdActivity, HdRefresh, HdShield } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
 import { opsService, OpsLog, OpsStatus } from '@/services/opsService';
 
@@ -59,7 +59,7 @@ export const OpsManager: React.FC = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-              <ShieldAlert className="text-emerald-300" size={20} />
+              <HdShield className="text-emerald-300" size={20} />
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-white">Backend & Base de datos</h1>
@@ -71,7 +71,7 @@ export const OpsManager: React.FC = () => {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700/70 text-zinc-300 hover:text-white hover:border-zinc-500/70 transition"
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <HdRefresh size={16} className={loading ? 'animate-spin' : ''} />
             <span>Actualizar</span>
           </button>
         </div>
@@ -120,7 +120,7 @@ export const OpsManager: React.FC = () => {
         <section className="rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-zinc-300">
-              <Activity size={18} />
+              <HdActivity size={18} />
               <span className="text-sm uppercase tracking-wider">Logs operativos</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">

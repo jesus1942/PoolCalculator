@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Save, RefreshCw, Lock, AlertTriangle } from 'lucide-react';
+import { HdFileText, HdSave, HdRefresh, HdLock, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
 import { docsService } from '@/services/docsService';
 
@@ -90,7 +90,7 @@ export const DocsManager: React.FC = () => {
       <div className="min-h-screen px-6 py-10 text-zinc-200">
         <div className="max-w-3xl mx-auto bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-8 shadow-xl">
           <div className="flex items-center space-x-3 text-red-300">
-            <Lock size={22} />
+            <HdLock size={22} />
             <h1 className="text-xl font-semibold">Acceso restringido</h1>
           </div>
           <p className="mt-3 text-zinc-400">
@@ -115,7 +115,7 @@ export const DocsManager: React.FC = () => {
               className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700/70 text-zinc-300 hover:text-white hover:border-zinc-500/70 transition"
               disabled={loadingList}
             >
-              <RefreshCw size={16} className={loadingList ? 'animate-spin' : ''} />
+              <HdRefresh size={16} className={loadingList ? 'animate-spin' : ''} />
               <span>Actualizar lista</span>
             </button>
             <button
@@ -127,7 +127,7 @@ export const DocsManager: React.FC = () => {
               }`}
               disabled={!isDirty || saving}
             >
-              <Save size={16} className={saving ? 'animate-pulse' : ''} />
+              <HdSave size={16} className={saving ? 'animate-pulse' : ''} />
               <span>{saving ? 'Guardando...' : 'Guardar cambios'}</span>
             </button>
           </div>
@@ -135,7 +135,7 @@ export const DocsManager: React.FC = () => {
 
         {error && (
           <div className="flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
-            <AlertTriangle size={18} />
+            <HdAlertTriangle size={18} />
             <span>{error}</span>
           </div>
         )}
@@ -143,7 +143,7 @@ export const DocsManager: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
           <aside className="bg-zinc-900/60 border border-zinc-800/70 rounded-2xl p-4 h-full">
             <div className="flex items-center gap-2 text-zinc-300 mb-3">
-              <FileText size={16} />
+              <HdFileText size={16} />
               <span className="text-sm uppercase tracking-wider">Documentos</span>
             </div>
             <div className="space-y-2 max-h-[70vh] overflow-auto pr-1">

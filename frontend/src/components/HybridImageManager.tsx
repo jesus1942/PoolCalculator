@@ -3,7 +3,7 @@ import { ProductImageUploader } from './ProductImageUploader';
 import { productImageService, ProductType } from '@/services/productImageService';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Link, Upload, X, Check, AlertCircle, Loader } from 'lucide-react';
+import { HdLink, HdUpload, HdX, HdCheck, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 
 interface HybridImageManagerProps {
   productType: ProductType;

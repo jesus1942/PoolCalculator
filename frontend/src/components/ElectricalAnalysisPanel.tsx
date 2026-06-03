@@ -5,7 +5,7 @@ import { ElectricalAnalysis, EquipmentPreset } from '@/types';
 import { professionalCalculationsService, ElectricalParams } from '@/services/professionalCalculationsService';
 import { additionalsService } from '@/services/additionalsService';
 import { EquipmentComparison } from '@/components/EquipmentComparison';
-import { AlertTriangle, CheckCircle, Zap, DollarSign, Settings, Cable } from 'lucide-react';
+import { HdAlertTriangle, HdCheck, HdZap, HdDollarSign, HdSettings } from '@/components/ui/HandDrawnIcons';
 
 interface ElectricalAnalysisPanelProps {
   projectId: string;

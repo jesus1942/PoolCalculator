@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, User, Waves, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { HdLock, HdUser, HdWaves, HdEye, HdEyeOff, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { DeveloperCredit } from '@/components/DeveloperCredit';

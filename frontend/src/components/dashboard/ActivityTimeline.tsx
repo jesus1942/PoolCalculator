@@ -1,5 +1,5 @@
 import React from 'react';
-import { FolderOpen, Waves, CheckCircle2, Clock, Plus, Edit } from 'lucide-react';
+import { HdFolderOpen, HdWaves, HdCheck, HdClock, HdPlus, HdEdit } from '@/components/ui/HandDrawnIcons';
 import { Project, PoolPreset } from '@/types';
 
 interface ActivityTimelineProps {

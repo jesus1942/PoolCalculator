@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { LogOut, User, Settings, Layout, Waves, Menu, X, Database, Calendar, Droplets } from 'lucide-react';
+import { HdArrowOut, HdUser, HdSettings, HdLayoutGrid, HdWaves, HdMenu, HdX, HdDatabase, HdCalendar, HdDroplet } from '@/components/ui/HandDrawnIcons';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 export const Header: React.FC = () => {

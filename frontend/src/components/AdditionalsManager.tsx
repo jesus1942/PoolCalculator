@@ -10,7 +10,7 @@ import { accessoryPresetService } from '@/services/accessoryPresetService';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { constructionMaterialService } from '@/services/constructionMaterialService';
 import { productImageService } from '@/services/productImageService';
-import { Plus, Trash2, Package, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { HdPlus, HdTrash, HdPackage, HdAlertTriangle, HdImage } from '@/components/ui/HandDrawnIcons';
 
 interface ProjectAdditional {
   id: string;

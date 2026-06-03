@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX } from '@/components/ui/HandDrawnIcons';
-import { LogOut } from 'lucide-react';
+import { HdArrowOut } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';

@@ -5,7 +5,7 @@ import { ProductImageUploader } from '@/components/ProductImageUploader';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { EquipmentPreset, EquipmentType } from '@/types';
 import { productImageService } from '@/services/productImageService';
-import { Plus, Edit, Trash2, Image, X } from 'lucide-react';
+import { HdPlus, HdEdit, HdTrash, HdImage, HdX } from '@/components/ui/HandDrawnIcons';
 
 export const EquipmentManager: React.FC = () => {
   const [equipment, setEquipment] = useState<EquipmentPreset[]>([]);
@@ -133,7 +133,7 @@ export const EquipmentManager: React.FC = () => {
           <p className="text-gray-600">Administra bombas, filtros, calentadores y más</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+          <HdPlus size={16} className="mr-2" />
           Nuevo Equipo
         </Button>
       </div>
@@ -201,7 +201,7 @@ export const EquipmentManager: React.FC = () => {
                 />
               ) : (
                 <div className="text-center text-gray-400">
-                  <Image className="w-12 h-12 mx-auto mb-2" />
+                  <HdImage size={48} className="mx-auto mb-2" />
                   <p className="text-sm">Sin imagen</p>
                 </div>
               )}

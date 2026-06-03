@@ -8,7 +8,7 @@ import { Project } from '@/types';
 import { plumbingItemService, PlumbingItem } from '@/services/plumbingItemService';
 import { plumbingCalculationService, PlumbingCalculationResult } from '@/services/plumbingCalculationService';
 import { getProjectAdditionals, isBaseModelAdditional, summarizeHydraulicSystem } from '@/utils/projectCosting';
-import { Save, Plus, Trash2, Search, Calculator, AlertTriangle, ScanLine } from 'lucide-react';
+import { HdSave, HdPlus, HdTrash, HdSearch, HdCalculator, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 
 interface PlumbingEditorProps {
   project: Project;

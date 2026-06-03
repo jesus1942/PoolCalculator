@@ -7,11 +7,7 @@ import { EquipmentComparison } from '@/components/EquipmentComparison';
 import { professionalCalculationsService } from '@/services/professionalCalculationsService';
 import { productImageService } from '@/services/productImageService';
 import { calculateProjectFinancials, getAdditionalName, summarizeHydraulicSystem } from '@/utils/projectCosting';
-import {
-  Droplets,
-  Wrench,
-  Layers,
-} from 'lucide-react';
+import { HdDroplet, HdSettings, HdLayers } from '@/components/ui/HandDrawnIcons';
 import {
   HdDollarSign,
   HdRuler,

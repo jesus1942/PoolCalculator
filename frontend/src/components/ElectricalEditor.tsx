@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Project } from '@/types';
-import { Zap, Lightbulb, Plus, Trash2, AlertCircle, Calculator, Settings } from 'lucide-react';
+import { HdZap, HdLightbulb, HdPlus, HdTrash, HdAlertTriangle, HdCalculator, HdSettings } from '@/components/ui/HandDrawnIcons';
 
 interface ElectricalItem {
   id: string;

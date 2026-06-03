@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, PlusCircle, RefreshCw, Pencil, Save, X, CalendarDays, MessageCircle, FolderOpen, ArrowUpRight, Camera, Shield } from 'lucide-react';
+import { HdUsers, HdPlus, HdRefresh, HdEdit, HdSave, HdX, HdCalendar, HdMessageBubble, HdFolderOpen, HdExternalLink, HdCamera, HdShield } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
 import { userService, type UserProjectAccessEntry } from '@/services/userService';
 import { agendaService } from '@/services/agendaService';
@@ -332,7 +332,7 @@ export const UsersManager: React.FC = () => {
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700/70 text-zinc-300 hover:text-white hover:border-zinc-500/70 transition"
             disabled={loading}
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <HdRefresh size={16} className={loading ? 'animate-spin' : ''} />
             <span>Actualizar</span>
           </button>
         </div>
@@ -345,7 +345,7 @@ export const UsersManager: React.FC = () => {
 
         <section className="bg-zinc-900/60 border border-zinc-800/70 rounded-2xl p-5">
           <div className="flex items-center gap-2 text-zinc-300 mb-4">
-            <PlusCircle size={18} />
+            <HdPlus size={18} />
             <span className="text-sm uppercase tracking-wider">Nuevo usuario</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -397,7 +397,7 @@ export const UsersManager: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-400/60 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 transition"
               disabled={saving}
             >
-              <Save size={16} />
+              <HdSave size={16} />
               <span>{saving ? 'Guardando...' : 'Crear usuario'}</span>
             </button>
           </div>
@@ -405,7 +405,7 @@ export const UsersManager: React.FC = () => {
 
         <section className="bg-zinc-900/60 border border-zinc-800/70 rounded-2xl p-5">
           <div className="flex items-center gap-2 text-zinc-300 mb-4">
-            <Users size={18} />
+            <HdUsers size={18} />
             <span className="text-sm uppercase tracking-wider">Usuarios actuales</span>
           </div>
           <div className="overflow-auto">
@@ -432,21 +432,21 @@ export const UsersManager: React.FC = () => {
                           onClick={() => openEdit(row)}
                           className="inline-flex items-center gap-1 text-blue-300 hover:text-blue-200"
                         >
-                          <Pencil size={14} />
+                          <HdEdit size={14} />
                           <span>Editar</span>
                         </button>
                         <button
                           onClick={() => loadProjectAccess(row)}
                           className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200"
                         >
-                          <Shield size={14} />
+                          <HdShield size={14} />
                           <span>Permisos</span>
                         </button>
                         <button
                           onClick={() => loadOperations(row)}
                           className="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
                         >
-                          <CalendarDays size={14} />
+                          <HdCalendar size={14} />
                           <span>Operativo</span>
                         </button>
                       </div>
@@ -471,7 +471,7 @@ export const UsersManager: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">Editar usuario</h2>
                 <button onClick={closeEdit} className="text-zinc-300 hover:text-white">
-                  <X size={18} />
+                  <HdX size={18} />
                 </button>
               </div>
               <div className="space-y-3">
@@ -523,7 +523,7 @@ export const UsersManager: React.FC = () => {
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-400/60 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 transition"
                   disabled={saving}
                 >
-                  <Save size={16} />
+                  <HdSave size={16} />
                   <span>{saving ? 'Guardando...' : 'Guardar'}</span>
                 </button>
               </div>
@@ -662,7 +662,7 @@ export const UsersManager: React.FC = () => {
                           onClick={() => saveProjectAccess(entry)}
                           className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/60 bg-emerald-500/20 px-4 py-2 text-sm text-emerald-200 hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <Save size={15} />
+                          <HdSave size={15} />
                           <span>{projectAccessSavingId === entry.projectId ? 'Guardando...' : 'Guardar acceso'}</span>
                         </button>
                       </div>
@@ -683,7 +683,7 @@ export const UsersManager: React.FC = () => {
                   <p className="text-sm text-zinc-400">{operationsUser.email}</p>
                 </div>
                 <button onClick={closeOperations} className="text-zinc-300 hover:text-white">
-                  <X size={18} />
+                  <HdX size={18} />
                 </button>
               </div>
 
@@ -753,7 +753,7 @@ export const UsersManager: React.FC = () => {
                               onClick={() => navigate(`/projects/${selectedEvent.project.id}`)}
                               className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 px-3 py-1.5 text-xs text-cyan-200 hover:bg-cyan-500/10"
                             >
-                              <FolderOpen size={14} />
+                              <HdFolderOpen size={14} />
                               Ver proyecto
                             </button>
                           )}
@@ -762,7 +762,7 @@ export const UsersManager: React.FC = () => {
                             onClick={() => window.open(`/agenda?event=${selectedEvent.id}`, '_blank')}
                             className="inline-flex items-center gap-2 rounded-full border border-zinc-700/70 px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/5"
                           >
-                            <ArrowUpRight size={14} />
+                            <HdExternalLink size={14} />
                             Abrir agenda
                           </button>
                         </div>
@@ -771,7 +771,7 @@ export const UsersManager: React.FC = () => {
                       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                         <div className="rounded-xl border border-zinc-800/70 bg-zinc-900/40 p-4">
                           <div className="mb-3 flex items-center gap-2 text-sm text-zinc-300">
-                            <MessageCircle size={16} />
+                            <HdMessageBubble size={16} />
                             Conversación
                           </div>
                           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
@@ -803,7 +803,7 @@ export const UsersManager: React.FC = () => {
                                 disabled={sendingMessage || !messageBody.trim()}
                                 className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/50 bg-cyan-500/15 px-4 py-2 text-sm text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                <MessageCircle size={15} />
+                                <HdMessageBubble size={15} />
                                 <span>{sendingMessage ? 'Enviando...' : 'Enviar mensaje'}</span>
                               </button>
                             </div>
@@ -812,7 +812,7 @@ export const UsersManager: React.FC = () => {
 
                         <div className="rounded-xl border border-zinc-800/70 bg-zinc-900/40 p-4">
                           <div className="mb-3 flex items-center gap-2 text-sm text-zinc-300">
-                            <Camera size={16} />
+                            <HdCamera size={16} />
                             Últimas imágenes
                           </div>
                           {recentImageMessages.length === 0 ? (

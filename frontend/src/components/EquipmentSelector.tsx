@@ -5,7 +5,7 @@ import { EquipmentPreset, ProjectAdditional } from '@/types';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { additionalsService } from '@/services/additionalsService';
 import { productImageService } from '@/services/productImageService';
-import { Zap, Filter, Droplets, Sun, Trash2, Download, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { HdZap, HdFilter, HdDroplet, HdSun, HdTrash, HdDownload, HdImage, HdExternalLink } from '@/components/ui/HandDrawnIcons';
 
 interface EquipmentSelectorProps {
   projectId: string;

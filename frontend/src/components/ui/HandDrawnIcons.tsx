@@ -775,6 +775,266 @@ export const HdGrid: React.FC<IconProps> = ({ size = 20, className = '', style }
   </Svg>
 );
 
+// ─── HdHammer ── Martillo / construcción ─────────────────────────────────────
+export const HdHammer: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cabeza del martillo */}
+    <path d="M11.2 13.2 Q13.8 10.8 16.5 8.8 Q18.3 8.1 19.5 9.2 Q20.7 10.4 20.3 12.2 Q19.5 13.8 17.2 14.3 L13.5 14" strokeWidth="1.6" />
+    {/* Mango diagonal */}
+    <path d="M4.2 20.2 Q6.5 17.8 9.5 14.8 L13 13.8 L11.5 13 Q8.2 16.2 4.8 19.5" strokeWidth="1.7" />
+  </Svg>
+);
+
+// ─── HdFileSpreadsheet ── Planilla / tabla ────────────────────────────────────
+export const HdFileSpreadsheet: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cuerpo del archivo */}
+    <path d="M5.1 3.2 Q4 3.1 4.1 4.4 L4 19.7 Q3.9 21.1 5.3 21 L18.8 21.1 Q20.1 21.2 20 19.8 L20.1 8.3 L15 3.1 Z" strokeWidth="1.6" />
+    {/* Doblez de esquina */}
+    <path d="M15.1 3.2 Q15 6.2 14.9 7.8 Q16.5 7.9 20 8.2" strokeWidth="1.5" />
+    {/* Cuadrícula */}
+    <path d="M7 11.5 Q10 11.2 17 11.5" strokeWidth="1.3" />
+    <path d="M7 14.5 Q10 14.2 17 14.5" strokeWidth="1.3" />
+    <path d="M7 17.5 Q10 17.2 17 17.5" strokeWidth="1.3" />
+    <path d="M11 11.2 Q11 14 11 18" strokeWidth="1.3" />
+    <path d="M14 11.2 Q14 14 14 18" strokeWidth="1.3" />
+  </Svg>
+);
+
+// ─── HdCpu ── Chip / procesador ───────────────────────────────────────────────
+export const HdCpu: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Marco exterior */}
+    <path d="M4.2 4.2 Q4 3.1 5.2 3.2 L18.9 3.1 Q20.1 3 20 4.3 L20.1 19.8 Q20.2 21 19 21.1 L5.1 21.2 Q3.9 21.3 4 20 Z" strokeWidth="1.5" />
+    {/* Chip interior */}
+    <path d="M7.2 7.2 Q7 6.3 7.9 6.2 L16.2 6.1 Q17.1 6 17 7 L17.1 17 Q17.2 18 16.1 17.9 L7.8 18 Q6.9 18.1 7 17 Z" strokeWidth="1.4" />
+    {/* Pines izquierda */}
+    <path d="M4 8.5 L2.5 8.5" strokeWidth="1.4" /><path d="M4 12 L2.5 12" strokeWidth="1.4" /><path d="M4 15.5 L2.5 15.5" strokeWidth="1.4" />
+    {/* Pines derecha */}
+    <path d="M20 8.5 L21.5 8.5" strokeWidth="1.4" /><path d="M20 12 L21.5 12" strokeWidth="1.4" /><path d="M20 15.5 L21.5 15.5" strokeWidth="1.4" />
+    {/* Pines arriba */}
+    <path d="M8.5 4 L8.5 2.5" strokeWidth="1.4" /><path d="M12 4 L12 2.5" strokeWidth="1.4" /><path d="M15.5 4 L15.5 2.5" strokeWidth="1.4" />
+    {/* Pines abajo */}
+    <path d="M8.5 20 L8.5 21.5" strokeWidth="1.4" /><path d="M12 20 L12 21.5" strokeWidth="1.4" /><path d="M15.5 20 L15.5 21.5" strokeWidth="1.4" />
+  </Svg>
+);
+
+// ─── HdLayers ── Capas ────────────────────────────────────────────────────────
+export const HdLayers: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Capa superior */}
+    <path d="M2.8 9 Q7.2 6.5 12.1 6.3 Q17 6.1 21.2 9 Q17 11.8 12.1 12 Q7.2 12.2 2.8 9 Z" strokeWidth="1.6" />
+    {/* Capa media */}
+    <path d="M2.8 12.8 Q7.2 15.8 12.1 16 Q17 16.2 21.2 12.8" strokeWidth="1.5" />
+    {/* Capa inferior */}
+    <path d="M2.8 16.5 Q7.2 19.5 12.1 19.7 Q17 19.9 21.2 16.5" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdBarChart ── Gráfico de barras ──────────────────────────────────────────
+export const HdBarChart: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Eje Y */}
+    <path d="M3.5 2.8 Q3.3 11.5 3.5 20.8" strokeWidth="1.5" />
+    {/* Eje X */}
+    <path d="M3.5 20.8 Q11 20.5 21 20.8" strokeWidth="1.5" />
+    {/* Barra izquierda (corta) */}
+    <path d="M6.5 20.8 L6.4 15.5 Q6.3 15 7.2 14.9 L9 15 Q9.8 14.9 9.8 15.5 L9.7 20.8" strokeWidth="1.5" />
+    {/* Barra central (alta) */}
+    <path d="M11.5 20.8 L11.4 8 Q11.3 7.5 12.2 7.4 L14 7.5 Q14.8 7.4 14.8 8 L14.7 20.8" strokeWidth="1.5" />
+    {/* Barra derecha (media) */}
+    <path d="M16.5 20.8 L16.4 12 Q16.3 11.5 17.2 11.4 L19 11.5 Q19.8 11.4 19.8 12 L19.7 20.8" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdLightbulb ── Bombilla / idea ──────────────────────────────────────────
+export const HdLightbulb: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Bombilla */}
+    <path d="M12 2.5 Q16.8 2.4 19.2 5.8 Q21.6 9.2 20.2 13 Q19.2 15.8 17 17.2 Q16 17.8 16 18.8 L8.1 18.9 Q8.1 17.8 7.1 17.3 Q4.8 15.9 3.8 13.1 Q2.3 9.3 4.7 5.9 Q7 2.6 12 2.5 Z" strokeWidth="1.6" />
+    {/* Base (anillos) */}
+    <path d="M8.2 18.9 Q8 20.2 9.2 20.8 Q10.8 21.6 12 21.7 Q13.2 21.6 14.8 20.8 Q16 20.2 15.8 18.9" strokeWidth="1.5" />
+    {/* Filamento */}
+    <path d="M9.8 13 Q10.8 11 12 10.1 Q13.2 11 14.2 13" strokeWidth="1.4" />
+  </Svg>
+);
+
+// ─── HdGlobe ── Globo / mundo ─────────────────────────────────────────────────
+export const HdGlobe: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Círculo exterior */}
+    <path d="M12.1 2.3 Q17.8 2.1 20.8 6.2 Q23.8 10.4 21.8 15.2 Q19.8 20.1 14.8 21.5 Q9.7 22.9 5.5 19.6 Q1.3 16.2 2.2 11.1 Q3.1 5.9 8 3.4 Q9.9 2.4 12.1 2.3 Z" strokeWidth="1.6" />
+    {/* Meridiano vertical */}
+    <path d="M12 2.3 Q15.5 6.8 15.8 12 Q15.5 17.2 12.1 21.5 Q8.5 17 8.2 12 Q8.5 6.8 12 2.3 Z" strokeWidth="1.3" />
+    {/* Ecuador */}
+    <path d="M2.5 12.1 Q6.5 9.8 12.1 9.6 Q17.7 9.4 21.8 11.9 Q17.5 14.2 12.1 14.4 Q6.7 14.6 2.5 12.1 Z" strokeWidth="1.3" />
+  </Svg>
+);
+
+// ─── HdBriefcase ── Maletín / trabajo ────────────────────────────────────────
+export const HdBriefcase: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cuerpo */}
+    <path d="M3.2 8.8 Q3 7.8 4.2 7.7 L19.9 7.8 Q21.1 7.7 21 9 L21.1 19.8 Q21.2 21.1 19.9 21 L4.1 21.1 Q2.9 21.2 3 19.9 Z" strokeWidth="1.6" />
+    {/* Asa */}
+    <path d="M9.2 7.8 Q9 5.3 9.6 4.6 Q10.2 3.9 12.1 3.8 Q14 3.7 14.6 4.5 Q15.2 5.2 15 7.7" strokeWidth="1.5" />
+    {/* Línea central */}
+    <path d="M3.2 13.8 Q8 13.4 12.1 13.6 Q16.2 13.8 21.2 13.5" strokeWidth="1.4" />
+  </Svg>
+);
+
+// ─── HdWind ── Viento ─────────────────────────────────────────────────────────
+export const HdWind: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Línea de viento larga con espiral */}
+    <path d="M2.8 8.5 Q7 7 12 6.9 Q16 6.8 18.5 7.8 Q20.5 8.6 20.2 10.5 Q19.8 12.5 17.5 12.8 Q15 13.2 12 12.5" strokeWidth="1.5" />
+    {/* Línea media */}
+    <path d="M2.8 13 Q8.5 11.5 14 11.4 Q18.5 11.3 21.5 12.8 Q23 13.8 22.5 15.8 Q22 17.5 19.8 17.8 Q17.5 18.2 14.5 17.5" strokeWidth="1.5" />
+    {/* Línea corta abajo */}
+    <path d="M2.8 17.5 Q7 16.5 12.8 16.4 Q17 16.3 20 17.5" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdUmbrella ── Paraguas ───────────────────────────────────────────────────
+export const HdUmbrella: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Arco/canopia */}
+    <path d="M12 3.5 Q5.5 3.3 3.2 8.8 Q3 10 3.8 11.2 Q7.5 8.2 12 8 Q16.5 7.8 20.2 11 Q21 9.8 20.8 8.6 Q18.5 3.4 12 3.5 Z" strokeWidth="1.6" />
+    {/* Borde interior del arco (sombra) */}
+    <path d="M3.2 11 Q7.5 8.2 12 8 Q16.5 7.8 20.2 11" strokeWidth="1.3" />
+    {/* Mango */}
+    <path d="M12 8.2 Q11.8 15 12 17.5 Q12.1 20 14.5 20.5 Q16.8 21 17.5 19.2 Q18 17.8 16.8 17.2" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdUser ── Usuario único ──────────────────────────────────────────────────
+export const HdUser: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cabeza */}
+    <path d="M8.5 8.8 Q8.2 5.8 12.1 5.6 Q16 5.5 15.8 8.6 Q15.9 11.6 12.2 11.8 Q8.4 12 8.5 8.8 Z" strokeWidth="1.6" />
+    {/* Cuerpo / hombros */}
+    <path d="M4.2 21 Q4 16.8 8.8 15.3 Q10.3 14.8 12.2 14.7 Q14.1 14.6 15.8 15.2 Q20.5 16.6 20.2 21" strokeWidth="1.6" />
+  </Svg>
+);
+
+// ─── HdMail ── Correo / envelope ─────────────────────────────────────────────
+export const HdMail: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cuerpo del sobre */}
+    <path d="M3.2 4.8 Q3 3.8 4.2 3.9 L19.9 4 Q21.1 3.9 21 5.2 L21.1 19 Q21.2 20.1 19.9 20 L4.2 20.1 Q3 20.2 3.1 18.9 Z" strokeWidth="1.6" />
+    {/* Doblez V */}
+    <path d="M3.3 5.2 Q7.8 10 12 12.8 Q16.2 10 20.8 5.3" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdPhone ── Teléfono ──────────────────────────────────────────────────────
+export const HdPhone: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    <path d="M6.8 3.5 Q6.2 2.8 5.2 3.1 L3.2 4.8 Q2.2 5.5 2.5 6.8 Q3.5 11.5 7.5 16 Q12 20.5 16.8 21.5 Q18.2 21.8 18.8 20.8 L20.5 18.8 Q21 17.8 20.2 17.2 L16.5 15.2 Q15.5 14.8 14.8 15.5 L13.2 17 Q11.5 16.5 8.8 13.2 Q6 10 5.5 8.5 L7.2 6.8 Q7.8 6.2 7.5 5.2 Z" strokeWidth="1.6" />
+  </Svg>
+);
+
+// ─── HdSun ── Sol ─────────────────────────────────────────────────────────────
+export const HdSun: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Círculo central */}
+    <circle cx="12" cy="12" r="3.8" strokeWidth="1.5" />
+    {/* Rayos */}
+    <path d="M12 2.5 Q11.8 4.2 12 6" strokeWidth="1.5" />
+    <path d="M12 18 Q11.8 19.8 12 21.5" strokeWidth="1.5" />
+    <path d="M2.5 12 Q4.2 11.8 6 12" strokeWidth="1.5" />
+    <path d="M18 12 Q19.8 11.8 21.5 12" strokeWidth="1.5" />
+    <path d="M5.5 5.5 Q6.7 6.5 7.8 7.5" strokeWidth="1.5" />
+    <path d="M16.2 16.5 Q17.3 17.5 18.5 18.5" strokeWidth="1.5" />
+    <path d="M18.5 5.5 Q17.3 6.5 16.2 7.5" strokeWidth="1.5" />
+    <path d="M7.8 16.5 Q6.7 17.5 5.5 18.5" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdCloud ── Nube ──────────────────────────────────────────────────────────
+export const HdCloud: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    <path d="M6.5 18.2 Q3 18.2 2.8 15 Q2.5 12 5.8 11.4 Q5.5 8.2 8.8 7 Q12.2 5.8 14.2 8 Q15.5 5.8 18 5.6 Q21.5 5.4 22 8.5 Q24 9.3 23.5 12.2 Q23 15 20.5 15.2 L6.5 18.2 Z" strokeWidth="1.6" />
+  </Svg>
+);
+
+// ─── HdListTodo ── Lista de tareas ────────────────────────────────────────────
+export const HdListTodo: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Fila 1 — checkbox vacío */}
+    <path d="M3 5.5 Q3 4.8 3.8 4.7 L6.5 4.8 Q7.2 4.7 7.2 5.5 L7.3 8.2 Q7.4 9 6.4 8.9 L3.8 9 Q3 9.1 3.1 8.2 Z" strokeWidth="1.4" />
+    <path d="M9.2 6.8 Q13 6.4 17 6.7 Q19 6.8 21 6.6" strokeWidth="1.5" />
+    {/* Fila 2 — con check */}
+    <path d="M3 11.5 Q3 10.8 3.8 10.7 L6.5 10.8 Q7.2 10.7 7.2 11.5 L7.3 14.2 Q7.4 15 6.4 14.9 L3.8 15 Q3 15.1 3.1 14.2 Z" strokeWidth="1.4" />
+    <path d="M4 12.5 Q5 13.5 5.5 14.2 Q6.2 13 6.8 11.8" strokeWidth="1.4" />
+    <path d="M9.2 12.8 Q13 12.4 17 12.7 Q19 12.8 21 12.6" strokeWidth="1.5" />
+    {/* Fila 3 — checkbox vacío */}
+    <path d="M3 17.5 Q3 16.8 3.8 16.7 L6.5 16.8 Q7.2 16.7 7.2 17.5 L7.3 20.2 Q7.4 21 6.4 20.9 L3.8 21 Q3 21.1 3.1 20.2 Z" strokeWidth="1.4" />
+    <path d="M9.2 18.8 Q13 18.4 17 18.7 Q19 18.8 21 18.6" strokeWidth="1.5" />
+  </Svg>
+);
+
+// ─── HdCircle ── Círculo / estado ─────────────────────────────────────────────
+export const HdCircle: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    <path d="M12.1 2.3 Q17.8 2.1 20.8 6.2 Q23.8 10.4 21.8 15.2 Q19.8 20.1 14.8 21.5 Q9.7 22.9 5.5 19.6 Q1.3 16.2 2.2 11.1 Q3.1 5.9 8 3.4 Q9.9 2.4 12.1 2.3 Z" strokeWidth="1.6" />
+  </Svg>
+);
+
+// ─── HdSparkles ── Destellos / magia ─────────────────────────────────────────
+export const HdSparkles: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Estrella grande */}
+    <path d="M12 2.5 Q12.8 7.2 13.2 8.8 Q14.8 9 19.5 9.8 Q14.8 10.6 13.2 10.8 Q12.8 12.5 12 17.2 Q11.2 12.5 10.8 10.8 Q9.2 10.6 4.5 9.8 Q9.2 9 10.8 8.8 Q11.2 7.2 12 2.5 Z" strokeWidth="1.5" />
+    {/* Estrella pequeña arriba-derecha */}
+    <path d="M19 3.5 Q19.3 5 19.5 5.8 Q20.3 6 21.5 6.5 Q20.3 7 19.5 7.2 Q19.3 8.2 19 9.5 Q18.7 8.2 18.5 7.2 Q17.7 7 16.5 6.5 Q17.7 6 18.5 5.8 Q18.7 5 19 3.5 Z" strokeWidth="1.3" />
+    {/* Estrella pequeña abajo-izquierda */}
+    <path d="M5.5 16 Q5.8 17.2 5.9 18 Q6.5 18.2 8 18.5 Q6.5 18.8 5.9 19 Q5.8 19.8 5.5 21 Q5.2 19.8 5.1 19 Q4.5 18.8 3 18.5 Q4.5 18.2 5.1 18 Q5.2 17.2 5.5 16 Z" strokeWidth="1.2" />
+  </Svg>
+);
+
+// ─── HdCalculator ── Calculadora ─────────────────────────────────────────────
+export const HdCalculator: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cuerpo */}
+    <path d="M5.1 3.2 Q4 3.1 4.1 4.4 L4 19.7 Q3.9 21.1 5.3 21 L18.8 21.1 Q20.1 21.2 20 19.8 L20.1 4.2 Q20.2 3.1 18.9 3.2 Z" strokeWidth="1.6" />
+    {/* Pantalla */}
+    <path d="M7 5.5 Q6.8 5 7.6 4.9 L16.5 5 Q17.3 4.9 17.2 5.7 L17.3 9 Q17.4 9.8 16.3 9.7 L7.6 9.8 Q6.8 9.9 6.9 9 Z" strokeWidth="1.4" />
+    {/* Botones: 3 filas de 3 */}
+    <circle cx="8.5" cy="12.5" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="12" cy="12.5" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="15.5" cy="12.5" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="8.5" cy="15.8" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="12" cy="15.8" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="15.5" cy="15.8" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="8.5" cy="19" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="12" cy="19" r="1" fill="currentColor" strokeWidth="0" />
+    <circle cx="15.5" cy="19" r="1" fill="currentColor" strokeWidth="0" />
+  </Svg>
+);
+
+// ─── HdCamera ── Cámara ───────────────────────────────────────────────────────
+export const HdCamera: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Cuerpo de la cámara */}
+    <path d="M2.2 8.8 Q2 7.8 3.2 7.7 L7 7.8 Q7.8 5.8 9.2 5.1 L14.8 5.2 Q16.2 5.8 17 7.8 L20.9 7.9 Q22.1 7.8 22 9 L22.1 19.8 Q22.2 21 20.9 21.1 L3.2 21.2 Q2 21.3 2.1 20 Z" strokeWidth="1.6" />
+    {/* Lente */}
+    <path d="M8.8 14.5 Q8.6 11 12.1 10.8 Q15.6 10.6 15.8 14 Q16 17.5 12.2 17.8 Q8.5 18 8.8 14.5 Z" strokeWidth="1.5" />
+    {/* Flash / botón */}
+    <circle cx="17.5" cy="9.5" r="0.9" fill="currentColor" strokeWidth="0" />
+  </Svg>
+);
+
+// ─── HdRotateCcw ── Rotar antihorario / reset ─────────────────────────────────
+export const HdRotateCcw: React.FC<IconProps> = ({ size = 20, className = '', style }) => (
+  <Svg size={size} className={className} style={style}>
+    {/* Arco circular ~270° anti-horario */}
+    <path d="M3.5 12 Q3.5 6.5 7.8 3.8 Q12.2 1.1 16.8 3.2 Q21.4 5.3 21.8 10.8 Q22.2 16.3 17.5 19 Q12.8 21.7 8.2 19.2 Q6 18 4.5 15.5" strokeWidth="1.6" />
+    {/* Cabeza de flecha */}
+    <path d="M7.8 11.8 L4 7.8 L8.6 6.5" strokeWidth="1.6" />
+  </Svg>
+);
+
 // ─── AppIcon ── Componente unificado ──────────────────────────────────────────
 
 export type AppIconName =
@@ -835,7 +1095,28 @@ export type AppIconName =
   | 'trending-up'
   | 'droplet'
   | 'flame'
-  | 'dot-grid';
+  | 'dot-grid'
+  | 'hammer'
+  | 'file-spreadsheet'
+  | 'cpu'
+  | 'layers'
+  | 'bar-chart'
+  | 'lightbulb'
+  | 'globe'
+  | 'briefcase'
+  | 'wind'
+  | 'umbrella'
+  | 'user'
+  | 'mail'
+  | 'phone'
+  | 'sun'
+  | 'cloud'
+  | 'list-todo'
+  | 'circle'
+  | 'sparkles'
+  | 'calculator'
+  | 'camera'
+  | 'rotate-ccw';
 
 const iconMap: Record<AppIconName, React.FC<IconProps>> = {
   calendar: HdCalendar,
@@ -896,6 +1177,27 @@ const iconMap: Record<AppIconName, React.FC<IconProps>> = {
   droplet: HdDroplet,
   flame: HdFlame,
   'dot-grid': HdGrid,
+  hammer: HdHammer,
+  'file-spreadsheet': HdFileSpreadsheet,
+  cpu: HdCpu,
+  layers: HdLayers,
+  'bar-chart': HdBarChart,
+  lightbulb: HdLightbulb,
+  globe: HdGlobe,
+  briefcase: HdBriefcase,
+  wind: HdWind,
+  umbrella: HdUmbrella,
+  user: HdUser,
+  mail: HdMail,
+  phone: HdPhone,
+  sun: HdSun,
+  cloud: HdCloud,
+  'list-todo': HdListTodo,
+  circle: HdCircle,
+  sparkles: HdSparkles,
+  calculator: HdCalculator,
+  camera: HdCamera,
+  'rotate-ccw': HdRotateCcw,
 };
 
 export const AppIcon: React.FC<{ name: AppIconName } & IconProps> = ({

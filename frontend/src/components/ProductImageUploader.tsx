@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { productImageService, ProductType } from '@/services/productImageService';
-import { Upload, X, Image as ImageIcon, Loader } from 'lucide-react';
+import { HdUpload, HdX, HdImage } from '@/components/ui/HandDrawnIcons';
 
 interface ProductImageUploaderProps {
   productType: ProductType;

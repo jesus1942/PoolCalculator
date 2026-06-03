@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HdCalendar, HdPlus, HdFilter, HdLock, HdShield, HdUsers, HdBell, HdClock, HdMapPin } from '@/components/ui/HandDrawnIcons';
-import { Briefcase, UserPlus } from 'lucide-react';
+import { HdBriefcase, HdUser } from '@/components/ui/HandDrawnIcons';
 import { agendaService } from '@/services/agendaService';
 import { crewService } from '@/services/crewService';
 import { userService } from '@/services/userService';

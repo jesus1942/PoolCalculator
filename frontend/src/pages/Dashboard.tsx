@@ -9,7 +9,7 @@ import { agendaChecklistService } from '@/services/agendaChecklistService';
 import { useReminders } from '@/context/RemindersContext';
 import { Project, PoolPreset } from '@/types';
 import { HdFolderOpen, HdWaves, HdTrendingUp, HdClock, HdCheck, HdActivity, HdCalendar, HdAlertTriangle, HdPlus, HdTrash, HdBell, HdChevronDown, HdChevronRight } from '@/components/ui/HandDrawnIcons';
-import { Droplets, Layers, BarChart3, Wind, Umbrella, ListTodo, Circle, Sparkles } from 'lucide-react';
+import { HdDroplet, HdLayers, HdBarChart, HdWind, HdUmbrella, HdListTodo, HdCircle, HdSparkles } from '@/components/ui/HandDrawnIcons';
 import FlipCard from '@/components/ui/FlipCard';
 import { PoolFitWizard } from '@/components/PoolFitWizard';
 import { ProjectsChart } from '@/components/dashboard/ProjectsChart';

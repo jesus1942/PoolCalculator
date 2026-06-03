@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HdCalendar, HdMapPin, HdMessageBubble, HdSave, HdImage } from '@/components/ui/HandDrawnIcons';
-import { CloudSun } from 'lucide-react';
+import { HdSun } from '@/components/ui/HandDrawnIcons';
 import { agendaService } from '@/services/agendaService';
 import { agendaMessageService } from '@/services/agendaMessageService';
 import { useAuth } from '@/context/AuthContext';

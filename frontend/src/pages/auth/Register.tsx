@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { HdAlertTriangle, HdArrowLeft } from '@/components/ui/HandDrawnIcons';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 // Para OAuth necesitamos la URL base sin /api
