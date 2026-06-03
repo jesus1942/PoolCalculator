@@ -243,7 +243,7 @@ export const EquipmentManager: React.FC = () => {
                 onClick={() => handleManageImages(item)}
                 className="flex-1"
               >
-                <Image className="w-4 h-4 mr-1" />
+                <HdImage size={16} className="mr-1" />
                 Imágenes
               </Button>
               <Button
@@ -251,7 +251,7 @@ export const EquipmentManager: React.FC = () => {
                 size="sm"
                 onClick={() => handleEdit(item)}
               >
-                <Edit className="w-4 h-4" />
+                <HdEdit size={16} />
               </Button>
               <Button
                 variant="outline"
@@ -259,7 +259,7 @@ export const EquipmentManager: React.FC = () => {
                 onClick={() => handleDelete(item.id)}
                 className="text-red-600 hover:bg-red-50"
               >
-                <Trash2 className="w-4 h-4" />
+                <HdTrash size={16} />
               </Button>
             </div>
           </Card>
@@ -282,7 +282,7 @@ export const EquipmentManager: React.FC = () => {
                   {editingId ? 'Editar Equipo' : 'Nuevo Equipo'}
                 </h2>
                 <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-6 h-6" />
+                  <HdX size={24} />
                 </button>
               </div>
 
@@ -437,7 +437,7 @@ export const EquipmentManager: React.FC = () => {
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-6 h-6" />
+                  <HdX size={24} />
                 </button>
               </div>
 

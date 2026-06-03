@@ -2,18 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import {
-  Filter,
-  Droplets,
-  Gauge,
-  Clock,
-  Package,
-  Zap,
-  TrendingUp,
-  Info,
-  CheckCircle2,
-  AlertTriangle
-} from 'lucide-react';
+import { HdFilter, HdDroplet, HdClock, HdPackage, HdZap, HdTrendingUp, HdInfo, HdCheck, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 
 interface FilterRecommendationProps {
@@ -120,7 +109,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl blur-md opacity-50"></div>
                 <div className="relative p-3 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 shadow-xl">
-                  <Filter className="w-6 h-6 text-white" />
+                  <HdFilter className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div>
@@ -159,7 +148,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                 <div className="flex items-center gap-2 mb-1">
-                  <Droplets className="w-4 h-4 text-blue-400" />
+                  <HdDroplet className="w-4 h-4 text-blue-400" />
                   <p className="text-xs text-zinc-500">Volumen</p>
                 </div>
                 <p className="text-2xl font-light text-white">{volume.toFixed(1)} m³</p>
@@ -167,7 +156,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               </div>
               <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                 <div className="flex items-center gap-2 mb-1">
-                  <Gauge className="w-4 h-4 text-cyan-400" />
+                  <HdFilter className="w-4 h-4 text-cyan-400" />
                   <p className="text-xs text-zinc-500">Caudal Requerido</p>
                 </div>
                 <p className="text-2xl font-light text-white">{recommendation.hydraulicAnalysis.pumpSelectionDetails.requiredFlowRate.toFixed(1)}</p>
@@ -175,7 +164,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               </div>
               <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-purple-400" />
+                  <HdClock className="w-4 h-4 text-purple-400" />
                   <p className="text-xs text-zinc-500">TDH Total</p>
                 </div>
                 <p className="text-2xl font-light text-white">{recommendation.hydraulicAnalysis.totalDynamicHead.toFixed(1)}m</p>
@@ -183,7 +172,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               </div>
               <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                 <div className="flex items-center gap-2 mb-1">
-                  <Zap className="w-4 h-4 text-yellow-400" />
+                  <HdZap className="w-4 h-4 text-yellow-400" />
                   <p className="text-xs text-zinc-500">Potencia Bomba</p>
                 </div>
                 <p className="text-2xl font-light text-white">{recommendation.equipment.pump.power} HP</p>
@@ -195,7 +184,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
             <div className="bg-gradient-to-br from-orange-950/50 to-amber-950/50 rounded-2xl p-6 border border-orange-500/30 mb-6">
               <div className="flex items-start gap-3">
                 <div className="p-3 rounded-xl bg-orange-500/20 border border-orange-500/30">
-                  <Zap className="w-6 h-6 text-orange-400" />
+                  <HdZap className="w-6 h-6 text-orange-400" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-light text-white mb-2">Bomba Recomendada</h3>
@@ -223,7 +212,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
             <div className="bg-gradient-to-br from-blue-950/50 to-cyan-950/50 rounded-2xl p-6 border border-blue-500/30 mb-6">
               <div className="flex items-start gap-3">
                 <div className="p-3 rounded-xl bg-blue-500/20 border border-blue-500/30">
-                  <Filter className="w-6 h-6 text-blue-400" />
+                  <HdFilter className="w-6 h-6 text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-light text-white mb-2">Filtro Recomendado</h3>
@@ -252,7 +241,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                   <div className="flex items-center gap-2 mb-3">
-                    <Package className="w-5 h-5 text-amber-400" />
+                    <HdPackage className="w-5 h-5 text-amber-400" />
                     <h3 className="text-lg font-light text-white">Arena de Sílice</h3>
                   </div>
                   <div className="flex items-baseline gap-2 mb-2">
@@ -265,7 +254,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
 
                 <div className="bg-zinc-900/30 rounded-2xl p-4 border border-zinc-800/50">
                   <div className="flex items-center gap-2 mb-3">
-                    <Package className="w-5 h-5 text-gray-400" />
+                    <HdPackage className="w-5 h-5 text-gray-400" />
                     <h3 className="text-lg font-light text-white">Grava de Soporte</h3>
                   </div>
                   <div className="flex items-baseline gap-2 mb-2">
@@ -281,7 +270,7 @@ export const FilterRecommendation: React.FC<FilterRecommendationProps> = ({
             {/* Retrolavado */}
             <div className="bg-orange-950/30 rounded-2xl p-4 border border-orange-500/30 mb-6">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-1" />
+                <HdAlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="text-sm font-medium text-orange-300 mb-2">Frecuencia de Retrolavado</h3>
                   <p className="text-white font-light mb-2">Cada 1-2 semanas o cuando aumente 0.5 bar la presión</p>

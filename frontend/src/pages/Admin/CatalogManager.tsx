@@ -1,19 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Globe,
-  Download,
-  Upload,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  Clock,
-  AlertCircle,
-  FileText,
-  Code,
-  Database,
-  Loader,
-  Play
-} from 'lucide-react';
+import { HdGlobe, HdUpload, HdRefresh, HdCheck, HdX, HdAlertTriangle, HdFileText, HdDatabase } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 
 interface ScrapingJob {
@@ -187,13 +173,13 @@ export const CatalogManager: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
+        return <HdCheck size={20} className="text-green-400" />;
       case 'failed':
-        return <XCircle className="w-5 h-5 text-red-400" />;
+        return <HdX size={20} className="text-red-400" />;
       case 'processing':
-        return <Loader className="w-5 h-5 text-blue-400 animate-spin" />;
+        return <span className="inline-block animate-spin rounded-full border-2 border-zinc-600 border-t-blue-400" style={{ width: 20, height: 20 }} />;
       default:
-        return <Clock className="w-5 h-5 text-gray-400" />;
+        return <span className="inline-block w-5 h-5 rounded-full border-2 border-gray-400" />;
     }
   };
 
@@ -218,7 +204,7 @@ export const CatalogManager: React.FC = () => {
                 : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
-            <Globe className="w-5 h-5" />
+            <HdGlobe size={20} />
             Scraping desde URL
           </button>
           <button
@@ -229,7 +215,7 @@ export const CatalogManager: React.FC = () => {
                 : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
-            <FileText className="w-5 h-5" />
+            <HdFileText size={20} />
             Contenido Manual
           </button>
           <button
@@ -240,7 +226,7 @@ export const CatalogManager: React.FC = () => {
                 : 'bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/10'
             }`}
           >
-            <Database className="w-5 h-5" />
+            <HdDatabase size={20} />
             Trabajos ({jobs.length})
           </button>
         </div>
@@ -249,7 +235,7 @@ export const CatalogManager: React.FC = () => {
         {activeTab === 'scrape' && (
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-6">
-              <Globe className="w-6 h-6 text-blue-400" />
+              <HdGlobe size={24} className="text-blue-400" />
               <h2 className="text-2xl font-bold text-white">Scraping Automático</h2>
             </div>
 
@@ -282,7 +268,7 @@ export const CatalogManager: React.FC = () => {
 
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                  <HdAlertTriangle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-blue-200">
                     <p className="font-medium mb-1">Información importante:</p>
                     <ul className="list-disc list-inside space-y-1 text-blue-300">
@@ -302,12 +288,12 @@ export const CatalogManager: React.FC = () => {
               >
                 {loading ? (
                   <>
-                    <Loader className="w-5 h-5 animate-spin" />
+                    <span className="inline-block animate-spin rounded-full border-2 border-zinc-600 border-t-white" style={{ width: 20, height: 20 }} />
                     Procesando...
                   </>
                 ) : (
                   <>
-                    <Play className="w-5 h-5" />
+                    <HdUpload size={20} />
                     Iniciar Scraping
                   </>
                 )}
@@ -320,7 +306,7 @@ export const CatalogManager: React.FC = () => {
         {activeTab === 'manual' && (
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-6">
-              <FileText className="w-6 h-6 text-purple-400" />
+              <HdFileText size={24} className="text-purple-400" />
               <h2 className="text-2xl font-bold text-white">Parseo Manual</h2>
             </div>
 
@@ -352,7 +338,7 @@ export const CatalogManager: React.FC = () => {
                           : 'bg-white/10 text-zinc-300 border border-white/20'
                       }`}
                     >
-                      <Code className="w-4 h-4 inline mr-1" />
+                      <HdFileText size={16} className="inline mr-1" />
                       HTML
                     </button>
                     <button
@@ -363,7 +349,7 @@ export const CatalogManager: React.FC = () => {
                           : 'bg-white/10 text-zinc-300 border border-white/20'
                       }`}
                     >
-                      <FileText className="w-4 h-4 inline mr-1" />
+                      <HdFileText size={16} className="inline mr-1" />
                       Texto
                     </button>
                   </div>
@@ -384,12 +370,12 @@ export const CatalogManager: React.FC = () => {
               >
                 {loading ? (
                   <>
-                    <Loader className="w-5 h-5 animate-spin" />
+                    <span className="inline-block animate-spin rounded-full border-2 border-zinc-600 border-t-white" style={{ width: 20, height: 20 }} />
                     Parseando...
                   </>
                 ) : (
                   <>
-                    <Upload className="w-5 h-5" />
+                    <HdUpload size={20} />
                     Parsear Contenido
                   </>
                 )}
@@ -449,21 +435,21 @@ export const CatalogManager: React.FC = () => {
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <Database className="w-6 h-6 text-green-400" />
+                <HdDatabase size={24} className="text-green-400" />
                 <h2 className="text-2xl font-bold text-white">Historial de Trabajos</h2>
               </div>
               <button
                 onClick={loadJobs}
                 className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/10 border border-white/20 rounded-lg text-zinc-300 transition-all"
               >
-                <RefreshCw className="w-4 h-4" />
+                <HdRefresh size={16} />
                 Actualizar
               </button>
             </div>
 
             {jobs.length === 0 ? (
               <div className="text-center py-12">
-                <Database className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
+                <HdDatabase size={64} className="text-zinc-600 mx-auto mb-4" />
                 <p className="text-zinc-300">No hay trabajos de scraping registrados</p>
               </div>
             ) : (

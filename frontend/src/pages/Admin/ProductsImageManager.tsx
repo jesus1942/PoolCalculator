@@ -9,7 +9,7 @@ import { accessoryPresetService } from '@/services/accessoryPresetService';
 import { equipmentPresetService } from '@/services/equipmentPresetService';
 import { constructionMaterialService } from '@/services/constructionMaterialService';
 import { getImageUrl } from '@/utils/imageUtils';
-import { Loader, Package, Image as ImageIcon } from 'lucide-react';
+import { HdPackage, HdImage } from '@/components/ui/HandDrawnIcons';
 
 type Product = {
   id: string;
@@ -22,7 +22,7 @@ type Product = {
 type ProductCategory = {
   type: ProductType;
   title: string;
-  icon: typeof Package;
+  icon: typeof HdPackage;
   service: any;
 };
 
@@ -30,31 +30,31 @@ const PRODUCT_CATEGORIES: ProductCategory[] = [
   {
     type: 'POOL_PRESET',
     title: 'Modelos de Piscinas',
-    icon: Package,
+    icon: HdPackage,
     service: poolPresetService,
   },
   {
     type: 'TILE_PRESET',
     title: 'Losetas',
-    icon: Package,
+    icon: HdPackage,
     service: tilePresetService,
   },
   {
     type: 'ACCESSORY_PRESET',
     title: 'Accesorios',
-    icon: Package,
+    icon: HdPackage,
     service: accessoryPresetService,
   },
   {
     type: 'EQUIPMENT_PRESET',
     title: 'Equipos (Bombas, Filtros, Calefactores)',
-    icon: Package,
+    icon: HdPackage,
     service: equipmentPresetService,
   },
   {
     type: 'CONSTRUCTION_MATERIAL',
     title: 'Materiales de Construcción',
-    icon: Package,
+    icon: HdPackage,
     service: constructionMaterialService,
   },
 ];
@@ -122,7 +122,8 @@ export const ProductsImageManager: React.FC = () => {
               }`}
             >
               <Icon
-                className={`w-8 h-8 mx-auto mb-2 ${
+                size={32}
+                className={`mx-auto mb-2 ${
                   isSelected ? 'text-blue-600' : 'text-gray-400'
                 }`}
               />
@@ -153,12 +154,12 @@ export const ProductsImageManager: React.FC = () => {
       {/* Lista de productos */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="inline-block animate-spin rounded-full border-2 border-zinc-600 border-t-white" style={{ width: 16, height: 16 }} />
           <span className="ml-2 text-gray-600">Cargando productos...</span>
         </div>
       ) : filteredProducts.length === 0 ? (
         <Card className="p-12 text-center">
-          <ImageIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <HdImage size={64} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 text-lg">
             {searchQuery
               ? 'No se encontraron productos con ese nombre'
@@ -195,7 +196,7 @@ export const ProductsImageManager: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex-shrink-0 ml-4 w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                    <HdImage size={32} className="text-gray-400" />
                   </div>
                 )}
               </div>

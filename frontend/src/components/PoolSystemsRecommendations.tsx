@@ -5,15 +5,7 @@ import { Project } from '@/types';
 import { HeatingRecommendation } from '@/components/HeatingRecommendation';
 import { FilterRecommendation } from '@/components/FilterRecommendation';
 import { WaterMaintenanceGuide } from '@/components/WaterMaintenanceGuide';
-import {
-  Flame,
-  Filter,
-  Droplet,
-  ChevronDown,
-  ChevronRight,
-  Lightbulb,
-  TrendingUp
-} from 'lucide-react';
+import { HdFlame, HdFilter, HdDroplet, HdChevronDown, HdChevronRight, HdLightbulb, HdTrendingUp } from '@/components/ui/HandDrawnIcons';
 
 interface PoolSystemsRecommendationsProps {
   project: Project;
@@ -37,7 +29,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
       id: 'heating',
       title: 'Calefacción de Piscina',
       description: 'Recomendaciones de calentadores según volumen y uso',
-      icon: <Flame className="w-6 h-6" />,
+      icon: <HdFlame className="w-6 h-6" />,
       gradient: 'from-orange-500 to-red-500',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
@@ -53,7 +45,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
       id: 'filter',
       title: 'Sistema de Filtración',
       description: 'Dimensionamiento de filtros y bombas',
-      icon: <Filter className="w-6 h-6" />,
+      icon: <HdFilter className="w-6 h-6" />,
       gradient: 'from-blue-500 to-cyan-500',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200',
@@ -70,7 +62,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
       id: 'maintenance',
       title: 'Mantenimiento del Agua',
       description: 'Guía completa de químicos y cuidado',
-      icon: <Droplet className="w-6 h-6" />,
+      icon: <HdDroplet className="w-6 h-6" />,
       gradient: 'from-cyan-500 to-teal-500',
       bgColor: 'bg-cyan-50',
       borderColor: 'border-cyan-200',
@@ -91,7 +83,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="p-3 rounded-xl bg-zinc-100 shadow-lg">
-              <Lightbulb className="w-6 h-6 text-white" />
+              <HdLightbulb className="w-6 h-6 text-white" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">Recomendaciones Inteligentes</h2>
@@ -103,7 +95,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
 
           <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
             <div className="flex items-start gap-3">
-              <TrendingUp className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-1" />
+              <HdTrendingUp className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2">¿Cómo funciona?</h3>
                 <p className="text-zinc-300 text-base mb-3">
@@ -149,7 +141,7 @@ export const PoolSystemsRecommendations: React.FC<PoolSystemsRecommendationsProp
                   ) : (
                     <span className="text-sm text-zinc-400 font-medium">Ver más</span>
                   )}
-                  <ChevronDown
+                  <HdChevronDown
                     className={`w-5 h-5 text-zinc-500 transition-transform duration-300 ${
                       expandedSection === section.id ? 'rotate-180' : ''
                     }`}

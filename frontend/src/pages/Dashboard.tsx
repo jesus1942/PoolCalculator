@@ -403,7 +403,7 @@ export const Dashboard: React.FC = () => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl blur-xl opacity-50"></div>
                 <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                  <Droplets className="h-8 w-8 text-white" />
+                  <HdDroplet className="h-8 w-8 text-white" />
                 </div>
               </div>
               <div>
@@ -437,7 +437,7 @@ export const Dashboard: React.FC = () => {
                     <div className="relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl blur-md opacity-50"></div>
                       <div className="relative p-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-xl shadow-orange-500/50">
-                        <Sparkles className="h-6 w-6 text-white" />
+                        <HdSparkles className="h-6 w-6 text-white" />
                       </div>
                     </div>
                     <div>
@@ -515,7 +515,7 @@ export const Dashboard: React.FC = () => {
                             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 rounded-2xl"></div>
                             <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-4 border border-zinc-800/50">
                               <div className="flex items-center gap-2 text-zinc-300 text-sm mb-2 font-light">
-                                <Wind className="h-4 w-4" />
+                                <HdWind className="h-4 w-4" />
                                 Viento
                               </div>
                               <div className="text-white text-xl font-light">
@@ -531,7 +531,7 @@ export const Dashboard: React.FC = () => {
                             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 rounded-2xl"></div>
                             <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-4 border border-zinc-800/50">
                               <div className="flex items-center gap-2 text-zinc-300 text-sm mb-2 font-light">
-                                <Umbrella className="h-4 w-4" />
+                                <HdUmbrella className="h-4 w-4" />
                                 Humedad
                               </div>
                               <div className="text-white text-xl font-light">{weather.current.humidity}<span className="text-sm text-zinc-300">%</span></div>
@@ -607,11 +607,11 @@ export const Dashboard: React.FC = () => {
                                       <div className="text-white font-light text-lg">{hour.temperature}°</div>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-zinc-300">
-                                      <Wind className="h-3 w-3" />
+                                      <HdWind className="h-3 w-3" />
                                       <span>{hour.windSpeed}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-zinc-300">
-                                      <Umbrella className="h-3 w-3" />
+                                      <HdUmbrella className="h-3 w-3" />
                                       <span>{hour.humidity}%</span>
                                     </div>
                                   </div>
@@ -735,13 +735,13 @@ export const Dashboard: React.FC = () => {
                                 <div className="mt-4 space-y-2">
                                   {day.precipitation > 0 && (
                                     <div className="flex items-center justify-center gap-1.5 text-xs text-blue-400 font-light">
-                                      <Umbrella className="h-3 w-3" />
+                                      <HdUmbrella className="h-3 w-3" />
                                       {day.precipitation}mm
                                     </div>
                                   )}
                                   {day.windSpeed > 20 && (
                                     <div className="flex items-center justify-center gap-1.5 text-xs text-orange-400 font-light">
-                                      <Wind className="h-3 w-3" />
+                                      <HdWind className="h-3 w-3" />
                                       {day.windSpeed}km/h
                                     </div>
                                   )}
@@ -811,7 +811,7 @@ export const Dashboard: React.FC = () => {
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl blur-md opacity-50"></div>
                     <div className="relative p-3 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 shadow-xl shadow-emerald-500/50">
-                      <ListTodo className="h-6 w-6 text-white" />
+                      <HdListTodo className="h-6 w-6 text-white" />
                     </div>
                   </div>
                   <div>
@@ -949,7 +949,7 @@ export const Dashboard: React.FC = () => {
 
                         <div className="mt-4 border-t border-zinc-800/60 pt-4">
                           <div className="flex items-center gap-2 text-xs text-zinc-300 mb-3">
-                            <ListTodo className="h-4 w-4" />
+                            <HdListTodo className="h-4 w-4" />
                             Checklist (recordatorios in-app)
                           </div>
 
@@ -964,7 +964,7 @@ export const Dashboard: React.FC = () => {
                                     onClick={() => toggleChecklistItem(event.id, item)}
                                     className="text-zinc-300 hover:text-emerald-300 transition-colors"
                                   >
-                                    {item.done ? <HdCheck size={16} className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4" />}
+                                    {item.done ? <HdCheck size={16} className="h-4 w-4 text-emerald-400" /> : <HdCircle className="h-4 w-4" />}
                                   </button>
                                   <span className={item.done ? 'line-through text-zinc-300' : ''}>{item.label}</span>
                                   <button
@@ -1119,7 +1119,7 @@ export const Dashboard: React.FC = () => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl blur-md opacity-50"></div>
                   <div className="relative p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-xl shadow-purple-500/20">
-                    <BarChart3 className="h-6 w-6 text-white" />
+                    <HdBarChart className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <h2 className="text-2xl font-light text-white tracking-wide">Métricas de Proyectos</h2>
@@ -1313,7 +1313,7 @@ export const Dashboard: React.FC = () => {
                               <div className="relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-xl blur-sm opacity-50"></div>
                                 <div className="relative p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/15">
-                                  <Layers className="h-4 w-4 text-white" />
+                                  <HdLayers className="h-4 w-4 text-white" />
                                 </div>
                               </div>
                               <div className="flex-1">

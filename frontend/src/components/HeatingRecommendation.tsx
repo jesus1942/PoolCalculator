@@ -3,19 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import {
-  Flame,
-  Zap,
-  Sun,
-  Wind,
-  ThermometerSun,
-  Clock,
-  DollarSign,
-  Lightbulb,
-  AlertCircle,
-  CheckCircle2,
-  TrendingUp
-} from 'lucide-react';
+import { HdFlame, HdZap, HdSun, HdWind, HdClock, HdDollarSign, HdLightbulb, HdAlertTriangle, HdCheck, HdTrendingUp } from '@/components/ui/HandDrawnIcons';
 import { calculateHeatingRequirements, HeatingRecommendation as IHeatingRecommendation } from '@/utils/poolCalculations';
 
 interface HeatingRecommendationProps {
@@ -57,7 +45,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
     {
       id: 'gas',
       name: 'Caldera a Gas',
-      icon: <Flame className="w-6 h-6" />,
+      icon: <HdFlame className="w-6 h-6" />,
       gradient: 'from-orange-600 to-red-600',
       heatupTime: recommendation.heatupTime.gas,
       dailyCost: recommendation.dailyOperationCost.gas,
@@ -69,7 +57,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
     {
       id: 'electric',
       name: 'Calentador Eléctrico',
-      icon: <Zap className="w-6 h-6" />,
+      icon: <HdZap className="w-6 h-6" />,
       gradient: 'from-yellow-600 to-amber-600',
       heatupTime: recommendation.heatupTime.electric,
       dailyCost: recommendation.dailyOperationCost.electric,
@@ -81,7 +69,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
     {
       id: 'heatpump',
       name: 'Bomba de Calor',
-      icon: <Wind className="w-6 h-6" />,
+      icon: <HdWind className="w-6 h-6" />,
       gradient: 'from-blue-600 to-cyan-600',
       heatupTime: recommendation.heatupTime.heatPump,
       dailyCost: recommendation.dailyOperationCost.heatPump,
@@ -94,7 +82,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
     {
       id: 'solar',
       name: 'Sistema Solar',
-      icon: <Sun className="w-6 h-6" />,
+      icon: <HdSun className="w-6 h-6" />,
       gradient: 'from-green-600 to-emerald-600',
       heatupTime: recommendation.heatupTime.solar,
       dailyCost: recommendation.dailyOperationCost.solar,
@@ -119,7 +107,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl blur-md opacity-50"></div>
                 <div className="relative p-3 rounded-2xl bg-gradient-to-br from-orange-600 to-red-600 shadow-xl">
-                  <ThermometerSun className="w-6 h-6 text-white" />
+                  <HdSun className="w-6 h-6 text-white" />
                 </div>
               </div>
               <div>
@@ -205,14 +193,14 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
             {/* Recomendación principal */}
             <div className="bg-gradient-to-br from-blue-950/50 to-cyan-950/50 rounded-2xl p-6 border border-blue-500/30 mb-6">
               <div className="flex items-start gap-3">
-                <Lightbulb className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
+                <HdLightbulb className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="text-lg font-light text-white mb-2">Recomendación</h3>
                   <p className="text-zinc-300 font-light mb-3">{recommendation.recommendation}</p>
                   <ul className="space-y-2">
                     {recommendation.considerations.map((consideration, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm text-zinc-400">
-                        <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                        <HdCheck className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                         <span>{consideration}</span>
                       </li>
                     ))}
@@ -264,14 +252,14 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/30">
                       <div className="flex items-center gap-2 mb-1">
-                        <Clock className="w-4 h-4 text-zinc-400" />
+                        <HdClock className="w-4 h-4 text-zinc-400" />
                         <p className="text-xs text-zinc-500">Tiempo de calentamiento</p>
                       </div>
                       <p className="text-lg font-light text-white">{heater.heatupTime.toFixed(1)}h</p>
                     </div>
                     <div className="bg-zinc-900/50 rounded-xl p-3 border border-zinc-800/30">
                       <div className="flex items-center gap-2 mb-1">
-                        <DollarSign className="w-4 h-4 text-zinc-400" />
+                        <HdDollarSign className="w-4 h-4 text-zinc-400" />
                         <p className="text-xs text-zinc-500">Costo operativo diario</p>
                       </div>
                       <p className="text-lg font-light text-white">${heater.dailyCost.toFixed(0)}</p>
@@ -284,7 +272,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
                     <ul className="space-y-1">
                       {heater.pros.map((pro, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-zinc-400">
-                          <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
+                          <HdCheck className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
                           <span>{pro}</span>
                         </li>
                       ))}
@@ -297,7 +285,7 @@ export const HeatingRecommendation: React.FC<HeatingRecommendationProps> = ({
                     <ul className="space-y-1">
                       {heater.cons.map((con, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-zinc-400">
-                          <AlertCircle className="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" />
+                          <HdAlertTriangle className="w-3 h-3 text-orange-400 flex-shrink-0 mt-0.5" />
                           <span>{con}</span>
                         </li>
                       ))}
