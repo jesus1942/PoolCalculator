@@ -121,15 +121,21 @@
   html,
   body,
   #root {
+    width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    /* `clip` clips overflow sin crear un scroll container, así NO rompe
+       position: sticky (a diferencia de overflow: hidden) y evita el paneo
+       horizontal en iOS Safari. */
+    overflow-x: clip;
+    /* Frena el rebote/deriva horizontal al scrollear en mobile. */
+    overscroll-behavior-x: none;
   }
 
   body {
     font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--app-text);
     background-color: var(--app-bg);
-    overflow-x: hidden;
+    overflow-x: clip;
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),

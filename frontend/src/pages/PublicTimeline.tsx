@@ -94,7 +94,7 @@ export const PublicTimeline: React.FC = () => {
   const exportUrl = shareToken ? `${API_BASE_URL}/api/public/timeline/${shareToken}/export` : '';
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen w-full overflow-x-hidden bg-zinc-950">
 
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-white/8 bg-zinc-950/90 backdrop-blur-xl">
@@ -142,14 +142,14 @@ export const PublicTimeline: React.FC = () => {
                     </div>
 
                     {/* Card */}
-                    <div className={`flex-1 min-w-0 rounded-xl border p-4 ${
+                    <div className={`flex-1 min-w-0 overflow-hidden rounded-xl border p-4 ${
                       isLatest
                         ? 'border-cyan-400/25 bg-cyan-500/5'
                         : 'border-white/7 bg-white/3'
                     }`}>
 
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                        <h3 className="min-w-0 break-words text-sm font-semibold text-white leading-snug">{item.title}</h3>
                         {isLatest && (
                           <span className="shrink-0 text-[10px] font-semibold text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 rounded-full px-2 py-0.5">
                             Nuevo
@@ -160,7 +160,7 @@ export const PublicTimeline: React.FC = () => {
                       <p className="text-[11px] text-zinc-500 mb-3">{formatDate(item.createdAt)}</p>
 
                       {item.description && (
-                        <p className="text-sm text-zinc-300 leading-relaxed mb-3 whitespace-pre-line">
+                        <p className="text-sm text-zinc-300 leading-relaxed mb-3 whitespace-pre-line break-words">
                           {item.description}
                         </p>
                       )}
