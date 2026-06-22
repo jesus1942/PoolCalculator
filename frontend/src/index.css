@@ -136,6 +136,9 @@
     color: var(--app-text);
     background-color: var(--app-bg);
     overflow-x: clip;
+    /* `overflow-wrap` se hereda: corta palabras/URLs largas en cualquier
+       texto de la app para que nunca generen scroll horizontal. */
+    overflow-wrap: break-word;
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
