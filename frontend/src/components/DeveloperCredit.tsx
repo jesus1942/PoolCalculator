@@ -50,23 +50,24 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
           </span>
         </a>
         <p className="text-[11px] text-zinc-500 -mt-1">Domotics &amp; IoT Solutions</p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-4 mt-2 text-xs">
           <a
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-xs text-green-300 transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-cyan-400 transition-colors group"
           >
-            <MessageCircle className="w-3.5 h-3.5" />
+            <MessageCircle className="w-3.5 h-3.5 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
             WhatsApp
           </a>
+          <span className="text-zinc-700">·</span>
           <a
             href={PORTFOLIO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs text-cyan-400 transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-cyan-400 transition-colors group"
           >
-            <Globe className="w-3.5 h-3.5" />
+            <Globe className="w-3.5 h-3.5 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
             Portfolio
           </a>
         </div>
@@ -97,23 +98,24 @@ export const DeveloperCredit: React.FC<DeveloperCreditProps> = ({ variant = 'ful
         <MapPin className="w-3 h-3" />
         Puerto Madryn, Chubut · Argentina
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-4 text-sm">
         <a
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/15 hover:bg-green-500/25 border border-green-500/40 text-xs text-green-300 font-medium transition-all hover:scale-105 hover:shadow-lg hover:shadow-green-500/20"
+          className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-cyan-400 transition-colors group"
         >
-          <MessageCircle className="w-3.5 h-3.5" />
+          <MessageCircle className="w-4 h-4 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
           WhatsApp
         </a>
+        <span className="text-zinc-700">·</span>
         <a
           href={PORTFOLIO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs text-cyan-400 font-medium transition-all hover:scale-105"
+          className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-cyan-400 transition-colors group"
         >
-          <Globe className="w-3.5 h-3.5" />
+          <Globe className="w-4 h-4 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
           Portfolio
         </a>
       </div>
