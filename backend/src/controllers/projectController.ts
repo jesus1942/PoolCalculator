@@ -26,6 +26,7 @@ import {
   resolveProjectAccessProfile,
   sanitizeProjectForAccess,
 } from '../utils/projectAccess';
+import { catalogVisibilityWhere, sortTenantFirst } from '../utils/catalogScope';
 import { getReferenceRoleBlueprints, getRoleAliases } from '../utils/laborReferences';
 
 const execAsync = promisify(exec);
@@ -460,9 +461,12 @@ const buildProjectExportData = async (project: any, sections?: any) => {
   };
 
   try {
-    const availableEquipment = await prisma.equipmentPreset.findMany({
-      where: { type: { in: ['PUMP', 'FILTER'] } }
-    });
+    const availableEquipment = sortTenantFirst(
+      await prisma.equipmentPreset.findMany({
+        where: { AND: [catalogVisibilityWhere(project.organizationId), { type: { in: ['PUMP', 'FILTER'] } }] }
+      }),
+      project.organizationId,
+    );
 
     const distanceToEquipment = plumbingConfig.distanceToEquipment || 8;
     const staticLift = 1.5;
@@ -950,17 +954,26 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
           });
         }
 
-        const tilePresets = await prisma.tilePreset.findMany();
-        const materialPrices = await prisma.constructionMaterialPreset.findMany({
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            pricePerUnit: true,
-            unit: true,
-            bagWeight: true,
-          },
-        });
+        // Catálogo visible para el tenant del proyecto: su catálogo propio + el global.
+        const tilePresets = sortTenantFirst(
+          await prisma.tilePreset.findMany({ where: catalogVisibilityWhere(project.organizationId) }),
+          project.organizationId,
+        );
+        const materialPrices = sortTenantFirst(
+          await prisma.constructionMaterialPreset.findMany({
+            where: catalogVisibilityWhere(project.organizationId),
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              pricePerUnit: true,
+              unit: true,
+              bagWeight: true,
+              organizationId: true,
+            },
+          }),
+          project.organizationId,
+        );
 
         const tileCalculations = calculateTileMaterials(
           project.poolPreset,
@@ -1127,21 +1140,30 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
           console.log('Settings creados');
         }
 
-        const tilePresets = await prisma.tilePreset.findMany();
+        // Catálogo visible para el tenant del proyecto: su catálogo propio + el global.
+        const tilePresets = sortTenantFirst(
+          await prisma.tilePreset.findMany({ where: catalogVisibilityWhere(existingProject.organizationId) }),
+          existingProject.organizationId,
+        );
         console.log(`Losetas encontradas: ${tilePresets.length}`);
 
-        // Cargar precios de materiales de construcción
+        // Cargar precios de materiales de construcción (catálogo del tenant + global)
         console.log('Cargando precios de materiales de construcción...');
-        const materialPrices = await prisma.constructionMaterialPreset.findMany({
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            pricePerUnit: true,
-            unit: true,
-            bagWeight: true,
-          },
-        });
+        const materialPrices = sortTenantFirst(
+          await prisma.constructionMaterialPreset.findMany({
+            where: catalogVisibilityWhere(existingProject.organizationId),
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              pricePerUnit: true,
+              unit: true,
+              bagWeight: true,
+              organizationId: true,
+            },
+          }),
+          existingProject.organizationId,
+        );
         console.log(`Precios cargados: ${materialPrices.length} materiales`);
 
         // Siempre calculamos si hay tileCalculation, independientemente de si los settings son nuevos

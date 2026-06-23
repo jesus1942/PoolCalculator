@@ -1,5 +1,6 @@
 import express from 'express';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
+import { canManageCatalog } from '../middleware/permissions';
 import {
   getPlumbingItems,
   createPlumbingItem,
@@ -9,9 +10,12 @@ import {
 
 const router = express.Router();
 
+// Todas las rutas requieren autenticación: el catálogo se filtra según el tenant.
+router.use(authenticate);
+
 router.get('/', getPlumbingItems);
-router.post('/', authenticate, isAdmin, createPlumbingItem);
-router.put('/:id', authenticate, isAdmin, updatePlumbingItem);
-router.delete('/:id', authenticate, isAdmin, deletePlumbingItem);
+router.post('/', canManageCatalog, createPlumbingItem);
+router.put('/:id', canManageCatalog, updatePlumbingItem);
+router.delete('/:id', canManageCatalog, deletePlumbingItem);
 
 export default router;

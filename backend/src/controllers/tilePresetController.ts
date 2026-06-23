@@ -1,12 +1,19 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
+import {
+  catalogVisibilityWhere,
+  sortTenantFirst,
+  canWriteCatalogRow,
+  resolveCreateOrganizationId,
+} from '../utils/catalogScope';
 
 const parseFormData = (body: any) => {
   const parsed: any = {};
 
-  // Campos que NO deben actualizarse (readonly)
-  const excludeFields = ['id', 'createdAt', 'updatedAt'];
+  // Campos readonly. organizationId nunca se toma del body: lo define el
+  // servidor según el tenant, no el cliente.
+  const excludeFields = ['id', 'createdAt', 'updatedAt', 'organizationId', 'organization'];
 
   for (const key in body) {
     // Skip readonly fields
@@ -49,7 +56,11 @@ const parseFormData = (body: any) => {
 export const createTilePreset = async (req: AuthRequest, res: Response) => {
   try {
     const data = parseFormData(req.body);
-    const tilePreset = await prisma.tilePreset.create({ data });
+    const organizationId = resolveCreateOrganizationId(
+      { role: req.user?.role, orgId: req.user?.orgId || null },
+      req.body?.organizationId,
+    );
+    const tilePreset = await prisma.tilePreset.create({ data: { ...data, organizationId } });
     res.status(201).json(tilePreset);
   } catch (error) {
     console.error('Error al crear preset de loseta:', error);
@@ -57,14 +68,14 @@ export const createTilePreset = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getTilePresets = async (req: Request, res: Response) => {
+export const getTilePresets = async (req: AuthRequest, res: Response) => {
   try {
+    const orgId = req.user?.orgId || null;
     const tilePresets = await prisma.tilePreset.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: catalogVisibilityWhere(orgId),
+      orderBy: { createdAt: 'desc' },
     });
-    res.json(tilePresets);
+    res.json(sortTenantFirst(tilePresets, orgId));
   } catch (error) {
     console.error('Error al obtener presets de losetas:', error);
     res.status(500).json({ error: 'Error al obtener presets de losetas' });
@@ -74,12 +85,16 @@ export const getTilePresets = async (req: Request, res: Response) => {
 export const updateTilePreset = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    console.log('[TILE UPDATE] ID:', id);
-    console.log('[TILE UPDATE] Body original:', req.body);
+
+    const existing = await prisma.tilePreset.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Preset de loseta no encontrado' });
+    }
+    if (!canWriteCatalogRow(existing, { role: req.user?.role, orgId: req.user?.orgId || null })) {
+      return res.status(403).json({ error: 'No podés modificar un preset de otra organización o del catálogo global' });
+    }
 
     const data = parseFormData(req.body);
-    console.log('[TILE UPDATE] Data parseada:', data);
-
     const tilePreset = await prisma.tilePreset.update({
       where: { id },
       data,
@@ -87,8 +102,6 @@ export const updateTilePreset = async (req: AuthRequest, res: Response) => {
     res.json(tilePreset);
   } catch (error: any) {
     console.error('Error al actualizar preset de loseta:', error);
-    console.error('Error message:', error?.message);
-    console.error('Error stack:', error?.stack);
     res.status(500).json({
       error: 'Error al actualizar preset de loseta',
       details: error?.message
@@ -99,9 +112,16 @@ export const updateTilePreset = async (req: AuthRequest, res: Response) => {
 export const deleteTilePreset = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.tilePreset.delete({
-      where: { id },
-    });
+
+    const existing = await prisma.tilePreset.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Preset de loseta no encontrado' });
+    }
+    if (!canWriteCatalogRow(existing, { role: req.user?.role, orgId: req.user?.orgId || null })) {
+      return res.status(403).json({ error: 'No podés eliminar un preset de otra organización o del catálogo global' });
+    }
+
+    await prisma.tilePreset.delete({ where: { id } });
     res.json({ message: 'Preset de loseta eliminado exitosamente' });
   } catch (error) {
     console.error('Error al eliminar preset de loseta:', error);

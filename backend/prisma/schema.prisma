@@ -85,6 +85,11 @@ model Organization {
   crews       Crew[]
   conversations Conversation[]
   projectAccesses ProjectAccess[]
+  tilePresets TilePreset[]
+  accessoryPresets AccessoryPreset[]
+  equipmentPresets EquipmentPreset[]
+  constructionMaterialPresets ConstructionMaterialPreset[]
+  plumbingItems PlumbingItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -508,8 +513,14 @@ model PlumbingItem {
   additionalImages String[] @default([])  // URLs de imágenes adicionales
   catalogPage String?              // Página del catálogo de donde viene
 
+  // Tenancy: null = catálogo global/base compartido; con valor = catálogo propio del tenant
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 enum PlumbingCategory {
@@ -661,8 +672,14 @@ model TilePreset {
   cornersPerTile     Int?
   isForFirstRing     Boolean @default(false)
 
+  // Tenancy: null = catálogo global/base compartido; con valor = catálogo propio del tenant
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 enum TileType {
@@ -689,10 +706,16 @@ model AccessoryPreset {
   additionalImages String[] @default([])  // URLs de imágenes adicionales
   catalogPage String?              // Página del catálogo de donde viene
 
+  // Tenancy: null = catálogo global/base compartido; con valor = catálogo propio del tenant
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   projectAdditionals ProjectAdditional[]
+
+  @@index([organizationId])
 }
 
 enum AccessoryType {
@@ -708,7 +731,7 @@ enum AccessoryType {
 
 model EquipmentPreset {
   id          String         @id @default(uuid())
-  name        String         @unique
+  name        String
   type        EquipmentType
   category    EquipmentCategory @default(OPTIONAL)
   brand       String?
@@ -739,6 +762,10 @@ model EquipmentPreset {
   recommendedPumpModel String?   // Modelo de bomba recomendado para filtros
   recommendedFilterModel String? // Modelo de filtro recomendado para bombas
 
+  // Tenancy: null = catálogo global/base compartido; con valor = catálogo propio del tenant
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   isActive    Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -746,6 +773,10 @@ model EquipmentPreset {
   projectAdditionals ProjectAdditional[]
   defaultPumpForPresets PoolPreset[] @relation("PoolPresetDefaultPump")
   defaultFilterForPresets PoolPreset[] @relation("PoolPresetDefaultFilter")
+
+  // El nombre es único por organización (los globales comparten organizationId NULL)
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 enum EquipmentType {
@@ -785,10 +816,16 @@ model ConstructionMaterialPreset {
   additionalImages String[] @default([])  // URLs de imágenes adicionales
   catalogPage String?              // Página del catálogo de donde viene
 
+  // Tenancy: null = catálogo global/base compartido; con valor = catálogo propio del tenant
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   projectAdditionals ProjectAdditional[]
+
+  @@index([organizationId])
 }
 
 enum MaterialType {

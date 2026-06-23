@@ -5,17 +5,17 @@ import {
   updateTilePreset,
   deleteTilePreset,
 } from '../controllers/tilePresetController';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
+import { canManageCatalog } from '../middleware/permissions';
 
 const router = express.Router();
 
-router.get('/', getTilePresets);
-
+// Todas las rutas requieren autenticación: el catálogo se filtra según el tenant.
 router.use(authenticate);
-router.use(isAdmin);
 
-router.post('/', createTilePreset);
-router.put('/:id', updateTilePreset);
-router.delete('/:id', deleteTilePreset);
+router.get('/', getTilePresets);
+router.post('/', canManageCatalog, createTilePreset);
+router.put('/:id', canManageCatalog, updateTilePreset);
+router.delete('/:id', canManageCatalog, deleteTilePreset);
 
 export default router;

@@ -14,6 +14,7 @@ import {
   ElectricalConfig,
   generateElectricalReport
 } from '../utils/electricalCalculations';
+import { catalogVisibilityWhere, sortTenantFirst } from '../utils/catalogScope';
 
 const prisma = new PrismaClient();
 
@@ -50,10 +51,13 @@ export const getProfessionalCalculations = async (req: Request, res: Response) =
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    // Obtener todos los equipos disponibles
-    const allEquipment = await prisma.equipmentPreset.findMany({
-      where: { isActive: true }
-    });
+    // Equipos visibles para el tenant del proyecto: catálogo propio + global.
+    const allEquipment = sortTenantFirst(
+      await prisma.equipmentPreset.findMany({
+        where: { AND: [catalogVisibilityWhere(project.organizationId), { isActive: true }] }
+      }),
+      project.organizationId,
+    );
 
     // Configuración eléctrica
     const electricalConfig: Partial<ElectricalConfig> = {

@@ -1,9 +1,31 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
+import { canManageOrganization } from '../utils/projectAccess';
 
 /**
  * Middleware para verificar permisos basados en roles
  */
+
+/**
+ * Permite gestionar el catálogo del tenant: SUPERADMIN/ADMIN de plataforma o
+ * el OWNER/ADMIN de la organización actual. Habilita que cada tenant administre
+ * su propio catálogo (precios propios) sin necesidad de rol de plataforma.
+ */
+export const canManageCatalog = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const allowed = await canManageOrganization({
+    userId: req.user?.userId,
+    orgId: req.user?.orgId || null,
+    role: req.user?.role,
+  });
+
+  if (!allowed) {
+    return res.status(403).json({
+      error: 'No tenés permiso para gestionar el catálogo de tu organización.',
+    });
+  }
+
+  next();
+};
 
 export const isSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
   if (req.user?.role !== 'SUPERADMIN') {

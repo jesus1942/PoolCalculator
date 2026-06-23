@@ -5,17 +5,17 @@ import {
   updateConstructionMaterial,
   deleteConstructionMaterial,
 } from '../controllers/constructionMaterialController';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
+import { canManageCatalog } from '../middleware/permissions';
 
 const router = express.Router();
 
-router.get('/', getConstructionMaterials);
-
+// Todas las rutas requieren autenticación: el catálogo se filtra según el tenant.
 router.use(authenticate);
-router.use(isAdmin);
 
-router.post('/', createConstructionMaterial);
-router.put('/:id', updateConstructionMaterial);
-router.delete('/:id', deleteConstructionMaterial);
+router.get('/', getConstructionMaterials);
+router.post('/', canManageCatalog, createConstructionMaterial);
+router.put('/:id', canManageCatalog, updateConstructionMaterial);
+router.delete('/:id', canManageCatalog, deleteConstructionMaterial);
 
 export default router;
