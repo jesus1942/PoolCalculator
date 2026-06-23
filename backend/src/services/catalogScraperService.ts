@@ -61,7 +61,9 @@ export const catalogScraperService = {
         timeout: 30000
       });
 
-      const contentType = response.headers['content-type'] || '';
+      // El header puede venir tipado como string | string[] | number según axios;
+      // lo normalizamos a string para poder inspeccionarlo.
+      const contentType = String(response.headers['content-type'] || '');
       let pools: ScrapedPool[] = [];
 
       if (contentType.includes('text/html')) {
