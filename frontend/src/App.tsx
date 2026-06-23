@@ -143,6 +143,9 @@ function App() {
               </RoleRoute>
             } />
           </Route>
+
+          {/* Cualquier ruta desconocida vuelve al inicio en vez de quedar en blanco */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

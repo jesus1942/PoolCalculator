@@ -99,22 +99,39 @@ console.log('[INIT] Variables de entorno cargadas');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configurar CORS para permitir acceso desde ngrok y localhost
+// CORS con allowlist por entorno. Configurá ALLOWED_ORIGINS en producción como
+// lista separada por comas (ej: "https://poolcalculator.com,https://app.poolcalculator.com").
+// Mientras ALLOWED_ORIGINS no esté seteada se mantiene el comportamiento permisivo
+// (con aviso en logs) para no romper el deploy actual antes de configurarla.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const hasAllowlist = allowedOrigins.length > 0;
+if (!hasAllowlist) {
+  console.warn('[CONFIG] ALLOWED_ORIGINS no definido: CORS permisivo (refleja cualquier origen). Configuralo para restringir en producción.');
+}
+
+const isLocalOrigin = (origin: string) =>
+  origin.includes('localhost') ||
+  origin.includes('127.0.0.1') ||
+  origin.includes('ngrok');
+
 app.use(cors({
   origin: function(origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl)
+    // Permitir requests sin origin (apps móviles, curl, same-origin server-to-server)
     if (!origin) return callback(null, true);
 
-    // Permitir localhost y ngrok
-    if (
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1') ||
-      origin.includes('ngrok')
-    ) {
-      return callback(null, true);
-    }
+    // localhost / 127.0.0.1 / ngrok siempre habilitados (desarrollo y túneles)
+    if (isLocalOrigin(origin)) return callback(null, true);
 
-    return callback(null, true); // Permitir todos en desarrollo
+    // Sin allowlist configurada: permisivo (transición). Con allowlist: estricto.
+    if (!hasAllowlist) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    return callback(new Error(`Origen no permitido por CORS: ${origin}`));
   },
   credentials: true
 }));

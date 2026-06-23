@@ -97,20 +97,16 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    console.log('🔐 [AUTH] Intento de login:', req.body.email);
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
-    console.log('🔍 [AUTH] Usuario encontrado:', user ? `✅ ${user.email}` : '❌ No existe');
 
     if (!user) {
-      console.log('❌ [AUTH] Login fallido: usuario no encontrado');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     // Verificar si es usuario de OAuth (no tiene password)
     if (user.provider === 'GOOGLE' && !user.password) {
-      console.log('❌ [AUTH] Login fallido: usuario de Google OAuth');
       return res.status(400).json({
         error: 'Esta cuenta usa inicio de sesión con Google. Por favor usa el botón de Google.',
       });
@@ -118,21 +114,17 @@ export const login = async (req: Request, res: Response) => {
 
     // Verificar que tenga password
     if (!user.password) {
-      console.log('❌ [AUTH] Login fallido: sin contraseña');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
-    console.log('🔑 [AUTH] Validación contraseña:', validPassword ? '✅ Correcta' : '❌ Incorrecta');
 
     if (!validPassword) {
-      console.log('❌ [AUTH] Login fallido: contraseña incorrecta');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     const orgId = await ensureCurrentOrganization(user.id, user.name);
     const token = generateToken(user.id, user.email, user.role, orgId);
-    console.log('✅ [AUTH] Login exitoso:', user.email, '| Rol:', user.role);
 
     res.json({
       message: 'Login exitoso',
