@@ -8,7 +8,11 @@ export const createOrUpdateShare = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const { showCosts, showDetails, expiresAt, clientUsername, clientPassword } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
 
     // Verificar que el proyecto pertenece al usuario
     const project = await prisma.project.findFirst({
@@ -83,7 +87,11 @@ export const createOrUpdateShare = async (req: Request, res: Response) => {
 export const getShareConfig = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const userId = (req as any).userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
 
     // Verificar que el proyecto pertenece al usuario
     const project = await prisma.project.findFirst({
@@ -109,7 +117,11 @@ export const getShareConfig = async (req: Request, res: Response) => {
 export const deactivateShare = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const userId = (req as any).userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
 
     // Verificar que el proyecto pertenece al usuario
     const project = await prisma.project.findFirst({
@@ -361,7 +373,11 @@ export const toggleUpdateVisibility = async (req: Request, res: Response) => {
   try {
     const { updateId } = req.params;
     const { isPublic } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
 
     // Verificar que la actualización pertenece a un proyecto del usuario
     const update = await prisma.projectUpdate.findUnique({
