@@ -12,11 +12,101 @@ import {
 import {
   calculateElectricalSystem,
   ElectricalConfig,
+  ElectricalSystemResult,
   generateElectricalReport
 } from '../utils/electricalCalculations';
 import { catalogVisibilityWhere, sortTenantFirst } from '../utils/catalogScope';
 
 const prisma = new PrismaClient();
+
+/**
+ * El dropdown del frontend ofrece tipos de instalación (TRAY/DIRECT/AIR) que el
+ * motor de cálculo no conoce. Sin normalizar, INSTALLATION_FACTORS[tipo] da
+ * undefined y la corriente ajustada termina en NaN. Mapeamos a los 3 tipos
+ * soportados por el cálculo.
+ */
+function normalizeInstallationType(raw: unknown): ElectricalConfig['installationType'] {
+  switch (String(raw).toUpperCase()) {
+    case 'AERIAL':
+    case 'AIR':
+    case 'TRAY':
+      return 'AERIAL';
+    case 'BURIED':
+    case 'DIRECT':
+      return 'BURIED';
+    case 'CONDUIT':
+    default:
+      return 'CONDUIT';
+  }
+}
+
+/**
+ * Adapta el resultado del motor de cálculo (ElectricalSystemResult) al contrato
+ * plano que consume el frontend (interface ElectricalAnalysis). Sin esta
+ * traducción el panel siempre mostraba "No hay datos de análisis eléctrico".
+ */
+function toElectricalAnalysisDTO(
+  projectId: string,
+  config: ElectricalConfig,
+  result: ElectricalSystemResult
+) {
+  // 220V monofásico (fase+neutro = 2 polos); 380V trifásico (3 fases + neutro).
+  const isThreePhase = config.voltage >= 380;
+  const phase = isThreePhase ? 3 : 1;
+
+  return {
+    projectId,
+    totalInstalledPower: result.totalPowerInstalled,
+    totalDemandPower: result.totalPowerDemand,
+    totalCurrent: result.totalCurrent,
+    voltage: config.voltage,
+    distanceToPanel: config.distanceToPanel,
+    cable: {
+      phase,
+      crossSection: result.cable.section,
+      maxCurrent: result.cable.current,
+      voltageDrop: result.cable.voltageDrop,
+      voltageDropPercent: result.cable.voltageDropPercent,
+      isValid: result.cable.acceptable,
+      warning: result.cable.recommendation
+    },
+    breaker: {
+      type: 'BREAKER' as const,
+      rating: result.protection.breaker,
+      poles: isThreePhase ? 3 : 2,
+      breakingCapacity: 6 // kA típico residencial
+    },
+    rcd: {
+      type: 'RCD' as const,
+      rating: result.protection.rcd,
+      poles: isThreePhase ? 4 : 2,
+      leakageCurrent: result.protection.rcdSensitivity // 30mA obligatorio en piscinas
+    },
+    loads: result.loads.map(load => {
+      const totalPower = load.power * load.quantity;
+      // Corriente del propio circuito de la carga (ej: 12V para luces), no la
+      // del tablero, para que potencia/voltaje/corriente cierren por fila.
+      const loadVoltage = load.voltage || config.voltage;
+      const current = totalPower / (loadVoltage * load.powerFactor * load.efficiency);
+      return {
+        name: load.name,
+        type: load.type,
+        power: totalPower,
+        voltage: load.voltage,
+        current,
+        powerFactor: load.powerFactor
+      };
+    }),
+    operatingCost: {
+      dailyCost: result.operatingCost.dailyCost,
+      monthlyCost: result.operatingCost.monthlyCost,
+      annualCost: result.operatingCost.annualCost,
+      electricityCostPerKwh: config.electricityCostPerKwh
+    },
+    warnings: result.warnings,
+    errors: result.errors
+  };
+}
 
 /**
  * GET /api/projects/:projectId/professional-calculations
@@ -221,7 +311,8 @@ export const getElectricalAnalysis = async (req: Request, res: Response) => {
       distanceToPanel = 10,
       voltage = 220,
       installationType = 'CONDUIT',
-      ambientTemp = 25
+      ambientTemp = 25,
+      electricityCostPerKwh = 50
     } = req.query;
 
     const project = await prisma.project.findUnique({
@@ -243,10 +334,10 @@ export const getElectricalAnalysis = async (req: Request, res: Response) => {
     const electricalConfig: ElectricalConfig = {
       distanceToPanel: Number(distanceToPanel),
       voltage: Number(voltage),
-      installationType: installationType as 'AERIAL' | 'BURIED' | 'CONDUIT',
+      installationType: normalizeInstallationType(installationType),
       ambientTemp: Number(ambientTemp),
       maxVoltageDrop: 3,
-      electricityCostPerKwh: 50
+      electricityCostPerKwh: Number(electricityCostPerKwh)
     };
 
     const electricalAnalysis = calculateElectricalSystem(
@@ -254,12 +345,10 @@ export const getElectricalAnalysis = async (req: Request, res: Response) => {
       electricalConfig
     );
 
-    res.json({
-      projectId: project.id,
-      projectName: project.name,
-      parameters: electricalConfig,
-      analysis: electricalAnalysis
-    });
+    // El frontend (ElectricalAnalysis) consume un objeto PLANO con nombres de
+    // campo propios. Mapeamos el resultado del cálculo a ese contrato para que
+    // el panel pueda renderizar los datos.
+    res.json(toElectricalAnalysisDTO(project.id, electricalConfig, electricalAnalysis));
   } catch (error) {
     console.error('Error en getElectricalAnalysis:', error);
     res.status(500).json({
