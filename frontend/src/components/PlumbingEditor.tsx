@@ -29,6 +29,59 @@ type HydraulicReferenceSide = 'north' | 'south' | 'east' | 'west';
 type HydraulicPointSide = HydraulicReferenceSide | 'internal_wall';
 type HydraulicPointKind = 'skimmer' | 'return' | 'hydrojet' | 'hydrojet_suction' | 'vacuum' | 'bottom_drain';
 
+type PipeSystemOption = 'PVC' | 'TERMOFUSION' | 'ELECTROFUSION';
+
+interface InstallationFactorsDraft {
+  craneLiftOverStructure: boolean;
+  confinedEquipmentSpace: boolean;
+  hydrojetDedicatedPump: boolean;
+}
+
+const PIPE_SYSTEM_OPTIONS: Array<{ id: PipeSystemOption; label: string; description: string; laborNote: string }> = [
+  {
+    id: 'PVC',
+    label: 'PVC pegado',
+    description: 'Uniones con adhesivo. Sistema estándar de la instalación base.',
+    laborNote: 'Mano de obra hidráulica base',
+  },
+  {
+    id: 'TERMOFUSION',
+    label: 'Termofusión',
+    description: 'PP tipo Acqua System. Cada unión se suelda con termofusora.',
+    laborNote: '+35% de mano de obra hidráulica',
+  },
+  {
+    id: 'ELECTROFUSION',
+    label: 'Electrofusión',
+    description: 'PP/PE con accesorios electrosoldables y equipo de electrofusión.',
+    laborNote: '+50% de mano de obra hidráulica',
+  },
+];
+
+const getProjectPipeSystemLabel = (project: Project) => {
+  const system = (project?.plumbingConfig as any)?.pipeSystem;
+  const option = PIPE_SYSTEM_OPTIONS.find((item) => item.id === system);
+  return (option || PIPE_SYSTEM_OPTIONS[0]).label;
+};
+
+const INSTALLATION_FACTOR_OPTIONS: Array<{ id: keyof InstallationFactorsDraft; label: string; description: string }> = [
+  {
+    id: 'craneLiftOverStructure',
+    label: 'Izaje con grúa sobre vivienda',
+    description: 'El casco entra por sobre la casa: maniobra riesgosa a cargo del instalador (la grúa no está incluida).',
+  },
+  {
+    id: 'confinedEquipmentSpace',
+    label: 'Equipos en espacio reducido',
+    description: 'La cabecera/equipos deben montarse en un espacio predeterminado con accesos limitados.',
+  },
+  {
+    id: 'hydrojetDedicatedPump',
+    label: 'Bomba dedicada para hidrojets',
+    description: 'El circuito de hidromasaje lleva su propia bomba (ej: 2 HP adicional).',
+  },
+];
+
 interface HydraulicPointDraft {
   id: string;
   kind: HydraulicPointKind;
@@ -1528,7 +1581,7 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.fillStyle = '#e2e8f0'; ctx.font = `700 15px ${MONO}`; ctx.textAlign = 'left';
     ctx.fillText('PLANTA TÉCNICA HIDRÁULICA', drawLeft + 4, 38);
     ctx.fillStyle = '#64748b'; ctx.font = `11px ${MONO}`;
-    ctx.fillText(`Vista superior · Piscina ${poolLength.toFixed(2)} m × ${poolWidth.toFixed(2)} m · Equipo: ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} (${distanceToEquipment.toFixed(2)} m)`, drawLeft + 4, 57);
+    ctx.fillText(`Vista superior · Piscina ${poolLength.toFixed(2)} m × ${poolWidth.toFixed(2)} m · Equipo: ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} (${distanceToEquipment.toFixed(2)} m) · Cañería: ${getProjectPipeSystemLabel(project).toUpperCase()}`, drawLeft + 4, 57);
     ctx.fillStyle = '#1e3a5f';
     ctx.beginPath(); ctx.roundRect(W - 110, 18, 86, 36, 6); ctx.fill();
     ctx.fillStyle = '#93c5fd'; ctx.font = `700 10px ${MONO}`; ctx.textAlign = 'center';
@@ -1777,7 +1830,7 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.fillStyle = '#64748b'; ctx.font = `700 9px ${MONO}`;
     ctx.fillText('REF. EQUIPO:', drawLeft + 4, TBY + 27);
     ctx.fillStyle = '#cbd5e1'; ctx.font = `9px ${MONO}`;
-    ctx.fillText(`Lateral ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} · ${distanceToEquipment.toFixed(2)} m`, drawLeft + 62, TBY + 27);
+    ctx.fillText(`Lateral ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} · ${distanceToEquipment.toFixed(2)} m · ${getProjectPipeSystemLabel(project).toUpperCase()}`, drawLeft + 62, TBY + 27);
     ctx.fillStyle = '#64748b'; ctx.font = `700 9px ${MONO}`;
     ctx.fillText('PUNTOS:', drawLeft + 4, TBY + 41);
     ctx.fillStyle = '#cbd5e1'; ctx.font = `9px ${MONO}`;
@@ -2838,6 +2891,12 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
   const [plumbingItems, setPlumbingItems] = useState<PlumbingItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [distanceToEquipment, setDistanceToEquipment] = useState(5);
+  const [pipeSystem, setPipeSystem] = useState<PipeSystemOption>('PVC');
+  const [installationFactors, setInstallationFactors] = useState<InstallationFactorsDraft>({
+    craneLiftOverStructure: false,
+    confinedEquipmentSpace: false,
+    hydrojetDedicatedPump: false,
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [pipeCalculation, setPipeCalculation] = useState<PlumbingCalculationResult | null>(null);
@@ -3077,6 +3136,16 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
       if (config.hydraulicLayout) {
         setHydraulicLayout(ensureHydraulicLayout(config.hydraulicLayout));
       }
+      if (config.pipeSystem === 'PVC' || config.pipeSystem === 'TERMOFUSION' || config.pipeSystem === 'ELECTROFUSION') {
+        setPipeSystem(config.pipeSystem);
+      }
+      if (config.installationFactors && typeof config.installationFactors === 'object') {
+        setInstallationFactors({
+          craneLiftOverStructure: Boolean(config.installationFactors.craneLiftOverStructure),
+          confinedEquipmentSpace: Boolean(config.installationFactors.confinedEquipmentSpace),
+          hydrojetDedicatedPump: Boolean(config.installationFactors.hydrojetDedicatedPump),
+        });
+      }
     }
     hasLoadedConfigRef.current = true;
   };
@@ -3159,6 +3228,8 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
       distanceToEquipment,
       selectedItems: calculationMode === 'automatic' ? getAutomaticSelection : selectedItems,
       hydraulicLayout,
+      pipeSystem,
+      installationFactors,
     };
     onSave(config);
   };
@@ -3180,8 +3251,42 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
       distanceToEquipment,
       selectedItems: calculationMode === 'automatic' ? getAutomaticSelection : selectedItems,
       hydraulicLayout,
+      pipeSystem,
+      installationFactors,
     };
-  }, [calculationMode, distanceToEquipment, getAutomaticSelection, hydraulicLayout, selectedItems]);
+  }, [calculationMode, distanceToEquipment, getAutomaticSelection, hydraulicLayout, selectedItems, pipeSystem, installationFactors]);
+
+  // Persistir automáticamente los cambios de sistema de unión y factores de obra,
+  // que impactan directo en la mano de obra calculada por el backend
+  const persistedInstallationFingerprint = React.useMemo(() => {
+    const config = (project.plumbingConfig && typeof project.plumbingConfig === 'object')
+      ? (project.plumbingConfig as any)
+      : {};
+    return JSON.stringify({
+      pipeSystem: config.pipeSystem || 'PVC',
+      installationFactors: {
+        craneLiftOverStructure: Boolean(config.installationFactors?.craneLiftOverStructure),
+        confinedEquipmentSpace: Boolean(config.installationFactors?.confinedEquipmentSpace),
+        hydrojetDedicatedPump: Boolean(config.installationFactors?.hydrojetDedicatedPump),
+      },
+    });
+  }, [project.plumbingConfig]);
+
+  React.useEffect(() => {
+    if (!onAutoSave) return;
+    if (!hasLoadedConfigRef.current) return;
+
+    const nextFingerprint = JSON.stringify({ pipeSystem, installationFactors });
+    if (nextFingerprint === persistedInstallationFingerprint) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      onAutoSave(latestHydraulicConfigRef.current);
+    }, 400);
+  }, [onAutoSave, pipeSystem, installationFactors, persistedInstallationFingerprint]);
 
   React.useEffect(() => () => {
     if (autoSaveTimeoutRef.current) {
@@ -3267,6 +3372,63 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
           <p className="text-sm mt-1 opacity-90">Selecciona items específicos del catálogo</p>
         </button>
       </div>
+
+      <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
+        <h3 className="text-xl font-semibold text-white mb-1">Sistema de Unión de Cañerías</h3>
+        <p className="text-sm text-zinc-400 mb-4">
+          La instalación base está tarifada para PVC pegado. Los sistemas por fusión suman mano de obra hidráulica y se recalculan automáticamente en las tareas del proyecto.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {PIPE_SYSTEM_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setPipeSystem(option.id)}
+              className={`text-left p-4 rounded-xl border transition-all ${
+                pipeSystem === option.id
+                  ? 'bg-zinc-100 text-zinc-950 border-zinc-100 shadow-md'
+                  : 'bg-zinc-900 text-zinc-100 border-zinc-800 hover:border-zinc-600'
+              }`}
+            >
+              <p className="font-semibold">{option.label}</p>
+              <p className={`text-sm mt-1 ${pipeSystem === option.id ? 'text-zinc-700' : 'text-zinc-400'}`}>
+                {option.description}
+              </p>
+              <p className={`text-xs mt-2 font-medium ${pipeSystem === option.id ? 'text-zinc-800' : 'text-zinc-300'}`}>
+                {option.laborNote}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <h4 className="text-base font-semibold text-white mb-2">Condiciones de obra</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {INSTALLATION_FACTOR_OPTIONS.map((option) => (
+            <label
+              key={option.id}
+              className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                installationFactors[option.id]
+                  ? 'bg-zinc-900 border-zinc-500'
+                  : 'bg-zinc-900 border-zinc-800 hover:border-zinc-600'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={installationFactors[option.id]}
+                onChange={(event) =>
+                  setInstallationFactors((prev) => ({ ...prev, [option.id]: event.target.checked }))
+                }
+                className="mt-1 h-4 w-4 accent-zinc-100"
+              />
+              <span>
+                <span className="block font-medium text-zinc-100">{option.label}</span>
+                <span className="block text-sm text-zinc-400 mt-1">{option.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </Card>
 
       <Card className="bg-zinc-950 border border-zinc-800 text-zinc-100">
         <h3 className="text-xl font-semibold text-white mb-4">Información del Sistema Hidráulico</h3>

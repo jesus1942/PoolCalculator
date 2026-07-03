@@ -7,6 +7,7 @@ import { EquipmentComparison } from '@/components/EquipmentComparison';
 import { professionalCalculationsService } from '@/services/professionalCalculationsService';
 import { productImageService } from '@/services/productImageService';
 import { calculateProjectFinancials, getAdditionalName, summarizeHydraulicSystem } from '@/utils/projectCosting';
+import { getProjectPipeSystemLabel } from '@/utils/commercialInstallationPricing';
 import { HdDroplet, HdSettings, HdLayers } from '@/components/ui/HandDrawnIcons';
 import {
   HdDollarSign,
@@ -811,6 +812,9 @@ export const ImprovedOverview: React.FC<ImprovedOverviewProps> = ({
             <div className="flex items-center gap-2 mb-4">
               <HdSettings className="text-zinc-200" size={24} />
               <h3 className="text-lg font-bold text-white">Instalación Hidráulica</h3>
+              <span className="ml-auto text-xs font-medium px-2 py-1 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300">
+                {getProjectPipeSystemLabel(project)}
+              </span>
             </div>
             {plumbingConfig.distanceToEquipment && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 mb-3">

@@ -14,7 +14,7 @@ import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { calculateProjectFinancials, getAdditionalName, getProjectAdditionals, isBaseModelAdditional, summarizeHydraulicSystem } from '@/utils/projectCosting';
-import { getCommercialInstallationProfile } from '@/utils/commercialInstallationPricing';
+import { getCommercialInstallationProfile, getInstallationConditionHighlights, getProjectPipeSystemLabel } from '@/utils/commercialInstallationPricing';
 
 interface EnhancedExportManagerProps {
   project: Project;
@@ -851,6 +851,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     volume: `${effectiveProjectSpec.volume.toFixed(2)} m³`,
     waterMirrorArea: `${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²`,
     installationTier,
+    pipeSystem: getProjectPipeSystemLabel(project),
     laborCost: formatCurrency(exportInstallationProfile.totalLaborCost),
     materialCost: formatCurrency(computedCosts.totalMaterialCost),
     grandTotal: formatCurrency(computedCosts.grandTotal),
@@ -883,8 +884,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     .filter((item): item is string => Boolean(item));
 
   const automaticScopeLines = [
+    `Cañería hidráulica: ${getProjectPipeSystemLabel(project)}.`,
     automaticAccessorySummary ? `Accesorios base: ${automaticAccessorySummary}.` : '',
     projectStageNames.length > 0 ? `Etapas incluidas: ${projectStageNames.join(', ')}.` : '',
+    ...getInstallationConditionHighlights(project).map((line) => `${line}.`),
   ].filter(Boolean);
 
   const interpolateProjectText = (value: string) =>
@@ -2172,6 +2175,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ${basePlumbingItems.length > 0 ? `
       <div class="section">
         <h2>Instalación Hidráulica</h2>
+        <p style="font-size: 13px; color: #6b7280; margin: 0 0 10px;">Sistema de unión: ${getProjectPipeSystemLabel(project)}</p>
         <table class="materials-table">
           <thead>
             <tr><th>Item</th><th>Cantidad</th><th>Especificación</th></tr>
