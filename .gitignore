@@ -89,3 +89,7 @@ mobile/
 
 # Claude Code internal
 .claude/
+
+# Python
+__pycache__/
+*.pyc
