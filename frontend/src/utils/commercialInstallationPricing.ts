@@ -110,10 +110,52 @@ export const getCommercialBaseInstallationLabor = (project: Project | any) => {
   };
 };
 
+export const getProjectPipeSystemLabel = (project: Project | any): string => {
+  const config = (project as any)?.plumbingConfig;
+  const pipeSystem = String((config && typeof config === 'object' ? config.pipeSystem : '') || 'PVC').toUpperCase();
+  if (pipeSystem === 'TERMOFUSION') return 'Termofusión';
+  if (pipeSystem === 'ELECTROFUSION') return 'Electrofusión';
+  return 'PVC pegado';
+};
+
+/**
+ * Líneas de alcance derivadas del sistema de unión de cañerías y las
+ * condiciones de obra configuradas en plumbingConfig, para que la propuesta
+ * económica refleje lo que realmente se cotiza (termofusión, izaje, etc.).
+ */
+export const getInstallationConditionHighlights = (project: Project | any): string[] => {
+  const config = (project as any)?.plumbingConfig;
+  const plumbingConfig = config && typeof config === 'object' ? config : {};
+  const factors = plumbingConfig.installationFactors && typeof plumbingConfig.installationFactors === 'object'
+    ? plumbingConfig.installationFactors
+    : {};
+  const lines: string[] = [];
+
+  const pipeSystem = String(plumbingConfig.pipeSystem || 'PVC').toUpperCase();
+  if (pipeSystem === 'TERMOFUSION') {
+    lines.push('Cañería hidráulica por termofusión (PP, uniones soldadas con termofusora)');
+  } else if (pipeSystem === 'ELECTROFUSION') {
+    lines.push('Cañería hidráulica por electrofusión (accesorios electrosoldables)');
+  }
+
+  if (factors.craneLiftOverStructure) {
+    lines.push('Coordinación y responsabilidad de la maniobra de izaje del casco con grúa sobre la vivienda');
+  }
+  if (factors.confinedEquipmentSpace) {
+    lines.push('Montaje de equipos adaptado a espacio reducido predeterminado');
+  }
+  if (factors.hydrojetDedicatedPump) {
+    lines.push('Instalación de bomba dedicada para el circuito de hidrojets');
+  }
+
+  return lines;
+};
+
 export const getCommercialInstallationProfile = (project: Project | any) => {
   const basePricing = getCommercialBaseInstallationLabor(project);
   const includesHeating = hasHeatingInstallation(project);
   const heatingLaborCost = includesHeating ? HEATING_INSTALLATION_SURCHARGE : 0;
+  const conditionHighlights = getInstallationConditionHighlights(project);
 
   return {
     baseLaborCost: basePricing.amount,
@@ -122,7 +164,7 @@ export const getCommercialInstallationProfile = (project: Project | any) => {
     includesHeating,
     pricingSource: basePricing.source,
     pricingRule: basePricing.rule,
-    baseScope: BASE_INSTALLATION_SCOPE,
+    baseScope: [...BASE_INSTALLATION_SCOPE, ...conditionHighlights],
     exclusions: BASE_INSTALLATION_EXCLUSIONS,
     heatingExtras: includesHeating ? HEATING_INSTALLATION_EXTRAS : [],
   };

@@ -9,7 +9,7 @@ import {
 import { calculateTileMaterials } from '../utils/tileCalculations';
 import { calculateBedMaterials } from '../utils/bedCalculations';
 import { generateCatalogInstallationTasks, generateDefaultTasks } from '../utils/taskGenerator';
-import { installationFactorsEqual, resolveInstallationFactors } from '../utils/installationFactors';
+import { getPipeSystemInfo, installationFactorsEqual, resolveInstallationFactors } from '../utils/installationFactors';
 import { calculateHydraulicSystem } from '../utils/hydraulicCalculations';
 import { calculateElectricalSystem } from '../utils/electricalCalculations';
 import { exec, execFile } from 'child_process';
@@ -313,11 +313,12 @@ const buildProjectExportData = async (project: any, sections?: any) => {
   const sidewalkBaseThicknessCm = calculationSettings?.sidewalkBaseThicknessCm || 10;
   const sidewalkConcreteVolume = ((project.sidewalkArea || 0) * sidewalkBaseThicknessCm) / 100;
 
+  const projectPipeSystem = getPipeSystemInfo(resolveInstallationFactors(plumbingConfig).pipeSystem);
   const plumbingItems = selectedPlumbingItems.map((item: any) => ({
     name: item.itemName || '',
     diameter: item.diameter || '-',
     quantity: item.quantity || 0,
-    type: item.type || 'PVC',
+    type: item.type || projectPipeSystem.shortLabel,
     observations: item.observations || '-',
   }));
 
@@ -358,6 +359,11 @@ const buildProjectExportData = async (project: any, sections?: any) => {
     address: project.location || '-',
     date: new Date().toLocaleDateString('es-AR'),
     responsible: 'Jesús Olguin',
+    pipeSystem: {
+      id: projectPipeSystem.id,
+      label: projectPipeSystem.label,
+      shortLabel: projectPipeSystem.shortLabel,
+    },
     pool: {
       name: project.poolPreset?.name || 'Piscina',
       length: project.poolPreset?.length || 0,

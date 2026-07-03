@@ -58,6 +58,12 @@ const PIPE_SYSTEM_OPTIONS: Array<{ id: PipeSystemOption; label: string; descript
   },
 ];
 
+const getProjectPipeSystemLabel = (project: Project) => {
+  const system = (project?.plumbingConfig as any)?.pipeSystem;
+  const option = PIPE_SYSTEM_OPTIONS.find((item) => item.id === system);
+  return (option || PIPE_SYSTEM_OPTIONS[0]).label;
+};
+
 const INSTALLATION_FACTOR_OPTIONS: Array<{ id: keyof InstallationFactorsDraft; label: string; description: string }> = [
   {
     id: 'craneLiftOverStructure',
@@ -1575,7 +1581,7 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.fillStyle = '#e2e8f0'; ctx.font = `700 15px ${MONO}`; ctx.textAlign = 'left';
     ctx.fillText('PLANTA TÉCNICA HIDRÁULICA', drawLeft + 4, 38);
     ctx.fillStyle = '#64748b'; ctx.font = `11px ${MONO}`;
-    ctx.fillText(`Vista superior · Piscina ${poolLength.toFixed(2)} m × ${poolWidth.toFixed(2)} m · Equipo: ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} (${distanceToEquipment.toFixed(2)} m)`, drawLeft + 4, 57);
+    ctx.fillText(`Vista superior · Piscina ${poolLength.toFixed(2)} m × ${poolWidth.toFixed(2)} m · Equipo: ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} (${distanceToEquipment.toFixed(2)} m) · Cañería: ${getProjectPipeSystemLabel(project).toUpperCase()}`, drawLeft + 4, 57);
     ctx.fillStyle = '#1e3a5f';
     ctx.beginPath(); ctx.roundRect(W - 110, 18, 86, 36, 6); ctx.fill();
     ctx.fillStyle = '#93c5fd'; ctx.font = `700 10px ${MONO}`; ctx.textAlign = 'center';
@@ -1824,7 +1830,7 @@ const HydraulicLayoutPreview: React.FC<{
     ctx.fillStyle = '#64748b'; ctx.font = `700 9px ${MONO}`;
     ctx.fillText('REF. EQUIPO:', drawLeft + 4, TBY + 27);
     ctx.fillStyle = '#cbd5e1'; ctx.font = `9px ${MONO}`;
-    ctx.fillText(`Lateral ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} · ${distanceToEquipment.toFixed(2)} m`, drawLeft + 62, TBY + 27);
+    ctx.fillText(`Lateral ${SIDE_LABELS[hydraulicLayout.referenceSide].toUpperCase()} · ${distanceToEquipment.toFixed(2)} m · ${getProjectPipeSystemLabel(project).toUpperCase()}`, drawLeft + 62, TBY + 27);
     ctx.fillStyle = '#64748b'; ctx.font = `700 9px ${MONO}`;
     ctx.fillText('PUNTOS:', drawLeft + 4, TBY + 41);
     ctx.fillStyle = '#cbd5e1'; ctx.font = `9px ${MONO}`;
