@@ -9,9 +9,6 @@ import { PoolVisualizationCanvas } from '@/components/PoolVisualizationCanvas';
 import { EquipmentWorkspacePreviewShared } from '@/components/hydraulic/EquipmentWorkspacePreview.shared';
 import { HdFileText, HdDownload, HdPrinter, HdDollarSign, HdMessageBubble, HdFileSpreadsheet, HdBriefcase, HdUser, HdSettings } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import QRCode from 'qrcode';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { calculateProjectFinancials, getAdditionalName, getProjectAdditionals, isBaseModelAdditional, summarizeHydraulicSystem } from '@/utils/projectCosting';
 import { getCommercialInstallationProfile, getInstallationConditionHighlights, getProjectPipeSystemLabel } from '@/utils/commercialInstallationPricing';
@@ -3782,21 +3779,30 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // Helper function to get common styles
   const getCommonStyles = () => `
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; background: #f9fafb; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .header { background: #111111; color: white; padding: 30px 40px; text-align: center; }
-    .logo { font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
-    .subtitle { font-size: 16px; opacity: 0.9; }
-    .date { font-size: 13px; opacity: 0.7; margin-top: 10px; }
-    .content { padding: 30px 40px; }
-    .section { margin: 30px 0; page-break-inside: avoid; }
-    .section h2 { color: #111111; border-bottom: 1px solid #d4d4d8; padding-bottom: 10px; margin-bottom: 20px; font-size: 20px; font-weight: 600; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-    .info-item { padding: 15px; background: #fafafa; border-left: 2px solid #d4d4d8; }
+    @page { size: A4; margin: 12mm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; background: #f9fafb; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .container { max-width: 190mm; margin: 0 auto; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { background: #111111; color: white; padding: 26px 34px; text-align: center; }
+    .logo { font-size: 26px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+    .subtitle { font-size: 15px; opacity: 0.9; }
+    .date { font-size: 13px; opacity: 0.7; margin-top: 8px; }
+    .content { padding: 22px 34px; }
+    .section { margin: 18px 0; page-break-inside: avoid; break-inside: avoid; }
+    .section h2 { color: #111111; border-bottom: 1px solid #d4d4d8; padding-bottom: 8px; margin-bottom: 14px; font-size: 18px; font-weight: 600; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+    .info-item { padding: 13px; background: #fafafa; border-left: 2px solid #d4d4d8; page-break-inside: avoid; break-inside: avoid; }
     .info-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-weight: 500; }
     .info-value { font-size: 15px; font-weight: 600; color: #1f2937; }
-    .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280; }
-    @media print { body { background: white; padding: 0; } .container { box-shadow: none; } }
+    .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280; page-break-inside: avoid; break-inside: avoid; }
+    table { page-break-inside: auto; }
+    tr, thead, .subtotal-row, .total-row { page-break-inside: avoid; break-inside: avoid; }
+    thead { display: table-header-group; }
+    h2, h3 { page-break-after: avoid; break-after: avoid; }
+    @media print {
+      html, body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+      .container { box-shadow: none !important; border: 0 !important; max-width: none !important; width: 100% !important; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   `;
 
   const generateWhatsAppMessage = (template: ExportTemplate, sections = selectedSections): string => {
@@ -4264,444 +4270,133 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     URL.revokeObjectURL(url);
   };
 
-  const handlePrint = async (template: ExportTemplate) => {
+  // Documento de impresión: usa el motor nativo del navegador (vectorial, texto
+  // nítido y seleccionable) y respeta los cortes de página CSS (break-inside:
+  // avoid), por lo que nunca corta en el medio de una tarjeta o tabla. Se
+  // imprime dentro de un iframe oculto para no depender de popups.
+  const printTemplateDocument = async (template: ExportTemplate) => {
     const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+
     let cadImageDataUrl = '';
     let poolImageDataUrl = '';
     if (template === 'overview' || template === 'complete') {
       poolImageDataUrl = await getPoolImageDataUrl();
     }
     if (template === 'professional') {
-      const templateSettings = getTemplateSettings('professional', exportSettings);
-      const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
-      if (canvasRef.current) {
-        await nextFrame();
-        try {
-          cadImageDataUrl = canvasRef.current.toDataURL('image/png');
-        } catch (error) {
-          console.warn('No se pudo capturar el plano CAD:', error);
-        }
-      }
+      cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
     }
-    if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
-      await nextFrame();
-      try {
-        cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
-      } catch (error) {
-        console.warn('No se pudo capturar el plano CAD:', error);
-      }
-    }
+
     const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
+
+    // Refuerzo de impresión común a todas las plantillas: A4, sin fondos de
+    // pantalla, colores exactos y cortes limpios entre secciones.
+    const printReinforcementCss = `
+      @page { size: A4; margin: 12mm; }
+      @media print {
+        html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .container { box-shadow: none !important; border: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+        .section, .info-item, .card, .cost-section, .scope-panel, .info-panel,
+        .category-section, .equipment-item, .spec-item, .comparison-card,
+        .custom-block, tr, thead, .subtotal-row, .total-row, .budget-table tr,
+        .materials-table tr, .visual-panel, .accessory-box, img {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        thead { display: table-header-group; }
+        h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+        a { text-decoration: none !important; color: inherit !important; }
+      }
+    `;
+
+    const htmlWithPrintCss = html.includes('</head>')
+      ? html.replace('</head>', `<style>${printReinforcementCss}</style></head>`)
+      : `<style>${printReinforcementCss}</style>${html}`;
+
+    // iframe oculto (evita bloqueadores de popups y no muestra "chrome" del navegador)
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+      // Damos margen para que el diálogo de impresión termine de leer el documento
       setTimeout(() => {
-        printWindow.print();
-      }, 250);
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 1000);
+    };
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      alert('No se pudo preparar el documento para imprimir. Probá de nuevo.');
+      return;
     }
-  };
 
-  const handleExportPDF = async (template: ExportTemplate) => {
-    // Export PDF robusto (A4) con paginado correcto y mejor calidad
-    const mmToPx = (mm: number, dpi = 96) => Math.round((mm / 25.4) * dpi);
-    const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
+    doc.open();
+    doc.write(htmlWithPrintCss);
+    doc.close();
 
-    const waitForImages = async (root: HTMLElement) => {
-      const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+    const win = iframe.contentWindow!;
+
+    const waitForImages = async () => {
+      const imgs = Array.from(doc.images || []);
       await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise<void>((resolve) => {
-            const done = () => resolve();
-            img.addEventListener('load', done, { once: true });
-            img.addEventListener('error', done, { once: true });
-          });
-        })
+        imgs.map((img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              })
+        )
       );
     };
 
-    const extractBodyAndStyles = (fullHtml: string) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(fullHtml, 'text/html');
-      const styleText = Array.from(doc.querySelectorAll('style'))
-        .map((s) => s.textContent || '')
-        .join('\n');
-
-      // Importante: evitamos traer <html>/<body> porque html2canvas se comporta mejor con un wrapper.
-      const bodyHtml = doc.body ? doc.body.innerHTML : fullHtml;
-      return { styleText, bodyHtml, title: doc.title || '' };
-    };
-
-    const createPdfPageShell = (pageWidthPx: number, pagePaddingPx: number) => {
-      const page = document.createElement('div');
-      page.className = 'pdf-page-shell';
-      page.style.width = `${pageWidthPx}px`;
-      page.style.padding = '0';
-      page.style.background = '#ffffff';
-      page.style.color = '#111827';
-      page.style.boxSizing = 'border-box';
-      page.style.overflow = 'hidden';
-
-      const frame = document.createElement('div');
-      frame.className = 'pdf-page-frame';
-      frame.style.background = '#ffffff';
-      frame.style.border = '0';
-      frame.style.borderRadius = '0';
-      frame.style.boxShadow = 'none';
-      frame.style.padding = `${pagePaddingPx}px`;
-      frame.style.overflow = 'hidden';
-      frame.style.boxSizing = 'border-box';
-
-      const content = document.createElement('div');
-      content.className = 'pdf-page-content';
-      content.style.display = 'block';
-
-      frame.appendChild(content);
-      page.appendChild(frame);
-      return page;
-    };
-
-    const getPdfPageContentTarget = (page: HTMLElement) =>
-      (page.querySelector('.pdf-page-content') as HTMLElement | null) || page;
-
-    const collectPdfBlocks = (root: HTMLElement) => {
-      const container = root.querySelector('.container') as HTMLElement | null;
-      if (!container) {
-        return Array.from(root.children) as HTMLElement[];
-      }
-
-      const blocks: HTMLElement[] = [];
-      const header = container.querySelector(':scope > .header') as HTMLElement | null;
-      if (header) blocks.push(header);
-
-      const content = (container.querySelector(':scope > .content') ||
-        container.querySelector(':scope > .content-wrapper')) as HTMLElement | null;
-
-      if (content) {
-        const sectionChildren = Array.from(content.children).filter(
-          (child): child is HTMLElement => child instanceof HTMLElement
-        );
-        if (sectionChildren.length > 0) {
-          blocks.push(...sectionChildren);
-        } else {
-          blocks.push(content);
-        }
-      } else {
-        blocks.push(
-          ...Array.from(container.children).filter(
-            (child): child is HTMLElement => child instanceof HTMLElement && child !== header
-          )
-        );
-      }
-
-      const footer = container.querySelector(':scope > .footer') as HTMLElement | null;
-      if (footer) blocks.push(footer);
-
-      return blocks.filter((block, index, list) => list.indexOf(block) === index);
-    };
-
-    const paginatePdfBlocks = async (
-      root: HTMLElement,
-      pageWidthPx: number,
-      pagePaddingPx: number,
-      maxPageHeightPx: number
-    ) => {
-      const topBlocks = collectPdfBlocks(root);
-      if (topBlocks.length === 0) return [root.cloneNode(true) as HTMLElement];
-
-      const measurementHost = document.createElement('div');
-      measurementHost.style.position = 'fixed';
-      measurementHost.style.left = '0';
-      measurementHost.style.top = '0';
-      measurementHost.style.transform = 'translateX(-300vw)';
-      measurementHost.style.pointerEvents = 'none';
-      measurementHost.style.zIndex = '2147483647';
-      document.body.appendChild(measurementHost);
-
-      const MAX_SPLIT_DEPTH = 3;
-      const queue: Array<{ block: HTMLElement; depth: number }> = topBlocks.map(b => ({ block: b, depth: 0 }));
-
-      const pages: HTMLElement[] = [];
-      let currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
-      measurementHost.appendChild(currentPage);
-      let currentContent = getPdfPageContentTarget(currentPage);
-      let isFirstOnPage = true;
-
-      while (queue.length > 0) {
-        const { block, depth } = queue.shift()!;
-        const clonedBlock = block.cloneNode(true) as HTMLElement;
-        const blockShell = document.createElement('div');
-        blockShell.className = 'pdf-page-block';
-        if (!isFirstOnPage) {
-          blockShell.style.borderTop = '1px solid #e5e7eb';
-          blockShell.style.paddingTop = '18px';
-          blockShell.style.marginTop = '18px';
-        }
-        blockShell.appendChild(clonedBlock);
-        currentContent.appendChild(blockShell);
-        await nextFrame();
-
-        const fitsCurrentPage = currentPage.scrollHeight <= maxPageHeightPx;
-
-        if (fitsCurrentPage) {
-          isFirstOnPage = false;
-          continue;
-        }
-
-        if (!isFirstOnPage) {
-          // Move block to a fresh page
-          currentContent.removeChild(blockShell);
-          pages.push(currentPage.cloneNode(true) as HTMLElement);
-          currentPage = createPdfPageShell(pageWidthPx, pagePaddingPx);
-          measurementHost.replaceChildren(currentPage);
-          currentContent = getPdfPageContentTarget(currentPage);
-          isFirstOnPage = true;
-          queue.unshift({ block, depth });
-          continue;
-        }
-
-        // Block is alone on the page and still too tall — try splitting into children
-        if (depth < MAX_SPLIT_DEPTH) {
-          const children = Array.from(block.children).filter(
-            (c): c is HTMLElement => c instanceof HTMLElement
-          );
-          if (children.length > 1) {
-            currentContent.removeChild(blockShell);
-            queue.unshift(...children.map(c => ({ block: c, depth: depth + 1 })));
-            continue;
-          }
-        }
-
-        // Can't split further — keep it as-is (will be scaled down at render time)
-        isFirstOnPage = false;
-      }
-
-      if (currentContent.children.length > 0) {
-        pages.push(currentPage.cloneNode(true) as HTMLElement);
-      }
-
-      measurementHost.remove();
-      return pages;
-    };
-
-    let wrapper: HTMLDivElement | null = null;
-
     try {
-      // 1) QR
-      const projectUrl = `${window.location.origin}/projects/${project.id}`;
-      const qrDataUrl = await QRCode.toDataURL(projectUrl, {
-        width: 220,
-        margin: 1,
-        color: { dark: '#2563eb', light: '#ffffff' },
+      await new Promise<void>((resolve) => {
+        if (doc.readyState === 'complete') return resolve();
+        win.addEventListener('load', () => resolve(), { once: true });
+        setTimeout(() => resolve(), 1200);
       });
-
-      // 2) Captura de visualización (alta resolución)
-      let poolImageDataUrl = '';
-      if (template === 'complete' || template === 'overview') {
-        poolImageDataUrl = await getPoolImageDataUrl();
-      }
-
-      // 3) Construimos wrapper A4 en px (evita “mm” inconsistentes en html2canvas)
-      const A4_W = mmToPx(190);
-      const A4_PADDING = 16;
-
-      let cadImageDataUrl = '';
-      if (template === 'professional') {
-        const templateSettings = getTemplateSettings('professional', exportSettings);
-        const canvasRef = templateSettings.drawingView === 'planta' ? poolCanvasRef : cadCanvasRef;
-        if (canvasRef.current) {
-          await nextFrame();
-          await nextFrame();
-          try {
-            cadImageDataUrl = canvasRef.current.toDataURL('image/png');
-          } catch (error) {
-            console.warn('No se pudo capturar el plano CAD:', error);
-          }
-        }
-      }
-      if (template === 'professional' && cadCanvasRef.current && !cadImageDataUrl) {
-        await nextFrame();
-        await nextFrame();
-        try {
-          cadImageDataUrl = cadCanvasRef.current.toDataURL('image/png');
-        } catch (error) {
-          console.warn('No se pudo capturar el plano CAD:', error);
-        }
-      }
-
-      const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
-      const { styleText, bodyHtml } = extractBodyAndStyles(html);
-
-      wrapper = document.createElement('div');
-      wrapper.setAttribute('data-export-root', '1');
-      wrapper.style.position = 'fixed';
-      wrapper.style.left = '0';
-      wrapper.style.top = '0';
-      wrapper.style.transform = 'translateX(-250vw)';
-      wrapper.style.width = `${A4_W}px`;
-      wrapper.style.padding = '0';
-      wrapper.style.background = '#ffffff';
-      wrapper.style.color = '#111827';
-      wrapper.style.zIndex = '2147483647';
-      wrapper.style.pointerEvents = 'none';
-
-      // Estilos “print-friendly”
-      const fixCss = `
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { background: #ffffff !important; padding: 0 !important; }
-        .container { max-width: none !important; width: 100% !important; box-shadow: none !important; margin: 0 !important; }
-        img { max-width: 100% !important; height: auto !important; }
-        a { color: inherit !important; text-decoration: none !important; }
-      `;
-
-      // 4) Body + extras (en flujo, no fixed; fija “footer” de forma estable)
-      wrapper.innerHTML = `
-        <style>${styleText}\n${fixCss}</style>
-        ${bodyHtml}
-        ${poolImageDataUrl && template === 'complete' ? `
-          <div style="margin-top: 28px; page-break-before: always;">
-            <h2 style="color:#1e40af; border-bottom: 2px solid #93c5fd; padding-bottom: 10px; margin-bottom: 16px;">
-              Visualización del Proyecto
-            </h2>
-            <div style="text-align:center; padding:16px; background:#eff6ff; border:1px solid #bfdbfe;">
-              <img src="${poolImageDataUrl}" style="max-width:100%; height:auto; display:inline-block;" />
-            </div>
-          </div>
-        ` : ''}
-      `;
-
-      document.body.appendChild(wrapper);
-
-      // 5) Esperar recursos (fonts + imágenes) para que no salgan “cortados” o sin cargar
-      // fonts
+      // Fuentes + imágenes cargadas para que no salga "cortado" o sin logo
       // @ts-ignore
-      if (document.fonts?.ready) {
+      if (doc.fonts?.ready) {
         // @ts-ignore
-        await document.fonts.ready;
+        await doc.fonts.ready;
       }
-      await waitForImages(wrapper);
+      await waitForImages();
+      await nextFrame();
       await nextFrame();
 
-      const scale = Math.min(3, Math.max(2, (window.devicePixelRatio || 1)));
-      // 6) Generación PDF por páginas A4 reales.
-      // En vez de cortar un canvas largo, armamos páginas por bloques y
-      // renderizamos cada una por separado para evitar cortes entre secciones.
-
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
-
-      const marginMm = 8;
-      const headerMm = 8;
-      const footerMm = 8;
-      const contentW = pdfW - marginMm * 2;
-      const contentH = pdfH - marginMm * 2 - headerMm - footerMm;
-
-      // Relación mm->px para construir páginas A4 sin cortar secciones.
-      const pxPerMm = wrapper.scrollWidth / contentW;
-      const maxPageHeightPx = Math.floor(contentH * pxPerMm);
-      const pagedWrappers = await paginatePdfBlocks(wrapper, A4_W, A4_PADDING, maxPageHeightPx);
-      const totalPages = Math.max(1, pagedWrappers.length);
-
-      const drawHeaderFooter = (page: number) => {
-        // Header
-        const yTop = marginMm;
-        const lineY = yTop + headerMm;
-
-        const logoDataUrl = getLogoForTemplate(template);
-        if (logoDataUrl) {
-          try {
-            // logo chico, ya pre-rasterizado
-            pdf.addImage(logoDataUrl, 'PNG', marginMm, yTop + 1, 18, 18, undefined, 'FAST');
-          } catch {
-            // si fallara el addImage (data corrupta), no bloqueamos el export
-          }
-        }
-
-        pdf.setTextColor(15, 23, 42);
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        const title = `${project.name || 'Proyecto'} · ${getTemplateName(template)}`;
-        pdf.text(title, pdfW / 2, yTop + 8, { align: 'center' });
-        pdf.setFont('helvetica', 'normal');
-        pdf.setDrawColor(226, 232, 240);
-        pdf.setLineWidth(0.4);
-        pdf.line(marginMm, lineY, pdfW - marginMm, lineY);
-
-        // Footer
-        const footerY = pdfH - marginMm;
-        pdf.setDrawColor(226, 232, 240);
-        pdf.line(marginMm, footerY - footerMm, pdfW - marginMm, footerY - footerMm);
-
-        pdf.setFontSize(9);
-        pdf.setTextColor(71, 85, 105);
-        pdf.text(`Página ${page} de ${totalPages}`, pdfW - marginMm, footerY - 4, { align: 'right' });
-
-        // QR solo en la última página (evita repetir y agrandar el PDF)
-        if (qrDataUrl && page === totalPages) {
-          try {
-            const qrSize = 18;
-            pdf.addImage(qrDataUrl, 'PNG', pdfW - marginMm - qrSize, footerY - footerMm + 1, qrSize, qrSize, undefined, 'FAST');
-            pdf.setFontSize(8);
-            pdf.text('Escaneá para ver el proyecto', pdfW - marginMm - qrSize - 2, footerY - 4, { align: 'right' });
-          } catch {
-            // noop
-          }
-        }
-      };
-
-      // Renderizamos cada página ya paginada por bloques.
-      for (let page = 1; page <= totalPages; page++) {
-        const pageWrapper = pagedWrappers[page - 1];
-        wrapper.replaceChildren(pageWrapper);
-        await waitForImages(wrapper);
-        await nextFrame();
-
-        const pageCanvas = await html2canvas(wrapper, {
-          scale,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: '#ffffff',
-          logging: false,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: wrapper.scrollWidth,
-          windowHeight: wrapper.scrollHeight,
-        });
-
-        const sliceMega = (pageCanvas.width * pageCanvas.height) / 1_000_000;
-        const useJpeg = sliceMega > 10;
-        const imgData = useJpeg ? pageCanvas.toDataURL('image/jpeg', 0.92) : pageCanvas.toDataURL('image/png');
-
-        if (page > 1) pdf.addPage();
-        drawHeaderFooter(page);
-
-        const rawDrawH = (pageCanvas.height / pageCanvas.width) * contentW;
-        const scaleFactor = rawDrawH > contentH ? contentH / rawDrawH : 1;
-        const drawW = contentW * scaleFactor;
-        const drawH = rawDrawH * scaleFactor;
-        const drawX = marginMm + (contentW - drawW) / 2;
-        pdf.addImage(
-          imgData,
-          useJpeg ? 'JPEG' : 'PNG',
-          drawX,
-          marginMm + headerMm,
-          drawW,
-          drawH,
-          undefined,
-          'FAST'
-        );
-      }
-
-      const filename = `${template}-${(project.name || 'proyecto').replace(/\s+/g, '-').toLowerCase()}.pdf`;
-      pdf.save(filename);
+      win.addEventListener('afterprint', cleanup, { once: true });
+      win.focus();
+      win.print();
+      // Fallback de limpieza por si el navegador no dispara afterprint
+      setTimeout(cleanup, 60000);
     } catch (error) {
-      console.error('Error al generar PDF:', error);
-      alert('Hubo un error al generar el PDF. Por favor intenta nuevamente.');
-    } finally {
-      if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      console.error('Error al preparar la impresión del PDF:', error);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      alert('Hubo un error al preparar el PDF. Por favor intentá nuevamente.');
     }
+  };
+
+  const handlePrint = async (template: ExportTemplate) => {
+    await printTemplateDocument(template);
+  };
+
+  // "Descargar PDF": usa el mismo motor nativo de impresión. En el diálogo,
+  // elegí destino "Guardar como PDF" para obtener un archivo A4 nítido y con
+  // los cortes de página correctos.
+  const handleExportPDF = async (template: ExportTemplate) => {
+    await printTemplateDocument(template);
   };
 
 
