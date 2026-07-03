@@ -2964,7 +2964,30 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
     pricePerUnit: item.pricePerUnit,
   });
 
+  // Un ítem de catálogo "pertenece" al sistema de unión elegido: para fusión se
+  // priorizan caños/accesorios de PP (termofusión/electrofusión) y para PVC se
+  // evita mezclar piezas de fusión. Si el catálogo no tiene piezas del sistema,
+  // se cae al ítem por diámetro para no dejar la selección vacía.
+  const isFusionCatalogItem = (item: PlumbingItem) => {
+    const name = ` ${normalize(item.name)} `;
+    const type = normalize(String(item.type || ''));
+    return (
+      type.includes('fusion') ||
+      type.includes('polipropileno') ||
+      name.includes('fusion') ||
+      name.includes('termofus') ||
+      name.includes('electrofus') ||
+      name.includes('polipropileno') ||
+      name.includes('acqua') ||
+      name.includes(' pp ')
+    );
+  };
+
+  const itemMatchesPipeSystem = (item: PlumbingItem) =>
+    pipeSystem === 'PVC' ? !isFusionCatalogItem(item) : isFusionCatalogItem(item);
+
   const findCatalogItem = (matcher: (item: PlumbingItem) => boolean) =>
+    plumbingItems.find((item) => matcher(item) && itemMatchesPipeSystem(item)) ||
     plumbingItems.find(matcher);
 
   const getAutomaticSelection = React.useMemo(() => {
@@ -3082,20 +3105,24 @@ export const PlumbingEditor: React.FC<PlumbingEditorProps> = ({ project, onSave,
       pushItem(valveItem, entry.quantity);
     });
 
-    const adhesiveItem = findCatalogItem((item) => {
-      const name = normalize(item.name);
-      return (item.category === 'ACCESSORY' || item.category === 'FITTING') &&
-        (name.includes('pegamento') || name.includes('adhesivo') || name.includes('cemento pvc') || name.includes('solvente'));
-    });
-    if (adhesiveItem) {
-      const quantity = adhesiveItem.unit.toLowerCase().includes('lt')
-        ? Math.ceil(pipeCalculation.fittings.adhesive.quantity)
-        : Math.max(1, Math.ceil(pipeCalculation.summary.totalMeters / 45));
-      pushItem(adhesiveItem, quantity);
+    // El adhesivo/solvente solo aplica a PVC pegado: en termofusión y
+    // electrofusión las uniones se sueldan, no llevan pegamento
+    if (pipeSystem === 'PVC') {
+      const adhesiveItem = findCatalogItem((item) => {
+        const name = normalize(item.name);
+        return (item.category === 'ACCESSORY' || item.category === 'FITTING') &&
+          (name.includes('pegamento') || name.includes('adhesivo') || name.includes('cemento pvc') || name.includes('solvente'));
+      });
+      if (adhesiveItem) {
+        const quantity = adhesiveItem.unit.toLowerCase().includes('lt')
+          ? Math.ceil(pipeCalculation.fittings.adhesive.quantity)
+          : Math.max(1, Math.ceil(pipeCalculation.summary.totalMeters / 45));
+        pushItem(adhesiveItem, quantity);
+      }
     }
 
     return automaticItems;
-  }, [pipeCalculation, plumbingItems]);
+  }, [pipeCalculation, plumbingItems, pipeSystem]);
 
   useEffect(() => {
     loadPlumbingItems();
