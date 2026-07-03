@@ -145,6 +145,15 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [generatingPackage, setGeneratingPackage] = useState(false);
   const [downloadingPackage, setDownloadingPackage] = useState(false);
   const [clientDocumentEditorHtml, setClientDocumentEditorHtml] = useState('');
+  // El contenido del editor solo se re-monta cuando cambia esta versión (cargar
+  // base / volver a automático). Si React reescribiera el innerHTML en cada
+  // tecla, el cursor saltaría al inicio y el texto parecería borrarse.
+  const [clientEditorSeedVersion, setClientEditorSeedVersion] = useState(0);
+
+  const seedClientDocumentEditor = (html: string) => {
+    setClientDocumentEditorHtml(html);
+    setClientEditorSeedVersion((version) => version + 1);
+  };
   const [excelSections, setExcelSections] = useState({
     excavation: true,
     supportBed: true,
@@ -305,7 +314,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const clientTemplate = (draftSettings.templates?.client || {}) as ExportTemplateSettings;
     if (clientDocumentEditorHtml) return;
     const nextHtml = resolveClientBodyHtml(clientTemplate);
-    setClientDocumentEditorHtml(nextHtml);
+    seedClientDocumentEditor(nextHtml);
   }, [selectedTemplate]);
 
   const loadRoles = async () => {
@@ -610,14 +619,25 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     return parts.join(' · ');
   };
 
+  // Cuando el proyecto usa un sistema por fusión, los caños/accesorios que el
+  // catálogo tiene cargados como "PVC" se muestran con el material real de la
+  // obra para que los documentos exportados sean coherentes con lo cotizado.
+  const renamePipeSystemTokens = (name: string) => {
+    const config = (project.plumbingConfig as any) || {};
+    const system = String(config.pipeSystem || 'PVC').toUpperCase();
+    if (system !== 'TERMOFUSION' && system !== 'ELECTROFUSION') return name;
+    const replacement = system === 'TERMOFUSION' ? 'PP termofusión' : 'PP electrofusión';
+    return name.replace(/pvc/gi, replacement);
+  };
+
   const getPlumbingMaterialLabel = (item: any) => {
-    const baseLabel = item.itemName || item.name || item.label || item.description || 'Ítem hidráulico';
+    const baseLabel = renamePipeSystemTokens(item.itemName || item.name || item.label || item.description || 'Ítem hidráulico');
     const spec = getPlumbingItemSpec(item);
     return spec ? `${baseLabel} (${spec})` : baseLabel;
   };
 
   const getPlumbingItemName = (item: any) =>
-    item.itemName || item.name || item.label || item.description || 'Ítem hidráulico';
+    renamePipeSystemTokens(item.itemName || item.name || item.label || item.description || 'Ítem hidráulico');
 
   const normalizeExportName = (value: string) =>
     value
@@ -4820,7 +4840,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const updateDraftClientCustomBody = (html: string) => {
-    setClientDocumentEditorHtml(html);
     setDraftSettings((prev) => {
       const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
       return {
@@ -4839,11 +4858,12 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const handleResetClientDocument = () => {
     const nextHtml = buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings);
+    seedClientDocumentEditor(nextHtml);
     updateDraftClientCustomBody(nextHtml);
   };
 
   const handleUseAutomaticClientDocument = () => {
-    setClientDocumentEditorHtml(buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings));
+    seedClientDocumentEditor(buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings));
     setDraftSettings((prev) => {
       const prevTemplate = (prev.templates?.client || {}) as ExportTemplateSettings;
       const nextTemplate = { ...prevTemplate };
@@ -5427,6 +5447,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                         </div>
 
                         <div
+                          key={clientEditorSeedVersion}
                           ref={clientDocumentEditorRef}
                           contentEditable
                           suppressContentEditableWarning

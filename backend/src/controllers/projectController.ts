@@ -314,11 +314,17 @@ const buildProjectExportData = async (project: any, sections?: any) => {
   const sidewalkConcreteVolume = ((project.sidewalkArea || 0) * sidewalkBaseThicknessCm) / 100;
 
   const projectPipeSystem = getPipeSystemInfo(resolveInstallationFactors(plumbingConfig).pipeSystem);
+  // En sistemas por fusión, ítems cargados como "PVC" en catálogo se muestran
+  // con el material real de la obra para mantener coherencia en los documentos
+  const renamePipeTokens = (name: string) =>
+    projectPipeSystem.id === 'PVC'
+      ? name
+      : name.replace(/pvc/gi, `PP ${projectPipeSystem.shortLabel.toLowerCase()}`);
   const plumbingItems = selectedPlumbingItems.map((item: any) => ({
-    name: item.itemName || '',
+    name: renamePipeTokens(item.itemName || ''),
     diameter: item.diameter || '-',
     quantity: item.quantity || 0,
-    type: item.type || projectPipeSystem.shortLabel,
+    type: item.type && projectPipeSystem.id === 'PVC' ? item.type : projectPipeSystem.shortLabel,
     observations: item.observations || '-',
   }));
 
