@@ -4,6 +4,7 @@
  */
 
 import { Project, EquipmentPreset, PoolPreset } from '@prisma/client';
+import { getPipeSystemInfo, resolveInstallationFactors } from './installationFactors';
 
 // ==================== INTERFACES ====================
 
@@ -494,6 +495,11 @@ export function calculateHydraulicSystem(
   // Extraer datos del proyecto
   const pipingData = extractProjectPipingData(project);
 
+  // Material según el sistema de unión configurado (PVC pegado o PP por termofusión/electrofusión)
+  const pipeMaterial = getPipeSystemInfo(
+    resolveInstallationFactors((project as any).plumbingConfig).pipeSystem
+  ).hydraulicMaterial;
+
   // PRIORIDAD 1: Buscar bomba en projectAdditionals (equipos seleccionados del catálogo)
   let configuredPump: EquipmentPreset | null = null;
 
@@ -581,7 +587,7 @@ export function calculateHydraulicSystem(
     requiredFlowRate,
     distanceToEquipment,
     mainSuctionDiameter,
-    'PVC'
+    pipeMaterial
   );
   const suctionSingularLoss = calculateSingularLoss(suctionVelocity, suctionFittings);
 
@@ -601,7 +607,7 @@ export function calculateHydraulicSystem(
     requiredFlowRate,
     distanceToEquipment,
     mainReturnDiameter,
-    'PVC'
+    pipeMaterial
   );
   const returnSingularLoss = calculateSingularLoss(returnVelocity, returnFittings);
 
@@ -626,7 +632,7 @@ export function calculateHydraulicSystem(
       requiredFlowRate * 0.5,
       distanceToEquipment,
       hydrojetDiameter,
-      'PVC'
+      pipeMaterial
     );
     hydrojetSingularLoss = calculateSingularLoss(hydrojetVelocity, hydrojetFittings);
 
