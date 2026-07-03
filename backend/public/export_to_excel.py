@@ -544,7 +544,7 @@ def write_project_inputs(ws, project_data):
     ws['B28'] = round(safe_float(support_materials.get('geomembrane')))
     ws['B29'] = round(safe_float(electrical.get('distanceToPanel', 15)) * 2)
     ws['B30'] = round((safe_float(ws['B29'].value) / 1.5), 0) if ws['B29'].value else 0
-    ws['B16'] = round(safe_float(support_materials.get('mixed')), 2) if safe_float(support_materials.get('mixed')) else 0
+    # B16 es una fórmula viva de la plantilla (mixto de la cama): NO sobrescribir.
 
 def write_tile_outputs(ws, tile_summary, sidewalk):
     sidewalk_materials = sidewalk.get('materials', {}) or {}
@@ -739,9 +739,13 @@ def export_project_to_excel(excel_path, project_data):
 
     ensure_grid_named_range(wb, ws)
     draw_tile_grid(ws, pool, tile_calculation)
-    normalize_template_formulas(ws)
+    # La plantilla ya contiene TODAS las fórmulas vivas (volúmenes, áreas,
+    # COUNTIF de la grilla, costos). Solo escribimos los INPUTS del proyecto y
+    # dejamos que Excel recalcule. No se llama a normalize_template_formulas
+    # (reescribía fórmulas con un bug $M$5/$M$6) ni a write_tile_outputs
+    # (pisaba las fórmulas con valores estáticos), para que el Excel exportado
+    # quede con fórmulas reales y recalcule al cambiar cualquier medida.
     write_project_inputs(ws, project_data)
-    write_tile_outputs(ws, tile_summary, sidewalk)
     temp_assets.append(add_tile_plan_sheet(wb, project_data, sheet_name))
 
     for other_sheet in list(wb.sheetnames):

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import passport from '../config/passport';
+import { generateToken } from '../config/jwt';
 
 export const googleAuth = passport.authenticate('google', {
   scope: ['profile', 'email'],
@@ -21,16 +21,9 @@ export const googleAuthCallback = (req: Request, res: Response) => {
     }
 
     try {
-      // Generar JWT
-      const token = jwt.sign(
-        {
-          userId: user.id,
-          email: user.email,
-          role: user.role,
-        },
-        process.env.JWT_SECRET || 'default_secret',
-        { expiresIn: '7d' }
-      );
+      // Generar JWT con el helper compartido (mismo secreto y payload que el
+      // resto del login, incluyendo orgId). Evita el secreto por defecto propio.
+      const token = generateToken(user.id, user.email, user.role, user.orgId ?? null);
 
       console.log('[GOOGLE AUTH] ✅ Token generado exitosamente');
       console.log('[GOOGLE AUTH] Redirigiendo a:', `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback`);
