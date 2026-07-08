@@ -26,3 +26,7 @@
 
 - Los commits deben llevar la autoría de Jesús:
   `git commit --author="jesus1942 <chucky9425@gmail.com>"`.
+- Si excepcionalmente hay que mergear a `main` (solo cuando Jesús lo pida),
+  el merge también va a su nombre: mismo `--author` en el commit de merge
+  (`git merge --no-ff <rama> && git commit --amend --no-edit
+  --author="jesus1942 <chucky9425@gmail.com>"`, o `-m` con `--author` directo).
