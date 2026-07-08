@@ -6,8 +6,6 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-const DOCS_ADMIN_EMAIL = 'jesusnatec@gmail.com';
-
 const resolveDocsDir = () => {
   const cwdDocs = path.resolve(process.cwd(), 'docs');
   if (fs.existsSync(cwdDocs)) {
@@ -18,10 +16,10 @@ const resolveDocsDir = () => {
 
 const docsDir = resolveDocsDir();
 
+// La documentación interna es solo del proveedor del SaaS: cualquier cuenta
+// SUPERADMIN (todas son de Jesús e invisibles para los tenants).
 const requireDocsAdmin = (req: AuthRequest, res: Response, next: () => void) => {
-  const role = req.user?.role;
-  const email = req.user?.email;
-  if ((role !== 'ADMIN' && role !== 'SUPERADMIN') || email !== DOCS_ADMIN_EMAIL) {
+  if (req.user?.role !== 'SUPERADMIN') {
     return res.status(403).json({ error: 'Acceso denegado para documentación' });
   }
   return next();
