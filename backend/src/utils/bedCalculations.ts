@@ -72,9 +72,24 @@ export function calculateBedMaterials(
     return material?.pricePerUnit || 0;
   };
 
+  // Geomembrana y malla: no existen como MaterialType propio, así que se buscan
+  // por el tipo más cercano del enum y por nombre en castellano (el catálogo
+  // carga "Geomembrana 200 micrones", "Malla electrosoldada 15x15", etc.).
+  const findPriceBy = (predicate: (m: MaterialPricing) => boolean): number =>
+    materialPrices.find(predicate)?.pricePerUnit || 0;
+
+  const geomembranePrice = findPriceBy(m => {
+    const name = m.name.toLowerCase();
+    return m.type === 'GEOTEXTILE' || name.includes('geomembran') || name.includes('geotextil');
+  });
+  const electroweldedMeshPrice = findPriceBy(m => {
+    const name = m.name.toLowerCase();
+    return m.type === 'WIRE_MESH' || name.includes('electrosoldada') || name.includes('malla');
+  });
+
   // Calcular costos
-  const geomembraneCost = Math.ceil(geomembrane) * findPrice('GEOMEMBRANE', 'm²');
-  const electroweldedMeshCost = Math.ceil(electroweldedMesh) * findPrice('ELECTROWELDED_MESH', 'm²');
+  const geomembraneCost = Math.ceil(geomembrane) * geomembranePrice;
+  const electroweldedMeshCost = Math.ceil(electroweldedMesh) * electroweldedMeshPrice;
   const sandForBedCost = roundedSandForBed * findPrice('SAND', 'm³');
   const cementCost = Math.ceil(cementBags) * findPrice('CEMENT', 'bolsa');
   const drainStoneCost = parseFloat(drainStone.toFixed(2)) * findPrice('STONE', 'm³');
