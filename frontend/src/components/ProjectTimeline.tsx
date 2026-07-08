@@ -65,9 +65,29 @@ interface TimelineItem {
   };
 }
 
+interface ClientComment {
+  id: string;
+  authorName: string;
+  kind: 'COMMENT' | 'PRAISE' | 'SUGGESTION' | 'QUESTION';
+  body: string;
+  reply?: string | null;
+  repliedAt?: string | null;
+  createdAt: string;
+}
+
+const CLIENT_COMMENT_KIND_INFO: Record<ClientComment['kind'], { label: string; badge: string }> = {
+  PRAISE: { label: '👏 Felicitación', badge: 'bg-emerald-100 text-emerald-700' },
+  SUGGESTION: { label: '💡 Sugerencia', badge: 'bg-amber-100 text-amber-700' },
+  QUESTION: { label: '❓ Consulta', badge: 'bg-violet-100 text-violet-700' },
+  COMMENT: { label: '💬 Comentario', badge: 'bg-cyan-100 text-cyan-700' },
+};
+
 export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, projectName = 'Proyecto', clientName }) => {
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [clientComments, setClientComments] = useState<ClientComment[]>([]);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -83,6 +103,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
 
   useEffect(() => {
     loadUpdates();
+    loadClientComments();
   }, [projectId]);
 
   const loadUpdates = async () => {
@@ -95,6 +116,41 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
       console.error('Error loading updates:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadClientComments = async () => {
+    try {
+      const response = await api.get(`/project-share/comments/project/${projectId}`);
+      setClientComments(response.data || []);
+    } catch (error) {
+      // Sin share o sin permisos de edición: la sección simplemente no se muestra
+      setClientComments([]);
+    }
+  };
+
+  const handleReplyToComment = async (commentId: string) => {
+    const reply = (replyDrafts[commentId] || '').trim();
+    if (!reply) return;
+    try {
+      setReplyingTo(commentId);
+      const response = await api.post(`/project-share/comments/${commentId}/reply`, { reply });
+      setClientComments(prev => prev.map(c => (c.id === commentId ? response.data : c)));
+      setReplyDrafts(prev => ({ ...prev, [commentId]: '' }));
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'No se pudo enviar la respuesta');
+    } finally {
+      setReplyingTo(null);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('¿Eliminar este comentario del cliente?')) return;
+    try {
+      await api.delete(`/project-share/comments/${commentId}`);
+      setClientComments(prev => prev.filter(c => c.id !== commentId));
+    } catch (error) {
+      alert('No se pudo eliminar el comentario');
     }
   };
 
@@ -472,6 +528,75 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
           </div>
         )}
       </Card>
+
+      {/* Comentarios del cliente (llegan desde el timeline compartido) */}
+      {clientComments.length > 0 && (
+        <Card>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <HdMessageBubble size={20} className="text-cyan-600" />
+              Comentarios del cliente
+            </h3>
+            <p className="text-sm text-gray-600">
+              Mensajes que {clientName || 'el cliente'} dejó en su timeline compartido. Respondé desde acá: la respuesta le aparece en su vista.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {clientComments.map((comment) => {
+              const kindInfo = CLIENT_COMMENT_KIND_INFO[comment.kind] || CLIENT_COMMENT_KIND_INFO.COMMENT;
+              return (
+                <div key={comment.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-900">{comment.authorName}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${kindInfo.badge}`}>{kindInfo.label}</span>
+                      <span className="text-xs text-gray-500">{formatDate(comment.createdAt)}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Eliminar comentario"
+                    >
+                      <HdTrash size={16} />
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{comment.body}</p>
+
+                  {comment.reply ? (
+                    <div className="mt-3 bg-cyan-50 border border-cyan-200 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-cyan-700 mb-1">Tu respuesta</p>
+                      <p className="text-sm text-cyan-900 whitespace-pre-line">{comment.reply}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        value={replyDrafts[comment.id] || ''}
+                        onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleReplyToComment(comment.id);
+                          }
+                        }}
+                        placeholder="Responder al cliente…"
+                        className="flex-1 px-3 py-2 border rounded-md text-sm"
+                      />
+                      <Button
+                        onClick={() => handleReplyToComment(comment.id)}
+                        disabled={replyingTo === comment.id || !(replyDrafts[comment.id] || '').trim()}
+                      >
+                        {replyingTo === comment.id ? 'Enviando…' : 'Responder'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Modal para agregar/editar actualización */}
       <Modal

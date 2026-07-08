@@ -872,6 +872,7 @@ model Project {
   projectAccesses    ProjectAccess[]
   agendaEvents       AgendaEvent[]
   conversations      Conversation[]
+  clientComments     ProjectClientComment[]
 }
 
 enum ProjectStatus {
@@ -1018,6 +1019,36 @@ model ProjectShare {
 
   @@index([shareToken])
   @@index([clientUsername])
+}
+
+// Comentarios del cliente final sobre el timeline compartido de su piscina.
+// El cliente no es un User: se autentica con las credenciales del ProjectShare
+// y puede dejar felicitaciones, sugerencias o consultas que el tenant responde.
+model ProjectClientComment {
+  id          String            @id @default(uuid())
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorName  String
+  kind        ClientCommentKind @default(COMMENT)
+  body        String            @db.Text
+
+  // Respuesta del tenant (admin/dueño del proyecto)
+  reply       String?           @db.Text
+  repliedAt   DateTime?
+  repliedById String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}
+
+enum ClientCommentKind {
+  COMMENT     // Comentario general
+  PRAISE      // Felicitación
+  SUGGESTION  // Crítica constructiva / sugerencia
+  QUESTION    // Consulta
 }
 
 model ContactForm {

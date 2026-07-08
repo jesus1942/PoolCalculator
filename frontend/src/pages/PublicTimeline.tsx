@@ -14,12 +14,37 @@ interface TimelineItem {
   images?: string[];
 }
 
+interface ClientComment {
+  id: string;
+  authorName: string;
+  kind: 'COMMENT' | 'PRAISE' | 'SUGGESTION' | 'QUESTION';
+  body: string;
+  reply?: string | null;
+  repliedAt?: string | null;
+  createdAt: string;
+}
+
 interface ProjectData {
   projectName: string;
   clientName: string;
   updates?: TimelineItem[];
   timeline?: TimelineItem[];
+  comments?: ClientComment[];
 }
+
+const COMMENT_KINDS: { id: ClientComment['kind']; label: string; emoji: string }[] = [
+  { id: 'PRAISE', label: 'Felicitación', emoji: '👏' },
+  { id: 'SUGGESTION', label: 'Sugerencia', emoji: '💡' },
+  { id: 'QUESTION', label: 'Consulta', emoji: '❓' },
+  { id: 'COMMENT', label: 'Comentario', emoji: '💬' },
+];
+
+const COMMENT_KIND_STYLE: Record<ClientComment['kind'], string> = {
+  PRAISE: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/20',
+  SUGGESTION: 'text-amber-300 bg-amber-400/10 border-amber-400/20',
+  QUESTION: 'text-violet-300 bg-violet-400/10 border-violet-400/20',
+  COMMENT: 'text-cyan-300 bg-cyan-400/10 border-cyan-400/20',
+};
 
 const CATEGORY_DOT: Record<string, string> = {
   PROGRESS:   'bg-blue-400',
@@ -50,6 +75,32 @@ export const PublicTimeline: React.FC = () => {
   const [projectData, setProjectData] = useState<ProjectData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [comments, setComments] = useState<ClientComment[]>([]);
+  const [commentKind, setCommentKind] = useState<ClientComment['kind']>('COMMENT');
+  const [commentBody, setCommentBody] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
+  const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
+
+  const handleSendComment = async () => {
+    const body = commentBody.trim();
+    if (!body || sendingComment || !shareToken) return;
+    setSendingComment(true);
+    setCommentFeedback(null);
+    try {
+      const response = await api.post(`/public/timeline/${shareToken}/comments`, {
+        body,
+        kind: commentKind,
+      });
+      setComments(prev => [response.data, ...prev]);
+      setCommentBody('');
+      setCommentKind('COMMENT');
+      setCommentFeedback('¡Gracias! Tu mensaje fue enviado al equipo.');
+    } catch (e: any) {
+      setCommentFeedback(e.response?.data?.error || 'No se pudo enviar el comentario. Probá de nuevo.');
+    } finally {
+      setSendingComment(false);
+    }
+  };
 
   useEffect(() => {
     const clientToken = sessionStorage.getItem('clientShareToken');
@@ -58,7 +109,10 @@ export const PublicTimeline: React.FC = () => {
       return;
     }
     api.get(`/public/timeline/${shareToken}`)
-      .then(r => setProjectData(r.data))
+      .then(r => {
+        setProjectData(r.data);
+        setComments(r.data.comments || []);
+      })
       .catch(e => setError(e.response?.data?.error || 'No se pudo cargar el timeline'))
       .finally(() => setLoading(false));
   }, [shareToken, navigate]);
@@ -185,6 +239,82 @@ export const PublicTimeline: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Comentarios del cliente → equipo */}
+        <section className="mt-10">
+          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+            <h2 className="text-sm font-semibold text-white mb-1">Dejanos tu comentario</h2>
+            <p className="text-xs text-zinc-500 mb-4">
+              Contanos qué te parece el avance de tu piscina: una felicitación, una sugerencia o una consulta. El equipo lo recibe al instante.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {COMMENT_KINDS.map((k) => (
+                <button
+                  key={k.id}
+                  onClick={() => setCommentKind(k.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    commentKind === k.id
+                      ? COMMENT_KIND_STYLE[k.id]
+                      : 'text-zinc-500 border-white/10 hover:text-zinc-300 hover:border-white/20'
+                  }`}
+                >
+                  {k.emoji} {k.label}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={commentBody}
+              onChange={e => setCommentBody(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              placeholder="Escribí tu mensaje para el equipo…"
+              className="w-full rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-cyan-400/50 resize-none"
+            />
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-zinc-600 min-w-0">{commentFeedback}</p>
+              <button
+                onClick={handleSendComment}
+                disabled={sendingComment || !commentBody.trim()}
+                className="shrink-0 px-4 py-2 bg-cyan-400 disabled:opacity-40 text-zinc-950 rounded-lg text-xs font-semibold hover:bg-cyan-300 transition-colors"
+              >
+                {sendingComment ? 'Enviando…' : 'Enviar'}
+              </button>
+            </div>
+          </div>
+
+          {comments.length > 0 && (
+            <div className="mt-5 space-y-3">
+              <h3 className="text-xs uppercase tracking-wider text-zinc-600 font-semibold">Mensajes anteriores</h3>
+              {comments.map((comment) => {
+                const kindInfo = COMMENT_KINDS.find(k => k.id === comment.kind) ?? COMMENT_KINDS[3];
+                return (
+                  <div key={comment.id} className="rounded-xl border border-white/7 bg-white/3 p-3.5">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-semibold text-zinc-300 truncate">{comment.authorName}</span>
+                        <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full border ${COMMENT_KIND_STYLE[comment.kind]}`}>
+                          {kindInfo.emoji} {kindInfo.label}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-zinc-600">{formatDate(comment.createdAt)}</span>
+                    </div>
+                    <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line break-words">{comment.body}</p>
+
+                    {comment.reply && (
+                      <div className="mt-3 rounded-lg border border-cyan-400/15 bg-cyan-400/5 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">Respuesta del equipo</p>
+                        <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line break-words">{comment.reply}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <p className="text-center text-zinc-700 text-xs mt-10">
           © {new Date().getFullYear()} Pool Installer

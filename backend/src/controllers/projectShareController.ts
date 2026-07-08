@@ -2,19 +2,41 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
 import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
+import { resolveProjectAccessProfile } from '../utils/projectAccess';
+
+const getActor = (req: Request) => ({
+  userId: req.user?.userId,
+  role: req.user?.role,
+  orgId: req.user?.orgId,
+});
+
+// Devuelve el proyecto solo si el usuario autenticado puede editarlo
+// (dueño, admin de plataforma o acceso explícito con edición).
+const findManagedProject = async (req: Request, projectId: string) => {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) return null;
+
+  const access = await resolveProjectAccessProfile(project, getActor(req));
+  if (!access.canAccess || !access.canEdit) return null;
+
+  return project;
+};
+
+const findActiveShareByToken = async (shareToken: string) =>
+  prisma.projectShare.findUnique({ where: { shareToken } });
+
+const shareIsExpired = (share: { expiresAt: Date | null }) =>
+  Boolean(share.expiresAt && new Date(share.expiresAt) < new Date());
+
+const CLIENT_COMMENT_KINDS = ['COMMENT', 'PRAISE', 'SUGGESTION', 'QUESTION'] as const;
 
 // Crear o actualizar link compartido
 export const createOrUpdateShare = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
     const { showCosts, showDetails, expiresAt, clientUsername, clientPassword } = req.body;
-    const userId = (req as any).userId;
 
-    // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, userId },
-    });
-
+    const project = await findManagedProject(req, projectId);
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
@@ -83,13 +105,8 @@ export const createOrUpdateShare = async (req: Request, res: Response) => {
 export const getShareConfig = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const userId = (req as any).userId;
 
-    // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, userId },
-    });
-
+    const project = await findManagedProject(req, projectId);
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
@@ -109,13 +126,8 @@ export const getShareConfig = async (req: Request, res: Response) => {
 export const deactivateShare = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const userId = (req as any).userId;
 
-    // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
-      where: { id: projectId, userId },
-    });
-
+    const project = await findManagedProject(req, projectId);
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
@@ -227,6 +239,20 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
       }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    const comments = await prisma.projectClientComment.findMany({
+      where: { projectId: projectShare.project.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        authorName: true,
+        kind: true,
+        body: true,
+        reply: true,
+        repliedAt: true,
+        createdAt: true,
+      },
+    });
+
     // Preparar datos a enviar
     const response = {
       project: {
@@ -239,6 +265,7 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
       },
       updates: projectShare.project.projectUpdates,
       timeline,
+      comments,
       config: {
         showCosts: projectShare.showCosts,
         showDetails: projectShare.showDetails,
@@ -361,26 +388,224 @@ export const toggleUpdateVisibility = async (req: Request, res: Response) => {
   try {
     const { updateId } = req.params;
     const { isPublic } = req.body;
-    const userId = (req as any).userId;
 
-    // Verificar que la actualización pertenece a un proyecto del usuario
+    // Verificar que la actualización pertenece a un proyecto que el usuario puede editar
     const update = await prisma.projectUpdate.findUnique({
       where: { id: updateId },
       include: { project: true },
     });
 
-    if (!update || update.project.userId !== userId) {
+    if (!update) {
       return res.status(404).json({ error: 'Actualización no encontrada' });
     }
 
+    const access = await resolveProjectAccessProfile(update.project, getActor(req));
+    if (!access.canAccess || !access.canEdit) {
+      return res.status(404).json({ error: 'Actualización no encontrada' });
+    }
+
+    // Si no llega un booleano explícito, alterna el estado actual
+    const nextIsPublic = typeof isPublic === 'boolean' ? isPublic : !update.isPublic;
+
     const updatedUpdate = await prisma.projectUpdate.update({
       where: { id: updateId },
-      data: { isPublic },
+      data: { isPublic: nextIsPublic },
     });
 
     res.json(updatedUpdate);
   } catch (error) {
     console.error('Error al actualizar visibilidad:', error);
     res.status(500).json({ error: 'Error al actualizar visibilidad' });
+  }
+};
+
+// ============================================================
+// Comentarios del cliente sobre el timeline compartido
+// ============================================================
+
+// El cliente (autenticado por shareToken) deja un comentario:
+// felicitación, crítica constructiva o consulta.
+export const createPublicComment = async (req: Request, res: Response) => {
+  try {
+    const { shareToken } = req.params;
+    const { body, kind, authorName } = req.body || {};
+
+    const projectShare = await findActiveShareByToken(shareToken);
+    if (!projectShare || !projectShare.isActive) {
+      return res.status(404).json({ error: 'Link no válido o expirado' });
+    }
+    if (shareIsExpired(projectShare)) {
+      return res.status(410).json({ error: 'Link expirado' });
+    }
+
+    const text = typeof body === 'string' ? body.trim() : '';
+    if (!text) {
+      return res.status(400).json({ error: 'El comentario no puede estar vacío' });
+    }
+    if (text.length > 2000) {
+      return res.status(400).json({ error: 'El comentario es demasiado largo (máximo 2000 caracteres)' });
+    }
+
+    const commentKind = CLIENT_COMMENT_KINDS.includes(kind) ? kind : 'COMMENT';
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectShare.projectId },
+      select: { clientName: true },
+    });
+
+    const name = (typeof authorName === 'string' && authorName.trim())
+      ? authorName.trim().slice(0, 120)
+      : (project?.clientName || 'Cliente');
+
+    const comment = await prisma.projectClientComment.create({
+      data: {
+        projectId: projectShare.projectId,
+        authorName: name,
+        kind: commentKind,
+        body: text,
+      },
+      select: {
+        id: true,
+        authorName: true,
+        kind: true,
+        body: true,
+        reply: true,
+        repliedAt: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error al crear comentario del cliente:', error);
+    res.status(500).json({ error: 'Error al enviar el comentario' });
+  }
+};
+
+// Listado público de comentarios (para refrescar sin recargar el timeline)
+export const listPublicComments = async (req: Request, res: Response) => {
+  try {
+    const { shareToken } = req.params;
+
+    const projectShare = await findActiveShareByToken(shareToken);
+    if (!projectShare || !projectShare.isActive) {
+      return res.status(404).json({ error: 'Link no válido o expirado' });
+    }
+    if (shareIsExpired(projectShare)) {
+      return res.status(410).json({ error: 'Link expirado' });
+    }
+
+    const comments = await prisma.projectClientComment.findMany({
+      where: { projectId: projectShare.projectId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        authorName: true,
+        kind: true,
+        body: true,
+        reply: true,
+        repliedAt: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(comments);
+  } catch (error) {
+    console.error('Error al listar comentarios públicos:', error);
+    res.status(500).json({ error: 'Error al cargar comentarios' });
+  }
+};
+
+// El tenant lista los comentarios de su proyecto
+export const listProjectComments = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await findManagedProject(req, projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    const comments = await prisma.projectClientComment.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(comments);
+  } catch (error) {
+    console.error('Error al listar comentarios del proyecto:', error);
+    res.status(500).json({ error: 'Error al cargar comentarios' });
+  }
+};
+
+// El tenant responde un comentario del cliente
+export const replyToClientComment = async (req: Request, res: Response) => {
+  try {
+    const { commentId } = req.params;
+    const { reply } = req.body || {};
+
+    const comment = await prisma.projectClientComment.findUnique({
+      where: { id: commentId },
+      include: { project: true },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comentario no encontrado' });
+    }
+
+    const access = await resolveProjectAccessProfile(comment.project, getActor(req));
+    if (!access.canAccess || !access.canEdit) {
+      return res.status(404).json({ error: 'Comentario no encontrado' });
+    }
+
+    const text = typeof reply === 'string' ? reply.trim() : '';
+    if (!text) {
+      return res.status(400).json({ error: 'La respuesta no puede estar vacía' });
+    }
+    if (text.length > 2000) {
+      return res.status(400).json({ error: 'La respuesta es demasiado larga (máximo 2000 caracteres)' });
+    }
+
+    const updated = await prisma.projectClientComment.update({
+      where: { id: commentId },
+      data: {
+        reply: text,
+        repliedAt: new Date(),
+        repliedById: req.user?.userId || null,
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al responder comentario:', error);
+    res.status(500).json({ error: 'Error al responder el comentario' });
+  }
+};
+
+// El tenant elimina un comentario (moderación)
+export const deleteClientComment = async (req: Request, res: Response) => {
+  try {
+    const { commentId } = req.params;
+
+    const comment = await prisma.projectClientComment.findUnique({
+      where: { id: commentId },
+      include: { project: true },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ error: 'Comentario no encontrado' });
+    }
+
+    const access = await resolveProjectAccessProfile(comment.project, getActor(req));
+    if (!access.canAccess || !access.canEdit) {
+      return res.status(404).json({ error: 'Comentario no encontrado' });
+    }
+
+    await prisma.projectClientComment.delete({ where: { id: commentId } });
+
+    res.json({ message: 'Comentario eliminado' });
+  } catch (error) {
+    console.error('Error al eliminar comentario:', error);
+    res.status(500).json({ error: 'Error al eliminar el comentario' });
   }
 };
