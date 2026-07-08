@@ -36,6 +36,15 @@ export const Dashboard: React.FC = () => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [isNight, setIsNight] = useState(false);
 
+  type DashboardTab = 'resumen' | 'agenda' | 'clima' | 'analisis';
+  const [activeTab, setActiveTab] = useState<DashboardTab>('resumen');
+  const dashboardTabs: { id: DashboardTab; label: string; icon: React.ComponentType<any> }[] = [
+    { id: 'resumen', label: 'Resumen', icon: HdFolderOpen },
+    { id: 'agenda', label: 'Agenda', icon: HdCalendar },
+    { id: 'clima', label: 'Clima', icon: HdWind },
+    { id: 'analisis', label: 'Análisis', icon: HdBarChart },
+  ];
+
   const weatherBackdrop = useMemo(() => {
     const weatherCode = weather?.current.weatherCode ?? 0;
 
@@ -421,6 +430,24 @@ export const Dashboard: React.FC = () => {
               <Notifications projects={projects} weather={weather} />
             </div>
           </div>
+
+          {/* Pestañas del dashboard */}
+          <div className="mt-6 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {dashboardTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-light whitespace-nowrap transition-all border ${
+                  activeTab === tab.id
+                    ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                    : 'border-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                }`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Efemérides de Año Nuevo */}
@@ -469,9 +496,9 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Clima y Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Widget de Clima con Flip - Estilo Strudel */}
+        {/* Clima: estado actual con flip por hora */}
+        {activeTab === 'clima' && (
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 group relative h-[420px] sm:h-[480px]">
             {/* Glow effect */}
             <div className={`absolute -inset-0.5 bg-gradient-to-br ${weather && isGoodWorkingWeather(weather.current.weatherCode, weather.current.windSpeed, 0) ? 'from-green-600 to-emerald-600' : 'from-red-600 to-orange-600'} rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500`}></div>
@@ -628,8 +655,12 @@ export const Dashboard: React.FC = () => {
             />
           </div>
 
-          {/* Stats Cards - Grid 2x2 Estilo Strudel */}
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+        </div>
+        )}
+
+        {/* Resumen: métricas rápidas */}
+        {activeTab === 'resumen' && (
+          <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {stats.map((stat, index) => (
               <div key={index} className="group relative">
                 {/* Glow effect */}
@@ -663,10 +694,10 @@ export const Dashboard: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        )}
 
         {/* Pronóstico de 7 días - Estilo Strudel */}
-        {weather && (
+        {activeTab === 'clima' && weather && (
           <div className="mb-8 group relative">
             <div className="absolute -inset-0.5 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
 
@@ -794,11 +825,14 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Quick Actions */}
+        {activeTab === 'resumen' && (
         <div className="mb-8">
           <QuickActions />
         </div>
+        )}
 
-        {/* Hoy - La Agenda del instalador + checklist */}
+        {/* Agenda: hoy + próximos 7 días */}
+        {activeTab === 'agenda' && (<>
         <div className="mb-8 group relative">
           <div className="absolute -inset-0.5 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-3xl blur-lg opacity-10 group-hover:opacity-20 transition duration-500"></div>
 
@@ -1097,12 +1131,14 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Gráficos de Proyectos */}
+        </>)}
+
+        {/* Análisis: gráficos, tendencias y métricas */}
+        {activeTab === 'analisis' && (<>
         <div className="mb-8">
           <ProjectsChart projects={projects} />
         </div>
 
-        {/* Gráficos de Tendencias */}
         <div className="mb-8">
           <TrendCharts projects={projects} />
         </div>
@@ -1164,17 +1200,21 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Asistente Inteligente */}
-        <div className="mb-8">
-          <PoolFitWizard />
-        </div>
-
         {/* Activity Timeline */}
         <div className="mb-8">
           <ActivityTimeline projects={projects} presets={presets} />
         </div>
+        </>)}
+
+        {/* Asistente Inteligente */}
+        {activeTab === 'resumen' && (
+        <div className="mb-8">
+          <PoolFitWizard />
+        </div>
+        )}
 
         {/* Proyectos y Modelos - Estilo Strudel */}
+        {activeTab === 'resumen' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Proyectos Recientes */}
           <div className="group relative">
@@ -1361,6 +1401,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
