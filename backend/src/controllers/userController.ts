@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { OrganizationRole, Prisma } from '@prisma/client';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
@@ -20,12 +20,18 @@ const resolveTargetOrgId = (req: AuthRequest, bodyOrgId?: string) => {
   return req.user?.orgId || null;
 };
 
+// Los tenants solo gestionan instaladores: cualquier otro rol global
+// (ADMIN, USER, VIEWER, SUPERADMIN) lo asigna únicamente el superadmin.
 const canAssignRole = (requesterRole?: string, targetRole?: string) => {
   if (!targetRole) return true;
-  if (targetRole === 'SUPERADMIN') {
-    return isSuperadminRole(requesterRole);
-  }
-  return true;
+  if (isSuperadminRole(requesterRole)) return true;
+  return targetRole === 'INSTALLER';
+};
+
+// Rol de organización que puede otorgar un tenant: nunca ADMIN/OWNER.
+const clampOrgRoleForRequester = (requesterRole: string | undefined, orgRole: string): OrganizationRole => {
+  if (isSuperadminRole(requesterRole)) return orgRole as OrganizationRole;
+  return orgRole === 'VIEWER' ? OrganizationRole.VIEWER : OrganizationRole.MEMBER;
 };
 
 const ensureOrganizationAccess = async (req: AuthRequest, res: Response) => {
@@ -65,10 +71,17 @@ export const listUsers = async (req: AuthRequest, res: Response) => {
 
     const orgId = req.user?.orgId || null;
 
+    // Las cuentas SUPERADMIN (proveedor del SaaS) no se muestran a los tenants:
+    // solo otro superadmin puede verlas y administrarlas.
+    const hideSuperadmins = !isSuperadminRole(req.user?.role);
+
     const users = await prisma.user.findMany({
-      where: orgId
-        ? { organizationMemberships: { some: { organizationId: orgId } } }
-        : {},
+      where: {
+        ...(orgId
+          ? { organizationMemberships: { some: { organizationId: orgId } } }
+          : {}),
+        ...(hideSuperadmins ? { role: { not: 'SUPERADMIN' } } : {}),
+      },
       select: {
         id: true,
         name: true,
@@ -124,13 +137,14 @@ export const createUser = async (req: AuthRequest, res: Response) => {
           email,
           name,
           password: hashedPassword,
-          role: role || 'USER',
+          // Los tenants solo dan de alta instaladores.
+          role: role || (isSuperadminRole(requesterRole) ? 'USER' : 'INSTALLER'),
           currentOrgId: targetOrgId,
         },
       });
     } else {
-      if (user.role === 'SUPERADMIN' && !isSuperadminRole(requesterRole)) {
-        return res.status(403).json({ error: 'No autorizado para modificar SUPERADMIN' });
+      if (!isSuperadminRole(requesterRole) && user.role !== 'INSTALLER') {
+        return res.status(403).json({ error: 'Solo podés gestionar instaladores de tu organización' });
       }
 
       user = await prisma.user.update({
@@ -144,7 +158,10 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const membershipRole = orgRole || (role === 'ADMIN' ? 'ADMIN' : 'MEMBER');
+    const membershipRole = clampOrgRoleForRequester(
+      requesterRole,
+      orgRole || (role === 'ADMIN' ? 'ADMIN' : 'MEMBER'),
+    );
     await prisma.organizationMember.upsert({
       where: {
         organizationId_userId: {
@@ -216,6 +233,12 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'No autorizado para modificar SUPERADMIN' });
     }
 
+    // Los tenants solo editan sus instaladores; el resto de las cuentas
+    // (admins, usuarios, viewers) las administra el superadmin.
+    if (!isSuperadminRole(requesterRole) && user.role !== 'INSTALLER') {
+      return res.status(403).json({ error: 'Solo podés gestionar instaladores de tu organización' });
+    }
+
     const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
 
     const updatedUser = await prisma.user.update({
@@ -229,6 +252,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     let updatedOrgRole = membership?.role || null;
     if (orgRole) {
+      const clampedOrgRole = clampOrgRoleForRequester(requesterRole, orgRole);
       const updatedMembership = await prisma.organizationMember.upsert({
         where: {
           organizationId_userId: {
@@ -239,9 +263,9 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
         create: {
           organizationId: targetOrgId,
           userId: id,
-          role: orgRole,
+          role: clampedOrgRole,
         },
-        update: { role: orgRole },
+        update: { role: clampedOrgRole },
       });
       updatedOrgRole = updatedMembership.role;
     }
@@ -315,6 +339,10 @@ export const getUserProjectAccess = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
+    if (targetUser.role === 'SUPERADMIN' && !isSuperadminRole(req.user?.role)) {
+      return res.status(403).json({ error: 'No autorizado para gestionar cuentas SUPERADMIN' });
+    }
+
     const explicitAccessByProjectId = new Map(explicitAccessRows.map((row: { projectId: string; canEdit: boolean; canViewFinancials: boolean; allowedTabs: string[] | null }) => [row.projectId, row]));
 
     const response = projects.map((project) => {
@@ -370,6 +398,10 @@ export const updateUserProjectAccess = async (req: AuthRequest, res: Response) =
 
     if (!targetUser) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (targetUser.role === 'SUPERADMIN' && !isSuperadminRole(req.user?.role)) {
+      return res.status(403).json({ error: 'No autorizado para gestionar cuentas SUPERADMIN' });
     }
 
     if (!project) {

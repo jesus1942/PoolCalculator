@@ -20,6 +20,9 @@ type UserRow = {
 
 const ROLE_OPTIONS = ['ADMIN', 'INSTALLER', 'USER', 'VIEWER'];
 const ORG_ROLE_OPTIONS = ['ADMIN', 'MEMBER', 'VIEWER'];
+// Los tenants solo dan de alta instaladores; el resto de los roles los maneja el superadmin.
+const TENANT_ROLE_OPTIONS = ['INSTALLER'];
+const TENANT_ORG_ROLE_OPTIONS = ['MEMBER', 'VIEWER'];
 const PROJECT_TAB_LABELS: Record<ProjectTabId, string> = {
   overview: 'Vista General',
   status: 'Estado',
@@ -43,6 +46,11 @@ export const UsersManager: React.FC = () => {
   const [orgRoleChecked, setOrgRoleChecked] = useState(false);
   // También administran los OWNER/ADMIN de la organización aunque su rol global sea USER.
   const isAdmin = isPlatformAdmin || currentOrgRole === 'OWNER' || currentOrgRole === 'ADMIN';
+  const isSuperadmin = user?.role === 'SUPERADMIN';
+  const roleOptions = isSuperadmin ? ROLE_OPTIONS : TENANT_ROLE_OPTIONS;
+  const orgRoleOptions = isSuperadmin ? ORG_ROLE_OPTIONS : TENANT_ORG_ROLE_OPTIONS;
+  const defaultRole = isSuperadmin ? 'USER' : 'INSTALLER';
+  const canEditRow = (row: UserRow) => isSuperadmin || row.role === 'INSTALLER';
 
   useEffect(() => {
     if (isPlatformAdmin) {
@@ -75,7 +83,7 @@ export const UsersManager: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'USER',
+    role: defaultRole,
     orgRole: 'MEMBER',
   });
 
@@ -133,7 +141,7 @@ export const UsersManager: React.FC = () => {
         role: createForm.role,
         orgRole: createForm.orgRole,
       });
-      setCreateForm({ name: '', email: '', password: '', role: 'USER', orgRole: 'MEMBER' });
+      setCreateForm({ name: '', email: '', password: '', role: defaultRole, orgRole: 'MEMBER' });
       await loadUsers();
     } catch (err: any) {
       setError(err?.response?.data?.error || 'No se pudo crear el usuario.');
@@ -409,7 +417,7 @@ export const UsersManager: React.FC = () => {
               onChange={(event) => setCreateForm((prev) => ({ ...prev, role: event.target.value }))}
               className="px-3 py-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-sm"
             >
-              {ROLE_OPTIONS.map((option) => (
+              {roleOptions.map((option) => (
                 <option key={option} value={option} className="bg-zinc-950 text-zinc-100">
                   {option}
                 </option>
@@ -420,7 +428,7 @@ export const UsersManager: React.FC = () => {
               onChange={(event) => setCreateForm((prev) => ({ ...prev, orgRole: event.target.value }))}
               className="px-3 py-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-sm"
             >
-              {ORG_ROLE_OPTIONS.map((option) => (
+              {orgRoleOptions.map((option) => (
                 <option key={option} value={option} className="bg-zinc-950 text-zinc-100">
                   {option}
                 </option>
@@ -464,13 +472,15 @@ export const UsersManager: React.FC = () => {
                     <td className="py-3 pr-4">{row.orgRole || '-'}</td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="inline-flex items-center gap-1 text-blue-300 hover:text-blue-200"
-                        >
-                          <HdEdit size={14} />
-                          <span>Editar</span>
-                        </button>
+                        {canEditRow(row) && (
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="inline-flex items-center gap-1 text-blue-300 hover:text-blue-200"
+                          >
+                            <HdEdit size={14} />
+                            <span>Editar</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => loadProjectAccess(row)}
                           className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200"
@@ -522,7 +532,7 @@ export const UsersManager: React.FC = () => {
                   onChange={(event) => setEditForm((prev) => ({ ...prev, role: event.target.value }))}
                   className="w-full px-3 py-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-sm"
                 >
-                  {ROLE_OPTIONS.map((option) => (
+                  {roleOptions.map((option) => (
                     <option key={option} value={option} className="bg-zinc-950 text-zinc-100">
                       {option}
                     </option>
@@ -533,7 +543,7 @@ export const UsersManager: React.FC = () => {
                   onChange={(event) => setEditForm((prev) => ({ ...prev, orgRole: event.target.value }))}
                   className="w-full px-3 py-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-sm"
                 >
-                  {ORG_ROLE_OPTIONS.map((option) => (
+                  {orgRoleOptions.map((option) => (
                     <option key={option} value={option} className="bg-zinc-950 text-zinc-100">
                       {option}
                     </option>
