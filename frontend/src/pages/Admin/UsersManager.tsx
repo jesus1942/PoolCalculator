@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HdUsers, HdPlus, HdRefresh, HdEdit, HdSave, HdX, HdCalendar, HdMessageBubble, HdFolderOpen, HdExternalLink, HdCamera, HdShield } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
+import { organizationService } from '@/services/organizationService';
 import { userService, type UserProjectAccessEntry } from '@/services/userService';
 import { agendaService } from '@/services/agendaService';
 import { agendaMessageService } from '@/services/agendaMessageService';
@@ -37,7 +38,33 @@ const PROJECT_TAB_LABELS: Record<ProjectTabId, string> = {
 export const UsersManager: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = useMemo(() => user?.role === 'ADMIN' || user?.role === 'SUPERADMIN', [user]);
+  const isPlatformAdmin = useMemo(() => user?.role === 'ADMIN' || user?.role === 'SUPERADMIN', [user]);
+  const [currentOrgRole, setCurrentOrgRole] = useState<string | null>(null);
+  const [orgRoleChecked, setOrgRoleChecked] = useState(false);
+  // También administran los OWNER/ADMIN de la organización aunque su rol global sea USER.
+  const isAdmin = isPlatformAdmin || currentOrgRole === 'OWNER' || currentOrgRole === 'ADMIN';
+
+  useEffect(() => {
+    if (isPlatformAdmin) {
+      setOrgRoleChecked(true);
+      return;
+    }
+    let active = true;
+    organizationService
+      .list()
+      .then((data) => {
+        if (!active) return;
+        const current = data.organizations?.find((org) => org.id === data.currentOrgId);
+        setCurrentOrgRole(current?.role || null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setOrgRoleChecked(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isPlatformAdmin]);
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -309,11 +336,20 @@ export const UsersManager: React.FC = () => {
   );
 
   if (!isAdmin) {
+    if (!orgRoleChecked) {
+      return (
+        <div className="min-h-screen px-6 py-10 text-zinc-200">
+          <div className="max-w-3xl mx-auto bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-8 shadow-xl">
+            <p className="text-zinc-300">Verificando permisos...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen px-6 py-10 text-zinc-200">
         <div className="max-w-3xl mx-auto bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-8 shadow-xl">
           <h1 className="text-xl font-semibold">Acceso restringido</h1>
-          <p className="mt-3 text-zinc-300">Solo administradores pueden gestionar usuarios.</p>
+          <p className="mt-3 text-zinc-300">Solo administradores de la organización pueden gestionar usuarios.</p>
         </div>
       </div>
     );

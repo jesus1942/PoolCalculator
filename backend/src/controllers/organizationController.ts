@@ -52,14 +52,35 @@ export const listOrganizations = async (req: AuthRequest, res: Response) => {
       select: { currentOrgId: true },
     });
 
+    const membershipItems = memberships.map((membership) => ({
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+      role: membership.role,
+    }));
+
+    // El superadmin (proveedor del SaaS) opera sobre cualquier tenant aunque
+    // no sea miembro: el selector le muestra todas las organizaciones.
+    if (req.user?.role === 'SUPERADMIN') {
+      const allOrganizations = await prisma.organization.findMany({
+        select: { id: true, name: true, slug: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      const membershipRoleByOrgId = new Map(memberships.map((membership) => [membership.organizationId, membership.role as string]));
+      return res.json({
+        currentOrgId: user?.currentOrgId || null,
+        organizations: allOrganizations.map((org) => ({
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          role: membershipRoleByOrgId.get(org.id) || 'SUPERADMIN',
+        })),
+      });
+    }
+
     res.json({
       currentOrgId: user?.currentOrgId || null,
-      organizations: memberships.map((membership) => ({
-        id: membership.organization.id,
-        name: membership.organization.name,
-        slug: membership.organization.slug,
-        role: membership.role,
-      })),
+      organizations: membershipItems,
     });
   } catch (error) {
     console.error('Error al listar organizaciones:', error);
@@ -90,8 +111,23 @@ export const switchOrganization = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!membership) {
+    // El superadmin puede pararse en cualquier organización sin membresía
+    // (no se lo agrega como miembro: opera como proveedor del SaaS).
+    const isSuperadminUser = req.user?.role === 'SUPERADMIN';
+    if (!membership && !isSuperadminUser) {
       return res.status(403).json({ error: 'No sos miembro de esta organización' });
+    }
+
+    let targetUser = membership?.user || null;
+    if (!targetUser) {
+      const organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+      if (!organization) {
+        return res.status(404).json({ error: 'Organización no encontrada' });
+      }
+      targetUser = await prisma.user.findUnique({ where: { id: userId } });
+      if (!targetUser) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
     }
 
     await prisma.user.update({
@@ -99,16 +135,16 @@ export const switchOrganization = async (req: AuthRequest, res: Response) => {
       data: { currentOrgId: organizationId },
     });
 
-    const token = generateToken(membership.user.id, membership.user.email, membership.user.role, organizationId);
+    const token = generateToken(targetUser.id, targetUser.email, targetUser.role, organizationId);
 
     res.json({
       message: 'Organización actualizada',
       token,
       user: {
-        id: membership.user.id,
-        email: membership.user.email,
-        name: membership.user.name,
-        role: membership.user.role,
+        id: targetUser.id,
+        email: targetUser.email,
+        name: targetUser.name,
+        role: targetUser.role,
         currentOrgId: organizationId,
       },
     });

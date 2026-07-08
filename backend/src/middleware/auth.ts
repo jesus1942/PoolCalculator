@@ -15,7 +15,18 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     req.user = decoded;
 
     if (decoded?.role === 'INSTALLER') {
-      const allowedPrefixes = ['/api/agenda', '/api/weather'];
+      // Los instaladores acceden a su agenda, al clima, a los proyectos que la
+      // organización les compartió (ProjectAccess decide qué ven y si editan),
+      // a las novedades de esos proyectos y a las conversaciones donde participan.
+      // La parte económica queda protegida por canViewFinancials en cada controller.
+      const allowedPrefixes = [
+        '/api/agenda',
+        '/api/weather',
+        '/api/projects',
+        '/api/project-updates',
+        '/api/conversations',
+        '/api/organizations',
+      ];
       const path = req.originalUrl || '';
       const allowed = allowedPrefixes.some((prefix) => path.startsWith(prefix));
       if (!allowed) {

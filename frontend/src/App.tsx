@@ -86,16 +86,10 @@ function App() {
                 <PoolModels />
               </RoleRoute>
             } />
-            <Route path="/projects" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
-                <Projects />
-              </RoleRoute>
-            } />
-            <Route path="/projects/:id" element={
-              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
-                <ProjectDetail />
-              </RoleRoute>
-            } />
+            {/* Los instaladores también entran: ven solo los proyectos que la
+                organización les compartió y las pestañas que les habilitaron. */}
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/settings" element={
               <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
                 <Settings />
@@ -107,8 +101,10 @@ function App() {
                 <DocsManager />
               </RoleRoute>
             } />
+            {/* El gate fino lo hace UsersManager: también pueden entrar los
+                OWNER/ADMIN de la organización aunque su rol global sea USER. */}
             <Route path="/admin/users" element={
-              <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
+              <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
                 <UsersManager />
               </RoleRoute>
             } />

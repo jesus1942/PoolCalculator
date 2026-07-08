@@ -6,7 +6,7 @@ import { generateToken } from '../config/jwt';
 const ensureCurrentOrganization = async (userId: string, name: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, currentOrgId: true },
+    select: { id: true, currentOrgId: true, role: true },
   });
 
   if (user?.currentOrgId) {
@@ -18,7 +18,9 @@ const ensureCurrentOrganization = async (userId: string, name: string) => {
         },
       },
     });
-    if (!membership) {
+    // El superadmin puede quedar "parado" en un tenant ajeno sin ser miembro:
+    // no hay que crearle membresía al reloguear.
+    if (!membership && user.role !== 'SUPERADMIN') {
       await prisma.organizationMember.create({
         data: {
           organizationId: user.currentOrgId,

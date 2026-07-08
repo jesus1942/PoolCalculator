@@ -644,6 +644,10 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
+    if (req.user?.role === 'INSTALLER' || req.user?.role === 'VIEWER') {
+      return res.status(403).json({ error: 'No tenés permiso para crear proyectos' });
+    }
+
     const { name, clientName, clientEmail, clientPhone, location, poolPresetId, status } = req.body;
     const includeBaseEquipment = req.body.includeBaseEquipment !== 'false' && req.body.includeBaseEquipment !== false;
     const requestedPlumbingConfig = req.body.plumbingConfig && typeof req.body.plumbingConfig === 'object'

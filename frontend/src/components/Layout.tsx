@@ -50,6 +50,7 @@ export const Layout: React.FC = () => {
     ? [
       { to: '/installer', icon: HdCalendar, label: 'Instalador' },
       { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },
+      { to: '/projects', icon: HdFolderOpen, label: 'Mis Proyectos' },
       { to: '/chat', icon: HdMessageBubble, label: 'Mensajes' },
     ]
     : [
@@ -61,7 +62,14 @@ export const Layout: React.FC = () => {
       { to: '/settings', icon: HdGear, label: 'Configuración' },
     ];
 
-  if (user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') {
+  const currentOrgRole = organizations.find((org) => org.id === currentOrgId)?.role;
+  const canManageOrgUsers =
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPERADMIN' ||
+    currentOrgRole === 'OWNER' ||
+    currentOrgRole === 'ADMIN';
+
+  if (user?.role !== 'INSTALLER' && canManageOrgUsers) {
     navItems.push({ to: '/admin/users', icon: HdUsers, label: 'Usuarios' });
   }
 
