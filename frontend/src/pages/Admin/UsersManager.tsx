@@ -18,7 +18,8 @@ type UserRow = {
   createdAt: string;
 };
 
-const ROLE_OPTIONS = ['ADMIN', 'INSTALLER', 'USER', 'VIEWER'];
+// SUPERADMIN solo aparece como opción cuando quien edita es superadmin.
+const ROLE_OPTIONS = ['SUPERADMIN', 'ADMIN', 'INSTALLER', 'USER', 'VIEWER'];
 const ORG_ROLE_OPTIONS = ['ADMIN', 'MEMBER', 'VIEWER'];
 // Los tenants solo dan de alta instaladores; el resto de los roles los maneja el superadmin.
 const TENANT_ROLE_OPTIONS = ['INSTALLER'];
