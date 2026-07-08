@@ -867,10 +867,12 @@ export const listAgendaMessages = async (req: AuthRequest, res: Response) => {
         crew: { include: { members: true } },
       },
     });
-    if (!event || (orgId && event.organizationId && event.organizationId !== orgId)) {
+    if (!event) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
+    // Sin filtro por la org del que mira: el asignado/cuadrilla accede a los
+    // mensajes aunque el evento viva en la organización de quien lo invitó.
     if (!canMessageEvent(event, userId, role)) {
       return res.status(403).json({ error: 'No tenés permiso para ver este evento' });
     }
@@ -916,10 +918,11 @@ export const addAgendaMessage = async (req: AuthRequest, res: Response) => {
         crew: { include: { members: true } },
       },
     });
-    if (!event || (orgId && event.organizationId && event.organizationId !== orgId)) {
+    if (!event) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
+    // Ídem listado: la relación (dueño/asignado/cuadrilla) manda, no la org.
     if (!canMessageEvent(event, userId, role)) {
       return res.status(403).json({ error: 'No tenés permiso para este evento' });
     }

@@ -88,10 +88,55 @@ export const hasHeatingInstallation = (project: Project | any) => {
   );
 };
 
+// Multiplicadores de mano de obra hidráulica según el sistema de unión
+// (mismos valores que backend/src/utils/installationFactors.ts y que muestran
+// las cards de Hidráulica: termofusión +35%, electrofusión +50%).
+const PIPE_SYSTEM_LABOR_FACTORS: Record<string, number> = {
+  PVC: 1,
+  TERMOFUSION: 1.35,
+  ELECTROFUSION: 1.5,
+};
+
+// Porción hidráulica de la obra base, igual que el generador de tareas del
+// catálogo: 13% instalación en casco + 11% tendido + 5% cabecera = 29%.
+const HYDRAULIC_SHARE_OF_BASE = 0.29;
+
+// Recargos fijos por factores de obra (mismos valores que el backend).
+const CRANE_LIFT_LABOR_SURCHARGE = 350_000;
+const CONFINED_EQUIPMENT_SPACE_SURCHARGE = 120_000;
+const HYDROJET_DEDICATED_PUMP_SURCHARGE = 150_000;
+
+/**
+ * Ajustes sobre una tarifa base fija expresada para PVC pegado: recargo del
+ * sistema de fusión sobre la porción hidráulica + recargos por factores de
+ * obra. Solo aplica a precios de modelo (los precios por tareas ya traen
+ * estos ajustes desde el generador de tareas del backend).
+ */
+const getFixedTariffAdjustments = (project: Project | any, baseAmount: number) => {
+  const config = (project as any)?.plumbingConfig;
+  const plumbingConfig = config && typeof config === 'object' ? config : {};
+  const factors = plumbingConfig.installationFactors && typeof plumbingConfig.installationFactors === 'object'
+    ? plumbingConfig.installationFactors
+    : {};
+
+  const pipeSystem = String(plumbingConfig.pipeSystem || 'PVC').toUpperCase();
+  const laborFactor = PIPE_SYSTEM_LABOR_FACTORS[pipeSystem] ?? 1;
+  const fusionSurcharge = Math.round(baseAmount * HYDRAULIC_SHARE_OF_BASE * (laborFactor - 1));
+
+  let workFactorSurcharge = 0;
+  if (factors.craneLiftOverStructure) workFactorSurcharge += CRANE_LIFT_LABOR_SURCHARGE;
+  if (factors.confinedEquipmentSpace) workFactorSurcharge += CONFINED_EQUIPMENT_SPACE_SURCHARGE;
+  if (factors.hydrojetDedicatedPump) workFactorSurcharge += HYDROJET_DEDICATED_PUMP_SURCHARGE;
+
+  return { fusionSurcharge, workFactorSurcharge };
+};
+
 export const getCommercialBaseInstallationLabor = (project: Project | any) => {
   if (isCirconModel(project)) {
+    const baseAmount = 4_000_000;
+    const { fusionSurcharge, workFactorSurcharge } = getFixedTariffAdjustments(project, baseAmount);
     return {
-      amount: 4_000_000,
+      amount: baseAmount + fusionSurcharge + workFactorSurcharge,
       source: 'model_pricing' as const,
       rule: 'circon_base_installation',
     };
@@ -103,6 +148,8 @@ export const getCommercialBaseInstallationLabor = (project: Project | any) => {
     return sum + categoryTasks.reduce((inner: number, task: any) => inner + (task?.laborCost || 0), 0);
   }, 0);
 
+  // Las tareas generadas por el backend ya incluyen el factor de fusión y los
+  // recargos de obra; acá no se vuelve a sumar nada para no duplicar.
   return {
     amount: tasksLaborCost > 0 ? tasksLaborCost : Number((project as any)?.laborCost || 0),
     source: 'task_pricing' as const,
