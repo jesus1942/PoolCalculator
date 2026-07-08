@@ -53,8 +53,11 @@ export const listConversations = async (req: AuthRequest, res: Response) => {
     const agendaEventId = typeof req.query.agendaEventId === 'string' ? req.query.agendaEventId : null;
     const kind = typeof req.query.kind === 'string' ? req.query.kind : null;
 
+    // Los admins listan por su organización; los invitados (instaladores,
+    // usuarios asignados) ven las conversaciones donde participan aunque la
+    // conversación viva en la org de quien los invitó.
     const conversations = await listConversationSummaries({
-      organizationId: orgId,
+      organizationId: isAdminRole(role) ? orgId : null,
       projectId,
       agendaEventId,
     });
@@ -78,7 +81,7 @@ export const getConversationById = async (req: AuthRequest, res: Response) => {
     const orgId = req.user?.orgId || null;
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-    const conversation = await getConversationScoped(req.params.id, orgId);
+    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
     if (!conversation) {
       return res.status(404).json({ error: 'Conversación no encontrada' });
     }
@@ -243,7 +246,7 @@ export const listConversationMessages = async (req: AuthRequest, res: Response) 
     const orgId = req.user?.orgId || null;
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-    const conversation = await getConversationScoped(req.params.id, orgId);
+    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
     if (!conversation) {
       return res.status(404).json({ error: 'Conversación no encontrada' });
     }
@@ -291,7 +294,7 @@ export const addConversationMessage = async (req: AuthRequest, res: Response) =>
       )
     );
 
-    const conversation = await getConversationScoped(req.params.id, orgId);
+    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
     if (!conversation) {
       return res.status(404).json({ error: 'Conversación no encontrada' });
     }

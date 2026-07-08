@@ -372,16 +372,21 @@ export const listAgendaEvents = async (req: AuthRequest, res: Response) => {
     if (priority) filters.priority = String(priority);
     if (type) filters.type = String(type);
 
-    let where: any = { ...filters, ...(orgId ? { organizationId: orgId } : {}) };
+    let where: any = { ...filters };
     if (isAdminRole(role)) {
-      if (!orgId) {
+      if (orgId) {
+        where.organizationId = orgId;
+      } else {
         where.ownerId = userId;
       }
     } else {
-      const assigneeFilter = userId;
+      // El invitado ve los eventos donde está asignado, integra la cuadrilla
+      // o es dueño, sin filtrar por SU organización: quien se registra arranca
+      // con una org propia vacía y el evento vive en la org de quien lo invitó.
       where.OR = [
-        { assignees: { some: { userId: assigneeFilter } } },
-        { crew: { members: { some: { userId: assigneeFilter } } } },
+        { ownerId: userId },
+        { assignees: { some: { userId } } },
+        { crew: { members: { some: { userId } } } },
       ];
     }
 
@@ -421,15 +426,18 @@ export const getAgendaEventById = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!event || (orgId && event.organizationId && event.organizationId !== orgId)) {
+    if (!event) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
     const isOwner = event.ownerId === userId;
     const isAssignee = event.assignees?.some((a: any) => a.userId === userId);
     const isCrewMember = event.crew?.members?.some((m: any) => m.userId === userId);
+    // Los admins solo ven eventos de su propia organización; los asignados y
+    // la cuadrilla acceden aunque el evento sea de otra org (fueron invitados).
+    const sameOrg = !orgId || !event.organizationId || event.organizationId === orgId;
 
-    if (!isOwner && !isAdminRole(role) && !isAssignee && !isCrewMember) {
+    if (!isOwner && !isAssignee && !isCrewMember && !(isAdminRole(role) && sameOrg)) {
       return res.status(403).json({ error: 'No tenés permiso para ver este evento' });
     }
 
@@ -559,12 +567,14 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!event || (orgId && event.organizationId && event.organizationId !== orgId)) {
+    if (!event) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
     const isOwner = event.ownerId === userId;
     const isAdmin = isAdminRole(role) && isOwner;
+    // Sin filtro por la org del que edita: el asignado con permiso de edición
+    // puede reportar avances aunque su org personal sea otra.
     const canEdit = isOwner || isAdmin || canEditAsAssignee(event, userId);
 
     if (!canEdit) {

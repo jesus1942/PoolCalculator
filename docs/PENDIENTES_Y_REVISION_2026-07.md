@@ -53,6 +53,11 @@ más la lista de pendientes acordados para después de la presentación.
 
 - [ ] **Notificar al tenant** cuando el cliente deja un comentario (push/email ya
       existen para agenda; reutilizar `pushNotificationService`).
+- [ ] **Invitación por email a la agenda**: hoy solo se puede asignar a usuarios
+      YA registrados (la asignación guarda un userId). Si se invita a alguien que
+      todavía no tiene cuenta, al registrarse no hereda nada. Falta una tabla de
+      invitaciones pendientes por email que se reclame al registrarse, + mail de
+      invitación con link.
 - [ ] **Export defaults en Configuración**: los logos de marca, condiciones
       comerciales por defecto y modo comercial inicial siguen definidos por
       proyecto/en código. Crear pestaña "Exportación" en Configuración con
