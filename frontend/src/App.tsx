@@ -24,6 +24,7 @@ import { ProductsImageManager } from '@/pages/Admin/ProductsImageManager';
 import { DocsManager } from '@/pages/Admin/DocsManager';
 import { UsersManager } from '@/pages/Admin/UsersManager';
 import { TenantsManager } from '@/pages/Admin/TenantsManager';
+import { SorteosManager } from '@/pages/Admin/SorteosManager';
 import { OpsManager } from '@/pages/Admin/OpsManager';
 import { Installer } from '@/pages/Installer';
 import { Chat } from '@/pages/Chat';
@@ -116,6 +117,11 @@ function App() {
             <Route path="/admin/ops" element={
               <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
                 <OpsManager />
+              </RoleRoute>
+            } />
+            <Route path="/admin/sorteos" element={
+              <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
+                <SorteosManager />
               </RoleRoute>
             } />
             <Route path="/admin/catalogs" element={

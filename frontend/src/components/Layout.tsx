@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX } from '@/components/ui/HandDrawnIcons';
+import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdSparkles } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -77,6 +77,7 @@ export const Layout: React.FC = () => {
     navItems.push({ to: '/admin/tenants', icon: HdBuilding, label: 'Tenants' });
     navItems.push({ to: '/admin/ops', icon: HdActivity, label: 'Ops' });
     navItems.push({ to: '/admin/docs', icon: HdFileText, label: 'Documentación' });
+    navItems.push({ to: '/admin/sorteos', icon: HdSparkles, label: 'Sorteos' });
   }
 
   if (user?.role === 'ADMIN' || user?.email === 'admin@poolcalculator.com') {
