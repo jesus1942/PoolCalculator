@@ -135,6 +135,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   });
   const [isEditorOpen, setIsEditorOpen] = useState(true);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
+  const [editorTab, setEditorTab] = useState<'contenido' | 'precios' | 'editor'>('contenido');
   const [draftSettings, setDraftSettings] = useState<ExportSettings>(() =>
     JSON.parse(JSON.stringify((project.exportSettings as ExportSettings) || { templates: {} }))
   );
@@ -4641,193 +4642,125 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </div>
 
       <Card className="overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
-        <div className="bg-zinc-950 text-white p-6 border-b border-white/8">
+        <div className="bg-zinc-950 text-white px-6 py-5 border-b border-white/8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-white/[0.06] p-3 rounded-2xl border border-white/10 shadow-inner">
-                <HdDownload size={30} className="text-white" />
+            <div className="flex items-center gap-3">
+              <div className="bg-white/[0.06] p-2.5 rounded-xl border border-white/10 shadow-inner">
+                <HdDownload size={22} className="text-white" />
               </div>
               <div>
-                <h2 className="text-3xl font-semibold tracking-tight">Exportación de Documentos</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Exportación</h2>
+                <p className="text-xs text-zinc-400">Elegí la plantilla, ajustá el contenido y exportá</p>
               </div>
             </div>
-            <div className="text-sm text-zinc-300">
-              Plantilla activa: <span className="font-semibold text-white">{selectedTemplateData.name}</span>
+
+            {/* Resumen verificable compacto */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-400">
+                Materiales <span className="font-semibold text-zinc-100 ml-1">{formatCurrency(computedCosts.totalMaterialCost)}</span>
+              </span>
+              <span className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-400">
+                Mano de obra <span className="font-semibold text-zinc-100 ml-1">{formatCurrency(computedCosts.totalLaborCost)}</span>
+              </span>
+              <span className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-400">
+                Tareas <span className="font-semibold text-zinc-100 ml-1">{computedTaskCount}</span>
+              </span>
+              <span className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-400">
+                Ítems hidráulicos <span className="font-semibold text-zinc-100 ml-1">{plumbingItemsCount}</span>
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="p-6 lg:p-8 bg-zinc-950">
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Plantillas disponibles</h3>
-              </div>
+        <div className="p-6 bg-zinc-950 space-y-5">
+          {/* Plantillas: una sola fila de chips (las internas llevan etiqueta) */}
+          <div>
+            <div className="flex flex-wrap gap-2">
+              {[...visibleTemplates, ...internalTemplates].map((template) => {
+                const Icon = template.icon;
+                const isSelected = selectedTemplate === template.id;
+                const isInternal = internalTemplates.some((internal) => internal.id === template.id);
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {visibleTemplates.map((template) => {
-                  const Icon = template.icon;
-                  const isSelected = selectedTemplate === template.id;
-
-                  return (
-                    <button
-                      key={template.id}
-                      onClick={() => setSelectedTemplate(template.id)}
-                      className={`text-left p-4 rounded-2xl border transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.22)]'
-                          : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-xl ${isSelected ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}>
-                          <Icon size={20} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-zinc-100">{template.name}</p>
-                          <p className="text-xs text-zinc-400 mt-1">{template.description}</p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {internalTemplates.length > 0 && (
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 p-5">
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                      <h4 className="text-sm font-semibold text-zinc-100">Documentos internos</h4>
-                    </div>
-                    <span className="text-[11px] uppercase tracking-wide text-zinc-500">Interno</span>
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {internalTemplates.map((template) => {
-                      const Icon = template.icon;
-                      const isSelected = selectedTemplate === template.id;
-
-                      return (
-                        <button
-                          key={template.id}
-                          onClick={() => setSelectedTemplate(template.id)}
-                          className={`text-left p-4 rounded-2xl border transition-all duration-200 ${
-                            isSelected
-                              ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.22)]'
-                              : 'bg-zinc-950/70 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-xl ${isSelected ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}>
-                              <Icon size={20} />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-zinc-100">{template.name}</p>
-                              <p className="text-xs text-zinc-400 mt-1">{template.description}</p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
+                return (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                    title={template.description}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold shadow-sm'
+                        : 'bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {template.name}
+                    {isInternal && (
+                      <span className={`text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                        isSelected ? 'bg-zinc-950/10 text-zinc-700' : 'bg-zinc-800 text-zinc-500'
+                      }`}>
+                        Interno
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-xs text-zinc-500 mt-2">{selectedTemplateData.description}</p>
+          </div>
 
-            <div className="bg-zinc-900/85 border border-zinc-800 rounded-2xl p-6 shadow-[0_12px_32px_rgba(0,0,0,0.18)] h-fit space-y-4">
-              <div>
-                <h4 className="text-lg font-semibold text-white">Acciones rápidas</h4>
-                <p className="text-xs text-zinc-400">Exportá, imprimí o compartí la plantilla seleccionada.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleExportPDF(selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm"
-                >
-                  <HdDownload size={20} />
-                  <span className="font-semibold text-xs">PDF</span>
-                </button>
-
-                <button
-                  onClick={() => handleExport('html', selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
-                >
-                  <HdDownload size={20} />
-                  <span className="font-semibold text-xs">HTML</span>
-                </button>
-
-                <button
-                  onClick={() => handlePrint(selectedTemplate)}
-                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors shadow-sm"
-                >
-                  <HdPrinter size={20} />
-                  <span className="font-semibold text-xs">Imprimir</span>
-                </button>
-
-                <button
-                  onClick={handleWhatsAppShare}
-                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm"
-                >
-                  <HdMessageBubble size={20} />
-                  <span className="font-semibold text-xs">WhatsApp</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowExcelDialog(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
-              >
-                <HdFileSpreadsheet size={18} />
-                Excel Técnico
-              </button>
-
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={handleGenerateProjectPackage}
-                  disabled={generatingPackage}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-zinc-100 border border-zinc-800 rounded-xl transition-colors shadow-sm text-sm font-semibold"
-                >
-                  <HdFileText size={18} />
-                  {generatingPackage ? 'Generando expediente...' : 'Generar expediente'}
-                </button>
-
-                <button
-                  onClick={handleDownloadProjectPackage}
-                  disabled={downloadingPackage}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-white disabled:opacity-60 text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
-                >
-                  <HdDownload size={18} />
-                  {downloadingPackage ? 'Preparando ZIP...' : 'Descargar ZIP'}
-                </button>
-              </div>
-
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">Resumen verificable</p>
-                  <span className="text-xs text-zinc-500">Antes de exportar</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-                    <p className="text-xs text-zinc-400">Materiales</p>
-                    <p className="font-semibold text-zinc-100">{formatCurrency(computedCosts.totalMaterialCost)}</p>
-                  </div>
-                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-                    <p className="text-xs text-zinc-400">Mano de obra</p>
-                    <p className="font-semibold text-zinc-100">{formatCurrency(computedCosts.totalLaborCost)}</p>
-                  </div>
-                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-                    <p className="text-xs text-zinc-400">Tareas cargadas</p>
-                    <p className="font-semibold text-zinc-100">{computedTaskCount}</p>
-                  </div>
-                  <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-                    <p className="text-xs text-zinc-400">Ítems hidráulicos</p>
-                    <p className="font-semibold text-zinc-100">{plumbingItemsCount}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Acciones: una sola fila */}
+          <div className="flex flex-wrap gap-2 pt-1 border-t border-zinc-900">
+            <button
+              onClick={() => handleExportPDF(selectedTemplate)}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl transition-colors shadow-sm text-sm font-semibold"
+            >
+              <HdDownload size={16} />
+              PDF
+            </button>
+            <button
+              onClick={() => handleExport('html', selectedTemplate)}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdDownload size={16} />
+              HTML
+            </button>
+            <button
+              onClick={() => handlePrint(selectedTemplate)}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdPrinter size={16} />
+              Imprimir
+            </button>
+            <button
+              onClick={handleWhatsAppShare}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdMessageBubble size={16} />
+              WhatsApp
+            </button>
+            <button
+              onClick={() => setShowExcelDialog(true)}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdFileSpreadsheet size={16} />
+              Excel técnico
+            </button>
+            <button
+              onClick={handleGenerateProjectPackage}
+              disabled={generatingPackage}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdFileText size={16} />
+              {generatingPackage ? 'Generando…' : 'Expediente'}
+            </button>
+            <button
+              onClick={handleDownloadProjectPackage}
+              disabled={downloadingPackage}
+              className="mt-3 flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-zinc-200 border border-zinc-800 rounded-xl transition-colors text-sm font-semibold"
+            >
+              <HdDownload size={16} />
+              {downloadingPackage ? 'Preparando…' : 'ZIP'}
+            </button>
           </div>
         </div>
       </Card>
@@ -4874,127 +4807,338 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 </div>
               </div>
 
-              <div className={`border-l border-zinc-800 p-5 overflow-auto bg-zinc-950 ${editorFullscreen ? 'h-[calc(100vh-65px)]' : 'max-h-[700px]'}`}>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-3">Textos del documento</h4>
-                    <div className="space-y-3">
+              <div className={`border-l border-zinc-800 overflow-auto bg-zinc-950 ${editorFullscreen ? 'h-[calc(100vh-65px)]' : 'max-h-[700px]'}`}>
+                {/* Pestañas del panel de ajustes */}
+                <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 px-5 pt-4 pb-0 flex gap-1">
+                  {([
+                    { id: 'contenido' as const, label: 'Contenido' },
+                    { id: 'precios' as const, label: 'Precios' },
+                    ...(selectedTemplate === 'client' ? [{ id: 'editor' as const, label: 'Documento' }] : []),
+                  ]).map((tab) => {
+                    const currentTab = selectedTemplate !== 'client' && editorTab === 'editor' ? 'contenido' : editorTab;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setEditorTab(tab.id)}
+                        className={`px-4 py-2.5 text-sm rounded-t-lg border-b-2 transition-colors ${
+                          currentTab === tab.id
+                            ? 'border-zinc-100 text-white font-semibold'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="p-5 space-y-6">
+                  {/* ============ PESTAÑA CONTENIDO ============ */}
+                  {(editorTab === 'contenido' || (selectedTemplate !== 'client' && editorTab === 'editor')) && (
+                    <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Título del documento</label>
-                        <input
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                          value={activeDraftTemplate.title || ''}
-                          onChange={(event) => updateDraftTemplate({ title: event.target.value })}
-                          placeholder={`${selectedTemplateData.name} - ${project.name}`}
-                        />
+                        <h4 className="text-sm font-semibold text-white mb-3">Textos del documento</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Título del documento</label>
+                            <input
+                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                              value={activeDraftTemplate.title || ''}
+                              onChange={(event) => updateDraftTemplate({ title: event.target.value })}
+                              placeholder={`${selectedTemplateData.name} - ${project.name}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Subtítulo de portada</label>
+                            <input
+                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                              value={activeDraftTemplate.subtitle || ''}
+                              onChange={(event) => updateDraftTemplate({ subtitle: event.target.value })}
+                              placeholder={selectedTemplateData.description}
+                            />
+                          </div>
+                          {selectedTemplate === 'client' && (
+                            <>
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Condiciones comerciales</label>
+                                <textarea
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[140px]"
+                                  value={activeDraftTemplate.conditions || ''}
+                                  onChange={(event) => updateDraftTemplate({ conditions: event.target.value })}
+                                  placeholder={defaultConditionsText}
+                                />
+                                <p className="text-[11px] text-zinc-500 mt-1">Una condición por línea.</p>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Texto del alcance</label>
+                                <textarea
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[120px]"
+                                  value={(activeDraftTemplate as ExportTemplateSettings).scopeSummary || ''}
+                                  onChange={(event) => updateDraftTemplate({ scopeSummary: event.target.value })}
+                                  placeholder={automaticScopeLines.join('\n')}
+                                />
+                                <p className="text-[11px] text-zinc-500 mt-1">Si lo dejás vacío, la app arma un alcance automático corto.</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Subtítulo de portada</label>
-                        <input
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                          value={activeDraftTemplate.subtitle || ''}
-                          onChange={(event) => updateDraftTemplate({ subtitle: event.target.value })}
-                          placeholder={selectedTemplateData.description}
-                        />
-                      </div>
+
                       {selectedTemplate === 'client' && (
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Condiciones comerciales</label>
-                          <textarea
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[140px]"
-                            value={activeDraftTemplate.conditions || ''}
-                            onChange={(event) => updateDraftTemplate({ conditions: event.target.value })}
-                            placeholder={defaultConditionsText}
-                          />
-                          <p className="text-[11px] text-zinc-500 mt-1">Una condición por línea.</p>
+                          <h4 className="text-sm font-semibold text-white mb-3">Secciones visibles</h4>
+                          <div className="space-y-2 text-sm text-zinc-300">
+                            {[
+                              { key: 'header', label: 'Información del cliente' },
+                              { key: 'includes', label: 'Alcance del proyecto' },
+                              { key: 'costs', label: 'Detalle de costos' },
+                              { key: 'conditions', label: 'Condiciones comerciales' },
+                            ].map((item) => (
+                              <label key={item.key} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={draftSections?.[item.key] !== false}
+                                  onChange={(event) => updateDraftSection(item.key, event.target.checked)}
+                                  className="h-4 w-4"
+                                />
+                                <span>{item.label}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       )}
+
+                      {selectedTemplate === 'professional' && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-white mb-3">Plano incluido</h4>
+                          <div className="space-y-2 text-sm text-zinc-300">
+                            <label className="block text-xs text-zinc-400 mb-1">Vista del dibujo</label>
+                            <select
+                              value={activeDraftTemplate.drawingView || 'cad'}
+                              onChange={(event) => updateDraftTemplate({ drawingView: event.target.value as 'cad' | 'planta' })}
+                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                            >
+                              <option value="cad">Plano CAD</option>
+                              <option value="planta">Vista Planta</option>
+                            </select>
+                            <p className="text-[11px] text-zinc-500">Se mostrará en la exportación de Especificaciones Técnicas.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedTemplate === 'materials' && (
+                        <div>
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <h4 className="text-sm font-semibold text-white">Bloques del listado de materiales</h4>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, true))}
+                                className="text-[11px] text-zinc-400 hover:text-white"
+                              >
+                                Marcar todo
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, false))}
+                                className="text-[11px] text-zinc-400 hover:text-white"
+                              >
+                                Quitar todo
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {materialSectionDefinitions.map((item) => (
+                              <label
+                                key={item.key}
+                                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${
+                                  draftMaterialSections?.[item.key] !== false
+                                    ? 'border-zinc-700 bg-zinc-900'
+                                    : 'border-zinc-800 bg-zinc-900/60'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={draftMaterialSections?.[item.key] !== false}
+                                  onChange={(event) => updateDraftSection(item.key, event.target.checked)}
+                                  className="h-4 w-4 mt-0.5"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-zinc-100">{item.label}</p>
+                                  <p className="text-xs text-zinc-400 mt-1">{item.description}</p>
+                                  <p className="text-[11px] text-zinc-500 mt-2">{item.preview}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* ============ PESTAÑA PRECIOS ============ */}
+                  {editorTab === 'precios' && (
+                    <>
+                      {/* Alcance y modo comercial: compartidos por cliente / materiales / presupuesto */}
+                      {(selectedTemplate === 'client' || selectedTemplate === 'materials' || selectedTemplate === 'budget') && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-white mb-3">Alcance y modo comercial</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-1">Alcance de instalación</label>
+                              <select
+                                value={activeDraftTemplate.installationMode || 'with_extras'}
+                                onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
+                                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                              >
+                                <option value="basic">Instalación base</option>
+                                <option value="with_extras">{selectedTemplate === 'client' ? installationTier : 'Instalación con extras'}</option>
+                              </select>
+                              <p className="text-[11px] text-zinc-500 mt-1">
+                                {selectedTemplate === 'materials'
+                                  ? 'La lista de materiales sigue sin valores; esto solo cambia el alcance incluido.'
+                                  : 'Elegí si el documento sale con el alcance base o con los adicionales cargados en el proyecto.'}
+                              </p>
+                            </div>
+
+                            {(selectedTemplate === 'client' || selectedTemplate === 'budget') && (
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
+                                <select
+                                  value={activeDraftTemplate.clientPricingMode || 'labor_only'}
+                                  onChange={(event) => updateDraftTemplate({ clientPricingMode: event.target.value as 'full' | 'labor_only' })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                                >
+                                  <option value="labor_only">Solo mano de obra</option>
+                                  <option value="full">Materiales + mano de obra</option>
+                                </select>
+                                <p className="text-[11px] text-zinc-500 mt-1">
+                                  {selectedTemplate === 'budget'
+                                    ? 'Por defecto queda seguro para cliente: solo mano de obra. Si activás materiales, vuelve a mostrarse el presupuesto interno completo.'
+                                    : 'En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.'}
+                                </p>
+                              </div>
+                            )}
+
+                            {selectedTemplate === 'client' && (
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Posición de inversión</label>
+                                <select
+                                  value={activeDraftTemplate.pricingPosition || 'bottom'}
+                                  onChange={(event) => updateDraftTemplate({ pricingPosition: event.target.value as 'top' | 'bottom' })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                                >
+                                  <option value="bottom">Al final</option>
+                                  <option value="top">Al principio</option>
+                                </select>
+                                <p className="text-[11px] text-zinc-500 mt-1">Elegís dónde aparece el precio dentro del presupuesto.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {selectedTemplate === 'client' && (
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Texto del alcance</label>
-                          <textarea
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm min-h-[120px]"
-                            value={(activeDraftTemplate as ExportTemplateSettings).scopeSummary || ''}
-                            onChange={(event) => updateDraftTemplate({ scopeSummary: event.target.value })}
-                            placeholder={automaticScopeLines.join('\n')}
-                          />
-                          <p className="text-[11px] text-zinc-500 mt-1">Si lo dejás vacío, la app arma un alcance automático corto.</p>
+                          <h4 className="text-sm font-semibold text-white mb-3">Adicionales y vereda</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                                <input
+                                  type="checkbox"
+                                  checked={activeDraftTemplate.showRecommendedInstallationBox !== false}
+                                  onChange={(event) => updateDraftTemplate({ showRecommendedInstallationBox: event.target.checked })}
+                                  className="h-4 w-4"
+                                />
+                                <span>Mostrar bloque de adicionales</span>
+                              </label>
+                              <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si lo desactivás, el presupuesto automático no muestra el resumen de adicionales.</p>
+                            </div>
+                            <div>
+                              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                                <input
+                                  type="checkbox"
+                                  checked={activeDraftTemplate.includeAdditionalsPricing !== false}
+                                  onChange={(event) => updateDraftTemplate({ includeAdditionalsPricing: event.target.checked })}
+                                  className="h-4 w-4"
+                                />
+                                <span>Sumar precios de adicionales</span>
+                              </label>
+                              <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si lo desactivás, los adicionales se muestran como alcance pero no se suman al precio comercial exportado.</p>
+                            </div>
+                            <div>
+                              <label className="flex items-center gap-2 text-sm text-zinc-300">
+                                <input
+                                  type="checkbox"
+                                  checked={activeDraftTemplate.includeVeredaMaterials !== false}
+                                  onChange={(event) => updateDraftTemplate({ includeVeredaMaterials: event.target.checked })}
+                                  className="h-4 w-4"
+                                />
+                                <span>Cobrar materiales de vereda</span>
+                              </label>
+                              <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si lo desactivás, se muestra solo la mano de obra de colocación de losetas sin sumar el costo de materiales.</p>
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-3">Valores y costos</h4>
-                    {selectedTemplate === 'client' && (
-                      <div className="mb-4">
-                        <label className="block text-xs text-zinc-400 mb-1">Alcance de instalación</label>
-                        <select
-                          value={activeDraftTemplate.installationMode || 'with_extras'}
-                          onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm mb-3"
-                        >
-                          <option value="basic">Instalación base</option>
-                          <option value="with_extras">{installationTier}</option>
-                        </select>
-                        <p className="text-[11px] text-zinc-500 mt-1 mb-3">Elegí si el presupuesto sale con el alcance base o con los adicionales cargados en el proyecto.</p>
+                      <div>
+                        <h4 className="text-sm font-semibold text-white mb-3">Valores y costos</h4>
+                        <div className="space-y-3">
+                          {!(selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only') && (
+                            <div>
+                              <label className="block text-xs text-zinc-400 mb-1">Materiales</label>
+                              <input
+                                type="number"
+                                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                                value={activeDraftTemplate.values?.materialCost ?? ''}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
+                                }}
+                                placeholder={computedCosts.totalMaterialCost.toFixed(2)}
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Mano de obra</label>
+                            <input
+                              type="number"
+                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                              value={activeDraftTemplate.values?.laborCost ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                updateDraftValues({ laborCost: value === '' ? undefined : Number(value) });
+                              }}
+                              placeholder={computedCosts.totalLaborCost.toFixed(2)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Total</label>
+                            <input
+                              type="number"
+                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
+                              value={activeDraftTemplate.values?.totalCost ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                updateDraftValues({ totalCost: value === '' ? undefined : Number(value) });
+                              }}
+                              placeholder={selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only'
+                                ? computedCosts.totalLaborCost.toFixed(2)
+                                : computedCosts.grandTotal.toFixed(2)}
+                            />
+                          </div>
+                          <p className="text-[11px] text-zinc-500">Si dejás un campo vacío se usa el valor calculado por la app (mostrado como referencia).</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                        <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
-                        <select
-                          value={activeDraftTemplate.clientPricingMode || 'labor_only'}
-                          onChange={(event) => updateDraftTemplate({ clientPricingMode: event.target.value as 'full' | 'labor_only' })}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                        >
-                          <option value="labor_only">Solo mano de obra</option>
-                          <option value="full">Materiales + mano de obra</option>
-                        </select>
-                        <p className="text-[11px] text-zinc-500 mt-1">En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.</p>
-
-                        <label className="mt-4 block text-xs text-zinc-400 mb-1">Posición de inversión</label>
-                        <select
-                          value={activeDraftTemplate.pricingPosition || 'bottom'}
-                          onChange={(event) => updateDraftTemplate({ pricingPosition: event.target.value as 'top' | 'bottom' })}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                        >
-                          <option value="bottom">Al final</option>
-                          <option value="top">Al principio</option>
-                        </select>
-                        <p className="text-[11px] text-zinc-500 mt-1">Elegís dónde aparece el precio dentro del presupuesto.</p>
-
-                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
-                          <input
-                            type="checkbox"
-                            checked={activeDraftTemplate.showRecommendedInstallationBox !== false}
-                            onChange={(event) => updateDraftTemplate({ showRecommendedInstallationBox: event.target.checked })}
-                            className="h-4 w-4"
-                          />
-                          <span>Mostrar bloque de adicionales</span>
-                        </label>
-                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, el presupuesto automático no muestra el resumen de adicionales.</p>
-
-                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
-                          <input
-                            type="checkbox"
-                            checked={activeDraftTemplate.includeAdditionalsPricing !== false}
-                            onChange={(event) => updateDraftTemplate({ includeAdditionalsPricing: event.target.checked })}
-                            className="h-4 w-4"
-                          />
-                          <span>Sumar precios de adicionales</span>
-                        </label>
-                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, los adicionales se muestran como alcance pero no se suman al precio comercial exportado.</p>
-
-                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
-                          <input
-                            type="checkbox"
-                            checked={activeDraftTemplate.includeVeredaMaterials !== false}
-                            onChange={(event) => updateDraftTemplate({ includeVeredaMaterials: event.target.checked })}
-                            className="h-4 w-4"
-                          />
-                          <span>Cobrar materiales de vereda</span>
-                        </label>
-                        <p className="text-[11px] text-zinc-500 mt-1">Si lo desactivás, se muestra solo la mano de obra de colocación de losetas sin sumar el costo de materiales.</p>
-
-                        <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
+                  {/* ============ PESTAÑA DOCUMENTO (solo cliente) ============ */}
+                  {editorTab === 'editor' && selectedTemplate === 'client' && (
+                    <>
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-zinc-300">
                           <input
                             type="checkbox"
                             checked={!!activeDraftTemplate.useCustomClientBody}
@@ -5009,396 +5153,211 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                           />
                           <span>Usar propuesta personalizada editada</span>
                         </label>
-                        <p className="text-[11px] text-zinc-500 mt-1">Si está desactivado, la exportación usa siempre la plantilla automática actual del sistema.</p>
-                      </div>
-                    )}
-                    <div className="space-y-3">
-                      {!(selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only') && (
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Materiales</label>
-                          <input
-                            type="number"
-                            className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                            value={activeDraftTemplate.values?.materialCost ?? ''}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
-                            }}
-                            placeholder={computedCosts.totalMaterialCost.toFixed(2)}
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Mano de obra</label>
-                        <input
-                          type="number"
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                          value={activeDraftTemplate.values?.laborCost ?? ''}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            updateDraftValues({ laborCost: value === '' ? undefined : Number(value) });
-                          }}
-                          placeholder={computedCosts.totalLaborCost.toFixed(2)}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Total</label>
-                        <input
-                          type="number"
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                          value={activeDraftTemplate.values?.totalCost ?? ''}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            updateDraftValues({ totalCost: value === '' ? undefined : Number(value) });
-                          }}
-                          placeholder={selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only'
-                            ? computedCosts.totalLaborCost.toFixed(2)
-                            : computedCosts.grandTotal.toFixed(2)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedTemplate === 'client' && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white mb-3">Secciones visibles</h4>
-                      <div className="space-y-2 text-sm text-zinc-300">
-                        {[
-                          { key: 'header', label: 'Información del cliente' },
-                          { key: 'includes', label: 'Alcance del proyecto' },
-                          { key: 'costs', label: 'Detalle de costos' },
-                          { key: 'conditions', label: 'Condiciones comerciales' },
-                        ].map((item) => (
-                          <label key={item.key} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                            checked={draftSections?.[item.key] !== false}
-                              onChange={(event) => updateDraftSection(item.key, event.target.checked)}
-                              className="h-4 w-4"
-                            />
-                            <span>{item.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTemplate === 'client' && (
-                    <div>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div>
-                          <h4 className="text-sm font-semibold text-white">Documento editable</h4>
-                          <p className="text-[11px] text-zinc-500 mt-1">Editás la propuesta de este proyecto. Los placeholders siguen saliendo de la app, por ejemplo <code>{'{{clientName}}'}</code> o <code>{'{{laborCost}}'}</code>.</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleResetClientDocument}
-                            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
-                          >
-                            Cargar base
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleUseAutomaticClientDocument}
-                            className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
-                          >
-                            Volver a automático
-                          </button>
-                        </div>
+                        <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si está desactivado, la exportación usa siempre la plantilla automática actual del sistema.</p>
                       </div>
 
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
-                        <div className="flex flex-wrap gap-2">
-                          <button type="button" onClick={() => runClientDocumentCommand('bold')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Negrita</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('italic')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Itálica</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h2>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H2</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h3>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H3</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<p>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Párrafo</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('insertUnorderedList')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Lista</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('justifyLeft')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Izq</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('justifyCenter')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Centro</button>
-                          <button type="button" onClick={() => runClientDocumentCommand('justifyRight')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Der</button>
-                          <button type="button" onClick={() => insertClientDocumentHtml('<hr />')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">División</button>
-                          <button type="button" onClick={() => insertClientDocumentHtml('<table><thead><tr><th>Concepto</th><th>Detalle</th></tr></thead><tbody><tr><td>Item</td><td>Valor</td></tr></tbody></table>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Tabla</button>
-                          <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-columns\"><div><h3>Columna 1</h3><p>Contenido</p></div><div><h3>Columna 2</h3><p>Contenido</p></div></div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">2 columnas</button>
-                          <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-comment\">Comentario interno o nota comercial.</div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Comentario</button>
-                        </div>
-
-                        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 p-3">
-                          <p className="text-[11px] font-semibold text-zinc-400 mb-2">Insertar dato real del proyecto</p>
-                          <div className="flex flex-wrap gap-2">
-                            {CLIENT_DYNAMIC_FIELDS.map((field) => (
-                              <button
-                                key={field.key}
-                                type="button"
-                                onClick={() => insertClientDocumentHtml(`{{${field.key}}}`)}
-                                className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:text-white"
-                              >
-                                {field.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div
-                          key={clientEditorSeedVersion}
-                          ref={clientDocumentEditorRef}
-                          contentEditable
-                          suppressContentEditableWarning
-                          onInput={(event) => updateDraftClientCustomBody(event.currentTarget.innerHTML)}
-                          className="min-h-[360px] rounded-xl border border-zinc-800 bg-white px-4 py-4 text-sm text-zinc-900 focus:outline-none"
-                          dangerouslySetInnerHTML={{ __html: clientDocumentEditorHtml }}
-                        />
-
-                        <p className="text-[11px] text-zinc-500">
-                          Si querés volver al armado original de la app, usá <strong>Volver a automático</strong>. Mientras uses este editor, el contenido queda persistido en este proyecto.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTemplate === 'client' && (
-                    <div>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div>
-                          <h4 className="text-sm font-semibold text-white">Bloques personalizados</h4>
-                          <p className="text-[11px] text-zinc-500 mt-1">Texto libre con variables reales del proyecto. Se guarda dentro de este proyecto.</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <button type="button" onClick={() => addClientDocumentBlock('heading')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Título</button>
-                        <button type="button" onClick={() => addClientDocumentBlock('paragraph')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Párrafo</button>
-                        <button type="button" onClick={() => addClientDocumentBlock('bullet_list')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Lista</button>
-                        <button type="button" onClick={() => addClientDocumentBlock('data_field')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Dato real</button>
-                        <button type="button" onClick={() => addClientDocumentBlock('divider')} className="col-span-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ División</button>
-                      </div>
-
-                      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 p-3 mb-4">
-                        <p className="text-[11px] font-semibold text-zinc-400 mb-2">Variables disponibles</p>
+                      {/* Variables del proyecto: un solo panel compartido */}
+                      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 p-3">
+                        <p className="text-[11px] font-semibold text-zinc-400 mb-2">Insertar dato real del proyecto (clic para insertar en el documento)</p>
                         <div className="flex flex-wrap gap-2">
                           {CLIENT_DYNAMIC_FIELDS.map((field) => (
-                            <code key={field.key} className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
-                              {`{{${field.key}}}`}
-                            </code>
+                            <button
+                              key={field.key}
+                              type="button"
+                              onClick={() => insertClientDocumentHtml(`{{${field.key}}}`)}
+                              className="rounded bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:text-white"
+                              title={`{{${field.key}}}`}
+                            >
+                              {field.label}
+                            </button>
                           ))}
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        {activeClientBlocks.length === 0 && (
-                          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
-                            Todavía no hay bloques personalizados para esta propuesta.
+                      <div>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div>
+                            <h4 className="text-sm font-semibold text-white">Documento editable</h4>
+                            <p className="text-[11px] text-zinc-500 mt-1">Editás la propuesta de este proyecto. Los placeholders siguen saliendo de la app, por ejemplo <code>{'{{clientName}}'}</code> o <code>{'{{laborCost}}'}</code>.</p>
                           </div>
-                        )}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleResetClientDocument}
+                              className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
+                            >
+                              Cargar base
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleUseAutomaticClientDocument}
+                              className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700"
+                            >
+                              Volver a automático
+                            </button>
+                          </div>
+                        </div>
 
-                        {activeClientBlocks.map((block, index) => (
-                          <div key={block.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                                Bloque {index + 1} · {block.type}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button type="button" onClick={() => moveClientDocumentBlock(block.id, -1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↑</button>
-                                <button type="button" onClick={() => moveClientDocumentBlock(block.id, 1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↓</button>
-                                <button type="button" onClick={() => removeClientDocumentBlock(block.id)} className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:text-red-200">Eliminar</button>
-                              </div>
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => runClientDocumentCommand('bold')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Negrita</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('italic')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Itálica</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h2>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H2</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<h3>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">H3</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('formatBlock', '<p>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Párrafo</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('insertUnorderedList')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Lista</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('justifyLeft')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Izq</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('justifyCenter')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Centro</button>
+                            <button type="button" onClick={() => runClientDocumentCommand('justifyRight')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Der</button>
+                            <button type="button" onClick={() => insertClientDocumentHtml('<hr />')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">División</button>
+                            <button type="button" onClick={() => insertClientDocumentHtml('<table><thead><tr><th>Concepto</th><th>Detalle</th></tr></thead><tbody><tr><td>Item</td><td>Valor</td></tr></tbody></table>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Tabla</button>
+                            <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-columns\"><div><h3>Columna 1</h3><p>Contenido</p></div><div><h3>Columna 2</h3><p>Contenido</p></div></div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">2 columnas</button>
+                            <button type="button" onClick={() => insertClientDocumentHtml('<div class=\"doc-comment\">Comentario interno o nota comercial.</div>')} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">Comentario</button>
+                          </div>
+
+                          <div
+                            key={clientEditorSeedVersion}
+                            ref={clientDocumentEditorRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={(event) => updateDraftClientCustomBody(event.currentTarget.innerHTML)}
+                            className="min-h-[360px] rounded-xl border border-zinc-800 bg-white px-4 py-4 text-sm text-zinc-900 focus:outline-none"
+                            dangerouslySetInnerHTML={{ __html: clientDocumentEditorHtml }}
+                          />
+
+                          <p className="text-[11px] text-zinc-500">
+                            Si querés volver al armado original de la app, usá <strong>Volver a automático</strong>. Mientras uses este editor, el contenido queda persistido en este proyecto.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div>
+                            <h4 className="text-sm font-semibold text-white">Bloques personalizados</h4>
+                            <p className="text-[11px] text-zinc-500 mt-1">Texto libre con variables reales del proyecto (las del panel de arriba). Se guarda dentro de este proyecto.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <button type="button" onClick={() => addClientDocumentBlock('heading')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Título</button>
+                          <button type="button" onClick={() => addClientDocumentBlock('paragraph')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Párrafo</button>
+                          <button type="button" onClick={() => addClientDocumentBlock('bullet_list')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Lista</button>
+                          <button type="button" onClick={() => addClientDocumentBlock('data_field')} className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ Dato real</button>
+                          <button type="button" onClick={() => addClientDocumentBlock('divider')} className="col-span-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-zinc-700">+ División</button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {activeClientBlocks.length === 0 && (
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
+                              Todavía no hay bloques personalizados para esta propuesta.
                             </div>
+                          )}
 
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs text-zinc-400 mb-1">Tipografía</label>
-                                <select
-                                  value={block.fontFamily || 'Segoe UI, Arial, sans-serif'}
-                                  onChange={(event) => patchClientDocumentBlock(block.id, { fontFamily: event.target.value })}
-                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
-                                >
-                                  <option value="Segoe UI, Arial, sans-serif">Sans</option>
-                                  <option value="Georgia, serif">Serif</option>
-                                  <option value="'Courier New', monospace">Monospace</option>
-                                </select>
+                          {activeClientBlocks.map((block, index) => (
+                            <div key={block.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 space-y-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                                  Bloque {index + 1} · {block.type}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button type="button" onClick={() => moveClientDocumentBlock(block.id, -1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↑</button>
+                                  <button type="button" onClick={() => moveClientDocumentBlock(block.id, 1)} className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:text-white">↓</button>
+                                  <button type="button" onClick={() => removeClientDocumentBlock(block.id)} className="rounded border border-red-900/60 px-2 py-1 text-xs text-red-300 hover:text-red-200">Eliminar</button>
+                                </div>
                               </div>
-                              <div>
-                                <label className="block text-xs text-zinc-400 mb-1">Tamaño</label>
-                                <input
-                                  type="number"
-                                  value={block.fontSize || ''}
-                                  onChange={(event) => patchClientDocumentBlock(block.id, { fontSize: event.target.value === '' ? undefined : Number(event.target.value) })}
-                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
-                                />
-                              </div>
-                            </div>
 
-                            <div>
-                              <label className="block text-xs text-zinc-400 mb-1">Alineación</label>
-                              <select
-                                value={block.align || 'left'}
-                                onChange={(event) => patchClientDocumentBlock(block.id, { align: event.target.value as 'left' | 'center' | 'right' })}
-                                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
-                              >
-                                <option value="left">Izquierda</option>
-                                <option value="center">Centro</option>
-                                <option value="right">Derecha</option>
-                              </select>
-                            </div>
-
-                            {block.type === 'data_field' ? (
-                              <>
+                              <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="block text-xs text-zinc-400 mb-1">Dato de proyecto</label>
+                                  <label className="block text-xs text-zinc-400 mb-1">Tipografía</label>
                                   <select
-                                    value={block.fieldKey || 'clientName'}
-                                    onChange={(event) => patchClientDocumentBlock(block.id, { fieldKey: event.target.value })}
+                                    value={block.fontFamily || 'Segoe UI, Arial, sans-serif'}
+                                    onChange={(event) => patchClientDocumentBlock(block.id, { fontFamily: event.target.value })}
                                     className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
                                   >
-                                    {CLIENT_DYNAMIC_FIELDS.map((field) => (
-                                      <option key={field.key} value={field.key}>{field.label}</option>
-                                    ))}
+                                    <option value="Segoe UI, Arial, sans-serif">Sans</option>
+                                    <option value="Georgia, serif">Serif</option>
+                                    <option value="'Courier New', monospace">Monospace</option>
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="block text-xs text-zinc-400 mb-1">Etiqueta</label>
+                                  <label className="block text-xs text-zinc-400 mb-1">Tamaño</label>
                                   <input
-                                    value={block.label || ''}
-                                    onChange={(event) => patchClientDocumentBlock(block.id, { label: event.target.value })}
+                                    type="number"
+                                    value={block.fontSize || ''}
+                                    onChange={(event) => patchClientDocumentBlock(block.id, { fontSize: event.target.value === '' ? undefined : Number(event.target.value) })}
                                     className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
-                                    placeholder="Ej: Inversión estimada"
                                   />
                                 </div>
-                              </>
-                            ) : block.type !== 'divider' ? (
+                              </div>
+
                               <div>
-                                <label className="block text-xs text-zinc-400 mb-1">Contenido</label>
-                                <textarea
-                                  value={block.content || ''}
-                                  onChange={(event) => patchClientDocumentBlock(block.id, { content: event.target.value })}
-                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm min-h-[110px]"
-                                  placeholder="Podés escribir texto libre y usar variables como {{clientName}} o {{laborCost}}"
+                                <label className="block text-xs text-zinc-400 mb-1">Alineación</label>
+                                <select
+                                  value={block.align || 'left'}
+                                  onChange={(event) => patchClientDocumentBlock(block.id, { align: event.target.value as 'left' | 'center' | 'right' })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                >
+                                  <option value="left">Izquierda</option>
+                                  <option value="center">Centro</option>
+                                  <option value="right">Derecha</option>
+                                </select>
+                              </div>
+
+                              {block.type === 'data_field' ? (
+                                <>
+                                  <div>
+                                    <label className="block text-xs text-zinc-400 mb-1">Dato de proyecto</label>
+                                    <select
+                                      value={block.fieldKey || 'clientName'}
+                                      onChange={(event) => patchClientDocumentBlock(block.id, { fieldKey: event.target.value })}
+                                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                    >
+                                      {CLIENT_DYNAMIC_FIELDS.map((field) => (
+                                        <option key={field.key} value={field.key}>{field.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-zinc-400 mb-1">Etiqueta</label>
+                                    <input
+                                      value={block.label || ''}
+                                      onChange={(event) => patchClientDocumentBlock(block.id, { label: event.target.value })}
+                                      className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                      placeholder="Ej: Inversión estimada"
+                                    />
+                                  </div>
+                                </>
+                              ) : block.type !== 'divider' ? (
+                                <div>
+                                  <label className="block text-xs text-zinc-400 mb-1">Contenido</label>
+                                  <textarea
+                                    value={block.content || ''}
+                                    onChange={(event) => patchClientDocumentBlock(block.id, { content: event.target.value })}
+                                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm min-h-[110px]"
+                                    placeholder="Podés escribir texto libre y usar variables como {{clientName}} o {{laborCost}}"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm text-zinc-400">
+                                  Este bloque agrega una división visual en el documento.
+                                </div>
+                              )}
+
+                              <div>
+                                <label className="block text-xs text-zinc-400 mb-1">Comentario interno</label>
+                                <input
+                                  value={block.comments || ''}
+                                  onChange={(event) => patchClientDocumentBlock(block.id, { comments: event.target.value })}
+                                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
+                                  placeholder="Nota para vos sobre este bloque"
                                 />
                               </div>
-                            ) : (
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm text-zinc-400">
-                                Este bloque agrega una división visual en el documento.
-                              </div>
-                            )}
-
-                            <div>
-                              <label className="block text-xs text-zinc-400 mb-1">Comentario interno</label>
-                              <input
-                                value={block.comments || ''}
-                                onChange={(event) => patchClientDocumentBlock(block.id, { comments: event.target.value })}
-                                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100 px-3 py-2 text-sm"
-                                placeholder="Nota para vos sobre este bloque"
-                              />
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTemplate === 'professional' && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white mb-3">Plano incluido</h4>
-                      <div className="space-y-2 text-sm text-zinc-300">
-                        <label className="block text-xs text-zinc-400 mb-1">Vista del dibujo</label>
-                        <select
-                          value={activeDraftTemplate.drawingView || 'cad'}
-                          onChange={(event) => updateDraftTemplate({ drawingView: event.target.value as 'cad' | 'planta' })}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                        >
-                          <option value="cad">Plano CAD</option>
-                          <option value="planta">Vista Planta</option>
-                        </select>
-                        <p className="text-[11px] text-zinc-500">Se mostrará en la exportación de Especificaciones Técnicas.</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTemplate === 'materials' && (
-                    <div>
-                      <div className="mb-4">
-                        <label className="block text-xs text-zinc-400 mb-1">Alcance de instalación</label>
-                        <select
-                          value={activeDraftTemplate.installationMode || 'with_extras'}
-                          onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
-                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                        >
-                          <option value="basic">Instalación básica</option>
-                          <option value="with_extras">Instalación con extras</option>
-                        </select>
-                        <p className="text-[11px] text-zinc-500 mt-1">La lista de materiales sigue sin valores; esto solo cambia el alcance incluido.</p>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <h4 className="text-sm font-semibold text-white">Bloques del listado de materiales</h4>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, true))}
-                            className="text-[11px] text-zinc-400 hover:text-white"
-                          >
-                            Marcar todo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => materialSectionDefinitions.forEach((item) => updateDraftSection(item.key, false))}
-                            className="text-[11px] text-zinc-400 hover:text-white"
-                          >
-                            Quitar todo
-                          </button>
+                          ))}
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        {materialSectionDefinitions.map((item) => (
-                          <label
-                            key={item.key}
-                            className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${
-                              draftMaterialSections?.[item.key] !== false
-                            ? 'border-zinc-700 bg-zinc-900'
-                            : 'border-zinc-800 bg-zinc-900/60'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={draftMaterialSections?.[item.key] !== false}
-                              onChange={(event) => updateDraftSection(item.key, event.target.checked)}
-                              className="h-4 w-4 mt-0.5"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-zinc-100">{item.label}</p>
-                              <p className="text-xs text-zinc-400 mt-1">{item.description}</p>
-                              <p className="text-[11px] text-zinc-500 mt-2">{item.preview}</p>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedTemplate === 'budget' && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white mb-3">Alcance del presupuesto</h4>
-                      <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
-                      <select
-                        value={activeDraftTemplate.clientPricingMode || 'labor_only'}
-                        onChange={(event) => updateDraftTemplate({ clientPricingMode: event.target.value as 'full' | 'labor_only' })}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm mb-3"
-                      >
-                        <option value="labor_only">Solo mano de obra</option>
-                        <option value="full">Materiales + mano de obra</option>
-                      </select>
-                      <label className="block text-xs text-zinc-400 mb-1">Modo de instalación</label>
-                      <select
-                        value={activeDraftTemplate.installationMode || 'with_extras'}
-                        onChange={(event) => updateDraftTemplate({ installationMode: event.target.value as 'basic' | 'with_extras' })}
-                        className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                      >
-                        <option value="basic">Instalación básica</option>
-                        <option value="with_extras">Instalación con extras</option>
-                      </select>
-                      <p className="text-[11px] text-zinc-500 mt-1">Por defecto queda seguro para cliente: solo mano de obra. Si activás materiales, vuelve a mostrarse el presupuesto interno completo.</p>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
