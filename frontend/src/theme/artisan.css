@@ -1,0 +1,367 @@
+/* ═══════════════════════════════════════════════════════════════
+   ARTESANAL SOBRIO — sistema visual de Pool Installer
+   Fuente de verdad: handoff "Diseño pool calculator artesanal"
+   - Dos temas: paper (Cuaderno técnico) / slate (Pizarra sobria)
+   - Trazo a mano vía filtros SVG globales (#pcRough / #pcRoughIcon)
+   - Este archivo también remapea la piel anterior (zinc/neón) a los
+     tokens del sistema, para que TODA la app quede consistente aunque
+     una pantalla todavía no tenga re-skin fino.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ─────────────────────────────────────────────────── */
+:root,
+:root[data-theme='paper'] {
+  --paper: #e8e1d1;
+  --card: #f6f1e6;
+  --card2: #efe8d7;
+  --ink: #2b2f36;
+  --ink-soft: #5f6672;
+  --hair: #d3c9b4;
+  --hair-strong: #c3b89f;
+  --accent: #2f6d72;
+  --accent-2: #dbe6e3;
+  --warm: #986a3d;
+  --good: #4f7a52;
+  --bad: #a5563f;
+  --grid: rgba(43, 47, 54, 0.055);
+  --overlay: rgba(20, 18, 12, 0.42);
+}
+
+:root[data-theme='slate'] {
+  --paper: #22252b;
+  --card: #2a2e35;
+  --card2: #31363f;
+  --ink: #ece6d8;
+  --ink-soft: #a5a08f;
+  --hair: #3d434d;
+  --hair-strong: #4a515c;
+  --accent: #8db9b3;
+  --accent-2: rgba(141, 185, 179, 0.13);
+  --warm: #c99e6d;
+  --good: #8fb287;
+  --bad: #c98d74;
+  --grid: rgba(236, 230, 216, 0.05);
+  --overlay: rgba(8, 8, 6, 0.55);
+}
+
+/* ── Fondo de papel técnico con grilla de ingeniero ─────────── */
+html {
+  background: var(--paper) !important;
+}
+
+body {
+  background-color: var(--paper) !important;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) !important;
+  background-size: 27px 27px !important;
+  color: var(--ink);
+}
+
+/* ── Tipografía del sistema ─────────────────────────────────── */
+h1, h2, h3 {
+  font-family: 'JetBrains Mono', 'Space Grotesk', monospace;
+}
+
+::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 72%, transparent) !important;
+}
+
+/* ── Helpers de trazo a mano ────────────────────────────────── */
+/* El borde/fondo vive en una capa aparte con filter para no
+   distorsionar el texto (patrón del handoff). */
+.rough-panel {
+  position: relative;
+  isolation: isolate;
+}
+.rough-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.6px solid var(--hair-strong);
+  border-radius: 16px;
+  background: var(--card);
+  filter: url(#pcRough);
+}
+.rough-panel--soft::before {
+  border-width: 1.4px;
+  border-color: var(--hair);
+  background: var(--card2);
+}
+.rough-panel--accent::before {
+  border-color: var(--accent);
+  background: var(--accent-2);
+}
+.rough-panel--flat::before {
+  border-radius: 0;
+}
+
+.rough-chip {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.rough-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.4px solid currentColor;
+  border-radius: 20px;
+  opacity: 0.85;
+  filter: url(#pcRough);
+}
+
+.rough-dashed {
+  border-top: 1.3px dashed var(--hair-strong) !important;
+}
+
+/* Botones re-skineados (usados por components/ui/Button.tsx) */
+.rough-btn {
+  position: relative;
+  isolation: isolate;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent !important;
+  border: none !important;
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+.rough-btn__bg {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.5px solid var(--hair-strong);
+  border-radius: 12px;
+  background: var(--card);
+  filter: url(#pcRough);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.rough-btn:hover .rough-btn__bg { border-color: var(--accent); }
+.rough-btn--primary { color: var(--paper) !important; }
+.rough-btn--primary .rough-btn__bg { background: var(--accent); border-color: var(--accent); }
+.rough-btn--secondary .rough-btn__bg { background: var(--card2); }
+.rough-btn--outline .rough-btn__bg { background: transparent; }
+.rough-btn--ghost .rough-btn__bg { background: transparent; border-color: transparent; }
+.rough-btn--ghost:hover .rough-btn__bg { border-color: var(--hair); }
+.rough-btn--danger { color: var(--paper) !important; }
+.rough-btn--danger .rough-btn__bg { background: var(--bad); border-color: var(--bad); }
+.rough-btn--success { color: var(--paper) !important; }
+.rough-btn--success .rough-btn__bg { background: var(--good); border-color: var(--good); }
+
+/* Campos re-skineados (Input/Select) */
+.rough-field {
+  position: relative;
+  isolation: isolate;
+}
+.rough-field__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.5px solid var(--hair-strong);
+  border-radius: 12px;
+  background: var(--card2);
+  filter: url(#pcRough);
+  transition: border-color 0.15s ease;
+}
+.rough-field:focus-within .rough-field__bg { border-color: var(--accent); }
+.rough-field--error .rough-field__bg { border-color: var(--bad); }
+.rough-field__control {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: var(--ink) !important;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Ítem de navegación activo (barra interior sólida, sin glow) */
+.artisan-nav-active {
+  box-shadow: inset 2.5px 0 0 var(--accent) !important;
+  background: var(--accent-2) !important;
+  color: var(--accent) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REMAPEO GLOBAL de la piel anterior (zinc oscuro + neón) a tokens.
+   Regla del handoff: para lo no rediseñado explícitamente, aplicar
+   el mismo sistema visual. Ningún color nuevo.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* — Fondos neutros — */
+[class*='bg-black'] { background-color: var(--paper) !important; }
+[class*='bg-zinc-950'] { background-color: var(--paper) !important; }
+[class*='bg-zinc-900'] { background-color: var(--card) !important; }
+[class*='bg-zinc-800'] { background-color: var(--card2) !important; }
+[class*='bg-zinc-700'] { background-color: var(--card2) !important; }
+[class*='bg-slate-9'] { background-color: var(--paper) !important; }
+[class*='bg-gray-9'] { background-color: var(--card) !important; }
+[class*='bg-gray-8'] { background-color: var(--card2) !important; }
+[class*='bg-white'] { background-color: var(--card) !important; }
+[class*='bg-gray-50'], [class*='bg-gray-100'], [class*='bg-gray-200'],
+[class*='bg-zinc-100'], [class*='bg-zinc-200'] { background-color: var(--card2) !important; }
+
+/* Overlays de modal: mantener velo oscuro sobrio (después de bg-black) */
+[class*='bg-black/'] { background-color: var(--overlay) !important; }
+
+/* — Fondos de acento / estado (sólidos) — */
+[class*='bg-cyan-'], [class*='bg-blue-'], [class*='bg-sky-'],
+[class*='bg-indigo-'], [class*='bg-purple-'], [class*='bg-violet-'] {
+  background-color: var(--accent) !important;
+}
+[class*='bg-emerald-'], [class*='bg-green-'], [class*='bg-teal-'] {
+  background-color: var(--good) !important;
+}
+[class*='bg-amber-'], [class*='bg-orange-'], [class*='bg-yellow-'] {
+  background-color: var(--warm) !important;
+}
+[class*='bg-red-'], [class*='bg-rose-'] {
+  background-color: var(--bad) !important;
+}
+
+/* — Tintes suaves (chips/badges translúcidos más comunes) — */
+.bg-cyan-500\/10, .bg-cyan-500\/20, .bg-cyan-400\/10, .bg-cyan-400\/20,
+.bg-blue-500\/10, .bg-blue-500\/20, .bg-blue-400\/10, .bg-sky-500\/10,
+.bg-indigo-500\/10, .bg-purple-500\/10, .bg-purple-500\/20, .bg-violet-500\/10,
+.bg-cyan-950\/30, .bg-blue-50, .bg-cyan-50, .bg-blue-950\/30 {
+  background-color: var(--accent-2) !important;
+}
+.bg-emerald-500\/10, .bg-emerald-500\/15, .bg-emerald-500\/20, .bg-emerald-400\/10,
+.bg-green-500\/10, .bg-green-500\/20, .bg-teal-500\/10, .bg-emerald-950\/30,
+.bg-emerald-50, .bg-green-50, .bg-green-100, .bg-emerald-100 {
+  background-color: color-mix(in srgb, var(--good) 14%, transparent) !important;
+}
+.bg-amber-500\/10, .bg-amber-500\/20, .bg-amber-400\/10, .bg-orange-500\/10,
+.bg-yellow-500\/10, .bg-amber-950\/30, .bg-amber-50, .bg-orange-50,
+.bg-amber-100, .bg-orange-100, .bg-yellow-100 {
+  background-color: color-mix(in srgb, var(--warm) 14%, transparent) !important;
+}
+.bg-red-500\/10, .bg-red-500\/20, .bg-rose-500\/10, .bg-red-950\/30,
+.bg-red-50, .bg-rose-50, .bg-red-100, .bg-rose-100 {
+  background-color: color-mix(in srgb, var(--bad) 12%, transparent) !important;
+}
+.bg-cyan-100, .bg-blue-100, .bg-purple-100, .bg-violet-100, .bg-blue-200 {
+  background-color: var(--accent-2) !important;
+}
+
+/* Paneles translúcidos sobre oscuro (white/5, white/10, zinc/60…) */
+.bg-white\/3, .bg-white\/5, .bg-white\/8, .bg-white\/10, .bg-white\/15, .bg-white\/20,
+.bg-zinc-900\/30, .bg-zinc-900\/40, .bg-zinc-900\/50, .bg-zinc-900\/60,
+.bg-zinc-900\/80, .bg-zinc-900\/85, .bg-zinc-900\/90,
+.bg-zinc-950\/60, .bg-zinc-950\/70, .bg-zinc-950\/80, .bg-zinc-950\/90, .bg-zinc-950\/95,
+.bg-zinc-800\/30, .bg-zinc-800\/50, .bg-zinc-800\/60 {
+  background-color: var(--card) !important;
+}
+
+/* — Texto — */
+[class*='text-white'] { color: var(--ink) !important; }
+[class*='text-black'] { color: var(--ink) !important; }
+[class*='text-zinc-1'], [class*='text-zinc-2'] { color: var(--ink) !important; }
+[class*='text-zinc-3'], [class*='text-zinc-4'], [class*='text-zinc-5'], [class*='text-zinc-6'], [class*='text-zinc-7'] { color: var(--ink-soft) !important; }
+[class*='text-zinc-8'], [class*='text-zinc-900'] { color: var(--ink) !important; }
+[class*='text-gray-3'], [class*='text-gray-4'], [class*='text-gray-5'], [class*='text-gray-6'], [class*='text-gray-7'] { color: var(--ink-soft) !important; }
+[class*='text-gray-8'], [class*='text-gray-9'] { color: var(--ink) !important; }
+[class*='text-slate-'] { color: var(--ink-soft) !important; }
+
+[class*='text-cyan-'], [class*='text-blue-'], [class*='text-sky-'],
+[class*='text-indigo-'], [class*='text-purple-'], [class*='text-violet-'] {
+  color: var(--accent) !important;
+}
+[class*='text-emerald-'], [class*='text-green-'], [class*='text-teal-'] { color: var(--good) !important; }
+[class*='text-amber-'], [class*='text-orange-'], [class*='text-yellow-'] { color: var(--warm) !important; }
+[class*='text-red-'], [class*='text-rose-'] { color: var(--bad) !important; }
+
+/* Texto sobre superficies de acción (antes: text-zinc-950 sobre claro,
+   text-white sobre acento) → tinta invertida del tema */
+[class*='text-zinc-95'] { color: var(--paper) !important; }
+[class*='bg-cyan-'][class*='text-white'], [class*='bg-blue-'][class*='text-white'],
+[class*='bg-emerald-'][class*='text-white'], [class*='bg-green-'][class*='text-white'],
+[class*='bg-red-'][class*='text-white'], [class*='bg-amber-'][class*='text-white'],
+[class*='bg-gradient-'][class*='text-white'] {
+  color: var(--paper) !important;
+}
+/* La superficie "clara de acción" del look viejo pasa a ser acento */
+[class*='bg-zinc-100'][class*='text-zinc-95'], [class*='bg-zinc-100'][class*='hover:bg-white'] {
+  background-color: var(--accent) !important;
+  color: var(--paper) !important;
+}
+
+/* — Bordes — */
+[class*='border-white'] { border-color: var(--hair) !important; }
+[class*='border-zinc-'], [class*='border-gray-'], [class*='border-slate-'] { border-color: var(--hair-strong) !important; }
+[class*='border-cyan-'], [class*='border-blue-'], [class*='border-sky-'],
+[class*='border-indigo-'], [class*='border-purple-'], [class*='border-violet-'] { border-color: var(--accent) !important; }
+[class*='border-emerald-'], [class*='border-green-'], [class*='border-teal-'] { border-color: var(--good) !important; }
+[class*='border-amber-'], [class*='border-orange-'], [class*='border-yellow-'] { border-color: var(--warm) !important; }
+[class*='border-red-'], [class*='border-rose-'] { border-color: var(--bad) !important; }
+
+/* — Gradientes: se aplanan a color de rol (cero neón) — */
+[class*='bg-gradient-'] { background-image: none !important; }
+[class*='bg-gradient-'][class*='from-cyan'], [class*='bg-gradient-'][class*='from-blue'],
+[class*='bg-gradient-'][class*='from-sky'], [class*='bg-gradient-'][class*='from-indigo'],
+[class*='bg-gradient-'][class*='from-purple'], [class*='bg-gradient-'][class*='from-violet'],
+[class*='bg-gradient-'][class*='from-pink'] {
+  background-color: var(--accent) !important;
+}
+[class*='bg-gradient-'][class*='from-emerald'], [class*='bg-gradient-'][class*='from-green'],
+[class*='bg-gradient-'][class*='from-teal'] {
+  background-color: var(--good) !important;
+}
+[class*='bg-gradient-'][class*='from-amber'], [class*='bg-gradient-'][class*='from-orange'],
+[class*='bg-gradient-'][class*='from-yellow'] {
+  background-color: var(--warm) !important;
+}
+[class*='bg-gradient-'][class*='from-red'], [class*='bg-gradient-'][class*='from-rose'] {
+  background-color: var(--bad) !important;
+}
+/* Fondos decorativos oscuros de página → transparentes (se ve la grilla) */
+[class*='bg-gradient-'][class*='from-zinc'], [class*='bg-gradient-'][class*='from-black'],
+[class*='bg-gradient-'][class*='from-slate'], [class*='bg-gradient-'][class*='from-gray'],
+[class*='bg-gradient-'][class*='from-white'], [class*='bg-gradient-'][class*='from-transparent'] {
+  background-color: transparent !important;
+}
+/* Texto con gradiente recortado (bg-clip-text) → acento plano */
+[class*='bg-clip-text'] {
+  background-image: none !important;
+  background-color: transparent !important;
+  color: var(--accent) !important;
+  -webkit-text-fill-color: var(--accent) !important;
+}
+
+/* — Sin sombras blandas: la elevación la da el borde — */
+[class*='shadow-'] { box-shadow: none !important; }
+
+/* — Cero neón: las capas de glow decorativo (blur suelto, no backdrop-blur)
+     del look anterior se apagan por completo — */
+.blur, .blur-sm, .blur-md, .blur-lg, .blur-xl, .blur-2xl, .blur-3xl {
+  opacity: 0 !important;
+}
+[class*='ring-cyan'], [class*='ring-blue'] { --tw-ring-color: color-mix(in srgb, var(--accent) 45%, transparent) !important; }
+[class*='ring-red'] { --tw-ring-color: color-mix(in srgb, var(--bad) 45%, transparent) !important; }
+
+/* — Separadores internos punteados (anotación a mano) — */
+[class*='divide-y'] > :not([hidden]) ~ :not([hidden]) {
+  border-top-style: dashed !important;
+  border-color: var(--hair) !important;
+}
+hr { border-top: 1.3px dashed var(--hair-strong) !important; }
+
+/* — Scrollbars sobrios — */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hair-strong); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); }
+
+/* Selects nativos: opciones legibles en ambos temas */
+select option { background-color: var(--card) !important; color: var(--ink) !important; }

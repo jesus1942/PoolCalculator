@@ -5,6 +5,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
 }
 
+// Botón del sistema "Artesanal Sobrio": el borde/fondo rugoso va en un
+// <span> absoluto con filter #pcRough; el label queda nítido encima.
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
@@ -13,17 +15,6 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   ...props
 }) => {
-  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cyan-300/40';
-
-  const variantStyles = {
-    primary: 'bg-cyan-400 text-zinc-950 hover:bg-cyan-300 shadow-sm hover:shadow-md',
-    secondary: 'bg-white/15 border border-white/30 text-zinc-50 hover:bg-white/25',
-    outline: 'bg-transparent border border-white/30 text-zinc-50 hover:bg-white/10 hover:border-white/40',
-    ghost: 'bg-transparent text-zinc-100 hover:bg-white/10',
-    danger: 'bg-red-500 text-white hover:bg-red-400 shadow-sm hover:shadow-md',
-    success: 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-sm hover:shadow-md',
-  };
-
   const sizeStyles = {
     sm: 'px-3 py-1.5 text-sm',
     md: 'px-5 py-2.5 text-base',
@@ -33,10 +24,11 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button
       type={type}
-      className={`${baseStyles} ${variantStyles[variant] || variantStyles.primary} ${sizeStyles[size]} ${className}`}
+      className={`rough-btn rough-btn--${variant} transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none ${sizeStyles[size]} ${className}`}
       {...props}
     >
-      {children}
+      <span className="rough-btn__bg" aria-hidden="true" />
+      <span className="relative inline-flex items-center justify-center gap-2">{children}</span>
     </button>
   );
 };

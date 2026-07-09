@@ -22,10 +22,18 @@
     <meta name="twitter:description" content="Sistema completo para calcular materiales, presupuestar y gestionar proyectos de montaje de piscinas de fibra de vidrio." />
     <meta name="twitter:image" content="https://poolcalculator.com/twitter-image.png" />
     <link rel="canonical" href="https://poolcalculator.com/" />
-    <meta name="theme-color" content="#080c14" />
+    <meta name="theme-color" content="#e8e1d1" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Pool Installer - Calculadora Profesional de Materiales para Piscinas ACQUAM</title>
+
+    <script>
+      // Rediseño Artesanal: aplicar el tema guardado antes de pintar
+      try {
+        var t = localStorage.getItem('pool-theme');
+        document.documentElement.dataset.theme = (t === 'slate' || t === 'paper') ? t : 'paper';
+      } catch (e) { document.documentElement.dataset.theme = 'paper'; }
+    </script>
 
     <style>
       /* ══════════════════════════════════════════════

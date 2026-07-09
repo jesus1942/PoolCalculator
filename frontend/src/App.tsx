@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RemindersProvider } from '@/context/RemindersContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { RoleRoute } from '@/components/RoleRoute';
 import { Layout } from '@/components/Layout';
@@ -42,6 +43,16 @@ function GlobalSvgFilters() {
           <feTurbulence type="fractalNoise" baseFrequency="0.028 0.048" numOctaves="3" seed="6" result="noise" />
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
         </filter>
+        {/* Rediseño Artesanal Sobrio: trazo rugoso para bordes de
+            tarjetas/botones/inputs y variante fina para iconos. */}
+        <filter id="pcRough" x="-3%" y="-3%" width="106%" height="106%" colorInterpolationFilters="linearRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.014 0.02" numOctaves="3" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="4.4" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="pcRoughIcon" x="-8%" y="-8%" width="116%" height="116%" colorInterpolationFilters="linearRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03 0.045" numOctaves="2" seed="4" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
       </defs>
     </svg>
   );
@@ -51,7 +62,7 @@ function App() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   const Router = BrowserRouter;
   return (
-    <>
+    <ThemeProvider>
     <GlobalSvgFilters />
     <AuthProvider>
       <Router
@@ -148,7 +159,7 @@ function App() {
         </Routes>
       </Router>
     </AuthProvider>
-    </>
+    </ThemeProvider>
   );
 }
 
