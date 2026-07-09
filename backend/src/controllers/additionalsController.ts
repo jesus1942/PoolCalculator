@@ -482,7 +482,10 @@ function generateSummary(additionals: any[]): any {
 export const updateAdditional = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { newQuantity, notes } = req.body;
+    // Los precios (customPricePerUnit / customLaborCost) se editan desde la
+    // pestaña Costos del proyecto; el resto de las pestañas solo maneja
+    // cantidades y notas.
+    const { newQuantity, notes, customPricePerUnit, customLaborCost } = req.body;
 
     const existing = await prisma.projectAdditional.findUnique({
       where: { id },
@@ -499,7 +502,12 @@ export const updateAdditional = async (req: AuthRequest, res: Response) => {
 
     const updated = await prisma.projectAdditional.update({
       where: { id },
-      data: { newQuantity, notes }
+      data: {
+        ...(newQuantity !== undefined ? { newQuantity } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+        ...(customPricePerUnit !== undefined ? { customPricePerUnit } : {}),
+        ...(customLaborCost !== undefined ? { customLaborCost } : {}),
+      }
     });
 
     const projectForLock = await prisma.project.findUnique({
@@ -520,10 +528,10 @@ export const updateAdditional = async (req: AuthRequest, res: Response) => {
         const generatedTask = generateTaskFromAdditional(
           getAdditionalName(existing),
           existing.customCategory || existing.equipment?.type || existing.accessory?.type || existing.material?.type || 'other',
-          Number(newQuantity || 0),
+          Number(newQuantity ?? existing.newQuantity ?? 0),
           category,
           [],
-          existing.customLaborCost || undefined
+          updated.customLaborCost || undefined
         );
 
         currentTasks[category] = categoryTasks.map((task: any) =>

@@ -292,11 +292,6 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-2">
                           <span>Cantidad: <strong>{additional.newQuantity} {additional.customUnit || 'unidades'}</strong></span>
-                          <span>Material: <strong>${costs.materialCost.toLocaleString('es-AR')}</strong></span>
-                          {costs.laborCost > 0 && (
-                            <span>M.O.: <strong>${costs.laborCost.toLocaleString('es-AR')}</strong></span>
-                          )}
-                          <span className="text-green-600">Total: <strong>${costs.total.toLocaleString('es-AR')}</strong></span>
                         </div>
 
                         {additional.notes && (
@@ -412,40 +407,19 @@ export const AdditionalsManager: React.FC<AdditionalsManagerProps> = ({ project,
                 placeholder="Ej: Equipamiento, Material, Accesorio"
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Unidad de Medida *"
-                  value={formData.customUnit}
-                  onChange={(e) => setFormData({ ...formData, customUnit: e.target.value })}
-                  placeholder="Ej: unidad, kg, m"
-                />
-
-                <Input
-                  label="Precio por Unidad *"
-                  type="number"
-                  value={formData.customPricePerUnit}
-                  onChange={(e) => setFormData({ ...formData, customPricePerUnit: parseFloat(e.target.value) || 0 })}
-                  min={0}
-                  step={0.01}
-                />
-              </div>
+              <Input
+                label="Unidad de Medida *"
+                value={formData.customUnit}
+                onChange={(e) => setFormData({ ...formData, customUnit: e.target.value })}
+                placeholder="Ej: unidad, kg, m"
+              />
 
             </>
           )}
 
-          <Input
-            label={useCustom ? 'Costo Mano de Obra por Unidad' : 'Costo Mano de Obra adicional por Unidad'}
-            type="number"
-            value={formData.customLaborCost}
-            onChange={(e) => setFormData({ ...formData, customLaborCost: parseFloat(e.target.value) || 0 })}
-            min={0}
-            step={0.01}
-          />
-          {!useCustom && (
-            <p className="text-xs text-gray-500 -mt-2">
-              Si este adicional requiere descarga, izaje, montaje o instalación extra real, cargala acá aunque el item venga de un preset.
-            </p>
-          )}
+          <p className="text-xs text-gray-500">
+            Los precios y la mano de obra de este adicional se cargan y editan desde la pestaña Costos.
+          </p>
 
           {/* Campos comunes */}
           <div className="grid grid-cols-2 gap-4">

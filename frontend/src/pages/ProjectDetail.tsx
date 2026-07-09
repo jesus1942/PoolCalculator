@@ -216,6 +216,13 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
+  // Guardado silencioso para la pestaña Costos (ella muestra su propio aviso).
+  const handleSaveTasksSilent = async (tasks: any) => {
+    if (!id) return;
+    await projectService.update(id, { tasks });
+    await loadProject();
+  };
+
   const handleUpdateProjectSettings = async (exportSettings: Record<string, unknown>) => {
     if (!id) return;
     await projectService.update(id, { exportSettings });
@@ -439,7 +446,9 @@ export const ProjectDetail: React.FC = () => {
         )}
 
         {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
-        {visibleActiveTab === 'costs' && canViewFinancials && <ProjectCostsTab project={project} />}
+        {visibleActiveTab === 'costs' && canViewFinancials && (
+          <ProjectCostsTab project={project} canEdit={!isReadOnlyProjectUser} onSaveTasks={handleSaveTasksSilent} />
+        )}
         {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
         {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
         {visibleActiveTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
@@ -615,7 +624,12 @@ const useProjectCostData = (project: Project) => {
     return summary;
   }, [tasks, hasTasks]);
 
-  return { roles, additionals, rolesCostSummary };
+  const reload = () => {
+    loadRoles();
+    loadAdditionals();
+  };
+
+  return { roles, additionals, rolesCostSummary, reload };
 };
 
 const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boolean }> = ({ project, canViewFinancials }) => {
@@ -623,7 +637,21 @@ const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boole
   return <ImprovedOverview project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} canViewFinancials={canViewFinancials} />;
 };
 
-const ProjectCostsTab: React.FC<{ project: Project }> = ({ project }) => {
-  const { roles, additionals, rolesCostSummary } = useProjectCostData(project);
-  return <ProjectCosts project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} />;
+const ProjectCostsTab: React.FC<{
+  project: Project;
+  canEdit: boolean;
+  onSaveTasks: (tasks: any) => Promise<void>;
+}> = ({ project, canEdit, onSaveTasks }) => {
+  const { roles, additionals, rolesCostSummary, reload } = useProjectCostData(project);
+  return (
+    <ProjectCosts
+      project={project}
+      roles={roles}
+      rolesCostSummary={rolesCostSummary}
+      additionals={additionals}
+      canEdit={canEdit}
+      onSaveTasks={onSaveTasks}
+      onReload={reload}
+    />
+  );
 };

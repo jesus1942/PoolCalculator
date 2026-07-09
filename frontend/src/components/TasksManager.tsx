@@ -467,86 +467,10 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
 
   return (
     <div className="relative space-y-6 pb-28">
-      {!budgetWidgetHidden && (
-        <div className="fixed bottom-6 right-6 z-40 w-[min(92vw,22rem)]">
-          <div className="overflow-hidden rounded-2xl border border-cyan-300/30 bg-zinc-950/92 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setBudgetWidgetCollapsed((current) => !current)}
-                className="flex flex-1 items-center justify-between text-left"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/75">Mano de Obra</p>
-                  <p className="text-lg font-semibold text-white">${cleanLaborCost.toLocaleString('es-AR')}</p>
-                </div>
-                {budgetWidgetCollapsed ? <HdChevronDown size={18} className="text-zinc-300" style={{ transform: "rotate(180deg)" }} /> : <HdChevronDown size={18} className="text-zinc-300" />}
-              </button>
-              {duplicateCount > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200">
-                  <HdAlertTriangle size={12} />
-                  {duplicateCount} dup.
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => handleBudgetWidgetVisibility(true)}
-                className="rounded-full border border-white/10 p-1 text-zinc-400 transition hover:border-white/20 hover:text-white"
-                title="Ocultar atajo"
-              >
-                <HdEyeOff size={14} />
-              </button>
-            </div>
-
-            {!budgetWidgetCollapsed && (
-              <div className="border-t border-white/10 px-4 pb-4 pt-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs text-zinc-400">Tope</p>
-                    <Input
-                      type="number"
-                      value={budgetLimit}
-                      onChange={(e) => handleBudgetLimitChange(Number(e.target.value))}
-                      min={0}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div className={`rounded-xl border p-3 ${isOverBudget ? 'border-red-400/30 bg-red-500/10' : 'border-emerald-400/30 bg-emerald-500/10'}`}>
-                    <p className={`text-xs ${isOverBudget ? 'text-red-200/80' : 'text-emerald-200/80'}`}>
-                      {isOverBudget ? 'Exceso' : 'Disponible'}
-                    </p>
-                    <p className={`mt-1 text-base font-semibold ${isOverBudget ? 'text-red-100' : 'text-emerald-100'}`}>
-                      ${Math.abs(remainingBudget).toLocaleString('es-AR')}
-                    </p>
-                  </div>
-                </div>
-
-                {duplicateCount > 0 && (
-                  <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-400/10 p-3">
-                    <p className="text-sm font-medium text-amber-100">
-                      Hay {duplicateCount} tarea(s) duplicada(s) exacta(s) por ${duplicateLaborCost.toLocaleString('es-AR')}.
-                    </p>
-                    <p className="mt-1 text-xs text-amber-100/80">
-                      Total cargado: ${rawLaborCost.toLocaleString('es-AR')} · Total limpio: ${cleanLaborCost.toLocaleString('es-AR')}
-                    </p>
-                    <Button size="sm" variant="secondary" className="mt-3 w-full" onClick={handleRemoveDuplicates}>
-                      Limpiar duplicadas
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Gestión de Tareas del Proyecto</h3>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={() => handleBudgetWidgetVisibility(!budgetWidgetHidden)}>
-            {budgetWidgetHidden ? <HdEye size={18} className="mr-2" /> : <HdEyeOff size={18} className="mr-2" />}
-            {budgetWidgetHidden ? 'Mostrar atajo' : 'Ocultar atajo'}
-          </Button>
           {duplicateCount > 0 && (
             <Button variant="outline" onClick={handleRemoveDuplicates}>
               <HdAlertTriangle size={18} className="mr-2" />
@@ -588,10 +512,6 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                   <HdClock size={16} />
                   {totalHours.toFixed(1)} hs
                 </span>
-                <span className="flex items-center gap-1">
-                  <HdDollarSign size={16} />
-                  ${totalCost.toLocaleString('es-AR')}
-                </span>
               </div>
             </div>
 
@@ -620,12 +540,6 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                               <HdUsers size={12} />
                               {task.quantity} {task.unit || ''}
                               {task.bocaType ? ` · ${task.bocaType}` : ''}
-                            </span>
-                          )}
-                          {task.laborCost && (
-                            <span className="flex items-center gap-1">
-                              <HdDollarSign size={12} />
-                              ${task.laborCost.toLocaleString('es-AR')}
                             </span>
                           )}
                           {task.assignedRole && (
@@ -710,16 +624,12 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
-                  {role.hourlyRate && ` - $${role.hourlyRate.toLocaleString('es-AR')}/hora`}
-                  {role.dailyRate && !role.hourlyRate && ` - $${role.dailyRate.toLocaleString('es-AR')}/día`}
-                  {role.billingType === 'M2' && role.ratePerUnit && ` - $${role.ratePerUnit.toLocaleString('es-AR')}/m²`}
-                  {role.billingType === 'ML' && role.ratePerUnit && ` - $${role.ratePerUnit.toLocaleString('es-AR')}/ml`}
                 </option>
               ))}
             </select>
             {formData.assignedRoleId && (
               <p className="text-xs text-gray-500 mt-1">
-                El costo se calculará automáticamente según el tipo de cobro del rol
+                El valor se calcula solo según la tarifa del rol y se ajusta desde la pestaña Costos.
               </p>
             )}
           </div>
@@ -736,7 +646,7 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                   <option value="">Seleccionar</option>
                   {(selectedRole?.bocaRates || []).map((rate) => (
                     <option key={rate.label} value={rate.label}>
-                      {rate.label} - ${Number(rate.price).toLocaleString('es-AR')}
+                      {rate.label}
                     </option>
                   ))}
                 </select>
@@ -771,47 +681,30 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
           )}
 
           {(selectedBillingType === 'HOUR' || selectedBillingType === 'DAY') && (
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Horas estimadas"
-                type="number"
-                value={formData.estimatedHours}
-                onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
-                min={0}
-                step={0.5}
-              />
-
-              <Input
-                label="Costo de mano de obra"
-                type="number"
-                value={formData.laborCost}
-                onChange={(e) => setFormData({ ...formData, laborCost: parseFloat(e.target.value) || 0 })}
-                min={0}
-                disabled={!!(formData.assignedRoleId && (selectedRole?.hourlyRate || selectedRole?.dailyRate))}
-              />
-            </div>
+            <Input
+              label="Horas estimadas"
+              type="number"
+              value={formData.estimatedHours}
+              onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
+              min={0}
+              step={0.5}
+            />
           )}
 
           {(selectedBillingType === 'M2' || selectedBillingType === 'ML' || selectedBillingType === 'BOCA') && (
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Costo de mano de obra"
-                type="number"
-                value={formData.laborCost}
-                onChange={(e) => setFormData({ ...formData, laborCost: parseFloat(e.target.value) || 0 })}
-                min={0}
-                disabled={!!formData.assignedRoleId}
-              />
-              <Input
-                label="Horas estimadas (opcional)"
-                type="number"
-                value={formData.estimatedHours}
-                onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
-                min={0}
-                step={0.5}
-              />
-            </div>
+            <Input
+              label="Horas estimadas (opcional)"
+              type="number"
+              value={formData.estimatedHours}
+              onChange={(e) => handleHoursChange(parseFloat(e.target.value) || 0)}
+              min={0}
+              step={0.5}
+            />
           )}
+
+          <p className="text-xs text-gray-500">
+            El valor de mano de obra de la tarea se carga y edita desde la pestaña Costos.
+          </p>
 
           <div>
             <label className="block text-sm font-medium mb-1">Estado</label>

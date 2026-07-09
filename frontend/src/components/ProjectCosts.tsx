@@ -1,21 +1,53 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Project } from '@/types';
 import { calculateProjectFinancials, getAdditionalName } from '@/utils/projectCosting';
-import { HdEye, HdEyeOff } from '@/components/ui/HandDrawnIcons';
+import { additionalsService } from '@/services/additionalsService';
+import api from '@/services/api';
+import { HdEye, HdEyeOff, HdSave } from '@/components/ui/HandDrawnIcons';
 
 // Pestaña "Costos": TODOS los valores del proyecto en un solo lugar, en tablas.
-// La Vista General queda sin plata; acá manda el número de la instalación y
-// el resto se lee ordenado por grupo. Sin chips ni badges.
+// Desde acá también se EDITAN los valores económicos (mano de obra por tarea,
+// precios de adicionales/equipos y tarifas por rol): las demás pestañas solo
+// agregan o quitan cosas, sin plata. Sin chips ni badges.
 
 interface ProjectCostsProps {
   project: Project;
   roles: any[];
   rolesCostSummary: Record<string, { hours: number; cost: number; tasksCount: number }>;
   additionals: any[];
+  canEdit?: boolean;
+  onSaveTasks?: (tasks: any) => Promise<void>;
+  onReload?: () => void;
 }
 
 const filaBase: React.CSSProperties = { borderTop: '1.2px dashed var(--hair)' };
 const celdaMonto: React.CSSProperties = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600, whiteSpace: 'nowrap' };
+
+const inputMonto: React.CSSProperties = {
+  width: '9.5rem',
+  maxWidth: '40vw',
+  textAlign: 'right',
+  fontVariantNumeric: 'tabular-nums',
+  backgroundColor: 'var(--card2)',
+  border: '1.4px solid var(--hair-strong)',
+  borderRadius: '10px',
+  color: 'var(--ink)',
+  padding: '6px 10px',
+  font: 'inherit',
+};
+
+const CATEGORIAS_TAREAS: Record<string, string> = {
+  excavation: 'Excavación',
+  preparation: 'Preparación',
+  installation: 'Instalación',
+  plumbing: 'Plomería',
+  electrical: 'Eléctrica',
+  finishing: 'Terminaciones',
+  additionals: 'Adicionales',
+};
+
+const etiquetaCategoria = (clave: string) =>
+  CATEGORIAS_TAREAS[clave] || clave.charAt(0).toUpperCase() + clave.slice(1);
 
 const Grupo: React.FC<{ titulo: string }> = ({ titulo }) => (
   <tr>
@@ -29,25 +61,54 @@ const Grupo: React.FC<{ titulo: string }> = ({ titulo }) => (
   </tr>
 );
 
-const Panel: React.FC<{ titulo?: string; children: React.ReactNode }> = ({ titulo, children }) => (
+const Panel: React.FC<{ titulo?: string; nota?: string; children: React.ReactNode }> = ({ titulo, nota, children }) => (
   <section
     className="rounded-2xl p-4 sm:p-6"
     style={{ backgroundColor: 'var(--card)', border: '1.6px solid var(--hair-strong)' }}
   >
     {titulo && (
       <h3
-        className="mb-3 text-base font-semibold"
+        className="mb-1 text-base font-semibold"
         style={{ color: 'var(--ink)', fontFamily: "'JetBrains Mono', monospace" }}
       >
         {titulo}
       </h3>
     )}
+    {nota && (
+      <p className="mb-3 text-xs" style={{ color: 'var(--ink-soft)' }}>{nota}</p>
+    )}
+    {!nota && titulo && <div className="mb-3" />}
     {children}
   </section>
 );
 
-export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, rolesCostSummary, additionals }) => {
+const BotonGuardar: React.FC<{ onClick: () => void; guardando: boolean; children: React.ReactNode }> = ({ onClick, guardando, children }) => (
+  <div className="mt-3 flex justify-end">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={guardando}
+      className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+      style={{ backgroundColor: 'var(--accent)', color: 'var(--paper)' }}
+    >
+      <HdSave size={16} />
+      <span>{guardando ? 'Guardando...' : children}</span>
+    </button>
+  </div>
+);
+
+export const ProjectCosts: React.FC<ProjectCostsProps> = ({
+  project,
+  roles,
+  rolesCostSummary,
+  additionals,
+  canEdit = false,
+  onSaveTasks,
+  onReload,
+}) => {
   const [mostrar, setMostrar] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const financials = useMemo(() => calculateProjectFinancials(project, additionals), [project, additionals]);
   const {
@@ -69,6 +130,192 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
 
   const money = (valor: number) => (mostrar ? `$ ${valor.toLocaleString('es-AR')}` : '••••••');
 
+  const avisar = (mensaje: string) => {
+    setAviso(mensaje);
+    setError(null);
+    window.setTimeout(() => setAviso(null), 4000);
+  };
+
+  // ── Mano de obra por tarea (editable) ─────────────────────────────────────
+  const tareasProyecto = (project.tasks as any) || {};
+  const categoriasTareas = Object.entries(tareasProyecto).filter(
+    ([, lista]) => Array.isArray(lista) && (lista as any[]).length > 0,
+  ) as Array<[string, any[]]>;
+
+  const [borradorTareas, setBorradorTareas] = useState<Record<string, string>>({});
+  const [guardandoTareas, setGuardandoTareas] = useState(false);
+
+  useEffect(() => {
+    setBorradorTareas({});
+  }, [project.tasks]);
+
+  const claveTarea = (categoria: string, index: number) => `${categoria}::${index}`;
+
+  const valorTarea = (categoria: string, index: number, tarea: any) => {
+    const clave = claveTarea(categoria, index);
+    return borradorTareas[clave] !== undefined ? borradorTareas[clave] : String(tarea.laborCost || 0);
+  };
+
+  const guardarTareas = async () => {
+    if (!onSaveTasks) return;
+    setGuardandoTareas(true);
+    setError(null);
+    try {
+      const nuevasTareas: Record<string, any[]> = {};
+      for (const [categoria, lista] of Object.entries(tareasProyecto)) {
+        if (!Array.isArray(lista)) {
+          nuevasTareas[categoria] = lista as any;
+          continue;
+        }
+        nuevasTareas[categoria] = (lista as any[]).map((tarea, index) => {
+          const clave = claveTarea(categoria, index);
+          if (borradorTareas[clave] === undefined) return tarea;
+          const parseado = Number(borradorTareas[clave]);
+          return { ...tarea, laborCost: Number.isFinite(parseado) && parseado >= 0 ? parseado : tarea.laborCost || 0 };
+        });
+      }
+      await onSaveTasks(nuevasTareas);
+      setBorradorTareas({});
+      avisar('Mano de obra guardada.');
+    } catch (err) {
+      setError('No se pudo guardar la mano de obra.');
+    } finally {
+      setGuardandoTareas(false);
+    }
+  };
+
+  // ── Adicionales (precios editables por unidad) ────────────────────────────
+  const [borradorAdicionales, setBorradorAdicionales] = useState<Record<string, { material?: string; manoObra?: string }>>({});
+  const [guardandoAdicionales, setGuardandoAdicionales] = useState(false);
+
+  useEffect(() => {
+    setBorradorAdicionales({});
+  }, [additionals]);
+
+  const filasAdicionales = useMemo(
+    () =>
+      additionals
+        .filter((additional: any) => (additional.newQuantity || 0) > 0)
+        .map((additional: any) => {
+          const cantidad = additional.newQuantity || 0;
+          const unitCatalogo =
+            additional.accessory?.pricePerUnit ??
+            additional.equipment?.pricePerUnit ??
+            additional.material?.pricePerUnit ??
+            0;
+          const unitMaterial =
+            typeof additional.customPricePerUnit === 'number' && additional.customPricePerUnit > 0
+              ? additional.customPricePerUnit
+              : unitCatalogo;
+          const unitManoObra =
+            typeof additional.customLaborCost === 'number' && additional.customLaborCost > 0
+              ? additional.customLaborCost
+              : 0;
+          return {
+            id: additional.id as string,
+            nombre: getAdditionalName(additional),
+            unidad: additional.customUnit || 'u.',
+            cantidad,
+            unitMaterial,
+            unitManoObra,
+          };
+        }),
+    [additionals],
+  );
+
+  const valorAdicional = (fila: { id: string; unitMaterial: number; unitManoObra: number }, campo: 'material' | 'manoObra') => {
+    const borrador = borradorAdicionales[fila.id]?.[campo];
+    if (borrador !== undefined) return borrador;
+    return String(campo === 'material' ? fila.unitMaterial : fila.unitManoObra);
+  };
+
+  const totalFilaAdicional = (fila: { id: string; cantidad: number; unitMaterial: number; unitManoObra: number }) => {
+    const material = Number(valorAdicional(fila, 'material'));
+    const manoObra = Number(valorAdicional(fila, 'manoObra'));
+    const unitMaterial = Number.isFinite(material) ? material : fila.unitMaterial;
+    const unitManoObra = Number.isFinite(manoObra) ? manoObra : fila.unitManoObra;
+    return fila.cantidad * (unitMaterial + unitManoObra);
+  };
+
+  const guardarAdicionales = async () => {
+    setGuardandoAdicionales(true);
+    setError(null);
+    try {
+      const cambios = Object.entries(borradorAdicionales);
+      for (const [idAdicional, campos] of cambios) {
+        const payload: Record<string, number> = {};
+        if (campos.material !== undefined) {
+          const parseado = Number(campos.material);
+          if (Number.isFinite(parseado) && parseado >= 0) payload.customPricePerUnit = parseado;
+        }
+        if (campos.manoObra !== undefined) {
+          const parseado = Number(campos.manoObra);
+          if (Number.isFinite(parseado) && parseado >= 0) payload.customLaborCost = parseado;
+        }
+        if (Object.keys(payload).length > 0) {
+          await additionalsService.updateAdditional(idAdicional, payload);
+        }
+      }
+      setBorradorAdicionales({});
+      onReload?.();
+      avisar('Precios de adicionales guardados.');
+    } catch (err) {
+      setError('No se pudieron guardar los precios de adicionales.');
+    } finally {
+      setGuardandoAdicionales(false);
+    }
+  };
+
+  // ── Tarifas por rol (editable, configuración global del usuario) ─────────
+  const [borradorRoles, setBorradorRoles] = useState<Record<string, string>>({});
+  const [guardandoRoles, setGuardandoRoles] = useState(false);
+
+  useEffect(() => {
+    setBorradorRoles({});
+  }, [roles]);
+
+  const tarifaDeRol = (role: any): { etiqueta: string; valor: number; campo: string } => {
+    const tipo = role.billingType || 'HOUR';
+    if (tipo === 'DAY') return { etiqueta: '$ por día', valor: Number(role.dailyRate || 0), campo: 'dailyRate' };
+    if (tipo === 'M2') return { etiqueta: '$ por m²', valor: Number(role.ratePerUnit || 0), campo: 'ratePerUnit' };
+    if (tipo === 'ML') return { etiqueta: '$ por ml', valor: Number(role.ratePerUnit || 0), campo: 'ratePerUnit' };
+    if (tipo === 'BOCA') return { etiqueta: '$ por boca', valor: Number(role.bocaRates?.[0]?.price || 0), campo: 'boca' };
+    return { etiqueta: '$ por hora', valor: Number(role.hourlyRate || 0), campo: 'hourlyRate' };
+  };
+
+  const guardarRoles = async () => {
+    setGuardandoRoles(true);
+    setError(null);
+    try {
+      for (const [roleId, valor] of Object.entries(borradorRoles)) {
+        const role = roles.find((item: any) => item.id === roleId);
+        if (!role) continue;
+        const parseado = Number(valor);
+        if (!Number.isFinite(parseado) || parseado < 0) continue;
+        const tarifa = tarifaDeRol(role);
+        if (tarifa.campo === 'boca') continue; // las tarifas por boca se editan en Roles
+        const payload: Record<string, any> = {
+          name: role.name,
+          description: role.description || '',
+          billingType: role.billingType || 'HOUR',
+          hourlyRate: role.hourlyRate ?? null,
+          dailyRate: role.dailyRate ?? null,
+          ratePerUnit: role.ratePerUnit ?? null,
+        };
+        payload[tarifa.campo] = parseado;
+        if (tarifa.campo === 'hourlyRate') payload.dailyRate = parseado * 8;
+        await api.put(`/profession-roles/${roleId}`, payload);
+      }
+      setBorradorRoles({});
+      onReload?.();
+      avisar('Tarifas por rol guardadas. Aplican a las próximas tareas que se generen.');
+    } catch (err) {
+      setError('No se pudieron guardar las tarifas por rol.');
+    } finally {
+      setGuardandoRoles(false);
+    }
+  };
+
   const filasRoles = useMemo(
     () =>
       Object.entries(rolesCostSummary)
@@ -78,39 +325,6 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
         }))
         .sort((a, b) => b.cost - a.cost),
     [rolesCostSummary, roles],
-  );
-
-  const filasAdicionales = useMemo(
-    () =>
-      additionals
-        .filter((additional: any) => (additional.newQuantity || 0) > 0)
-        .map((additional: any) => {
-          const cantidad = additional.newQuantity || 0;
-          let material = 0;
-          if (typeof additional.customPricePerUnit === 'number' && additional.customPricePerUnit > 0) {
-            material = additional.customPricePerUnit * cantidad;
-          } else if (additional.accessory) {
-            material = additional.accessory.pricePerUnit * cantidad;
-          } else if (additional.equipment) {
-            material = additional.equipment.pricePerUnit * cantidad;
-          } else if (additional.material) {
-            material = additional.material.pricePerUnit * cantidad;
-          }
-          const manoObra =
-            typeof additional.customLaborCost === 'number' && additional.customLaborCost > 0
-              ? additional.customLaborCost * cantidad
-              : 0;
-          return {
-            id: additional.id,
-            nombre: getAdditionalName(additional),
-            unidad: additional.customUnit || 'u.',
-            cantidad,
-            material,
-            manoObra,
-            total: material + manoObra,
-          };
-        }),
-    [additionals],
   );
 
   return (
@@ -144,6 +358,17 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
           </button>
         </div>
       </Panel>
+
+      {error && (
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ border: '1.4px solid var(--bad)', color: 'var(--bad)' }}>
+          {error}
+        </div>
+      )}
+      {aviso && (
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ border: '1.4px solid var(--accent)', color: 'var(--accent)' }}>
+          {aviso}
+        </div>
+      )}
 
       {/* Resumen en tabla */}
       <Panel titulo="Resumen">
@@ -219,48 +444,150 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
         </div>
       </Panel>
 
-      {/* Roles y tareas */}
-      {filasRoles.length > 0 && (
-        <Panel titulo="Mano de obra por rol">
-          <p className="mb-3 text-xs" style={{ color: 'var(--ink-soft)' }}>
-            Detalle informativo: estos valores ya están incluidos en la instalación base.
-          </p>
+      {/* Mano de obra por tarea (edición) */}
+      {canEdit && categoriasTareas.length > 0 && (
+        <Panel
+          titulo="Mano de obra por tarea"
+          nota="Acá se cargan los valores de cada tarea. En la pestaña Tareas se agregan, quitan y asignan, sin plata."
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr className="text-[11px] uppercase tracking-[0.1em]" style={{ color: 'var(--ink-soft)' }}>
-                  <td className="py-1 pr-3">Rol</td>
-                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Tareas</td>
-                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Horas</td>
-                  <td className="py-1" style={{ textAlign: 'right' }}>Costo</td>
-                </tr>
-              </thead>
               <tbody>
-                {filasRoles.map((fila) => (
-                  <tr key={fila.nombre} style={filaBase}>
-                    <td className="py-2 pr-3">{fila.nombre}</td>
-                    <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.tasksCount}</td>
-                    <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.hours.toFixed(0)} hs</td>
-                    <td className="py-2" style={celdaMonto}>{money(fila.cost)}</td>
-                  </tr>
+                {categoriasTareas.map(([categoria, lista]) => (
+                  <React.Fragment key={categoria}>
+                    <Grupo titulo={etiquetaCategoria(categoria)} />
+                    {lista.map((tarea: any, index: number) => (
+                      <tr key={tarea.id || `${categoria}-${index}`} style={filaBase}>
+                        <td colSpan={3} className="py-2 pr-3">
+                          {tarea.name}
+                          {tarea.estimatedHours ? (
+                            <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>{tarea.estimatedHours} hs estimadas</span>
+                          ) : null}
+                        </td>
+                        <td colSpan={2} className="py-2" style={{ textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={valorTarea(categoria, index, tarea)}
+                            onChange={(event) =>
+                              setBorradorTareas((prev) => ({ ...prev, [claveTarea(categoria, index)]: event.target.value }))
+                            }
+                            style={inputMonto}
+                            aria-label={`Mano de obra de ${tarea.name}`}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
           </div>
+          {Object.keys(borradorTareas).length > 0 && (
+            <BotonGuardar onClick={guardarTareas} guardando={guardandoTareas}>Guardar mano de obra</BotonGuardar>
+          )}
         </Panel>
       )}
 
-      {/* Adicionales itemizados */}
+      {/* Roles: resumen del proyecto + tarifas editables */}
+      {(filasRoles.length > 0 || (canEdit && roles.length > 0)) && (
+        <Panel
+          titulo="Roles"
+          nota={canEdit
+            ? 'El costo por rol de este proyecto ya está incluido en la instalación base. Las tarifas son tu configuración general y alimentan las tareas nuevas.'
+            : 'Detalle informativo: estos valores ya están incluidos en la instalación base.'}
+        >
+          {filasRoles.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-[0.1em]" style={{ color: 'var(--ink-soft)' }}>
+                    <td className="py-1 pr-3">Rol en este proyecto</td>
+                    <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Tareas</td>
+                    <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Horas</td>
+                    <td className="py-1" style={{ textAlign: 'right' }}>Costo</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasRoles.map((fila) => (
+                    <tr key={fila.nombre} style={filaBase}>
+                      <td className="py-2 pr-3">{fila.nombre}</td>
+                      <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.tasksCount}</td>
+                      <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.hours.toFixed(0)} hs</td>
+                      <td className="py-2" style={celdaMonto}>{money(fila.cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {canEdit && roles.length > 0 && (
+            <>
+              <p className="mt-5 mb-2 text-[11px] uppercase tracking-[0.12em]" style={{ color: 'var(--ink-soft)' }}>
+                Tarifas por rol
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {roles.map((role: any) => {
+                      const tarifa = tarifaDeRol(role);
+                      if (tarifa.campo === 'boca') {
+                        return (
+                          <tr key={role.id} style={filaBase}>
+                            <td colSpan={3} className="py-2 pr-3">{role.name}
+                              <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>Tarifas por boca: se editan en la pestaña Roles</span>
+                            </td>
+                            <td colSpan={2} className="py-2" style={celdaMonto}>{money(tarifa.valor)}</td>
+                          </tr>
+                        );
+                      }
+                      return (
+                        <tr key={role.id} style={filaBase}>
+                          <td colSpan={3} className="py-2 pr-3">
+                            {role.name}
+                            <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>{tarifa.etiqueta}</span>
+                          </td>
+                          <td colSpan={2} className="py-2" style={{ textAlign: 'right' }}>
+                            <input
+                              type="number"
+                              min={0}
+                              inputMode="numeric"
+                              value={borradorRoles[role.id] !== undefined ? borradorRoles[role.id] : String(tarifa.valor)}
+                              onChange={(event) => setBorradorRoles((prev) => ({ ...prev, [role.id]: event.target.value }))}
+                              style={inputMonto}
+                              aria-label={`Tarifa de ${role.name}`}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {Object.keys(borradorRoles).length > 0 && (
+                <BotonGuardar onClick={guardarRoles} guardando={guardandoRoles}>Guardar tarifas</BotonGuardar>
+              )}
+            </>
+          )}
+        </Panel>
+      )}
+
+      {/* Adicionales itemizados (precios editables) */}
       {filasAdicionales.length > 0 && (
-        <Panel titulo="Adicionales y equipos">
+        <Panel
+          titulo="Adicionales y equipos"
+          nota={canEdit ? 'Precios por unidad. Las cantidades se manejan desde la pestaña Adicionales.' : undefined}
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr className="text-[11px] uppercase tracking-[0.1em]" style={{ color: 'var(--ink-soft)' }}>
                   <td className="py-1 pr-3">Ítem</td>
                   <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Cantidad</td>
-                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Material</td>
-                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>M. de obra</td>
+                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>Material ($/u.)</td>
+                  <td className="py-1 pr-3" style={{ textAlign: 'right' }}>M. de obra ($/u.)</td>
                   <td className="py-1" style={{ textAlign: 'right' }}>Total</td>
                 </tr>
               </thead>
@@ -269,15 +596,53 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
                   <tr key={fila.id || fila.nombre} style={filaBase}>
                     <td className="py-2 pr-3">{fila.nombre}</td>
                     <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.cantidad} {fila.unidad}</td>
-                    <td className="py-2 pr-3" style={{ ...celdaMonto, fontWeight: 500 }}>{money(fila.material)}</td>
-                    <td className="py-2 pr-3" style={{ ...celdaMonto, fontWeight: 500 }}>{fila.manoObra > 0 ? money(fila.manoObra) : '—'}</td>
-                    <td className="py-2" style={celdaMonto}>{money(fila.total)}</td>
+                    {canEdit ? (
+                      <>
+                        <td className="py-2 pr-3" style={{ textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={valorAdicional(fila, 'material')}
+                            onChange={(event) =>
+                              setBorradorAdicionales((prev) => ({
+                                ...prev,
+                                [fila.id]: { ...prev[fila.id], material: event.target.value },
+                              }))
+                            }
+                            style={{ ...inputMonto, width: '7.5rem' }}
+                            aria-label={`Precio de material de ${fila.nombre}`}
+                          />
+                        </td>
+                        <td className="py-2 pr-3" style={{ textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={valorAdicional(fila, 'manoObra')}
+                            onChange={(event) =>
+                              setBorradorAdicionales((prev) => ({
+                                ...prev,
+                                [fila.id]: { ...prev[fila.id], manoObra: event.target.value },
+                              }))
+                            }
+                            style={{ ...inputMonto, width: '7.5rem' }}
+                            aria-label={`Mano de obra de ${fila.nombre}`}
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2 pr-3" style={{ ...celdaMonto, fontWeight: 500 }}>{money(fila.unitMaterial)}</td>
+                        <td className="py-2 pr-3" style={{ ...celdaMonto, fontWeight: 500 }}>{fila.unitManoObra > 0 ? money(fila.unitManoObra) : '—'}</td>
+                      </>
+                    )}
+                    <td className="py-2" style={celdaMonto}>{money(totalFilaAdicional(fila))}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {/* Fuera del scroll horizontal: el subtotal se ve siempre, también en el teléfono */}
           <div
             className="mt-1 flex items-center justify-between gap-3 pt-2 text-sm font-semibold"
             style={{ borderTop: '1.4px solid var(--hair-strong)' }}
@@ -285,6 +650,9 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({ project, roles, role
             <span>Subtotal adicionales</span>
             <span style={celdaMonto}>{money(additionalsCosts.materialCost + additionalsCosts.laborCost)}</span>
           </div>
+          {canEdit && Object.keys(borradorAdicionales).length > 0 && (
+            <BotonGuardar onClick={guardarAdicionales} guardando={guardandoAdicionales}>Guardar precios</BotonGuardar>
+          )}
         </Panel>
       )}
 

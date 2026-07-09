@@ -208,40 +208,14 @@ export const RolesManager: React.FC = () => {
                   </div>
                 </div>
 
-                {(role.hourlyRate || role.dailyRate) && (
-                  <div className="border-t pt-3 space-y-1">
-                    {role.hourlyRate && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Tarifa por hora</span>
-                        <span className="font-medium">${role.hourlyRate.toLocaleString('es-AR')}</span>
-                      </div>
-                    )}
-                    {role.dailyRate && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Tarifa por día</span>
-                        <span className="font-medium">${role.dailyRate.toLocaleString('es-AR')}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(role.billingType === 'M2' || role.billingType === 'ML') && role.ratePerUnit && (
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tarifa por {role.billingType === 'M2' ? 'm²' : 'ml'}</span>
-                      <span className="font-medium">${role.ratePerUnit.toLocaleString('es-AR')}</span>
-                    </div>
-                  </div>
-                )}
-                {role.bocaRates && role.bocaRates.length > 0 && (
-                  <div className="border-t pt-3 space-y-1">
-                    {role.bocaRates.map((rate) => (
-                      <div key={rate.label} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{rate.label}</span>
-                        <span className="font-medium">${Number(rate.price).toLocaleString('es-AR')}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Las tarifas no se muestran acá: se ven y ajustan desde la
+                    pestaña Costos del proyecto (parte económica). */}
+                <div className="border-t pt-3">
+                  <p className="text-xs text-gray-500">
+                    Cobra por {role.billingType === 'DAY' ? 'día' : role.billingType === 'M2' ? 'm²' : role.billingType === 'ML' ? 'metro lineal' : role.billingType === 'BOCA' ? 'boca' : 'hora'}.
+                    Las tarifas se cargan y editan en la pestaña Costos.
+                  </p>
+                </div>
 
                 <div className="flex space-x-2 pt-3 border-t">
                   <Button

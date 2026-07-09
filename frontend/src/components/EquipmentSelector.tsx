@@ -287,17 +287,6 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({
           )}
         </div>
 
-        {/* Precio */}
-        {equipment.pricePerUnit > 0 && (
-          <div className="pt-2 border-t">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Precio:</span>
-              <span className="text-lg font-bold text-green-600">
-                ${equipment.pricePerUnit.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Links a datasheet y catálogo */}
         <div className="flex space-x-2">
