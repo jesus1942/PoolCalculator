@@ -298,6 +298,13 @@ h1, h2, h3 {
 .bg-zinc-800\/30, .bg-zinc-800\/50, .bg-zinc-800\/60 {
   background-color: var(--card) !important;
 }
+/* Genérico: CUALQUIER alfa de panel zinc (…/92, /96, futuros) es tarjeta,
+   nunca fondo de página. La doble condición le gana a los sólidos de arriba
+   y evita ventanas emergentes color papel (contraste roto vs. mockups). */
+[class*='bg-zinc-950'][class*='950/'], [class*='bg-zinc-900'][class*='900/'],
+[class*='bg-zinc-800'][class*='800/'] {
+  background-color: var(--card) !important;
+}
 
 /* — Texto — */
 [class*='text-white'] { color: var(--ink) !important; }
