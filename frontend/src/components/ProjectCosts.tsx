@@ -348,16 +348,89 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
     }
   };
 
+  const rolesCargados = roles.length > 0;
+
   const filasRoles = useMemo(
     () =>
       Object.entries(rolesCostSummary)
-        .map(([roleId, resumen]) => ({
-          nombre: roles.find((role: any) => role.id === roleId)?.name || 'Rol sin nombre',
-          ...resumen,
-        }))
+        .map(([roleId, resumen]) => {
+          const role = roles.find((item: any) => item.id === roleId);
+          return {
+            nombre: role?.name || 'Rol eliminado (tareas viejas)',
+            huerfano: !role,
+            ...resumen,
+          };
+        })
         .sort((a, b) => b.cost - a.cost),
     [rolesCostSummary, roles],
   );
+
+  // Tareas huérfanas: apuntan a un rol que ya no existe. Si además tienen una
+  // gemela (misma categoría, nombre y costo) con rol válido, son duplicados de
+  // una versión anterior de los roles y están inflando el total.
+  const normalizar = (valor: any) => String(valor ?? '').trim().toLowerCase();
+  const analisisHuerfanas = useMemo(() => {
+    if (!rolesCargados) return { total: 0, duplicadas: 0, costoDuplicado: 0 };
+    const idsValidos = new Set(roles.map((role: any) => role.id));
+    let total = 0;
+    let duplicadas = 0;
+    let costoDuplicado = 0;
+    for (const [, lista] of categoriasTareas) {
+      for (const tarea of lista) {
+        if (!tarea.assignedRoleId || idsValidos.has(tarea.assignedRoleId)) continue;
+        total += 1;
+        const tieneGemela = lista.some(
+          (otra: any) =>
+            otra !== tarea &&
+            otra.assignedRoleId &&
+            idsValidos.has(otra.assignedRoleId) &&
+            normalizar(otra.name) === normalizar(tarea.name) &&
+            Number(otra.laborCost || 0) === Number(tarea.laborCost || 0),
+        );
+        if (tieneGemela) {
+          duplicadas += 1;
+          costoDuplicado += Number(tarea.laborCost || 0);
+        }
+      }
+    }
+    return { total, duplicadas, costoDuplicado };
+  }, [rolesCargados, roles, categoriasTareas]);
+
+  const [limpiandoHuerfanas, setLimpiandoHuerfanas] = useState(false);
+
+  const limpiarHuerfanasDuplicadas = async () => {
+    if (!onSaveTasks || !rolesCargados) return;
+    setLimpiandoHuerfanas(true);
+    setError(null);
+    try {
+      const idsValidos = new Set(roles.map((role: any) => role.id));
+      const nuevasTareas: Record<string, any[]> = {};
+      for (const [categoria, lista] of Object.entries(tareasProyecto)) {
+        if (!Array.isArray(lista)) {
+          nuevasTareas[categoria] = lista as any;
+          continue;
+        }
+        nuevasTareas[categoria] = (lista as any[]).filter((tarea: any) => {
+          if (!tarea.assignedRoleId || idsValidos.has(tarea.assignedRoleId)) return true;
+          const tieneGemela = (lista as any[]).some(
+            (otra: any) =>
+              otra !== tarea &&
+              otra.assignedRoleId &&
+              idsValidos.has(otra.assignedRoleId) &&
+              normalizar(otra.name) === normalizar(tarea.name) &&
+              Number(otra.laborCost || 0) === Number(tarea.laborCost || 0),
+          );
+          return !tieneGemela;
+        });
+      }
+      await onSaveTasks(nuevasTareas);
+      avisar('Tareas duplicadas con rol eliminado quitadas. Los totales quedaron limpios.');
+    } catch (err) {
+      setError('No se pudieron limpiar las tareas duplicadas.');
+    } finally {
+      setLimpiandoHuerfanas(false);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6" style={{ color: 'var(--ink)' }}>
@@ -539,7 +612,34 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
             ? 'El costo por rol de este proyecto ya está incluido en la instalación base. Las tarifas son tu configuración general y alimentan las tareas nuevas.'
             : 'Detalle informativo: estos valores ya están incluidos en la instalación base.'}
         >
-          {filasRoles.length > 0 && (
+          {!rolesCargados && filasRoles.length > 0 && (
+            <p className="text-sm" style={{ color: 'var(--ink-soft)' }}>Cargando roles...</p>
+          )}
+
+          {rolesCargados && analisisHuerfanas.total > 0 && (
+            <div className="mb-4 rounded-xl px-4 py-3 text-sm" style={{ border: '1.4px solid var(--warm)' }}>
+              <p style={{ color: 'var(--ink)' }}>
+                Hay {analisisHuerfanas.total} tarea(s) apuntando a roles que ya no existen
+                {analisisHuerfanas.duplicadas > 0 && (
+                  <> — {analisisHuerfanas.duplicadas} son duplicados de tareas vigentes y están inflando el total en {money(analisisHuerfanas.costoDuplicado)}</>
+                )}
+                .
+              </p>
+              {canEdit && analisisHuerfanas.duplicadas > 0 && (
+                <button
+                  type="button"
+                  onClick={limpiarHuerfanasDuplicadas}
+                  disabled={limpiandoHuerfanas}
+                  className="mt-2 inline-flex min-h-[44px] items-center rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--warm)', color: 'var(--paper)' }}
+                >
+                  {limpiandoHuerfanas ? 'Limpiando...' : 'Quitar duplicadas con rol eliminado'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {rolesCargados && filasRoles.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                 <thead>
@@ -551,9 +651,9 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filasRoles.map((fila) => (
-                    <tr key={fila.nombre} style={filaBase}>
-                      <td className="py-2 pr-3">{fila.nombre}</td>
+                  {filasRoles.map((fila, indice) => (
+                    <tr key={`${fila.nombre}-${indice}`} style={filaBase}>
+                      <td className="py-2 pr-3" style={fila.huerfano ? { color: 'var(--warm)' } : undefined}>{fila.nombre}</td>
                       <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.tasksCount}</td>
                       <td className="py-2 pr-3" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fila.hours.toFixed(0)} hs</td>
                       <td className="py-2" style={celdaMonto}>{money(fila.cost)}</td>
