@@ -231,11 +231,46 @@ h1, h2, h3 {
 }
 
 /* — Tintes suaves (chips/badges translúcidos más comunes) — */
-.bg-cyan-500\/10, .bg-cyan-500\/20, .bg-cyan-400\/10, .bg-cyan-400\/20,
-.bg-blue-500\/10, .bg-blue-500\/20, .bg-blue-400\/10, .bg-sky-500\/10,
-.bg-indigo-500\/10, .bg-purple-500\/10, .bg-purple-500\/20, .bg-violet-500\/10,
+.bg-cyan-500\/10, .bg-cyan-500\/15, .bg-cyan-500\/20, .bg-cyan-500\/30,
+.bg-cyan-400\/10, .bg-cyan-400\/15, .bg-cyan-400\/20, .bg-cyan-600\/10,
+.bg-blue-500\/10, .bg-blue-500\/15, .bg-blue-500\/20, .bg-blue-500\/30,
+.bg-blue-400\/10, .bg-blue-600\/10, .bg-sky-500\/10, .bg-sky-500\/20,
+.bg-indigo-500\/10, .bg-purple-500\/10, .bg-purple-500\/20, .bg-purple-500\/30,
+.bg-violet-500\/10, .bg-violet-500\/20,
 .bg-cyan-950\/30, .bg-blue-50, .bg-cyan-50, .bg-blue-950\/30 {
   background-color: var(--accent-2) !important;
+}
+.bg-emerald-500\/30, .bg-green-500\/30, .bg-emerald-400\/15, .bg-emerald-400\/20 {
+  background-color: color-mix(in srgb, var(--good) 18%, transparent) !important;
+}
+.bg-amber-500\/15, .bg-amber-500\/30, .bg-amber-400\/15, .bg-amber-400\/20, .bg-orange-500\/20 {
+  background-color: color-mix(in srgb, var(--warm) 16%, transparent) !important;
+}
+.bg-red-500\/15, .bg-red-500\/30, .bg-rose-500\/20 {
+  background-color: color-mix(in srgb, var(--bad) 14%, transparent) !important;
+}
+
+/* Genérico: cualquier fondo de color con alfa ("...-X00/nn" o "...-950/nn")
+   es un tinte suave del rol, nunca un fondo sólido. La doble condición de
+   atributo le gana en especificidad a las reglas de sólidos. */
+[class*='bg-cyan-'][class*='00/'], [class*='bg-blue-'][class*='00/'],
+[class*='bg-sky-'][class*='00/'], [class*='bg-indigo-'][class*='00/'],
+[class*='bg-purple-'][class*='00/'], [class*='bg-violet-'][class*='00/'],
+[class*='bg-cyan-'][class*='950/'], [class*='bg-blue-'][class*='950/'] {
+  background-color: var(--accent-2) !important;
+}
+[class*='bg-emerald-'][class*='00/'], [class*='bg-green-'][class*='00/'],
+[class*='bg-teal-'][class*='00/'], [class*='bg-emerald-'][class*='950/'],
+[class*='bg-green-'][class*='950/'] {
+  background-color: color-mix(in srgb, var(--good) 15%, transparent) !important;
+}
+[class*='bg-amber-'][class*='00/'], [class*='bg-orange-'][class*='00/'],
+[class*='bg-yellow-'][class*='00/'], [class*='bg-amber-'][class*='950/'] {
+  background-color: color-mix(in srgb, var(--warm) 15%, transparent) !important;
+}
+[class*='bg-red-'][class*='00/'], [class*='bg-rose-'][class*='00/'],
+[class*='bg-red-'][class*='950/'] {
+  background-color: color-mix(in srgb, var(--bad) 13%, transparent) !important;
 }
 .bg-emerald-500\/10, .bg-emerald-500\/15, .bg-emerald-500\/20, .bg-emerald-400\/10,
 .bg-green-500\/10, .bg-green-500\/20, .bg-teal-500\/10, .bg-emerald-950\/30,

@@ -49,6 +49,36 @@ más la lista de pendientes acordados para después de la presentación.
    una fila, panel del editor en pestañas Contenido / Precios / Documento, y las
    opciones "Alcance de instalación" / "Modo comercial" definidas una sola vez.
 
+## Rediseño "Artesanal Sobrio" (handoff de diseño — julio 2026)
+
+Implementado en esta pasada:
+- Tokens de ambos temas + ThemeContext con toggle (persistido) + grilla de
+  ingeniero + filtros de trazo a mano globales (`#pcRough`/`#pcRoughIcon`).
+- Átomos con capa rugosa: `Card`, `Button`, `Input`, `Select` + helpers
+  `.rough-*` (`frontend/src/theme/artisan.css`).
+- Layout/sidebar re-skineado (nav con barra de acento, separadores punteados,
+  toggle de tema, logout).
+- Remapeo global de la piel anterior a los tokens (fondos, textos, bordes,
+  tintes, gradientes aplanados, cero glow/sombras, títulos en mono).
+- Verificado por screenshot: Login (ambos temas), Landing, Dashboard
+  (Resumen/Agenda), Proyectos.
+
+Pendiente de re-skin fino (hoy salen con el remapeo global, consistentes
+pero sin el trazo rugoso en cada tarjeta interna):
+- [ ] Gráficos (recharts) usan colores inline JS (cyan/emerald viejos):
+      pasarles la paleta artesanal por props.
+- [ ] Chips de eventos de agenda usan `event.typeColor/statusColor` de la BD
+      (colores custom por evento): mapear los defaults a los tokens.
+- [ ] Trazo rugoso 1:1 en tarjetas internas de: ProjectDetail (12 tabs),
+      Agenda (calendario), Chat (burbujas asimétricas del handoff), Settings
+      (toggles dibujados), Admin (8 sub-páginas), Estados (toasts/skeleton/
+      empty según `PoolStates.dc.html`).
+- [ ] Sketches SVG de piscina hechos a mano en tarjetas de Modelos/Proyectos
+      (paths en `PoolModels.dc.html` del handoff).
+- [ ] Subrayado ondulado del hero de la Landing (path SVG del handoff).
+- [ ] Revisión mobile-first pantalla por pantalla (hit targets ≥44px, chat en
+      una columna, calendario compacto) según sección mobile del README.
+
 ## Pendientes (anotados, NO bloquean la presentación)
 
 - [ ] **Notificar al tenant** cuando el cliente deja un comentario (push/email ya
