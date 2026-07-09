@@ -123,12 +123,14 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
     commercialPricingSource,
     totalMaterialCost,
     totalLaborCost,
+    tileLaborCost,
     grandTotal,
   } = financials;
 
   const persistedMaterialCost = Number(project.materialCost || 0);
 
-  const money = (valor: number) => (mostrar ? `$ ${valor.toLocaleString('es-AR')}` : '••••••');
+  // Redondeado a pesos: los centavos solo ensucian la lectura.
+  const money = (valor: number) => (mostrar ? `$ ${Math.round(valor).toLocaleString('es-AR')}` : '••••••');
 
   const avisar = (mensaje: string) => {
     setAviso(mensaje);
@@ -287,13 +289,24 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
     setGuardandoRoles(true);
     setError(null);
     try {
-      for (const [roleId, valor] of Object.entries(borradorRoles)) {
+      // Agrupar borradores por rol: claves "roleId" (tarifa simple) y
+      // "roleId::boca::<índice>" (tarifas por boca).
+      const cambiosPorRol = new Map<string, { simple?: string; bocas: Record<number, string> }>();
+      for (const [clave, valor] of Object.entries(borradorRoles)) {
+        const [roleId, tipo, indice] = clave.split('::');
+        const actual = cambiosPorRol.get(roleId) || { bocas: {} };
+        if (tipo === 'boca') {
+          actual.bocas[Number(indice)] = valor;
+        } else {
+          actual.simple = valor;
+        }
+        cambiosPorRol.set(roleId, actual);
+      }
+
+      for (const [roleId, cambios] of cambiosPorRol.entries()) {
         const role = roles.find((item: any) => item.id === roleId);
         if (!role) continue;
-        const parseado = Number(valor);
-        if (!Number.isFinite(parseado) || parseado < 0) continue;
-        const tarifa = tarifaDeRol(role);
-        if (tarifa.campo === 'boca') continue; // las tarifas por boca se editan en Roles
+
         const payload: Record<string, any> = {
           name: role.name,
           description: role.description || '',
@@ -302,8 +315,27 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
           dailyRate: role.dailyRate ?? null,
           ratePerUnit: role.ratePerUnit ?? null,
         };
-        payload[tarifa.campo] = parseado;
-        if (tarifa.campo === 'hourlyRate') payload.dailyRate = parseado * 8;
+
+        if (cambios.simple !== undefined) {
+          const parseado = Number(cambios.simple);
+          if (Number.isFinite(parseado) && parseado >= 0) {
+            const tarifa = tarifaDeRol(role);
+            if (tarifa.campo !== 'boca') {
+              payload[tarifa.campo] = parseado;
+              if (tarifa.campo === 'hourlyRate') payload.dailyRate = parseado * 8;
+            }
+          }
+        }
+
+        if (Object.keys(cambios.bocas).length > 0 && Array.isArray(role.bocaRates)) {
+          payload.bocaRates = role.bocaRates.map((rate: any, indice: number) => {
+            const nuevo = cambios.bocas[indice];
+            if (nuevo === undefined) return rate;
+            const parseado = Number(nuevo);
+            return Number.isFinite(parseado) && parseado >= 0 ? { ...rate, price: parseado } : rate;
+          });
+        }
+
         await api.put(`/profession-roles/${roleId}`, payload);
       }
       setBorradorRoles({});
@@ -424,6 +456,15 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
                   <td className="py-2" style={{ ...celdaMonto, color: 'var(--ink-soft)', fontWeight: 500 }}>{money(taskBaseLaborCost)}</td>
                 </tr>
               )}
+              {tileLaborCost > 0 && (
+                <tr style={filaBase}>
+                  <td colSpan={4} className="py-2 pr-3">
+                    Colocación de losetas (vereda)
+                    <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>Calculada desde la pestaña Losetas</span>
+                  </td>
+                  <td className="py-2" style={celdaMonto}>{money(tileLaborCost)}</td>
+                </tr>
+              )}
               {additionalsCosts.laborCost > 0 && (
                 <tr style={filaBase}>
                   <td colSpan={4} className="py-2 pr-3">Mano de obra de adicionales</td>
@@ -534,13 +575,32 @@ export const ProjectCosts: React.FC<ProjectCostsProps> = ({
                     {roles.map((role: any) => {
                       const tarifa = tarifaDeRol(role);
                       if (tarifa.campo === 'boca') {
+                        const bocaRates = Array.isArray(role.bocaRates) ? role.bocaRates : [];
                         return (
-                          <tr key={role.id} style={filaBase}>
-                            <td colSpan={3} className="py-2 pr-3">{role.name}
-                              <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>Tarifas por boca: se editan en la pestaña Roles</span>
-                            </td>
-                            <td colSpan={2} className="py-2" style={celdaMonto}>{money(tarifa.valor)}</td>
-                          </tr>
+                          <React.Fragment key={role.id}>
+                            {bocaRates.map((rate: any, indice: number) => {
+                              const claveBoca = `${role.id}::boca::${indice}`;
+                              return (
+                                <tr key={claveBoca} style={filaBase}>
+                                  <td colSpan={3} className="py-2 pr-3">
+                                    {role.name}
+                                    <span className="block text-xs" style={{ color: 'var(--ink-soft)' }}>$ por boca · {rate.label}</span>
+                                  </td>
+                                  <td colSpan={2} className="py-2" style={{ textAlign: 'right' }}>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      inputMode="numeric"
+                                      value={borradorRoles[claveBoca] !== undefined ? borradorRoles[claveBoca] : String(Number(rate.price || 0))}
+                                      onChange={(event) => setBorradorRoles((prev) => ({ ...prev, [claveBoca]: event.target.value }))}
+                                      style={inputMonto}
+                                      aria-label={`Tarifa de ${role.name} por ${rate.label}`}
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
                         );
                       }
                       return (

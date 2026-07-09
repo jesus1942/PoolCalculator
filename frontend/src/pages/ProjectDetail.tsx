@@ -436,7 +436,8 @@ export const ProjectDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('status')}
-                  className="rounded-xl border border-amber-300/40 bg-amber-300 px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-amber-200"
+                  className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                  style={{ backgroundColor: 'var(--warm)', color: 'var(--paper)', border: '1.4px solid var(--warm)' }}
                 >
                   {isReadOnlyProjectUser ? 'Ver estado' : 'Cargar avance'}
                 </button>
