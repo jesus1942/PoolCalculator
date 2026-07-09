@@ -29,6 +29,7 @@ import { SorteosManager } from '@/pages/Admin/SorteosManager';
 import { OpsManager } from '@/pages/Admin/OpsManager';
 import { Installer } from '@/pages/Installer';
 import { Chat } from '@/pages/Chat';
+import { Ayuda } from '@/pages/Ayuda';
 
 // Siempre mostrar landing page en la raíz
 function HomeRedirect() {
@@ -108,6 +109,7 @@ function App() {
               </RoleRoute>
             } />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/ayuda" element={<Ayuda />} />
             <Route path="/admin/docs" element={
               <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
                 <DocsManager />

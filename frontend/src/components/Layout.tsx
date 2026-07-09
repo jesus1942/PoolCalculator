@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdSparkles } from '@/components/ui/HandDrawnIcons';
+import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdSparkles, HdInfo } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -55,6 +55,7 @@ export const Layout: React.FC = () => {
       { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },
       { to: '/projects', icon: HdFolderOpen, label: 'Mis Proyectos' },
       { to: '/chat', icon: HdMessageBubble, label: 'Mensajes' },
+      { to: '/ayuda', icon: HdInfo, label: 'Ayuda' },
     ]
     : [
       { to: '/dashboard', icon: HdLayoutGrid, label: 'Panel' },
@@ -63,6 +64,7 @@ export const Layout: React.FC = () => {
       { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },
       { to: '/chat', icon: HdMessageBubble, label: 'Mensajes' },
       { to: '/settings', icon: HdGear, label: 'Configuración' },
+      { to: '/ayuda', icon: HdInfo, label: 'Ayuda' },
     ];
 
   const currentOrgRole = organizations.find((org) => org.id === currentOrgId)?.role;
