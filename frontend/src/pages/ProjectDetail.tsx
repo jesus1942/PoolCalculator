@@ -23,7 +23,8 @@ import {
   buildProjectAutoConfigurations,
 } from '@/utils/presetAutoConfig';
 import { HdArrowLeft, HdEdit, HdFileText, HdUsers, HdPackage, HdZap, HdActivity, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
-import { HdHammer, HdFileSpreadsheet, HdCpu } from '@/components/ui/HandDrawnIcons';
+import { HdHammer, HdFileSpreadsheet, HdCpu, HdDollarSign } from '@/components/ui/HandDrawnIcons';
+import { ProjectCosts } from '@/components/ProjectCosts';
 import { useAuth } from '@/context/AuthContext';
 
 const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);
@@ -334,6 +335,7 @@ export const ProjectDetail: React.FC = () => {
   const allTabs: Array<{ id: ProjectTabId; label: string; icon: React.FC<any> }> = [
     { id: 'overview', label: 'Vista General', icon: HdFileText },
     { id: 'status', label: 'Estado', icon: HdActivity },
+    { id: 'costs', label: 'Costos', icon: HdDollarSign },
     { id: 'tiles', label: 'Losetas', icon: HdEdit },
     { id: 'plumbing', label: 'Hidráulica', icon: HdHammer },
     { id: 'electrical', label: 'Eléctrica', icon: HdZap },
@@ -345,7 +347,8 @@ export const ProjectDetail: React.FC = () => {
     { id: 'additionals', label: 'Adicionales', icon: HdPackage },
     { id: 'export', label: 'Exportar', icon: HdFileSpreadsheet },
   ];
-  const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id));
+  // La pestaña Costos ni aparece para quien no puede ver la parte económica.
+  const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id) && (tab.id !== 'costs' || canViewFinancials));
   const visibleActiveTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';
 
   return (
@@ -436,6 +439,7 @@ export const ProjectDetail: React.FC = () => {
         )}
 
         {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
+        {visibleActiveTab === 'costs' && canViewFinancials && <ProjectCostsTab project={project} />}
         {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
         {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
         {visibleActiveTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
@@ -545,7 +549,9 @@ export const ProjectDetail: React.FC = () => {
   );
 };
 
-const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boolean }> = ({ project, canViewFinancials }) => {
+// Datos compartidos por Vista General y Costos: roles, adicionales y el
+// resumen de costos por rol calculado desde las tareas del proyecto.
+const useProjectCostData = (project: Project) => {
   const [roles, setRoles] = React.useState<any[]>([]);
   const [additionals, setAdditionals] = React.useState<any[]>([]);
 
@@ -609,5 +615,15 @@ const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boole
     return summary;
   }, [tasks, hasTasks]);
 
+  return { roles, additionals, rolesCostSummary };
+};
+
+const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boolean }> = ({ project, canViewFinancials }) => {
+  const { roles, additionals, rolesCostSummary } = useProjectCostData(project);
   return <ImprovedOverview project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} canViewFinancials={canViewFinancials} />;
+};
+
+const ProjectCostsTab: React.FC<{ project: Project }> = ({ project }) => {
+  const { roles, additionals, rolesCostSummary } = useProjectCostData(project);
+  return <ProjectCosts project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} />;
 };

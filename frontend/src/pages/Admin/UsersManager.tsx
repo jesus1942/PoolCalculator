@@ -27,6 +27,7 @@ const TENANT_ORG_ROLE_OPTIONS = ['MEMBER', 'VIEWER'];
 const PROJECT_TAB_LABELS: Record<ProjectTabId, string> = {
   overview: 'Vista General',
   status: 'Estado',
+  costs: 'Costos',
   tiles: 'Losetas',
   plumbing: 'Hidráulica',
   electrical: 'Eléctrica',

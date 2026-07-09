@@ -4,6 +4,7 @@ import prisma from '../config/database';
 export const PROJECT_TAB_IDS = [
   'overview',
   'status',
+  'costs',
   'tiles',
   'plumbing',
   'electrical',
