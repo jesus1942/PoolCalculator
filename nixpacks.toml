@@ -1,5 +1,9 @@
 providers = []
 
+[variables]
+# Silencia el banner "Update available" de Prisma en los logs de deploy.
+PRISMA_HIDE_UPDATE_MESSAGE = "1"
+
 [phases.setup]
 nixPkgs = [
   "nodejs_20",
