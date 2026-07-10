@@ -523,8 +523,8 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 bg-gradient-to-br from-cyan-500/20 via-zinc-900 to-blue-500/20 text-white">
+      {/* Benefits Section — banda suave del sistema artesanal (texto en tinta) */}
+      <section className="py-20" style={{ backgroundColor: 'var(--accent-2)', color: 'var(--ink)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={benefitsRef.ref}

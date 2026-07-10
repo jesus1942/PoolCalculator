@@ -3,7 +3,11 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig(() => ({
-  base: '/',
+  // Railway sirve el frontend en la raíz ('/'); GitHub Pages lo sirve bajo
+  // /PoolCalculator/, así que el workflow de Pages exporta VITE_BASE.
+  // Sin esto, el index de Pages pide /assets/... (404) y la app queda
+  // clavada en el splash.
+  base: process.env.VITE_BASE || '/',
   plugins: [react()],
   resolve: {
     alias: {
