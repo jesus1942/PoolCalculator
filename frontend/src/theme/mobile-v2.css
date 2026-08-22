@@ -27,6 +27,11 @@ canvas {
   max-width: 100%;
 }
 
+/* La landing conserva su contenido actual pero usa la nueva firma técnica. */
+.landing-experience-v2__legacy > .landing-surface > footer:last-child {
+  display: none !important;
+}
+
 @media (max-width: 1023px) {
   body {
     overscroll-behavior-y: none;
@@ -77,16 +82,11 @@ canvas {
   }
 
   .dashboard-v2 .rough-panel,
-  .projects-v2 .rough-panel {
-    min-width: 0;
-  }
-
+  .projects-v2 .rough-panel,
   .hydraulic-workspace-mobile .rough-panel {
     min-width: 0;
   }
 
-  /* Los editores históricos pueden contener diagramas más anchos que el teléfono.
-     Se conservan completos dentro de una zona desplazable en vez de comprimirlos. */
   .hydraulic-workspace-mobile svg,
   .hydraulic-workspace-mobile canvas {
     max-width: none;
