@@ -30,7 +30,7 @@ jobs:
               sha: context.sha,
               state: 'pending',
               context: 'frontend-build',
-              description: 'Validando build del frontend',
+              description: 'Validando TypeScript y build del frontend',
               target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
             });
 
@@ -44,10 +44,10 @@ jobs:
       - name: Install dependencies
         run: npm --prefix frontend ci --ignore-scripts
 
-      - name: Build frontend
+      - name: Typecheck and build frontend
         id: frontend_build
         continue-on-error: true
-        run: npm --prefix frontend run build
+        run: npm --prefix frontend run build:check
         env:
           VITE_API_URL: https://poolcalculator-production.up.railway.app/api
           VITE_BASE: /PoolCalculator/
@@ -66,8 +66,8 @@ jobs:
               state,
               context: 'frontend-build',
               description: state === 'success'
-                ? 'Frontend compila correctamente'
-                : 'Falló el build del frontend',
+                ? 'TypeScript y frontend compilan correctamente'
+                : 'Falló TypeScript o el build del frontend',
               target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
             });
 
