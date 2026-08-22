@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { TileEditor } from '@/components/TileEditor';
-import { PlumbingEditor } from '@/components/PlumbingEditor';
+import { HydraulicWorkspace } from '@/components/hydraulic/HydraulicWorkspace';
 import { RolesManager } from '@/components/RolesManager';
 import { TasksManager } from '@/components/TasksManager';
 import { AdditionalsManager } from '@/components/AdditionalsManager';
@@ -14,7 +14,6 @@ import { EnhancedExportManager } from '@/components/EnhancedExportManager';
 import { EquipmentSelector } from '@/components/EquipmentSelector';
 import { ProjectStatus as ProjectStatusPanel } from '@/components/ProjectStatus';
 import { ImprovedOverview } from '@/components/ImprovedOverview';
-import { HydraulicAnalysisPanel } from '@/components/HydraulicAnalysisPanel';
 import { ElectricalAnalysisPanel } from '@/components/ElectricalAnalysisPanel';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
@@ -186,7 +185,7 @@ export const ProjectDetail: React.FC = () => {
       if (!id) return;
       await projectService.update(id, { plumbingConfig });
       await loadProject();
-      setActiveTab('overview');
+      setActiveTab('plumbing');
       alert('Configuración de instalaciones hidráulicas guardada exitosamente');
     } catch (error) {
       console.error('Error al guardar configuración:', error);
@@ -309,6 +308,7 @@ export const ProjectDetail: React.FC = () => {
   };
   const isReadOnlyProjectUser = !currentUserAccess.canEdit;
   const allowedTabsSet = new Set<ProjectTabId>(currentUserAccess.allowedTabs || fallbackAllowedTabs);
+  const hasHydraulicAccess = allowedTabsSet.has('plumbing') || allowedTabsSet.has('hydraulic_pro');
   const canViewFinancials = currentUserAccess.canViewFinancials;
   const lastProjectUpdateDate = getLastProjectUpdateDate(project);
   const needsDailyProjectUpdate = !DAILY_UPDATE_EXCLUDED_STATUSES.has(project.status) && (
@@ -346,7 +346,6 @@ export const ProjectDetail: React.FC = () => {
     { id: 'tiles', label: 'Losetas', icon: HdEdit },
     { id: 'plumbing', label: 'Hidráulica', icon: HdHammer },
     { id: 'electrical', label: 'Eléctrica', icon: HdZap },
-    { id: 'hydraulic_pro', label: 'Análisis Hidráulico', icon: HdActivity },
     { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: HdZap },
     { id: 'tasks', label: 'Tareas', icon: HdHammer },
     { id: 'roles', label: 'Roles', icon: HdUsers },
@@ -354,8 +353,11 @@ export const ProjectDetail: React.FC = () => {
     { id: 'additionals', label: 'Adicionales', icon: HdPackage },
     { id: 'export', label: 'Exportar', icon: HdFileSpreadsheet },
   ];
-  // La pestaña Costos ni aparece para quien no puede ver la parte económica.
-  const tabs = allTabs.filter((tab) => allowedTabsSet.has(tab.id) && (tab.id !== 'costs' || canViewFinancials));
+  // Hidráulica absorbe el permiso histórico de hydraulic_pro para no romper asignaciones existentes.
+  const tabs = allTabs.filter((tab) => {
+    const hasTabAccess = tab.id === 'plumbing' ? hasHydraulicAccess : allowedTabsSet.has(tab.id);
+    return hasTabAccess && (tab.id !== 'costs' || canViewFinancials);
+  });
   const visibleActiveTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';
 
   return (
@@ -452,7 +454,15 @@ export const ProjectDetail: React.FC = () => {
         )}
         {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
         {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
-        {visibleActiveTab === 'plumbing' && !isReadOnlyProjectUser && <PlumbingEditor project={project} onSave={handleSavePlumbingConfig} onAutoSave={handleAutoSavePlumbingConfig} />}
+        {visibleActiveTab === 'plumbing' && id && !isReadOnlyProjectUser && (
+          <HydraulicWorkspace
+            project={project}
+            projectId={id}
+            onSave={handleSavePlumbingConfig}
+            onAutoSave={handleAutoSavePlumbingConfig}
+            onReloadProject={loadProject}
+          />
+        )}
         {visibleActiveTab === 'electrical' && id && !isReadOnlyProjectUser && (
           <div className="space-y-6">
             <EquipmentSelector
@@ -462,7 +472,6 @@ export const ProjectDetail: React.FC = () => {
             />
           </div>
         )}
-        {visibleActiveTab === 'hydraulic_pro' && id && !isReadOnlyProjectUser && <HydraulicAnalysisPanel projectId={id} />}
         {visibleActiveTab === 'electrical_pro' && id && !isReadOnlyProjectUser && <ElectricalAnalysisPanel projectId={id} />}
         {visibleActiveTab === 'tasks' && !isReadOnlyProjectUser && (
           <TasksManager
