@@ -13,7 +13,7 @@ import { ResetPassword } from '@/pages/ResetPassword';
 import { AuthCallback } from '@/pages/AuthCallback';
 import { DashboardV2 } from '@/pages/DashboardV2';
 import { Agenda } from '@/pages/Agenda';
-import { PoolModels } from '@/pages/PoolModels';
+import { PoolModelsExperience } from '@/pages/PoolModelsExperience';
 import { ProjectsV2 } from '@/pages/ProjectsV2';
 import { ProjectDetail } from '@/pages/ProjectDetail';
 import { Settings } from '@/pages/Settings';
@@ -89,7 +89,7 @@ function App() {
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/pool-models" element={
                 <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
-                  <PoolModels />
+                  <PoolModelsExperience />
                 </RoleRoute>
               } />
               <Route path="/projects" element={<ProjectsV2 />} />
