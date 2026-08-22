@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { TileEditor } from '@/components/TileEditor';
 import { HydraulicWorkspace } from '@/components/hydraulic/HydraulicWorkspace';
+import { ProjectMobileSectionNav } from '@/components/project/ProjectMobileSectionNav';
 import { RolesManager } from '@/components/RolesManager';
 import { TasksManager } from '@/components/TasksManager';
 import { AdditionalsManager } from '@/components/AdditionalsManager';
@@ -353,6 +354,7 @@ export const ProjectDetail: React.FC = () => {
     { id: 'additionals', label: 'Adicionales', icon: HdPackage },
     { id: 'export', label: 'Exportar', icon: HdFileSpreadsheet },
   ];
+
   // Hidráulica absorbe el permiso histórico de hydraulic_pro para no romper asignaciones existentes.
   const tabs = allTabs.filter((tab) => {
     const hasTabAccess = tab.id === 'plumbing' ? hasHydraulicAccess : allowedTabsSet.has(tab.id);
@@ -362,30 +364,32 @@ export const ProjectDetail: React.FC = () => {
 
   return (
     <div className="project-surface min-h-screen bg-zinc-950/50">
-      <div className="sticky top-0 z-50 bg-zinc-950/80 border-b border-white/10 shadow-2xl backdrop-blur-xl">
+      {/* En mobile el header del proyecto forma parte del scroll. El único sticky es el header global. */}
+      <div className="border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl lg:sticky lg:top-0 lg:z-50 lg:shadow-2xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:mb-4">
             <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigate('/projects')}
-                className="group p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200"
+                aria-label="Volver a proyectos"
               >
                 <HdArrowLeft size={20} className="h-5 w-5 text-zinc-300 group-hover:text-white transition-colors" />
               </button>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className="mb-1 break-words text-xl font-bold text-white sm:text-2xl">{project.name}</h1>
                 <p className="break-words text-sm font-medium text-zinc-400">Cliente: {project.clientName}</p>
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <span className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${currentStatusClass}`}>
+            <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2 sm:flex sm:items-center sm:gap-3">
+              <span className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${currentStatusClass}`}>
                 {currentStatusLabel}
               </span>
               {!isReadOnlyProjectUser && (
                 <Button
                   type="button"
                   onClick={() => setShowEditModal(true)}
-                  className="w-full border border-white/15 bg-white/10 text-white hover:bg-white/15 sm:w-auto"
+                  className="min-h-11 w-full border border-white/15 bg-white/10 text-white hover:bg-white/15 sm:w-auto"
                 >
                   Editar ficha
                 </Button>
@@ -393,13 +397,20 @@ export const ProjectDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative">
+          <ProjectMobileSectionNav
+            tabs={tabs}
+            activeTab={visibleActiveTab}
+            onChange={setActiveTab}
+          />
+
+          {/* Desktop conserva las pestañas rápidas. Mobile usa el selector agrupado superior. */}
+          <div className="relative hidden lg:block">
             <div className="overflow-x-auto pb-1 scrollbar-hide">
               <div className="flex min-w-max gap-2 pb-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => setActiveTab(tab.id)}
                     className={`group relative flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium whitespace-nowrap transition-all duration-200 sm:px-4 sm:py-2.5 sm:text-sm ${
                       visibleActiveTab === tab.id
                         ? 'bg-cyan-400 text-zinc-950 shadow-sm'
@@ -419,7 +430,7 @@ export const ProjectDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="mx-auto max-w-7xl overflow-x-hidden px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         {needsDailyProjectUpdate && (
           <div className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50 shadow-lg shadow-amber-950/20">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -438,7 +449,7 @@ export const ProjectDetail: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('status')}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
+                  className="min-h-11 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-85"
                   style={{ backgroundColor: 'var(--warm)', color: 'var(--paper)', border: '1.4px solid var(--warm)' }}
                 >
                   {isReadOnlyProjectUser ? 'Ver estado' : 'Cargar avance'}
