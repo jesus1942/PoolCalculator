@@ -77,24 +77,40 @@ canvas {
   }
 
   .dashboard-v2,
-  .projects-v2 {
+  .projects-v2,
+  .installer-v2 {
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
   }
 
   .dashboard-v2 .rough-panel,
   .projects-v2 .rough-panel,
+  .installer-v2 .rough-panel,
   .hydraulic-workspace-mobile .rough-panel {
     min-width: 0;
   }
 
-  .hydraulic-workspace-mobile svg,
-  .hydraulic-workspace-mobile canvas {
-    max-width: none;
-  }
-
+  /* Los diagramas anchos se desplazan sólo dentro de sus contenedores
+     desplazables; no se altera el tamaño de iconos o SVG pequeños. */
   .hydraulic-workspace-mobile .overflow-x-auto {
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Chat ocupa exactamente el espacio entre el header mobile y la bottom-nav.
+     Su componente conserva su lógica list/chat; sólo corregimos el viewport. */
+  .chat-experience-v2 {
+    height: calc(100dvh - 56px - 64px - env(safe-area-inset-bottom));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .chat-experience-v2 > div:first-child {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .chat-experience-v2 textarea {
+    font-size: 16px !important;
   }
 }
 
@@ -131,14 +147,21 @@ canvas {
     font-size: 1.75rem;
     line-height: 1.15;
   }
+
+  .chat-experience-v2 [class*='px-6'] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
 }
 
 @media (hover: none) and (pointer: coarse) {
   .dashboard-v2 button:hover,
   .projects-v2 button:hover,
+  .installer-v2 button:hover,
   .project-surface button:hover,
   .dashboard-v2 a:hover,
   .projects-v2 a:hover,
+  .installer-v2 a:hover,
   .project-surface a:hover {
     transform: none !important;
   }
