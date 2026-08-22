@@ -14,7 +14,7 @@ import { AuthCallback } from '@/pages/AuthCallback';
 import { DashboardV2 } from '@/pages/DashboardV2';
 import { Agenda } from '@/pages/Agenda';
 import { PoolModels } from '@/pages/PoolModels';
-import { Projects } from '@/pages/Projects';
+import { ProjectsV2 } from '@/pages/ProjectsV2';
 import { ProjectDetail } from '@/pages/ProjectDetail';
 import { Settings } from '@/pages/Settings';
 import { PublicTimeline } from '@/pages/PublicTimeline';
@@ -31,7 +31,6 @@ import { Installer } from '@/pages/Installer';
 import { Chat } from '@/pages/Chat';
 import { Ayuda } from '@/pages/Ayuda';
 
-// Siempre mostrar landing page en la raíz.
 function HomeRedirect() {
   return <Landing />;
 }
@@ -97,7 +96,7 @@ function App() {
                   <PoolModels />
                 </RoleRoute>
               } />
-              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects" element={<ProjectsV2 />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/settings" element={
                 <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
