@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { RoleRoute } from '@/components/RoleRoute';
 import { Layout } from '@/components/Layout';
-import { Landing } from '@/pages/Landing';
+import { LandingExperience } from '@/pages/LandingExperience';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { ForgotPassword } from '@/pages/ForgotPassword';
@@ -30,10 +30,6 @@ import { OpsManager } from '@/pages/Admin/OpsManager';
 import { Installer } from '@/pages/Installer';
 import { Chat } from '@/pages/Chat';
 import { Ayuda } from '@/pages/Ayuda';
-
-function HomeRedirect() {
-  return <Landing />;
-}
 
 function GlobalSvgFilters() {
   return (
@@ -73,8 +69,8 @@ function App() {
         >
           <Routes>
             {basePath === '' && <Route path="/PoolCalculator/*" element={<Navigate to="/" replace />} />}
-            <Route path="/" element={<HomeRedirect />} />
-            <Route path="/landing" element={<Landing />} />
+            <Route path="/" element={<LandingExperience />} />
+            <Route path="/landing" element={<LandingExperience />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
