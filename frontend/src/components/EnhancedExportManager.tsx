@@ -147,6 +147,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // base / volver a automático). Si React reescribiera el innerHTML en cada
   // tecla, el cursor saltaría al inicio y el texto parecería borrarse.
   const [clientEditorSeedVersion, setClientEditorSeedVersion] = useState(0);
+  const [copiedPwaLink, setCopiedPwaLink] = useState(false);
 
   const seedClientDocumentEditor = (html: string) => {
     setClientDocumentEditorHtml(html);
@@ -827,7 +828,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const conditionsCount = getConditionsList(getTemplateSettings('client').conditions).length;
 
   const effectiveProjectSpec = (() => {
-    const poolPreset = project.poolPreset || {};
+    const poolPreset = (project.poolPreset || {}) as any;
     const shape = String(poolPreset.shape || '').toUpperCase();
     const tileConfig = (project.tileCalculation as any) || {};
     const returnsCount = Number(hydraulicSummary.total.returns || poolPreset.returnsCount || 0);
@@ -2776,6 +2777,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const documentTitle = templateSettings.title || `Vista General - ${project.name}`;
     const logoDataUrl = getLogoForTemplate('overview');
     const overviewHydraulicSummary = hydraulicSummary;
+    const overviewConditions = getConditionsList(getTemplateSettings('client').conditions);
+    const visibleInstallationExclusions = getVisibleInstallationExclusions(overviewConditions);
 
     return `
 <!DOCTYPE html>

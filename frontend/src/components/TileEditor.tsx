@@ -92,7 +92,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
     }
   };
 
-  const handleSideChange = (side: keyof typeof config, field: keyof SideConfig, value: any) => {
+  const handleSideChange = (side: 'north' | 'south' | 'east' | 'west', field: keyof SideConfig, value: any) => {
     const nextConfig = {
       ...config,
       [side]: {
@@ -183,7 +183,7 @@ export const TileEditor: React.FC<TileEditorProps> = ({ project, onSave }) => {
     })),
   ];
 
-  const getSideColor = (side: keyof typeof config) => {
+  const getSideColor = (side: 'north' | 'south' | 'east' | 'west') => {
     if (!config[side].firstRingType) return '#e5e7eb';
     return config[side].rows > 0 ? '#3b82f6' : '#94a3b8';
   };

@@ -394,9 +394,9 @@ export const Dashboard: React.FC = () => {
                 left: drop.left,
                 top: drop.top,
                 height: `${drop.height}px`,
-                ['--rain-duration' as '--rain-duration']: drop.duration,
-                ['--rain-delay' as '--rain-delay']: drop.delay,
-              }}
+                '--rain-duration': drop.duration,
+                '--rain-delay': drop.delay,
+              } as React.CSSProperties}
             />
           ))}
         </div>
