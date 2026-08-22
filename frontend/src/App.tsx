@@ -27,8 +27,8 @@ import { UsersManager } from '@/pages/Admin/UsersManager';
 import { TenantsManager } from '@/pages/Admin/TenantsManager';
 import { SorteosManager } from '@/pages/Admin/SorteosManager';
 import { OpsManager } from '@/pages/Admin/OpsManager';
-import { Installer } from '@/pages/Installer';
-import { Chat } from '@/pages/Chat';
+import { InstallerV2 } from '@/pages/InstallerV2';
+import { ChatExperience } from '@/pages/ChatExperience';
 import { Ayuda } from '@/pages/Ayuda';
 
 function GlobalSvgFilters() {
@@ -99,7 +99,7 @@ function App() {
                   <Settings />
                 </RoleRoute>
               } />
-              <Route path="/chat" element={<Chat />} />
+              <Route path="/chat" element={<ChatExperience />} />
               <Route path="/ayuda" element={<Ayuda />} />
               <Route path="/admin/docs" element={
                 <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
@@ -143,7 +143,7 @@ function App() {
               } />
               <Route path="/installer" element={
                 <RoleRoute allowedRoles={['INSTALLER']} redirectTo="/dashboard">
-                  <Installer />
+                  <InstallerV2 />
                 </RoleRoute>
               } />
             </Route>
