@@ -1,0 +1,156 @@
+/*
+  MOBILE V2 — reglas de interacción y legibilidad.
+  No define una identidad nueva: usa exclusivamente los tokens de artisan.css.
+*/
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .rough-panel::before {
+    border-radius: 14px;
+  }
+
+  .rough-field__control {
+    min-height: 46px;
+    padding: 11px 13px;
+  }
+
+  .rough-btn {
+    min-height: 44px;
+  }
+
+  .project-surface {
+    min-width: 0;
+  }
+
+  .project-surface > * {
+    min-width: 0;
+  }
+
+  .project-surface table {
+    font-size: 13px;
+  }
+
+  .project-surface textarea {
+    min-height: 110px;
+  }
+
+  .project-surface [role='dialog'] {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .dashboard-v2,
+  .projects-v2 {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .dashboard-v2 .rough-panel,
+  .projects-v2 .rough-panel {
+    min-width: 0;
+  }
+
+  .hydraulic-workspace-mobile .rough-panel {
+    min-width: 0;
+  }
+
+  /* Los editores históricos pueden contener diagramas más anchos que el teléfono.
+     Se conservan completos dentro de una zona desplazable en vez de comprimirlos. */
+  .hydraulic-workspace-mobile svg,
+  .hydraulic-workspace-mobile canvas {
+    max-width: none;
+  }
+
+  .hydraulic-workspace-mobile .overflow-x-auto {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 639px) {
+  h1 {
+    line-height: 1.16;
+  }
+
+  h2,
+  h3 {
+    line-height: 1.25;
+  }
+
+  .rough-chip {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .project-surface [class*='p-8'],
+  .project-surface [class*='p-10'],
+  .project-surface [class*='p-12'] {
+    padding: 1rem;
+  }
+
+  .project-surface [class*='gap-8'],
+  .project-surface [class*='gap-10'],
+  .project-surface [class*='gap-12'] {
+    gap: 1rem;
+  }
+
+  .project-surface [class*='text-4xl'],
+  .project-surface [class*='text-5xl'],
+  .project-surface [class*='text-6xl'] {
+    font-size: 1.75rem;
+    line-height: 1.15;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .dashboard-v2 button:hover,
+  .projects-v2 button:hover,
+  .project-surface button:hover,
+  .dashboard-v2 a:hover,
+  .projects-v2 a:hover,
+  .project-surface a:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
