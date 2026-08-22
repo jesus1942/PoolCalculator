@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './theme/artisan.css';
+import './theme/mobile-v2.css';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -32,7 +33,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 );
 
-// Fade out the Mundial splash — wait at least 3.5s so the full animation plays
 const splashStart = Date.now();
 const MIN_SPLASH_MS = 3500;
 
