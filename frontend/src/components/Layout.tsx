@@ -310,7 +310,7 @@ export const Layout: React.FC = () => {
           </button>
         </header>
 
-        <main className="flex-grow pb-[86px] lg:pb-0">
+        <main className="flex-grow pb-[72px] lg:pb-0">
           <Outlet />
         </main>
 
@@ -320,9 +320,12 @@ export const Layout: React.FC = () => {
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 lg:hidden"
+        className="mobile-tabbar fixed inset-x-0 bottom-0 z-20 lg:hidden"
         aria-label="Navegación principal"
         style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          width: '100%',
           backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',
           borderTop: '1.5px solid var(--hair-strong)',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -334,7 +337,7 @@ export const Layout: React.FC = () => {
           <NavLink
             key={item.to}
             to={item.to}
-            className="relative flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center"
+            className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-center"
             style={({ isActive }: { isActive: boolean }) => ({
               color: isActive ? 'var(--accent)' : 'var(--ink-soft)',
               fontWeight: isActive ? 700 : 550,
@@ -350,12 +353,12 @@ export const Layout: React.FC = () => {
                   />
                 )}
                 <span
-                  className="inline-flex h-7 w-10 items-center justify-center rounded-lg"
+                  className="inline-flex h-6 w-9 items-center justify-center rounded-lg"
                   style={{ backgroundColor: isActive ? 'var(--accent-2)' : 'transparent' }}
                 >
-                  <item.icon size={21} />
+                  <item.icon size={19} />
                 </span>
-                <span className="max-w-full truncate text-[11px] leading-none">{item.label}</span>
+                <span className="max-w-full truncate text-[10px] leading-none">{item.label}</span>
               </>
             )}
           </NavLink>

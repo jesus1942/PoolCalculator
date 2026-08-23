@@ -76,10 +76,10 @@ interface ClientComment {
 }
 
 const CLIENT_COMMENT_KIND_INFO: Record<ClientComment['kind'], { label: string; badge: string }> = {
-  PRAISE: { label: '👏 Felicitación', badge: 'bg-emerald-100 text-emerald-700' },
-  SUGGESTION: { label: '💡 Sugerencia', badge: 'bg-amber-100 text-amber-700' },
-  QUESTION: { label: '❓ Consulta', badge: 'bg-violet-100 text-violet-700' },
-  COMMENT: { label: '💬 Comentario', badge: 'bg-cyan-100 text-cyan-700' },
+  PRAISE: { label: 'Felicitación', badge: 'bg-emerald-100 text-emerald-700' },
+  SUGGESTION: { label: 'Sugerencia', badge: 'bg-amber-100 text-amber-700' },
+  QUESTION: { label: 'Consulta', badge: 'bg-violet-100 text-violet-700' },
+  COMMENT: { label: 'Comentario', badge: 'bg-cyan-100 text-cyan-700' },
 };
 
 export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, projectName = 'Proyecto', clientName }) => {
@@ -365,19 +365,19 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
   return (
     <div className="space-y-6">
       <Card>
-        <div className="flex justify-between items-center mb-6">
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold">Timeline del Proyecto</h3>
             <p className="text-sm text-gray-600">Registro cronológico de actualizaciones y eventos</p>
           </div>
-          <div className="flex gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
             {timelineItems.length > 0 && (
-              <Button variant="secondary" onClick={() => setShowExportModal(true)}>
+              <Button variant="secondary" onClick={() => setShowExportModal(true)} className="w-full justify-center sm:w-auto">
                 <HdShare size={18} className="mr-2" />
                 Compartir Timeline
               </Button>
             )}
-            <Button onClick={() => setShowAddModal(true)}>
+            <Button onClick={() => setShowAddModal(true)} className="w-full justify-center sm:w-auto">
               <HdPlus size={18} className="mr-2" />
               Agregar Actualización
             </Button>
@@ -398,7 +398,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
         ) : (
           <div className="relative">
             {/* Línea vertical del timeline */}
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            <div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gray-200 sm:left-8"></div>
 
             {/* Lista de actualizaciones */}
             <div className="space-y-6">
@@ -407,15 +407,15 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                 const CategoryIcon = categoryInfo.icon;
 
                 return (
-                  <div key={item.id} className="relative pl-20">
+                  <div key={item.id} className="relative pl-11 sm:pl-20">
                     {/* Icono en la línea del timeline */}
-                    <div className={`absolute left-4 w-8 h-8 rounded-full bg-${categoryInfo.color}-100 border-4 border-white flex items-center justify-center`}>
+                    <div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-${categoryInfo.color}-100 sm:left-4`}>
                       <CategoryIcon size={16} className={`text-${categoryInfo.color}-600`} />
                     </div>
 
                     {/* Contenido de la actualización */}
                     <div className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h4 className="font-semibold text-gray-900">{item.title}</h4>
@@ -441,7 +441,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                           )}
                         </div>
                         {item.type === 'PROJECT_UPDATE' && (
-                          <div className="flex gap-2">
+                          <div className="flex shrink-0 gap-1 self-end sm:self-auto">
                             <button
                               onClick={() => handleToggleVisibility(item.id)}
                               className={`${item.isPublic ? 'text-green-600 hover:text-green-800' : 'text-gray-400 hover:text-gray-600'} p-1`}
@@ -501,7 +501,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
 
                       {/* Galería de imágenes */}
                       {item.images && item.images.length > 0 && (
-                        <div className="grid grid-cols-4 gap-2 mt-3">
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                           {(item.images as string[]).map((image, index) => (
                             <div
                               key={index}
@@ -546,7 +546,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
             {clientComments.map((comment) => {
               const kindInfo = CLIENT_COMMENT_KIND_INFO[comment.kind] || CLIENT_COMMENT_KIND_INFO.COMMENT;
               return (
-                <div key={comment.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                <div key={comment.id} className="overflow-hidden rounded-lg border bg-white p-3 shadow-sm sm:p-4">
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">{comment.authorName}</span>
@@ -570,7 +570,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                       <p className="text-sm text-cyan-900 whitespace-pre-line">{comment.reply}</p>
                     </div>
                   ) : (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:flex">
                       <input
                         value={replyDrafts[comment.id] || ''}
                         onChange={(e) => setReplyDrafts(prev => ({ ...prev, [comment.id]: e.target.value }))}
@@ -581,11 +581,12 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                           }
                         }}
                         placeholder="Responder al cliente…"
-                        className="flex-1 px-3 py-2 border rounded-md text-sm"
+                        className="min-h-11 w-full min-w-0 rounded-md border px-3 py-2 text-base sm:flex-1 sm:text-sm"
                       />
                       <Button
                         onClick={() => handleReplyToComment(comment.id)}
                         disabled={replyingTo === comment.id || !(replyDrafts[comment.id] || '').trim()}
+                      className="w-full justify-center sm:w-auto"
                       >
                         {replyingTo === comment.id ? 'Enviando…' : 'Responder'}
                       </Button>
