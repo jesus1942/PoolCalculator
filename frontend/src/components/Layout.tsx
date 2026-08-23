@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdSparkles, HdInfo } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
@@ -14,13 +14,13 @@ export const Layout: React.FC = () => {
   const { user, logout, updateSession } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [organizations, setOrganizations] = useState<OrganizationItem[]>([]);
   const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    // Navegar a la landing con replace para evitar volver atrás
     navigate('/', { replace: true });
   };
 
@@ -37,6 +37,27 @@ export const Layout: React.FC = () => {
     };
     loadOrganizations();
   }, [user]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', closeWithEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeWithEscape);
+    };
+  }, [sidebarOpen]);
 
   const handleSwitchOrganization = async (orgId: string) => {
     try {
@@ -103,80 +124,101 @@ export const Layout: React.FC = () => {
     navItems.push({ to: '/admin/catalogs', icon: HdDatabase, label: 'Catálogos' });
   }
 
+  const homePath = user?.role === 'INSTALLER' ? '/installer' : '/dashboard';
+
   return (
     <div className="min-h-screen overflow-x-hidden">
       <ReminderToasts />
       <BrowserNotificationPrompt />
 
-      {/* Overlay del menú completo en mobile. */}
       <button
         type="button"
         aria-label="Cerrar menú"
         onClick={() => setSidebarOpen(false)}
-        className={`fixed inset-0 z-30 transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
-        style={{ backgroundColor: 'var(--overlay)', backdropFilter: 'blur(1.5px)' }}
+        className={`fixed inset-0 z-30 transition-opacity duration-200 lg:hidden ${sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        style={{ backgroundColor: 'var(--overlay)', backdropFilter: 'blur(3px)' }}
       />
 
-      {/* Sidebar: navegación principal en desktop y menú Más en mobile. */}
-      <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ backgroundColor: 'var(--card)', borderRight: '1.6px solid var(--hair-strong)' }}
+      <aside
+        aria-label="Menú principal"
+        className={`fixed inset-y-0 left-0 z-40 w-[88vw] max-w-[360px] transform transition-transform duration-200 ease-out lg:w-64 lg:max-w-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          backgroundColor: 'var(--card)',
+          borderRight: '1.6px solid var(--hair-strong)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between px-4" style={{ borderBottom: '1.3px dashed var(--hair-strong)' }}>
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex min-h-[72px] items-center gap-3 px-4" style={{ borderBottom: '1.3px dashed var(--hair-strong)' }}>
             <button
-              onClick={() => navigate(user?.role === 'INSTALLER' ? '/installer' : '/dashboard')}
-              className="flex flex-1 items-center justify-center gap-3 text-lg transition-opacity hover:opacity-80"
+              type="button"
+              onClick={() => navigate(homePath)}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
               title="Ir al inicio"
-              style={{ color: 'var(--ink)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}
             >
-              <span className="rough-panel rough-panel--soft inline-flex h-9 w-9 items-center justify-center">
-                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="relative h-5 w-auto" />
+              <span className="rough-panel rough-panel--soft inline-flex h-11 w-11 shrink-0 items-center justify-center">
+                <img src={publicAssetUrl('logo-isotipo.png')} alt="Pool Installer" className="relative h-6 w-auto" />
               </span>
-              Pool Installer
+              <span className="min-w-0">
+                <span
+                  className="block truncate text-[15px] font-semibold"
+                  style={{ color: 'var(--ink)', fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  Pool Installer
+                </span>
+                <span className="mt-0.5 block truncate text-[11px]" style={{ color: 'var(--ink-soft)' }}>
+                  Herramientas de obra
+                </span>
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-lg lg:hidden"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl lg:hidden"
               aria-label="Cerrar menú"
-              style={{ color: 'var(--ink-soft)' }}
+              style={{ border: '1.4px solid var(--hair-strong)', color: 'var(--ink)' }}
             >
               <HdX size={19} />
             </button>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex min-h-11 items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-150 ${isActive ? 'artisan-nav-active' : ''}`
-                }
-                style={({ isActive }: { isActive: boolean }) => ({
-                  color: isActive ? 'var(--accent)' : 'var(--ink-soft)',
-                  fontWeight: isActive ? 600 : 500,
-                })}
-              >
-                <item.icon size={19} />
-                <span className="text-[14.5px]">{item.label}</span>
-              </NavLink>
-            ))}
+          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+            <p
+              className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: 'var(--ink-soft)', fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              Navegación
+            </p>
+
+            <div className="space-y-1">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `flex min-h-[48px] items-center gap-3 rounded-xl px-3.5 py-2.5 transition-colors duration-150 ${isActive ? 'artisan-nav-active' : ''}`
+                  }
+                  style={({ isActive }: { isActive: boolean }) => ({
+                    color: isActive ? 'var(--accent)' : 'var(--ink-soft)',
+                    fontWeight: isActive ? 650 : 500,
+                    backgroundColor: isActive ? 'var(--accent-2)' : 'transparent',
+                  })}
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center">
+                    <item.icon size={19} />
+                  </span>
+                  <span className="min-w-0 truncate text-[14px]">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           </nav>
 
-          <div className="p-4" style={{ borderTop: '1.3px dashed var(--hair-strong)' }}>
-            <div className="rough-panel rough-panel--soft mb-3 p-3">
-              <p className="relative text-sm font-semibold" style={{ color: 'var(--ink)' }}>{user?.name}</p>
-              <p className="relative truncate text-xs" style={{ color: 'var(--ink-soft)' }}>{user?.email}</p>
-              {(user?.role === 'ADMIN' || user?.role === 'SUPERADMIN') && (
-                <span className="rough-chip mt-2" style={{ color: 'var(--accent)' }}>
-                  Administrador
-                </span>
-              )}
+          <div className="shrink-0 p-3 sm:p-4" style={{ borderTop: '1.3px dashed var(--hair-strong)' }}>
+            <div className="mb-3 px-1">
+              <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>{user?.name}</p>
+              <p className="mt-0.5 truncate text-xs" style={{ color: 'var(--ink-soft)' }}>{user?.email}</p>
             </div>
 
             {organizations.length > 0 && (
@@ -195,54 +237,60 @@ export const Layout: React.FC = () => {
                     className="rough-field__control text-sm"
                   >
                     {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name}
-                      </option>
+                      <option key={org.id} value={org.id}>{org.name}</option>
                     ))}
                   </select>
                 </div>
               </div>
             )}
 
-            <button
-              onClick={toggleTheme}
-              className="mb-1 flex min-h-11 w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all"
-              style={{ color: 'var(--ink-soft)' }}
-              title="Cambiar tema"
-            >
-              <HdSun size={16} />
-              <span>{theme === 'paper' ? 'Tema oscuro' : 'Tema claro'}</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                style={{ border: '1.3px solid var(--hair-strong)', color: 'var(--ink-soft)' }}
+                title="Cambiar tema"
+              >
+                <HdSun size={16} />
+                <span>{theme === 'paper' ? 'Oscuro' : 'Claro'}</span>
+              </button>
 
-            <button
-              onClick={handleLogout}
-              className="flex min-h-11 w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all"
-              style={{ color: 'var(--bad)' }}
-            >
-              <HdArrowOut size={16} />
-              <span>Cerrar sesión</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold"
+                style={{ border: '1.3px solid var(--hair-strong)', color: 'var(--bad)' }}
+              >
+                <HdArrowOut size={16} />
+                <span>Salir</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Contenido. En mobile reserva espacio para la navegación inferior. */}
       <div className="flex min-h-screen flex-col lg:ml-64">
         <header
-          className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 lg:hidden"
-          style={{ backgroundColor: 'var(--card)', borderBottom: '1.4px solid var(--hair-strong)' }}
+          className="sticky top-0 z-20 flex min-h-[62px] items-center justify-between gap-3 px-3 py-2 lg:hidden"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--card) 96%, transparent)',
+            borderBottom: '1.4px solid var(--hair-strong)',
+            backdropFilter: 'blur(12px)',
+            paddingTop: 'max(8px, env(safe-area-inset-top))',
+          }}
         >
           <button
             type="button"
-            onClick={() => navigate(user?.role === 'INSTALLER' ? '/installer' : '/dashboard')}
-            className="flex min-h-11 min-w-0 items-center gap-2 text-left"
+            onClick={() => navigate(homePath)}
+            className="flex min-h-11 min-w-0 items-center gap-2.5 text-left"
             aria-label="Ir al inicio de Pool Installer"
           >
             <span className="rough-panel rough-panel--soft inline-flex h-9 w-9 shrink-0 items-center justify-center">
               <img src={publicAssetUrl('logo-isotipo.png')} alt="" className="relative h-5 w-auto" />
             </span>
             <span
-              className="truncate text-sm font-semibold"
+              className="truncate text-[13px] font-semibold"
               style={{ color: 'var(--ink)', fontFamily: "'JetBrains Mono', monospace" }}
             >
               Pool Installer
@@ -252,42 +300,44 @@ export const Layout: React.FC = () => {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3"
             aria-label="Abrir menú completo"
-            style={{ border: '1.4px solid var(--hair-strong)', color: 'var(--ink)' }}
+            aria-expanded={sidebarOpen}
+            style={{ border: '1.4px solid var(--hair-strong)', color: 'var(--ink)', backgroundColor: 'var(--card2)' }}
           >
-            <HdMenu size={20} />
+            <HdMenu size={19} />
+            <span className="text-xs font-semibold">Menú</span>
           </button>
         </header>
 
-        <div className="flex-grow pb-24 lg:pb-0">
+        <main className="flex-grow pb-[86px] lg:pb-0">
           <Outlet />
-        </div>
+        </main>
 
-        {/* El footer editorial queda para desktop. En mobile prima el área de trabajo. */}
         <div className="hidden lg:block">
           <Footer />
         </div>
       </div>
 
-      {/* Navegación operativa mobile. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 lg:hidden"
         aria-label="Navegación principal"
         style={{
-          backgroundColor: 'var(--card)',
+          backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',
           borderTop: '1.5px solid var(--hair-strong)',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 -8px 24px color-mix(in srgb, var(--ink) 7%, transparent)',
         }}
       >
         {mobilePrimaryItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
-            className="relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center"
+            className="relative flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center"
             style={({ isActive }: { isActive: boolean }) => ({
               color: isActive ? 'var(--accent)' : 'var(--ink-soft)',
-              fontWeight: isActive ? 700 : 500,
+              fontWeight: isActive ? 700 : 550,
             })}
           >
             {({ isActive }) => (
@@ -295,35 +345,21 @@ export const Layout: React.FC = () => {
                 {isActive && (
                   <span
                     aria-hidden="true"
-                    className="absolute inset-x-3 top-0 h-[2px]"
+                    className="absolute left-1/2 top-0 h-[2px] w-8 -translate-x-1/2 rounded-full"
                     style={{ backgroundColor: 'var(--accent)' }}
                   />
                 )}
-                <item.icon size={21} />
-                <span className="max-w-full truncate text-[10px] leading-none">{item.label}</span>
+                <span
+                  className="inline-flex h-7 w-10 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: isActive ? 'var(--accent-2)' : 'transparent' }}
+                >
+                  <item.icon size={21} />
+                </span>
+                <span className="max-w-full truncate text-[11px] leading-none">{item.label}</span>
               </>
             )}
           </NavLink>
         ))}
-
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          className="relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-1 py-2 text-center"
-          style={{ color: sidebarOpen ? 'var(--accent)' : 'var(--ink-soft)', fontWeight: sidebarOpen ? 700 : 500 }}
-          aria-label="Abrir más opciones"
-          aria-expanded={sidebarOpen}
-        >
-          {sidebarOpen && (
-            <span
-              aria-hidden="true"
-              className="absolute inset-x-3 top-0 h-[2px]"
-              style={{ backgroundColor: 'var(--accent)' }}
-            />
-          )}
-          <HdMenu size={21} />
-          <span className="text-[10px] leading-none">Más</span>
-        </button>
       </nav>
     </div>
   );
