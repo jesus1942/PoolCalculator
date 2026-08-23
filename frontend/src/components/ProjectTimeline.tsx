@@ -34,6 +34,7 @@ interface ProjectTimelineProps {
   projectId: string;
   projectName?: string;
   clientName?: string;
+  onTimelineChanged?: () => void;
 }
 
 interface TimelineItem {
@@ -82,7 +83,7 @@ const CLIENT_COMMENT_KIND_INFO: Record<ClientComment['kind'], { label: string; b
   COMMENT: { label: 'Comentario', badge: 'bg-cyan-100 text-cyan-700' },
 };
 
-export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, projectName = 'Proyecto', clientName }) => {
+export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, projectName = 'Proyecto', clientName, onTimelineChanged }) => {
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [clientComments, setClientComments] = useState<ClientComment[]>([]);
@@ -112,6 +113,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
       const response = await api.get(`/project-updates/project/${projectId}/timeline`);
       setUpdates(response.data.updates || []);
       setTimelineItems(response.data.timeline || []);
+      onTimelineChanged?.();
     } catch (error) {
       console.error('Error loading updates:', error);
     } finally {

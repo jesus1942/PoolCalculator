@@ -370,23 +370,6 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      pending: 'bg-gray-100 text-gray-800',
-      in_progress: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-    };
-    const labels = {
-      pending: 'Pendiente',
-      in_progress: 'En Progreso',
-      completed: 'Completada',
-    };
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
-      </span>
-    );
-  };
 
   const getTotalsByCategory = (categoryTasks: TaskDetail[]) => {
     const totalHours = categoryTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
@@ -525,7 +508,6 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h5 className="font-medium">{task.name}</h5>
-                          {getStatusBadge(task.status)}
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{task.description}</p>
                         <div className="flex gap-4 text-xs text-gray-500">
@@ -706,17 +688,8 @@ export const TasksManager: React.FC<TasksManagerProps> = ({ project, onSave, onU
             El valor de mano de obra de la tarea se carga y edita desde la pestaña Costos.
           </p>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Estado</label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="pending">Pendiente</option>
-              <option value="in_progress">En Progreso</option>
-              <option value="completed">Completada</option>
-            </select>
+          <div className="rounded-lg border px-3 py-3 text-sm" style={{ borderColor: 'var(--hair)', backgroundColor: 'var(--card2)', color: 'var(--ink-soft)' }}>
+            El estado de avance de la obra se calcula automáticamente con hitos del Timeline, eventos de Agenda y la secuencia constructiva. No hace falta actualizar esta tarea manualmente.
           </div>
 
           <div className="flex gap-3 mt-6">
