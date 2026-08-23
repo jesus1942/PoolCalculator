@@ -1,6 +1,11 @@
 import React from 'react';
 import { Project } from '@/types';
+import api from '@/services/api';
 import { ProjectTimeline } from './ProjectTimeline';
+import {
+  AutomaticProgressTimelineItem,
+  calculateAutomaticProjectProgress,
+} from '@/utils/automaticProjectProgress';
 
 interface ProjectStatusProps {
   project: Project;
@@ -15,25 +20,17 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; badge: string 
   CANCELLED:   { label: 'Cancelado',     dot: 'bg-rose-400',    badge: 'bg-rose-400/10 text-rose-300 border-rose-400/20' },
 };
 
-const TASK_STATUS_COLORS: Record<string, string> = {
-  completed:   'border-l-emerald-400',
-  in_progress: 'border-l-amber-400',
-  pending:     'border-l-zinc-700',
-};
-
 const CATEGORY_LABELS: Record<string, string> = {
   excavation: 'Excavación',
-  hydraulic:  'Hidráulica',
+  hydraulic: 'Hidráulica',
   electrical: 'Eléctrica',
-  floor:      'Solado',
-  tiles:      'Losetas',
-  finishes:   'Terminaciones',
+  floor: 'Solado y colocación',
+  tiles: 'Losetas',
+  finishes: 'Terminaciones',
   additionals: 'Adicionales',
-  other:      'Otros',
+  other: 'Otros',
 };
 
-// Orden constructivo real de la obra: las categorías se muestran siempre en
-// esta secuencia (el JSON de tareas no garantiza ningún orden).
 const CATEGORY_ORDER = ['excavation', 'floor', 'hydraulic', 'electrical', 'tiles', 'finishes', 'additionals', 'other'];
 
 const categoryIndex = (cat: string) => {
@@ -41,46 +38,69 @@ const categoryIndex = (cat: string) => {
   return idx === -1 ? CATEGORY_ORDER.length : idx;
 };
 
+const stageBorderClass = (state?: string) => {
+  if (state === 'completed') return 'border-l-emerald-400';
+  if (state === 'in_progress') return 'border-l-amber-400';
+  return 'border-l-zinc-700';
+};
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export const ProjectStatus: React.FC<ProjectStatusProps> = ({ project }) => {
-  const tasks = project.tasks as any;
-  const hasTasks = tasks && Object.keys(tasks).length > 0;
+  const tasks = (project.tasks && typeof project.tasks === 'object' ? project.tasks : {}) as Record<string, any>;
+  const hasTasks = Object.keys(tasks).length > 0;
+  const [timelineItems, setTimelineItems] = React.useState<AutomaticProgressTimelineItem[]>([]);
+  const [progressLoading, setProgressLoading] = React.useState(true);
 
-  const taskStats = React.useMemo(() => {
-    let total = 0, pending = 0, inProgress = 0, completed = 0, totalHours = 0;
-    if (hasTasks) {
-      Object.values(tasks).forEach((catTasks: any) => {
-        const arr = Array.isArray(catTasks) ? catTasks : (catTasks ? [catTasks] : []);
-        arr.forEach((t: any) => {
-          total++;
-          totalHours += t.estimatedHours || 0;
-          if (t.status === 'pending') pending++;
-          else if (t.status === 'in_progress') inProgress++;
-          else if (t.status === 'completed') completed++;
-        });
-      });
+  const taskCount = React.useMemo(() => {
+    return Object.values(tasks).reduce((sum: number, categoryTasks: any) => {
+      if (Array.isArray(categoryTasks)) return sum + categoryTasks.length;
+      return categoryTasks ? sum + 1 : sum;
+    }, 0);
+  }, [tasks]);
+
+  const refreshAutomaticProgress = React.useCallback(async () => {
+    try {
+      setProgressLoading(true);
+      const response = await api.get(`/project-updates/project/${project.id}/timeline`);
+      setTimelineItems(Array.isArray(response.data?.timeline) ? response.data.timeline : []);
+    } catch (error) {
+      console.error('Error al calcular avance automático:', error);
+      setTimelineItems([]);
+    } finally {
+      setProgressLoading(false);
     }
-    return { total, pending, inProgress, completed, totalHours, progress: total > 0 ? (completed / total) * 100 : 0 };
-  }, [tasks, hasTasks]);
+  }, [project.id]);
 
-  const materials      = project.materials as any;
-  const hasMaterials   = materials && Object.keys(materials).length > 0;
-  const plumbing       = project.plumbingConfig as any;
-  const hasPlumbing    = plumbing?.selectedItems?.length > 0;
-  const electrical     = project.electricalConfig as any;
-  const hasElectrical  = electrical?.items?.length > 0;
+  React.useEffect(() => {
+    void refreshAutomaticProgress();
+    const refreshOnFocus = () => void refreshAutomaticProgress();
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [refreshAutomaticProgress]);
+
+  const automaticProgress = React.useMemo(
+    () => calculateAutomaticProjectProgress(project as any, timelineItems),
+    [project, timelineItems]
+  );
+
+  const materials = project.materials as any;
+  const hasMaterials = materials && Object.keys(materials).length > 0;
+  const plumbing = project.plumbingConfig as any;
+  const hasPlumbing = plumbing?.selectedItems?.length > 0;
+  const electrical = project.electricalConfig as any;
+  const hasElectrical = electrical?.items?.length > 0;
 
   const statusCfg = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.DRAFT;
   const daysSince = Math.floor((Date.now() - new Date(project.createdAt).getTime()) / 86_400_000);
 
   const checklist = [
-    { label: 'Materiales',         ok: hasMaterials },
-    { label: 'Hidráulica',         ok: hasPlumbing },
-    { label: 'Eléctrica',          ok: hasElectrical },
-    { label: `Tareas (${taskStats.total})`, ok: hasTasks && taskStats.total > 0 },
+    { label: 'Materiales', ok: hasMaterials },
+    { label: 'Hidráulica', ok: hasPlumbing },
+    { label: 'Eléctrica', ok: hasElectrical },
+    { label: `Tareas base (${taskCount})`, ok: hasTasks && taskCount > 0 },
   ];
 
   const orderedTaskCategories = hasTasks
@@ -95,67 +115,76 @@ export const ProjectStatus: React.FC<ProjectStatusProps> = ({ project }) => {
 
   return (
     <div className="space-y-4">
-
-      {/* ── Cabecera compacta: estado + fechas + progreso general ── */}
-      <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-4">
+      <div className="space-y-4 rounded-xl border border-white/8 bg-white/3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold border rounded-full px-3 py-1 ${statusCfg.badge}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${statusCfg.badge}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
             {statusCfg.label}
           </span>
-          <div className="flex items-center gap-4 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
             <span>Creado: <span className="text-zinc-300">{formatDate(project.createdAt)}</span> · {daysSince} días</span>
             <span>Actualizado: <span className="text-zinc-300">{formatDate(project.updatedAt)}</span></span>
           </div>
         </div>
 
-        {hasTasks && taskStats.total > 0 ? (
-          <div>
-            <div className="flex justify-between text-xs text-zinc-400 mb-1.5">
-              <span>
-                {taskStats.completed} de {taskStats.total} tareas completadas
-                {taskStats.inProgress > 0 && <span className="text-amber-400"> · {taskStats.inProgress} en progreso</span>}
-              </span>
-              <span className="font-semibold text-white">{taskStats.progress.toFixed(0)}%</span>
+        <div>
+          <div className="mb-1.5 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Avance automático</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                Se calcula con hitos del Timeline, eventos de Agenda y la secuencia real de la obra. Nadie carga el porcentaje manualmente.
+              </p>
             </div>
-            <div className="w-full bg-zinc-800 rounded-full h-2">
-              <div
-                className="bg-emerald-400 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${taskStats.progress}%` }}
-              />
-            </div>
+            <span className="shrink-0 text-xl font-semibold text-white">
+              {progressLoading ? '—' : `${automaticProgress.percent.toFixed(0)}%`}
+            </span>
           </div>
-        ) : (
-          <p className="text-sm text-zinc-500">Sin tareas registradas todavía.</p>
-        )}
+          <div className="h-2 w-full rounded-full bg-zinc-800">
+            <div
+              className="h-2 rounded-full bg-emerald-400 transition-all duration-500"
+              style={{ width: `${progressLoading ? 0 : automaticProgress.percent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-zinc-600">
+            {progressLoading
+              ? 'Buscando evidencias de avance…'
+              : automaticProgress.evidenceCount > 0
+                ? `${automaticProgress.evidenceCount} evidencia(s) detectada(s) automáticamente.`
+                : 'Todavía no hay hitos o eventos confirmados que acrediten avance físico.'}
+          </p>
+        </div>
       </div>
 
-      {/* ── Timeline primero: es el corazón del estado de la obra ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <ProjectTimeline
           projectId={project.id}
           projectName={project.name}
           clientName={project.clientName}
+          onTimelineChanged={refreshAutomaticProgress}
         />
 
-        {/* ── Panel lateral: avance por etapa + configuración ── */}
         <div className="space-y-4">
           {orderedTaskCategories.length > 0 && (
-            <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-3">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">Avance por etapa de obra</p>
+            <div className="space-y-3 rounded-xl border border-white/8 bg-white/3 p-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-zinc-500">Avance automático por etapa</p>
+                <p className="mt-1 text-[11px] text-zinc-600">Las etapas se actualizan con la actividad real registrada en la aplicación.</p>
+              </div>
+
               {orderedTaskCategories.map(({ cat, arr }) => {
-                const done = arr.filter((t: any) => t.status === 'completed').length;
-                const pct  = (done / arr.length) * 100;
+                const stage = automaticProgress.stageByCategory[cat];
+                const pct = stage?.percent || 0;
+                const state = stage?.state || 'pending';
 
                 return (
-                  <details key={cat} className="bg-white/3 rounded-lg border border-white/6 overflow-hidden group">
+                  <details key={cat} className="group overflow-hidden rounded-lg border border-white/6 bg-white/3">
                     <summary className="cursor-pointer list-none">
-                      <div className="flex items-center justify-between px-3 py-2">
-                        <p className="text-sm font-medium text-white flex items-center gap-2">
-                          <span className="text-zinc-600 text-xs font-semibold">{categoryIndex(cat) + 1}</span>
-                          {CATEGORY_LABELS[cat] ?? cat}
+                      <div className="flex items-center justify-between gap-3 px-3 py-2">
+                        <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-white">
+                          <span className="text-xs font-semibold text-zinc-600">{categoryIndex(cat) + 1}</span>
+                          <span className="truncate">{CATEGORY_LABELS[cat] ?? cat}</span>
                         </p>
-                        <p className="text-xs text-zinc-400">{done}/{arr.length}</p>
+                        <p className="shrink-0 text-xs font-semibold text-zinc-400">{pct.toFixed(0)}%</p>
                       </div>
                       <div className="h-1 bg-zinc-800">
                         <div className="h-1 bg-emerald-400/70 transition-all" style={{ width: `${pct}%` }} />
@@ -163,40 +192,44 @@ export const ProjectStatus: React.FC<ProjectStatusProps> = ({ project }) => {
                     </summary>
 
                     <div className="divide-y divide-white/5">
+                      {stage?.evidence?.length ? (
+                        <div className="px-3 py-2 text-[11px] leading-relaxed text-zinc-500">
+                          {stage.evidence.slice(0, 2).join(' · ')}
+                        </div>
+                      ) : null}
+
                       {arr.map((task: any, i: number) => (
                         <div
                           key={task.id ?? i}
-                          className={`flex items-start justify-between px-3 py-2.5 border-l-2 ${TASK_STATUS_COLORS[task.status] ?? 'border-l-zinc-700'}`}
+                          className={`flex items-start justify-between border-l-2 px-3 py-2.5 ${stageBorderClass(state)}`}
                         >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white leading-snug">{task.name}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm leading-snug text-white">{task.name}</p>
                             {task.description && (
-                              <p className="text-xs text-zinc-500 mt-0.5 truncate">{task.description}</p>
+                              <p className="mt-0.5 truncate text-xs text-zinc-500">{task.description}</p>
                             )}
                           </div>
-                          <p className="text-xs text-zinc-400 ml-3 shrink-0">{task.estimatedHours}h</p>
+                          <p className="ml-3 shrink-0 text-xs text-zinc-400">{task.estimatedHours || 0}h</p>
                         </div>
                       ))}
                     </div>
                   </details>
                 );
               })}
-              <p className="text-[11px] text-zinc-600">Tocá una etapa para ver sus tareas.</p>
             </div>
           )}
 
-          <div className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Configuración del proyecto</p>
+          <div className="space-y-2 rounded-xl border border-white/8 bg-white/3 p-4">
+            <p className="mb-3 text-xs uppercase tracking-wider text-zinc-500">Configuración del proyecto</p>
             {checklist.map(({ label, ok }) => (
               <div key={label} className="flex items-center gap-3 py-1">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${ok ? 'bg-emerald-400/15' : 'bg-zinc-800'}`}>
+                <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${ok ? 'bg-emerald-400/15' : 'bg-zinc-800'}`}>
                   {ok
-                    ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round"><path d="M2 6l3 3 5-5"/></svg>
-                    : <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
-                  }
+                    ? <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round"><path d="M2 6l3 3 5-5" /></svg>
+                    : <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />}
                 </div>
                 <p className={`text-sm ${ok ? 'text-white' : 'text-zinc-500'}`}>{label}</p>
-                <p className={`text-xs ml-auto ${ok ? 'text-emerald-400' : 'text-zinc-600'}`}>{ok ? '✓' : 'Pendiente'}</p>
+                <p className={`ml-auto text-xs ${ok ? 'text-emerald-400' : 'text-zinc-600'}`}>{ok ? 'Listo' : 'Pendiente'}</p>
               </div>
             ))}
           </div>
