@@ -29,94 +29,66 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
-          def replace_once(path_str: str, old: str, new: str) -> None:
-              path = Path(path_str)
-              text = path.read_text(encoding='utf-8')
-              count = text.count(old)
-              if count != 1:
-                  raise RuntimeError(f'{path_str}: expected exactly one match, found {count}: {old[:80]!r}')
-              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          def must_replace(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise RuntimeError(f'Missing required pattern: {label}')
+              return text.replace(old, new, 1)
 
-          layout = 'frontend/src/components/Layout.tsx'
-          replace_once(
-              layout,
-              '        <main className="flex-grow pb-[86px] lg:pb-0">',
-              '        <main className="flex-grow pb-[72px] lg:pb-0">',
-          )
-          replace_once(
-              layout,
-              '        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 lg:hidden"',
-              '        className="mobile-tabbar fixed inset-x-0 bottom-0 z-20 lg:hidden"',
-          )
-          replace_once(
-              layout,
-              "          backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',\n",
-              "          display: 'grid',\n          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',\n          width: '100%',\n          backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',\n",
-          )
-          replace_once(
-              layout,
-              '            className="relative flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center"',
-              '            className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-center"',
-          )
-          replace_once(
-              layout,
-              '                  className="inline-flex h-7 w-10 items-center justify-center rounded-lg"',
-              '                  className="inline-flex h-6 w-9 items-center justify-center rounded-lg"',
-          )
-          replace_once(
-              layout,
-              '                  <item.icon size={21} />',
-              '                  <item.icon size={19} />',
-          )
-          replace_once(
-              layout,
-              '<span className="max-w-full truncate text-[11px] leading-none">{item.label}</span>',
-              '<span className="max-w-full truncate text-[10px] leading-none">{item.label}</span>',
-          )
+          # --- Bottom navigation: force a real horizontal iPhone tab bar ---
+          layout_path = Path('frontend/src/components/Layout.tsx')
+          layout = layout_path.read_text(encoding='utf-8')
+          layout = must_replace(layout, '        <main className="flex-grow pb-[86px] lg:pb-0">', '        <main className="flex-grow pb-[72px] lg:pb-0">', 'layout content padding')
+          layout = must_replace(layout, '        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 lg:hidden"', '        className="mobile-tabbar fixed inset-x-0 bottom-0 z-20 lg:hidden"', 'mobile tabbar class')
+          layout = must_replace(layout, "          backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',", "          display: 'grid',\n          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',\n          width: '100%',\n          backgroundColor: 'color-mix(in srgb, var(--card) 97%, transparent)',", 'mobile tabbar inline grid')
+          layout = must_replace(layout, '            className="relative flex min-h-[66px] min-w-0 flex-col items-center justify-center gap-1.5 px-2 py-2 text-center"', '            className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-center"', 'mobile tab item sizing')
+          layout = must_replace(layout, '                  className="inline-flex h-7 w-10 items-center justify-center rounded-lg"', '                  className="inline-flex h-6 w-9 items-center justify-center rounded-lg"', 'mobile tab icon box')
+          layout = must_replace(layout, '                  <item.icon size={21} />', '                  <item.icon size={19} />', 'mobile tab icon size')
+          layout = must_replace(layout, '<span className="max-w-full truncate text-[11px] leading-none">{item.label}</span>', '<span className="max-w-full truncate text-[10px] leading-none">{item.label}</span>', 'mobile tab label size')
+          layout_path.write_text(layout, encoding='utf-8')
 
-          timeline = 'frontend/src/components/ProjectTimeline.tsx'
-          replace_once(timeline, "PRAISE: { label: '👏 Felicitación', badge: 'bg-emerald-100 text-emerald-700' },", "PRAISE: { label: 'Felicitación', badge: 'bg-emerald-100 text-emerald-700' },")
-          replace_once(timeline, "SUGGESTION: { label: '💡 Sugerencia', badge: 'bg-amber-100 text-amber-700' },", "SUGGESTION: { label: 'Sugerencia', badge: 'bg-amber-100 text-amber-700' },")
-          replace_once(timeline, "QUESTION: { label: '❓ Consulta', badge: 'bg-violet-100 text-violet-700' },", "QUESTION: { label: 'Consulta', badge: 'bg-violet-100 text-violet-700' },")
-          replace_once(timeline, "COMMENT: { label: '💬 Comentario', badge: 'bg-cyan-100 text-cyan-700' },", "COMMENT: { label: 'Comentario', badge: 'bg-cyan-100 text-cyan-700' },")
-          replace_once(
-              timeline,
-              '<div className="flex justify-between items-center mb-6">',
-              '<div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">',
-          )
-          replace_once(
-              timeline,
-              '<div className="flex gap-2">\n            {timelineItems.length > 0 && (',
-              '<div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">\n            {timelineItems.length > 0 && (',
-          )
-          replace_once(
-              timeline,
-              '<Button variant="secondary" onClick={() => setShowExportModal(true)}>',
-              '<Button variant="secondary" onClick={() => setShowExportModal(true)} className="w-full justify-center sm:w-auto">',
-          )
-          replace_once(
-              timeline,
-              '<Button onClick={() => setShowAddModal(true)}>',
-              '<Button onClick={() => setShowAddModal(true)} className="w-full justify-center sm:w-auto">',
-          )
-          replace_once(timeline, '<div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>', '<div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gray-200 sm:left-8"></div>')
-          replace_once(timeline, '<div key={item.id} className="relative pl-20">', '<div key={item.id} className="relative pl-11 sm:pl-20">')
-          replace_once(timeline, '<div className={`absolute left-4 w-8 h-8 rounded-full bg-${categoryInfo.color}-100 border-4 border-white flex items-center justify-center`}>', '<div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-${categoryInfo.color}-100 sm:left-4`}>')
-          replace_once(timeline, '<div className="flex justify-between items-start mb-2">', '<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">')
-          replace_once(timeline, '<div className="flex gap-2">\n                            <button', '<div className="flex shrink-0 gap-1 self-end sm:self-auto">\n                            <button')
-          replace_once(timeline, '<div className="grid grid-cols-4 gap-2 mt-3">', '<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">')
-          replace_once(timeline, '<div key={comment.id} className="border rounded-lg p-4 bg-white shadow-sm">', '<div key={comment.id} className="overflow-hidden rounded-lg border bg-white p-3 shadow-sm sm:p-4">')
-          replace_once(timeline, '<div className="mt-3 flex gap-2">', '<div className="mt-3 grid grid-cols-1 gap-2 sm:flex">')
-          replace_once(timeline, 'className="flex-1 px-3 py-2 border rounded-md text-sm"', 'className="min-h-11 w-full min-w-0 rounded-md border px-3 py-2 text-base sm:flex-1 sm:text-sm"')
-          replace_once(
-              timeline,
-              '<Button\n                        onClick={() => handleReplyToComment(comment.id)}\n                        disabled={replyingTo === comment.id || !(replyDrafts[comment.id] || \'\').trim()}\n                      >',
-              '<Button\n                        onClick={() => handleReplyToComment(comment.id)}\n                        disabled={replyingTo === comment.id || !(replyDrafts[comment.id] || \'\').trim()}\n                        className="w-full justify-center sm:w-auto"\n                      >',
-          )
+          # --- Timeline and client comments: recompose instead of squeezing desktop rows ---
+          timeline_path = Path('frontend/src/components/ProjectTimeline.tsx')
+          timeline = timeline_path.read_text(encoding='utf-8')
 
-          css = Path('frontend/src/theme/mobile-v2.css')
-          css.write_text(css.read_text(encoding='utf-8') + r'''\n\n/* Mobile compression pass: evita que estilos heredados deformen la tab bar. */\n@media (max-width: 1023px) {\n  nav.mobile-tabbar {\n    display: grid !important;\n    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;\n    grid-auto-flow: column !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    min-height: 56px !important;\n    max-height: calc(56px + env(safe-area-inset-bottom)) !important;\n  }\n\n  nav.mobile-tabbar > a {\n    display: flex !important;\n    min-width: 0 !important;\n    min-height: 56px !important;\n    max-height: 56px !important;\n    padding: 5px 2px !important;\n  }\n}\n''', encoding='utf-8')
+          replacements = [
+              ("PRAISE: { label: '👏 Felicitación', badge: 'bg-emerald-100 text-emerald-700' },", "PRAISE: { label: 'Felicitación', badge: 'bg-emerald-100 text-emerald-700' },", 'praise emoji'),
+              ("SUGGESTION: { label: '💡 Sugerencia', badge: 'bg-amber-100 text-amber-700' },", "SUGGESTION: { label: 'Sugerencia', badge: 'bg-amber-100 text-amber-700' },", 'suggestion emoji'),
+              ("QUESTION: { label: '❓ Consulta', badge: 'bg-violet-100 text-violet-700' },", "QUESTION: { label: 'Consulta', badge: 'bg-violet-100 text-violet-700' },", 'question emoji'),
+              ("COMMENT: { label: '💬 Comentario', badge: 'bg-cyan-100 text-cyan-700' },", "COMMENT: { label: 'Comentario', badge: 'bg-cyan-100 text-cyan-700' },", 'comment emoji'),
+              ('<div className="flex justify-between items-center mb-6">', '<div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">', 'timeline header'),
+              ('<div className="flex gap-2">\n            {timelineItems.length > 0 && (', '<div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">\n            {timelineItems.length > 0 && (', 'timeline actions'),
+              ('<Button variant="secondary" onClick={() => setShowExportModal(true)}>', '<Button variant="secondary" onClick={() => setShowExportModal(true)} className="w-full justify-center sm:w-auto">', 'share button'),
+              ('<Button onClick={() => setShowAddModal(true)}>', '<Button onClick={() => setShowAddModal(true)} className="w-full justify-center sm:w-auto">', 'add button'),
+              ('<div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>', '<div className="absolute bottom-0 left-4 top-0 w-0.5 bg-gray-200 sm:left-8"></div>', 'timeline rail'),
+              ('<div key={item.id} className="relative pl-20">', '<div key={item.id} className="relative pl-11 sm:pl-20">', 'timeline item inset'),
+              ('<div className={`absolute left-4 w-8 h-8 rounded-full bg-${categoryInfo.color}-100 border-4 border-white flex items-center justify-center`}>', '<div className={`absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-${categoryInfo.color}-100 sm:left-4`}>', 'timeline dot'),
+              ('<div className="flex justify-between items-start mb-2">', '<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">', 'timeline card heading'),
+              ('<div className="flex gap-2">\n                            <button', '<div className="flex shrink-0 gap-1 self-end sm:self-auto">\n                            <button', 'timeline row actions'),
+              ('<div className="grid grid-cols-4 gap-2 mt-3">', '<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">', 'timeline gallery'),
+              ('<div key={comment.id} className="border rounded-lg p-4 bg-white shadow-sm">', '<div key={comment.id} className="overflow-hidden rounded-lg border bg-white p-3 shadow-sm sm:p-4">', 'comment card'),
+              ('<div className="mt-3 flex gap-2">', '<div className="mt-3 grid grid-cols-1 gap-2 sm:flex">', 'comment reply layout'),
+              ('className="flex-1 px-3 py-2 border rounded-md text-sm"', 'className="min-h-11 w-full min-w-0 rounded-md border px-3 py-2 text-base sm:flex-1 sm:text-sm"', 'comment reply input'),
+          ]
+          for old, new, label in replacements:
+              timeline = must_replace(timeline, old, new, label)
+
+          # Add responsive class to only the reply button in the client-comment block.
+          pattern = re.compile(r'(onClick=\{\(\) => handleReplyToComment\(comment\.id\)\}\s*\n\s*disabled=\{replyingTo === comment\.id \|\| !\(replyDrafts\[comment\.id\] \|\| \'\'\)\.trim\(\)\}\s*\n)(\s*)>')
+          timeline, count = pattern.subn(r'\1\2className="w-full justify-center sm:w-auto"\n\2>', timeline, count=1)
+          if count != 1:
+              raise RuntimeError(f'Could not patch comment reply button; matches={count}')
+
+          timeline_path.write_text(timeline, encoding='utf-8')
+
+          # Hard CSS guard against inherited/global navigation rules.
+          css_path = Path('frontend/src/theme/mobile-v2.css')
+          css = css_path.read_text(encoding='utf-8')
+          marker = '/* Mobile compression pass: enforced tab bar */'
+          if marker not in css:
+              css += '''\n\n/* Mobile compression pass: enforced tab bar */\n@media (max-width: 1023px) {\n  nav.mobile-tabbar {\n    display: grid !important;\n    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;\n    grid-auto-flow: column !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    height: auto !important;\n    min-height: 56px !important;\n    max-height: calc(56px + env(safe-area-inset-bottom)) !important;\n  }\n\n  nav.mobile-tabbar > a {\n    display: flex !important;\n    flex-direction: column !important;\n    min-width: 0 !important;\n    min-height: 56px !important;\n    max-height: 56px !important;\n    padding: 5px 2px !important;\n  }\n}\n'''
+          css_path.write_text(css, encoding='utf-8')
 
       - name: Install dependencies
         run: npm --prefix frontend ci --ignore-scripts
@@ -132,9 +104,5 @@ jobs:
           git config user.name "jesus1942"
           git config user.email "chucky9425@gmail.com"
           git add frontend/src/components/Layout.tsx frontend/src/components/ProjectTimeline.tsx frontend/src/theme/mobile-v2.css
-          if git diff --cached --quiet; then
-            echo "No changes"
-            exit 0
-          fi
           git commit -m "fix(mobile): compactar navegación, timeline y comentarios"
           git push origin HEAD:main
