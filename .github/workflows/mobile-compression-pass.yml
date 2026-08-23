@@ -29,14 +29,12 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
 
           def must_replace(text: str, old: str, new: str, label: str) -> str:
               if old not in text:
                   raise RuntimeError(f'Missing required pattern: {label}')
               return text.replace(old, new, 1)
 
-          # --- Bottom navigation: force a real horizontal iPhone tab bar ---
           layout_path = Path('frontend/src/components/Layout.tsx')
           layout = layout_path.read_text(encoding='utf-8')
           layout = must_replace(layout, '        <main className="flex-grow pb-[86px] lg:pb-0">', '        <main className="flex-grow pb-[72px] lg:pb-0">', 'layout content padding')
@@ -48,10 +46,8 @@ jobs:
           layout = must_replace(layout, '<span className="max-w-full truncate text-[11px] leading-none">{item.label}</span>', '<span className="max-w-full truncate text-[10px] leading-none">{item.label}</span>', 'mobile tab label size')
           layout_path.write_text(layout, encoding='utf-8')
 
-          # --- Timeline and client comments: recompose instead of squeezing desktop rows ---
           timeline_path = Path('frontend/src/components/ProjectTimeline.tsx')
           timeline = timeline_path.read_text(encoding='utf-8')
-
           replacements = [
               ("PRAISE: { label: '👏 Felicitación', badge: 'bg-emerald-100 text-emerald-700' },", "PRAISE: { label: 'Felicitación', badge: 'bg-emerald-100 text-emerald-700' },", 'praise emoji'),
               ("SUGGESTION: { label: '💡 Sugerencia', badge: 'bg-amber-100 text-amber-700' },", "SUGGESTION: { label: 'Sugerencia', badge: 'bg-amber-100 text-amber-700' },", 'suggestion emoji'),
@@ -73,21 +69,13 @@ jobs:
           ]
           for old, new, label in replacements:
               timeline = must_replace(timeline, old, new, label)
-
-          # Add responsive class to only the reply button in the client-comment block.
-          pattern = re.compile(r'(onClick=\{\(\) => handleReplyToComment\(comment\.id\)\}\s*\n\s*disabled=\{replyingTo === comment\.id \|\| !\(replyDrafts\[comment\.id\] \|\| \'\'\)\.trim\(\)\}\s*\n)(\s*)>')
-          timeline, count = pattern.subn(r'\1\2className="w-full justify-center sm:w-auto"\n\2>', timeline, count=1)
-          if count != 1:
-              raise RuntimeError(f'Could not patch comment reply button; matches={count}')
-
           timeline_path.write_text(timeline, encoding='utf-8')
 
-          # Hard CSS guard against inherited/global navigation rules.
           css_path = Path('frontend/src/theme/mobile-v2.css')
           css = css_path.read_text(encoding='utf-8')
           marker = '/* Mobile compression pass: enforced tab bar */'
           if marker not in css:
-              css += '''\n\n/* Mobile compression pass: enforced tab bar */\n@media (max-width: 1023px) {\n  nav.mobile-tabbar {\n    display: grid !important;\n    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;\n    grid-auto-flow: column !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    height: auto !important;\n    min-height: 56px !important;\n    max-height: calc(56px + env(safe-area-inset-bottom)) !important;\n  }\n\n  nav.mobile-tabbar > a {\n    display: flex !important;\n    flex-direction: column !important;\n    min-width: 0 !important;\n    min-height: 56px !important;\n    max-height: 56px !important;\n    padding: 5px 2px !important;\n  }\n}\n'''
+              css += '''\n\n/* Mobile compression pass: enforced tab bar */\n@media (max-width: 1023px) {\n  nav.mobile-tabbar {\n    display: grid !important;\n    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;\n    grid-auto-flow: column !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    height: auto !important;\n    min-height: 56px !important;\n    max-height: calc(56px + env(safe-area-inset-bottom)) !important;\n  }\n  nav.mobile-tabbar > a {\n    display: flex !important;\n    flex-direction: column !important;\n    min-width: 0 !important;\n    min-height: 56px !important;\n    max-height: 56px !important;\n    padding: 5px 2px !important;\n  }\n}\n'''
           css_path.write_text(css, encoding='utf-8')
 
       - name: Install dependencies
