@@ -57,6 +57,9 @@ jobs:
       - name: Apply all migrations to the empty test database
         run: npm exec --workspace backend -- prisma migrate deploy
 
+      - name: Ensure migrated database matches the application schema
+        run: npm exec --workspace backend -- prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+
       - name: Run backend and frontend regression tests
         run: npm test
 

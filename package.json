@@ -8,7 +8,7 @@
     "build": "npm --workspace backend run build && npm --workspace frontend run build:check",
     "test": "npm --workspace backend test && npm run test:frontend",
     "check": "npm --workspace backend run prisma:generate && npm run test && npm run build",
-    "test:frontend": "node --import tsx --test frontend/tests/*.test.ts"
+    "test:frontend": "node scripts/run-tests.mjs frontend"
   },
   "workspaces": [
     "frontend",

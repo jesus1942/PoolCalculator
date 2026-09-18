@@ -16,7 +16,7 @@
     "seed:equipment": "tsx prisma/seedEquipment.ts",
     "make-superadmin": "tsx scripts/make-superadmin.ts",
     "migrate:cloudinary": "tsx scripts/migrate-uploads-to-cloudinary.ts",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node ../scripts/run-tests.mjs backend"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

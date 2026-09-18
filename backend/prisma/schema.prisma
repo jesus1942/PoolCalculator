@@ -628,6 +628,9 @@ model PoolPreset {
   updatedAt DateTime @updatedAt
 
   projects Project[]
+
+  @@index([defaultPumpId])
+  @@index([defaultFilterId])
 }
 
 enum PoolShape {
