@@ -4,6 +4,9 @@ providers = []
 PRISMA_HIDE_UPDATE_MESSAGE = "1"
 
 [phases.setup]
+# Archivo usado por el proveedor oficial de Nixpacks para Node 22.
+# El archivo predeterminado del plan manual es anterior a nodejs_22.
+nixpkgsArchive = "e6f23dc08d3624daab7094b701aa3954923c6bbb"
 nixPkgs = [
   "nodejs_22",
   "python311",
