@@ -1,21 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { TileEditor } from '@/components/TileEditor';
-import { HydraulicWorkspace } from '@/components/hydraulic/HydraulicWorkspace';
+const TileEditor = lazy(() => import('@/components/TileEditor').then((module) => ({ default: module.TileEditor })));
+const HydraulicWorkspace = lazy(() => import('@/components/hydraulic/HydraulicWorkspace').then((module) => ({ default: module.HydraulicWorkspace })));
 import { ProjectMobileSectionNav } from '@/components/project/ProjectMobileSectionNav';
-import { RolesManager } from '@/components/RolesManager';
-import { TasksManager } from '@/components/TasksManager';
-import { AdditionalsManager } from '@/components/AdditionalsManager';
-import { PoolSystemsRecommendations } from '@/components/PoolSystemsRecommendations';
-import { EnhancedExportManager } from '@/components/EnhancedExportManager';
-import { EquipmentSelector } from '@/components/EquipmentSelector';
+const RolesManager = lazy(() => import('@/components/RolesManager').then((module) => ({ default: module.RolesManager })));
+const TasksManager = lazy(() => import('@/components/TasksManager').then((module) => ({ default: module.TasksManager })));
+const AdditionalsManager = lazy(() => import('@/components/AdditionalsManager').then((module) => ({ default: module.AdditionalsManager })));
+const PoolSystemsRecommendations = lazy(() => import('@/components/PoolSystemsRecommendations').then((module) => ({ default: module.PoolSystemsRecommendations })));
+const EnhancedExportManager = lazy(() => import('@/components/EnhancedExportManager').then((module) => ({ default: module.EnhancedExportManager })));
+const EquipmentSelector = lazy(() => import('@/components/EquipmentSelector').then((module) => ({ default: module.EquipmentSelector })));
 import { ProjectStatus as ProjectStatusPanel } from '@/components/ProjectStatus';
 import { ImprovedOverview } from '@/components/ImprovedOverview';
-import { ElectricalAnalysisPanel } from '@/components/ElectricalAnalysisPanel';
+const ElectricalAnalysisPanel = lazy(() => import('@/components/ElectricalAnalysisPanel').then((module) => ({ default: module.ElectricalAnalysisPanel })));
+import { PageLoading } from '@/components/PageLoading';
+import api from '@/services/api';
+import { additionalsService } from '@/services/additionalsService';
 import { projectService } from '@/services/projectService';
 import { poolPresetService } from '@/services/poolPresetService';
 import type { Project, ProjectStatus as ProjectStatusType, PoolPreset, ProjectTabId } from '@/types';
@@ -24,7 +27,7 @@ import {
 } from '@/utils/presetAutoConfig';
 import { HdArrowLeft, HdEdit, HdFileText, HdUsers, HdPackage, HdZap, HdActivity, HdAlertTriangle } from '@/components/ui/HandDrawnIcons';
 import { HdHammer, HdFileSpreadsheet, HdCpu, HdDollarSign } from '@/components/ui/HandDrawnIcons';
-import { ProjectCosts } from '@/components/ProjectCosts';
+const ProjectCosts = lazy(() => import('@/components/ProjectCosts').then((module) => ({ default: module.ProjectCosts })));
 import { useAuth } from '@/context/AuthContext';
 
 const DAILY_UPDATE_EXCLUDED_STATUSES = new Set(['COMPLETED', 'CANCELLED']);
@@ -82,8 +85,7 @@ export const ProjectDetail: React.FC = () => {
 
     try {
       if (!id) return hydratedProject;
-      const additionalsService = await import('@/services/additionalsService');
-      hydratedProject.additionals = await additionalsService.additionalsService.getProjectAdditionals(id);
+      hydratedProject.additionals = await additionalsService.getProjectAdditionals(id);
     } catch (error) {
       console.log('No se pudieron cargar los adicionales:', error);
       hydratedProject.additionals = [];
@@ -459,6 +461,7 @@ export const ProjectDetail: React.FC = () => {
           </div>
         )}
 
+        <Suspense fallback={<PageLoading label="Cargando sección del proyecto…" />}>
         {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
         {visibleActiveTab === 'costs' && canViewFinancials && (
           <ProjectCostsTab project={project} canEdit={!isReadOnlyProjectUser} onSaveTasks={handleSaveTasksSilent} />
@@ -495,6 +498,7 @@ export const ProjectDetail: React.FC = () => {
         {visibleActiveTab === 'systems' && !isReadOnlyProjectUser && <PoolSystemsRecommendations project={project} />}
         {visibleActiveTab === 'additionals' && !isReadOnlyProjectUser && <AdditionalsManager project={project} onUpdate={loadProject} />}
         {visibleActiveTab === 'export' && allowedTabsSet.has('export') && <EnhancedExportManager project={project} />}
+        </Suspense>
       </div>
 
       {!isReadOnlyProjectUser && (
@@ -592,7 +596,6 @@ const useProjectCostData = (project: Project) => {
 
   const loadRoles = async () => {
     try {
-      const { default: api } = await import('@/services/api');
       const response = await api.get('/profession-roles');
       setRoles(response.data);
     } catch (error) {
@@ -602,8 +605,7 @@ const useProjectCostData = (project: Project) => {
 
   const loadAdditionals = async () => {
     try {
-      const additionalsService = await import('@/services/additionalsService');
-      const data = await additionalsService.additionalsService.getProjectAdditionals(project.id);
+      const data = await additionalsService.getProjectAdditionals(project.id);
       setAdditionals(data);
     } catch (error) {
       console.error('Error al cargar adicionales:', error);

@@ -1,3 +1,4 @@
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { agendaReminderService } from '@/services/agendaReminderService';
 import { PUSH_SUBSCRIPTION_FLAG } from '@/services/pushNotificationService';
@@ -67,7 +68,7 @@ export const RemindersProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       notification.onclick = () => {
         window.focus();
-        window.location.href = '/agenda';
+        window.location.href = publicAssetUrl('agenda');
       };
 
       notifiedReminderIdsRef.current.add(reminder.id);

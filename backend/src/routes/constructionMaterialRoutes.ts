@@ -5,14 +5,14 @@ import {
   updateConstructionMaterial,
   deleteConstructionMaterial,
 } from '../controllers/constructionMaterialController';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 
 const router = express.Router();
 
 router.get('/', getConstructionMaterials);
 
 router.use(authenticate);
-router.use(isAdmin);
+router.use(isSuperadmin);
 
 router.post('/', createConstructionMaterial);
 router.put('/:id', updateConstructionMaterial);

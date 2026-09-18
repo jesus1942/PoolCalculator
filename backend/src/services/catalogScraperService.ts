@@ -61,7 +61,7 @@ export const catalogScraperService = {
         timeout: 30000
       });
 
-      const contentType = response.headers['content-type'] || '';
+      const contentType = String(response.headers['content-type'] || '');
       let pools: ScrapedPool[] = [];
 
       if (contentType.includes('text/html')) {

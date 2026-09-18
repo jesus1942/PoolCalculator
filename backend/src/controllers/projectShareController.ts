@@ -17,7 +17,7 @@ const findManagedProject = async (req: Request, projectId: string) => {
   if (!project) return null;
 
   const access = await resolveProjectAccessProfile(project, getActor(req));
-  if (!access.canAccess || !access.canEdit) return null;
+  if (!access.canAccess || !access.canEdit || !access.canViewFinancials) return null;
 
   return project;
 };
@@ -115,7 +115,9 @@ export const getShareConfig = async (req: Request, res: Response) => {
       where: { projectId },
     });
 
-    res.json(projectShare);
+    if (!projectShare) return res.json(null);
+    const { clientPassword: _password, ...shareData } = projectShare;
+    res.json(shareData);
   } catch (error) {
     console.error('Error al obtener share:', error);
     res.status(500).json({ error: 'Error al obtener configuración' });
@@ -288,7 +290,8 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
 
 const escapeCsv = (value: any) => {
   if (value === null || value === undefined) return '';
-  const stringValue = String(value);
+  const rawValue = String(value);
+  const stringValue = /^[=+@\-\t\r]/.test(rawValue) ? `'${rawValue}` : rawValue;
   if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n')) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }

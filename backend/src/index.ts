@@ -1,136 +1,53 @@
+// La configuración se carga antes de importar servicios que leen variables al iniciar.
+import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import passport from './config/passport';
-
-console.log('[INIT] Iniciando servidor...');
-
+import prisma from './config/database';
+import platformIntegrationRoutes, { publicIntegrations } from './routes/platformIntegrationRoutes';
+import { configureHttpSecurity, installPublicRateLimits, protectPrivateUploads, installHealthRoutes, notFound, httpErrorHandler } from './middleware/httpSecurity';
+import { getIntegrationConfig } from './services/platformIntegrationService';
 import authRoutes from './routes/authRoutes';
-console.log('[INIT] authRoutes cargado');
-
 import poolPresetRoutes from './routes/poolPresetRoutes';
-console.log('[INIT] poolPresetRoutes cargado');
-
 import projectRoutes from './routes/projectRoutes';
-console.log('[INIT] projectRoutes cargado');
-
 import tilePresetRoutes from './routes/tilePresetRoutes';
-console.log('[INIT] tilePresetRoutes cargado');
-
 import accessoryPresetRoutes from './routes/accessoryPresetRoutes';
-console.log('[INIT] accessoryPresetRoutes cargado');
-
 import equipmentPresetRoutes from './routes/equipmentPresetRoutes';
-console.log('[INIT] equipmentPresetRoutes cargado');
-
 import equipmentRoutes from './routes/equipment';
-console.log('[INIT] equipmentRoutes (recomendaciones) cargado');
-
 import constructionMaterialRoutes from './routes/constructionMaterialRoutes';
-console.log('[INIT] constructionMaterialRoutes cargado');
-
 import professionRoleRoutes from './routes/professionRoleRoutes';
-console.log('[INIT] professionRoleRoutes cargado');
-
 import calculationSettingsRoutes from './routes/calculationSettingsRoutes';
-console.log('[INIT] calculationSettingsRoutes cargado');
-
 import plumbingItemRoutes from './routes/plumbingItemRoutes';
-console.log('[INIT] plumbingItemRoutes cargado');
-
 import additionalsRoutes from './routes/additionalsRoutes';
-console.log('[INIT] additionalsRoutes cargado');
-
 import projectUpdatesRoutes from './routes/projectUpdates';
-console.log('[INIT] projectUpdatesRoutes cargado');
-
 import projectShareRoutes from './routes/projectShareRoutes';
-console.log('[INIT] projectShareRoutes cargado');
-
 import publicShareRoutes from './routes/publicShareRoutes';
-console.log('[INIT] publicShareRoutes cargado');
-
 import passwordResetRoutes from './routes/passwordResetRoutes';
-console.log('[INIT] passwordResetRoutes cargado');
-
 import publicContactRoutes from './routes/publicContactRoutes';
-console.log('[INIT] publicContactRoutes cargado');
-
 import catalogScraperRoutes from './routes/catalogScraperRoutes';
-console.log('[INIT] catalogScraperRoutes cargado');
-
 import professionalCalculationsRoutes from './routes/professionalCalculationsRoutes';
-console.log('[INIT] professionalCalculationsRoutes cargado');
-
 import productImageRoutes from './routes/productImageRoutes';
-console.log('[INIT] productImageRoutes cargado');
-
 import weatherRoutes from './routes/weatherRoutes';
-console.log('[INIT] weatherRoutes cargado');
-
 import agendaRoutes from './routes/agendaRoutes';
-console.log('[INIT] agendaRoutes cargado');
-
 import crewRoutes from './routes/crewRoutes';
-console.log('[INIT] crewRoutes cargado');
-
 import userRoutes from './routes/userRoutes';
-console.log('[INIT] userRoutes cargado');
-
 import docsRoutes from './routes/docsRoutes';
-console.log('[INIT] docsRoutes cargado');
-
 import organizationRoutes from './routes/organizationRoutes';
-console.log('[INIT] organizationRoutes cargado');
-
 import opsRoutes from './routes/opsRoutes';
-console.log('[INIT] opsRoutes cargado');
-
 import conversationRoutes from './routes/conversationRoutes';
-console.log('[INIT] conversationRoutes cargado');
-
-import loteriaRoutes from './routes/loteriaRoutes';
-console.log('[INIT] loteriaRoutes cargado');
-
 import { startAgendaReminderEmailService } from './services/agendaReminderEmailService';
 
-dotenv.config();
-console.log('[INIT] Variables de entorno cargadas');
-
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configurar CORS para permitir acceso desde ngrok y localhost
-app.use(cors({
-  origin: function(origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl)
-    if (!origin) return callback(null, true);
-
-    // Permitir localhost y ngrok
-    if (
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1') ||
-      origin.includes('ngrok')
-    ) {
-      return callback(null, true);
-    }
-
-    return callback(null, true); // Permitir todos en desarrollo
-  },
-  credentials: true
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+configureHttpSecurity(app, process.env, async () => (await getIntegrationConfig()).general.frontendUrl);
+installPublicRateLimits(app);
 app.use(passport.initialize());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', protectPrivateUploads, express.static(path.join(__dirname, '../uploads')));
 app.use('/pool-images', express.static(path.join(__dirname, '../public/pool-images')));
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+installHealthRoutes(app, () => prisma.$queryRaw`SELECT 1`);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/pool-presets', poolPresetRoutes);
@@ -160,9 +77,8 @@ app.use('/api/docs', docsRoutes); // Documentación interna
 app.use('/api/organizations', organizationRoutes); // Organizaciones
 app.use('/api/admin/ops', opsRoutes); // Observabilidad backend/db
 app.use('/api/conversations', conversationRoutes); // Conversaciones internas reutilizables
-app.use('/api/loterias', loteriaRoutes); // Sorteos Quini 6 / Loto (solo superadmin)
-
-console.log('[INIT] Configurando middlewares y rutas...');
+app.use('/api/admin/integrations', platformIntegrationRoutes);
+app.get('/api/public/integrations', publicIntegrations);
 
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 const frontendIndexPath = path.join(frontendDistPath, 'index.html');
@@ -212,21 +128,16 @@ if (fs.existsSync(frontendIndexPath)) {
   console.log(`[INIT] Frontend no encontrado en ${frontendDistPath}`);
 }
 
-app.listen(PORT, () => {
-  console.log('');
-  console.log('========================================');
-  console.log('  BACKEND INICIADO EXITOSAMENTE');
-  console.log('========================================');
-  console.log(`Servidor: http://localhost:${PORT}`);
-  console.log(`Health: http://localhost:${PORT}/health`);
-  console.log(`Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`Equipment: http://localhost:${PORT}/api/equipment`);
-  console.log(`Professional Calculations: http://localhost:${PORT}/api/professional-calculations`);
-  console.log(`Product Images: http://localhost:${PORT}/api/products`);
-  console.log(`DB: PostgreSQL@localhost:5433`);
-  console.log('========================================');
-  console.log('');
+// Los errores de API no deben terminar convertidos en el HTML de la aplicación.
+app.use(notFound);
+app.use(httpErrorHandler);
 
-  startAgendaReminderEmailService();
-  console.log('[INIT] Agenda reminders email service iniciado');
-});
+/** Importar la aplicación permite verificarla sin abrir puertos ni ejecutar recordatorios. */
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`[INIT] Servidor listo en puerto ${PORT}`);
+    startAgendaReminderEmailService();
+  });
+}
+
+export default app;

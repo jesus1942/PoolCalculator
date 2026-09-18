@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 import {
   getPlumbingItems,
   createPlumbingItem,
@@ -10,8 +10,8 @@ import {
 const router = express.Router();
 
 router.get('/', getPlumbingItems);
-router.post('/', authenticate, isAdmin, createPlumbingItem);
-router.put('/:id', authenticate, isAdmin, updatePlumbingItem);
-router.delete('/:id', authenticate, isAdmin, deletePlumbingItem);
+router.post('/', authenticate, isSuperadmin, createPlumbingItem);
+router.put('/:id', authenticate, isSuperadmin, updatePlumbingItem);
+router.delete('/:id', authenticate, isSuperadmin, deletePlumbingItem);
 
 export default router;

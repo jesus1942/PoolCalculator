@@ -9,7 +9,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     if (import.meta.env.PROD) {
       navigator.serviceWorker
-        .register('/service-worker.js', { updateViaCache: 'none' })
+        .register(`${import.meta.env.BASE_URL}service-worker.js`, { updateViaCache: 'none' })
         .then((registration) => registration.update().catch(() => {}))
         .catch(() => {});
       return;
@@ -33,19 +33,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 );
 
-const splashStart = Date.now();
-const MIN_SPLASH_MS = 3500;
-
+// Retira el splash tras el primer cuadro; no impone una espera artificial.
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
-    const elapsed = Date.now() - splashStart;
-    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if (splash) {
-        splash.classList.add('fade-out');
-        setTimeout(() => { splash.style.display = 'none'; }, 650);
-      }
-    }, remaining);
+    const splash = document.getElementById('splash');
+    if (!splash) return;
+    splash.classList.add('fade-out');
+    window.setTimeout(() => splash.remove(), 650);
   });
 });

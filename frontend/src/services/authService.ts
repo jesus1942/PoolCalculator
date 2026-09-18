@@ -1,5 +1,6 @@
 import api from './api';
-import { AuthResponse } from '@/types';
+import { AuthResponse, User } from '@/types';
+import { userFromSessionToken } from '@/utils/session';
 
 export const authService = {
   async register(email: string, password: string, name: string): Promise<AuthResponse> {
@@ -18,19 +19,35 @@ export const authService = {
   },
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      userFromSessionToken(token);
+      return token;
+    } catch {
+      this.logout();
+      return null;
+    }
   },
 
   setToken(token: string) {
     localStorage.setItem('token', token);
   },
 
-  getUser() {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+  getUser(): User | null {
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      if (!user || typeof user.id !== 'string' || typeof user.email !== 'string') return null;
+      return user;
+    } catch {
+      // Un dato local dañado no debe bloquear toda la aplicación.
+      this.logout();
+      return null;
+    }
   },
 
-  setUser(user: any) {
+  setUser(user: User) {
     localStorage.setItem('user', JSON.stringify(user));
   },
 };

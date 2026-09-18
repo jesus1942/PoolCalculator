@@ -1,3 +1,4 @@
+import { getIntegrationConfig } from '../services/platformIntegrationService';
 import { Response } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
@@ -23,10 +24,16 @@ export const getOpsStatus = async (_req: AuthRequest, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     dbOk = true;
   } catch (error) {
-    dbError = String(error);
+    dbError = 'No se pudo consultar la base de datos.';
   }
 
-  const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  let smtpConfigured = false;
+  try {
+    const { smtp } = await getIntegrationConfig();
+    smtpConfigured = Boolean(smtp.enabled && smtp.host && smtp.user && smtp.password);
+  } catch {
+    warnings.push('No se pudo consultar la configuración de integraciones.');
+  }
 
   let remindersPending = 0;
   let remindersDue = 0;

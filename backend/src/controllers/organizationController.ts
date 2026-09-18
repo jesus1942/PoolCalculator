@@ -1,8 +1,11 @@
 import { Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { generateToken } from '../config/jwt';
 import bcrypt from 'bcryptjs';
+import { normalizeEmail, validName, validNewPassword, PASSWORD_REQUIREMENTS } from '../utils/authValidation';
+import { getSessionRole } from '../utils/authOrganization';
 
 const slugify = (value: string) =>
   value
@@ -11,8 +14,8 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-const ensureOwnerUser = async (email: string, name?: string, password?: string) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
+const ensureOwnerUser = async (tx: Prisma.TransactionClient, email: string, name?: string, password?: string) => {
+  const existing = await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
   if (existing) {
     return existing;
   }
@@ -21,8 +24,8 @@ const ensureOwnerUser = async (email: string, name?: string, password?: string) 
     throw new Error('ownerName y ownerPassword son requeridos para crear el owner');
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  return prisma.user.create({
+  const hashedPassword = await bcrypt.hash(password, 12);
+  return tx.user.create({
     data: {
       email,
       name,
@@ -94,7 +97,7 @@ export const switchOrganization = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
     const { organizationId } = req.body;
-    if (!organizationId) {
+    if (typeof organizationId !== 'string' || !organizationId) {
       return res.status(400).json({ error: 'organizationId requerido' });
     }
 
@@ -135,7 +138,8 @@ export const switchOrganization = async (req: AuthRequest, res: Response) => {
       data: { currentOrgId: organizationId },
     });
 
-    const token = generateToken(targetUser.id, targetUser.email, targetUser.role, organizationId);
+    const role = await getSessionRole(targetUser.id, targetUser.role, organizationId);
+    const token = generateToken(targetUser.id, targetUser.email, role, organizationId, targetUser.name, targetUser.sessionVersion);
 
     res.json({
       message: 'Organización actualizada',
@@ -144,7 +148,7 @@ export const switchOrganization = async (req: AuthRequest, res: Response) => {
         id: targetUser.id,
         email: targetUser.email,
         name: targetUser.name,
-        role: targetUser.role,
+        role,
         currentOrgId: organizationId,
       },
     });
@@ -182,8 +186,12 @@ export const listAllOrganizations = async (_req: AuthRequest, res: Response) => 
 
 export const createOrganization = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, slug, ownerEmail, ownerName, ownerPassword } = req.body || {};
-    if (!name) {
+    const { name, slug, ownerName, ownerPassword } = req.body || {};
+    const ownerEmail = req.body?.ownerEmail ? normalizeEmail(req.body.ownerEmail) : null;
+    if ((req.body?.ownerEmail && !ownerEmail) || (ownerPassword !== undefined && !validNewPassword(ownerPassword))) {
+      return res.status(400).json({ error: 'Email inválido. ' + PASSWORD_REQUIREMENTS });
+    }
+    if (!validName(name) || (ownerName !== undefined && !validName(ownerName)) || (slug !== undefined && (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))) {
       return res.status(400).json({ error: 'Nombre requerido' });
     }
 
@@ -195,58 +203,47 @@ export const createOrganization = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    let ownerId: string | null = null;
-    if (ownerEmail) {
-      const ownerUser = await ensureOwnerUser(ownerEmail, ownerName, ownerPassword);
-      ownerId = ownerUser.id;
+    if (ownerEmail && (!ownerName || !ownerPassword)) {
+      const existingOwner = await prisma.user.findFirst({ where: { email: { equals: ownerEmail, mode: 'insensitive' } }, select: { id: true } });
+      if (!existingOwner) return res.status(400).json({ error: 'Nombre y contraseña requeridos para un propietario nuevo' });
     }
-
-    const organization = await prisma.organization.create({
-      data: {
-        name,
-        slug: resolvedSlug || null,
-        ownerId,
-      },
+    const organization = await prisma.$transaction(async (tx) => {
+      const ownerUser = ownerEmail ? await ensureOwnerUser(tx, ownerEmail, ownerName, ownerPassword) : null;
+      const created = await tx.organization.create({
+        data: {
+          name: name.trim(), slug: resolvedSlug || null, ownerId: ownerUser?.id || null,
+          ...(ownerUser ? { members: { create: { userId: ownerUser.id, role: 'OWNER' } } } : {}),
+        },
+      });
+      if (ownerUser) {
+        await tx.user.update({ where: { id: ownerUser.id }, data: { currentOrgId: created.id } });
+      }
+      return created;
     });
-
-    if (ownerId) {
-      await prisma.organizationMember.upsert({
-        where: {
-          organizationId_userId: {
-            organizationId: organization.id,
-            userId: ownerId,
-          },
-        },
-        create: {
-          organizationId: organization.id,
-          userId: ownerId,
-          role: 'ADMIN',
-        },
-        update: { role: 'ADMIN' },
-      });
-
-      await prisma.user.update({
-        where: { id: ownerId },
-        data: { currentOrgId: organization.id, role: 'ADMIN' },
-      });
-    }
 
     res.json({
       id: organization.id,
       name: organization.name,
       slug: organization.slug,
-      ownerId,
+      ownerId: organization.ownerId,
     });
   } catch (error: any) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'La organización o el email ya existen' });
+    }
     console.error('Error al crear organización:', error);
-    res.status(500).json({ error: error.message || 'Error al crear organización' });
+    res.status(500).json({ error: 'Error al crear organización' });
   }
 };
 
 export const updateOrganization = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, slug, ownerEmail } = req.body || {};
+    const { name, slug } = req.body || {};
+    const ownerEmail = req.body?.ownerEmail ? normalizeEmail(req.body.ownerEmail) : null;
+    if ((req.body?.ownerEmail && !ownerEmail) || (name !== undefined && !validName(name)) || (slug !== undefined && (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))) {
+      return res.status(400).json({ error: 'Nombre, slug o email inválidos' });
+    }
     if (!id) {
       return res.status(400).json({ error: 'ID requerido' });
     }
@@ -267,31 +264,25 @@ export const updateOrganization = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const organization = await prisma.organization.update({
-      where: { id },
-      data: {
-        name: name ?? undefined,
-        slug: slug ?? undefined,
-        ownerId: ownerId ?? undefined,
-      },
-    });
-
-    if (ownerId) {
-      await prisma.organizationMember.upsert({
-        where: {
-          organizationId_userId: {
-            organizationId: organization.id,
-            userId: ownerId,
-          },
-        },
-        create: {
-          organizationId: organization.id,
-          userId: ownerId,
-          role: 'ADMIN',
-        },
-        update: { role: 'ADMIN' },
+    const organization = await prisma.$transaction(async (tx) => {
+      const updated = await tx.organization.update({
+        where: { id },
+        data: { name: name?.trim(), slug: slug ?? undefined, ownerId: ownerId ?? undefined },
       });
-    }
+      if (ownerId) {
+        // Mantiene un solo OWNER; el propietario anterior conserva administración.
+        await tx.organizationMember.updateMany({
+          where: { organizationId: id, role: 'OWNER', userId: { not: ownerId } },
+          data: { role: 'ADMIN' },
+        });
+        await tx.organizationMember.upsert({
+          where: { organizationId_userId: { organizationId: id, userId: ownerId } },
+          create: { organizationId: id, userId: ownerId, role: 'OWNER' },
+          update: { role: 'OWNER' },
+        });
+      }
+      return updated;
+    });
 
     res.json({
       id: organization.id,
@@ -300,6 +291,12 @@ export const updateOrganization = async (req: AuthRequest, res: Response) => {
       ownerId: organization.ownerId,
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Organización no encontrada' });
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'El identificador ya está en uso' });
+    }
     console.error('Error al actualizar organización:', error);
     res.status(500).json({ error: 'Error al actualizar organización' });
   }

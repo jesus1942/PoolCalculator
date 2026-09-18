@@ -30,6 +30,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(storedUser);
     }
     setLoading(false);
+    const clearSession = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('poolinstaller:session-expired', clearSession);
+    const syncSession = (event: StorageEvent) => {
+      if (event.key !== 'token' && event.key !== 'user' && event.key !== null) return;
+      const nextToken = authService.getToken();
+      const nextUser = authService.getUser();
+      setToken(nextToken && nextUser ? nextToken : null);
+      setUser(nextToken && nextUser ? nextUser : null);
+    };
+    window.addEventListener('storage', syncSession);
+    return () => {
+      window.removeEventListener('poolinstaller:session-expired', clearSession);
+      window.removeEventListener('storage', syncSession);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

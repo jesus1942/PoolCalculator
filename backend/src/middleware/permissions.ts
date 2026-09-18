@@ -5,32 +5,16 @@ import { AuthRequest } from './auth';
  * Middleware para verificar permisos basados en roles
  */
 
-export const isSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'SUPERADMIN') {
-    return res.status(403).json({
-      error: 'Acceso denegado. Se requiere rol de SUPERADMIN.'
-    });
-  }
-  next();
-};
-
-export const isAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const role = req.user?.role;
-  if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
-    return res.status(403).json({
-      error: 'Acceso denegado. Se requiere rol de ADMIN o superior.'
-    });
-  }
-  next();
-};
+// Una sola implementación de roles evita divergencias entre rutas.
+export { isAdmin, isSuperadmin as isSuperAdmin } from './auth';
 
 export const isAdminOrOwner = (resourceUserId: string) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = req.user?.userId;
     const role = req.user?.role;
 
-    // SUPERADMIN y ADMIN pueden acceder a todo
-    if (role === 'SUPERADMIN' || role === 'ADMIN') {
+    // Solo el proveedor puede cruzar organizaciones sin un recurso con orgId.
+    if (role === 'SUPERADMIN') {
       return next();
     }
 
@@ -47,6 +31,8 @@ export const isAdminOrOwner = (resourceUserId: string) => {
 
 export const canWrite = (req: AuthRequest, res: Response, next: NextFunction) => {
   const role = req.user?.role;
+
+  if (!req.user?.userId) return res.status(401).json({ error: 'Usuario no autenticado' });
 
   // VIEWER solo puede leer
   if (role === 'VIEWER') {
@@ -84,25 +70,6 @@ export const canModifyGlobalSettings = (req: AuthRequest, res: Response, next: N
   }
 
   next();
-};
-
-/**
- * Middleware para SaaS: verifica límites de plan
- * (Para implementar más adelante con planes de suscripción)
- */
-export interface PlanLimits {
-  maxProjects?: number;
-  maxUsers?: number;
-  maxStorage?: number; // en MB
-  features?: string[];
-}
-
-export const checkPlanLimits = (limitType: keyof PlanLimits) => {
-  return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    // TODO: Implementar lógica de verificación de límites según plan
-    // Por ahora, permite todo
-    next();
-  };
 };
 
 /**

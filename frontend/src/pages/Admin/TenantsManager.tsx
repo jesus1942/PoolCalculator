@@ -1,3 +1,4 @@
+import { passwordValidationError } from '@/utils/session';
 import React, { useEffect, useMemo, useState } from 'react';
 import { HdBuilding, HdPlus, HdRefresh, HdSave } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
@@ -43,6 +44,8 @@ export const TenantsManager: React.FC = () => {
       setError('El nombre del tenant es requerido.');
       return;
     }
+    const passwordError = form.ownerPassword ? passwordValidationError(form.ownerPassword) : null;
+    if (passwordError) { setError(passwordError); return; }
     setSaving(true);
     setError(null);
     try {

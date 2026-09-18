@@ -1,6 +1,12 @@
-# Pool Calculator
+# PoolInstaller
 
 Sistema completo de calculo de materiales para montaje de piscinas de fibra de vidrio.
+
+## Revisión de producción
+
+Ver [revisión y requisitos de lanzamiento](docs/REVISION_PRODUCCION_2026-09-18.md). Las integraciones de plataforma se administran en **Configuración → Integraciones** con SUPERADMIN. El cobro de suscripciones todavía requiere implementación y validación.
+
+Validación reproducible desde la raíz: `npm ci` y `npm run check` (Node 22).
 
 ## Descripcion
 

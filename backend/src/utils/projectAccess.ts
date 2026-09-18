@@ -48,7 +48,8 @@ export type ProjectAccessContext = {
 
 const DEFAULT_SHARED_TABS: ProjectTabId[] = ['overview', 'status'];
 
-const fetchExplicitProjectAccesses = async (userId: string): Promise<ProjectAccessRecord[]> => {
+const fetchExplicitProjectAccesses = async (userId: string, orgId?: string | null): Promise<ProjectAccessRecord[]> => {
+  if (!orgId) return [];
   const rows = await prisma.$queryRaw<Array<{
     projectId: string;
     canEdit: boolean;
@@ -57,7 +58,7 @@ const fetchExplicitProjectAccesses = async (userId: string): Promise<ProjectAcce
   }>>(Prisma.sql`
     SELECT "projectId", "canEdit", "canViewFinancials", "allowedTabs"
     FROM "ProjectAccess"
-    WHERE "userId" = ${userId}
+    WHERE "userId" = ${userId} AND "organizationId" = ${orgId}
   `);
 
   return rows.map((row) => ({
@@ -73,6 +74,8 @@ const FINANCIAL_FIELD_KEYS = new Set([
   'totalCost',
   'price',
   'pricePerUnit',
+  'cornerPricePerUnit',
+  'tileLaborCost',
   'customPricePerUnit',
   'customLaborCost',
   'grandTotal',
@@ -83,7 +86,7 @@ const FINANCIAL_FIELD_KEYS = new Set([
   'totalElectricalCost',
 ]);
 
-export const isPlatformAdminRole = (role?: string | null) => role === 'ADMIN' || role === 'SUPERADMIN';
+export const isPlatformAdminRole = (role?: string | null) => role === 'SUPERADMIN';
 
 export const normalizeAllowedProjectTabs = (tabs?: string[] | null, fallback: ProjectTabId[] = DEFAULT_SHARED_TABS): ProjectTabId[] => {
   const validTabs = Array.isArray(tabs)
@@ -100,6 +103,7 @@ export const normalizeAllowedProjectTabs = (tabs?: string[] | null, fallback: Pr
 
 export const canManageOrganization = async (actor: ProjectActorContext) => {
   if (isPlatformAdminRole(actor.role)) return true;
+  if (actor.role === 'VIEWER' || actor.role === 'INSTALLER') return false;
   if (!actor.userId || !actor.orgId) return false;
 
   const membership = await prisma.organizationMember.findUnique({
@@ -116,6 +120,7 @@ export const canManageOrganization = async (actor: ProjectActorContext) => {
 };
 
 export const getAssignedProjectIdsForUser = async (userId: string, orgId?: string | null) => {
+  if (!orgId) return [];
   const assignedEvents = await prisma.agendaEvent.findMany({
     where: {
       projectId: { not: null },
@@ -137,7 +142,7 @@ export const getAssignedProjectIdsForUser = async (userId: string, orgId?: strin
 
 export const buildProjectAccessContext = async (userId: string, orgId?: string | null): Promise<ProjectAccessContext> => {
   const [explicitAccesses, assignedProjectIds] = await Promise.all([
-    fetchExplicitProjectAccesses(userId),
+    fetchExplicitProjectAccesses(userId, orgId),
     getAssignedProjectIdsForUser(userId, orgId),
   ]);
 
@@ -149,7 +154,7 @@ export const buildProjectAccessContext = async (userId: string, orgId?: string |
 
 export const getAccessibleProjectIdsForUser = async (actor: ProjectActorContext) => {
   if (!actor.userId) return [];
-  if (isPlatformAdminRole(actor.role)) {
+  if (isPlatformAdminRole(actor.role) || (actor.role === 'ADMIN' && actor.orgId)) {
     const projects = await prisma.project.findMany({
       where: actor.orgId ? { organizationId: actor.orgId } : {},
       select: { id: true },
@@ -157,12 +162,13 @@ export const getAccessibleProjectIdsForUser = async (actor: ProjectActorContext)
     return projects.map((project: { id: string }) => project.id);
   }
 
+  if (!actor.orgId) return [];
   const [ownedProjects, explicitAccesses, assignedProjectIds] = await Promise.all([
     prisma.project.findMany({
-      where: { userId: actor.userId },
+      where: { userId: actor.userId, organizationId: actor.orgId },
       select: { id: true },
     }),
-    fetchExplicitProjectAccesses(actor.userId),
+    fetchExplicitProjectAccesses(actor.userId, actor.orgId),
     getAssignedProjectIdsForUser(actor.userId, actor.orgId),
   ]);
 
@@ -174,15 +180,15 @@ export const getAccessibleProjectIdsForUser = async (actor: ProjectActorContext)
 };
 
 export const buildProjectAccessProfileFromContext = (
-  project: { id: string; userId: string },
+  project: { id: string; userId: string; organizationId?: string | null },
   actor: ProjectActorContext,
   context?: ProjectAccessContext,
 ): ProjectAccessProfile => {
-  if (!actor.userId) {
+  if (!actor.userId || (actor.role !== 'SUPERADMIN' && (!actor.orgId || project.organizationId !== actor.orgId))) {
     return { canAccess: false, canEdit: false, canDelete: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
   }
 
-  if (isPlatformAdminRole(actor.role)) {
+  if (isPlatformAdminRole(actor.role) || actor.role === 'ADMIN') {
     return {
       canAccess: true,
       canEdit: true,
@@ -196,8 +202,8 @@ export const buildProjectAccessProfileFromContext = (
   if (project.userId === actor.userId) {
     return {
       canAccess: true,
-      canEdit: true,
-      canDelete: true,
+      canEdit: actor.role !== 'VIEWER',
+      canDelete: actor.role !== 'VIEWER',
       canViewFinancials: true,
       allowedTabs: [...PROJECT_TAB_IDS],
       source: 'owner',
@@ -209,7 +215,7 @@ export const buildProjectAccessProfileFromContext = (
     return {
       canAccess: true,
       canEdit: actor.role === 'VIEWER' ? false : Boolean(explicitAccess.canEdit),
-      canDelete: actor.role === 'VIEWER' ? false : Boolean(explicitAccess.canEdit),
+      canDelete: false,
       canViewFinancials: Boolean(explicitAccess.canViewFinancials),
       allowedTabs: normalizeAllowedProjectTabs(explicitAccess.allowedTabs),
       source: 'explicit',
@@ -231,10 +237,10 @@ export const buildProjectAccessProfileFromContext = (
 };
 
 export const resolveProjectAccessProfile = async (
-  project: { id: string; userId: string },
+  project: { id: string; userId: string; organizationId?: string | null },
   actor: ProjectActorContext,
 ): Promise<ProjectAccessProfile> => {
-  if (!actor.userId) {
+  if (!actor.userId || (actor.role !== 'SUPERADMIN' && (!actor.orgId || project.organizationId !== actor.orgId))) {
     return { canAccess: false, canEdit: false, canDelete: false, canViewFinancials: false, allowedTabs: [], source: 'none' };
   }
 

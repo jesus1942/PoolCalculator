@@ -7,7 +7,7 @@ import {
   deletePoolPreset,
   calculatePresetMeasurements,
 } from '../controllers/poolPresetController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 import { upload } from '../config/multer';
 
 const router = express.Router();
@@ -18,14 +18,14 @@ router.get('/:id', getPoolPresetById);
 router.get('/:id/calculate', calculatePresetMeasurements);
 
 // Rutas protegidas (POST, PUT, DELETE) - requieren autenticación
-router.post('/', authenticate, upload.fields([
+router.post('/', authenticate, isSuperadmin, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'additionalImages', maxCount: 5 }
 ]), createPoolPreset);
-router.put('/:id', authenticate, upload.fields([
+router.put('/:id', authenticate, isSuperadmin, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'additionalImages', maxCount: 5 }
 ]), updatePoolPreset);
-router.delete('/:id', authenticate, deletePoolPreset);
+router.delete('/:id', authenticate, isSuperadmin, deletePoolPreset);
 
 export default router;

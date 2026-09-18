@@ -39,7 +39,17 @@ const modelImageMapping: { [key: string]: string } = {
 const parseFormData = (body: any) => {
   const parsed: any = {};
   
-  for (const key in body) {
+  const editableFields = new Set([
+    'name', 'description', 'imageUrl', 'additionalImages', 'backDescription', 'vendor',
+    'length', 'width', 'depth', 'depthEnd', 'shape', 'constructionType',
+    'lateralCushionSpace', 'floorCushionDepth', 'hasWetDeck', 'hasStairsOnly',
+    'stairsCount', 'canaletasCount', 'returnsCount', 'hasHotWaterReturn', 'hasHydroJets',
+    'hydroJetsCount', 'hasBottomDrain', 'hasVacuumIntake', 'vacuumIntakeCount',
+    'hasSkimmer', 'skimmerCount', 'hasLighting', 'lightingCount', 'lightingType',
+    'defaultPumpId', 'defaultFilterId', 'tileConfig',
+  ]);
+  for (const key of Object.keys(body)) {
+    if (!editableFields.has(key)) continue;
     const value = body[key];
     
     // Números
@@ -74,7 +84,10 @@ export const createPoolPreset = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    const data = parseFormData({ ...req.body, userId });
+    if (req.user?.role !== 'SUPERADMIN') {
+      return res.status(403).json({ error: 'Solo SUPERADMIN puede administrar el catálogo global' });
+    }
+    const data = { ...parseFormData(req.body), userId };
 
     // Manejar imagen principal
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -123,7 +136,6 @@ export const getPoolPresets = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -152,7 +164,6 @@ export const getPoolPresetById = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -182,7 +193,7 @@ export const updatePoolPreset = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Modelo no encontrado' });
     }
 
-    if (existingPreset.userId !== userId && req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPERADMIN') {
+    if (req.user?.role !== 'SUPERADMIN') {
       return res.status(403).json({ error: 'No tenés permiso para modificar este modelo' });
     }
 
@@ -277,7 +288,7 @@ export const deletePoolPreset = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Modelo no encontrado' });
     }
 
-    if (existingPreset.userId !== userId && req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPERADMIN') {
+    if (req.user?.role !== 'SUPERADMIN') {
       return res.status(403).json({ error: 'No tenés permiso para eliminar este modelo' });
     }
 

@@ -36,11 +36,19 @@ export const updateCalculationSettings = async (req: AuthRequest, res: Response)
 
     // Parsear valores numéricos y filtrar campos no actualizables
     const data: any = {};
-    const excludeKeys = ['id', 'userId', 'createdAt', 'updatedAt'];
+    const editableFields = new Set([
+      'adhesiveKgPerM2', 'sidewalkBaseThicknessCm', 'cementKgPerM3', 'sandM3PerM3',
+      'gravelM3PerM3', 'groutJointWidthMm', 'whiteCementKgPerLinealM', 'marmolinaKgPerLinealM',
+      'wireMeshOverlapCm', 'wireMeshM2PerM2', 'waterproofingKgPerM2', 'waterproofingCoats',
+      'tileInstallerRatePerM2', 'excavationRatePerM3', 'finishingRatePerM2',
+      'groutWhiteCementParts', 'groutMarmolinaParts', 'bedThicknessCm', 'bedCementKgPerM3',
+      'bedCementBagsPerM3', 'bedCementBagWeight', 'bedSandM3PerCementBag',
+      'drainTrenchWidthCm', 'drainTrenchDepthCm', 'geomembraneM2PerM2', 'electroweldedMeshM2PerM2',
+    ]);
 
-    for (const key in req.body) {
+    for (const key of Object.keys(req.body)) {
       // Saltar campos que no deben ser actualizados
-      if (excludeKeys.includes(key)) {
+      if (!editableFields.has(key)) {
         continue;
       }
 

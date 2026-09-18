@@ -10,7 +10,9 @@ import {
 const parseFormData = (body: any) => {
   const parsed: any = {};
   
-  for (const key in body) {
+  const editableFields = new Set(['name', 'description', 'hourlyRate', 'dailyRate', 'billingType', 'ratePerUnit', 'bocaRates']);
+  for (const key of Object.keys(body)) {
+    if (!editableFields.has(key)) continue;
     const value = body[key];
 
     if (['hourlyRate', 'dailyRate', 'ratePerUnit'].includes(key)) {

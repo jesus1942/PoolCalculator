@@ -157,6 +157,12 @@ export const syncAgendaConversation = async (input: SyncAgendaConversationInput)
     ...(input.crewMemberIds || []),
   ]);
 
+  // Revocar participantes retirados antes de sincronizar los que siguen asignados.
+  await prismaAny.conversationParticipant.updateMany({
+    where: { conversationId: conversation.id, userId: { notIn: participantIds }, isActive: true },
+    data: { isActive: false },
+  });
+
   await Promise.all(
     participantIds.map((userId) =>
       prismaAny.conversationParticipant.upsert({
@@ -182,4 +188,24 @@ export const syncAgendaConversation = async (input: SyncAgendaConversationInput)
   );
 
   return conversation;
+};
+
+/** Cambiar una cuadrilla también actualiza quién conserva acceso a sus canales de agenda. */
+export const syncCrewAgendaConversations = async (crewId: string) => {
+  const events = await prisma.agendaEvent.findMany({
+    where: { crewId },
+    include: { assignees: true, crew: { include: { members: true } } },
+  });
+  for (const event of events) {
+    await syncAgendaConversation({
+      agendaEventId: event.id,
+      projectId: event.projectId,
+      organizationId: event.organizationId,
+      createdById: event.ownerId,
+      title: event.title,
+      location: event.location,
+      assigneeIds: event.assignees.map((assignee) => assignee.userId),
+      crewMemberIds: event.crew?.members.map((member) => member.userId) || [],
+    });
+  }
 };

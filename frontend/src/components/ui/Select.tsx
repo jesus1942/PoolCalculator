@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -14,10 +14,13 @@ export const Select: React.FC<SelectProps> = ({
   className = '',
   ...props
 }) => {
+  const generatedId = useId();
+  const selectId = props.id || generatedId;
+  const errorId = `${selectId}-error`;
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-soft)' }}>
+        <label htmlFor={selectId} className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-soft)' }}>
           {label}
         </label>
       )}
@@ -26,6 +29,9 @@ export const Select: React.FC<SelectProps> = ({
         <select
           className={`rough-field__control ${className}`}
           {...props}
+          id={selectId}
+          aria-invalid={error ? true : props['aria-invalid']}
+          aria-describedby={error ? `${props['aria-describedby'] || ''} ${errorId}`.trim() : props['aria-describedby']}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -34,7 +40,7 @@ export const Select: React.FC<SelectProps> = ({
           ))}
         </select>
       </div>
-      {error && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--bad)' }}>{error}</p>}
+      {error && <p id={errorId} className="mt-2 text-sm font-medium" style={{ color: 'var(--bad)' }}>{error}</p>}
     </div>
   );
 };

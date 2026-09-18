@@ -3,13 +3,12 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { storeImageFile } from '../utils/imageStorage';
 
-const prisma = new PrismaClient();
 
 // Configurar multer en memoria para subir a Cloudinary o fallback local
 const storage = multer.memoryStorage();

@@ -1,12 +1,11 @@
 providers = []
 
 [variables]
-# Silencia el banner "Update available" de Prisma en los logs de deploy.
 PRISMA_HIDE_UPDATE_MESSAGE = "1"
 
 [phases.setup]
 nixPkgs = [
-  "nodejs_20",
+  "nodejs_22",
   "python311",
   "python311Packages.pip",
   "libjpeg",
@@ -20,16 +19,11 @@ cmds = [
   "npm config set fetch-retry-factor 2",
   "npm config set fetch-retry-mintimeout 20000",
   "npm config set fetch-retry-maxtimeout 120000",
-  "npm --prefix frontend ci --include=dev --no-audit --no-fund",
-  "npm --prefix backend ci --include=dev --no-audit --no-fund"
+  "npm ci --include=dev --no-audit --no-fund"
 ]
 
 [phases.build]
-cmds = [
-  "npm --prefix backend run prisma:generate",
-  "npm --prefix frontend run build",
-  "npm --prefix backend run build"
-]
+cmds = ["npm run check"]
 
 [start]
-cmd = "npm --prefix backend run start:deploy"
+cmd = "npm --workspace backend run start:deploy"

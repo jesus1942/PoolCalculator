@@ -5,14 +5,14 @@ import {
   updateEquipmentPreset,
   deleteEquipmentPreset,
 } from '../controllers/equipmentPresetController';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 
 const router = express.Router();
 
 router.get('/', getEquipmentPresets);
 
 router.use(authenticate);
-router.use(isAdmin);
+router.use(isSuperadmin);
 
 router.post('/', createEquipmentPreset);
 router.put('/:id', updateEquipmentPreset);

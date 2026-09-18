@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -12,10 +12,13 @@ export const Input: React.FC<InputProps> = ({
   className = '',
   ...props
 }) => {
+  const generatedId = useId();
+  const inputId = props.id || generatedId;
+  const errorId = `${inputId}-error`;
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-soft)' }}>
+        <label htmlFor={inputId} className="block text-sm font-semibold mb-2" style={{ color: 'var(--ink-soft)' }}>
           {label}
         </label>
       )}
@@ -24,9 +27,12 @@ export const Input: React.FC<InputProps> = ({
         <input
           className={`rough-field__control ${className}`}
           {...props}
+          id={inputId}
+          aria-invalid={error ? true : props['aria-invalid']}
+          aria-describedby={error ? `${props['aria-describedby'] || ''} ${errorId}`.trim() : props['aria-describedby']}
         />
       </div>
-      {error && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--bad)' }}>{error}</p>}
+      {error && <p id={errorId} className="mt-2 text-sm font-medium" style={{ color: 'var(--bad)' }}>{error}</p>}
     </div>
   );
 };

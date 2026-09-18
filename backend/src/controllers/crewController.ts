@@ -1,18 +1,14 @@
 import { Response } from 'express';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
+import { belongsToOrganization, normalizeMemberIds, usersBelongToOrganization } from '../utils/tenantRelations';
+import { syncCrewAgendaConversations } from '../services/conversationService';
 
 const isAdminRole = (role?: string) => role === 'ADMIN' || role === 'SUPERADMIN';
 
 const canManageCrew = (crew: { ownerId: string; organizationId?: string | null }, userId: string, role?: string, orgId?: string | null) => {
-  if (crew.ownerId === userId) return true;
-  if (!isAdminRole(role)) return false;
-
-  if (orgId) {
-    return !crew.organizationId || crew.organizationId === orgId;
-  }
-
-  return role === 'SUPERADMIN';
+  if (role === 'SUPERADMIN') return true;
+  return belongsToOrganization(crew.organizationId, orgId) && (crew.ownerId === userId || role === 'ADMIN');
 };
 
 export const listCrews = async (req: AuthRequest, res: Response) => {
@@ -24,8 +20,10 @@ export const listCrews = async (req: AuthRequest, res: Response) => {
 
     const baseWhere = isAdminRole(role)
       ? {}
-      : { members: { some: { userId } } };
-    const where = orgId ? { ...baseWhere, organizationId: orgId } : baseWhere;
+      : { OR: [{ ownerId: userId }, { members: { some: { userId } } }] };
+    const where = orgId
+      ? { ...baseWhere, organizationId: orgId }
+      : role === 'SUPERADMIN' ? baseWhere : { ...baseWhere, organizationId: null, ownerId: userId };
 
     const crews = await prisma.crew.findMany({
       where,
@@ -50,7 +48,14 @@ export const createCrew = async (req: AuthRequest, res: Response) => {
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
-    const { name, description, memberIds } = req.body;
+    const { name, description, memberIds = [] } = req.body;
+    const membersToAdd = normalizeMemberIds(memberIds);
+    if (typeof name !== 'string' || !name.trim() || !membersToAdd) {
+      return res.status(400).json({ error: 'Nombre y miembros de cuadrilla inválidos' });
+    }
+    if (!await usersBelongToOrganization(membersToAdd, orgId)) {
+      return res.status(400).json({ error: 'Todos los miembros deben pertenecer a la organización' });
+    }
 
     const crew = await prisma.crew.create({
       data: {
@@ -58,19 +63,9 @@ export const createCrew = async (req: AuthRequest, res: Response) => {
         description,
         ownerId: userId,
         organizationId: orgId,
+        members: { create: membersToAdd.map((memberId) => ({ userId: memberId })) },
       },
     });
-
-    const membersToAdd = Array.isArray(memberIds) ? memberIds : [];
-    if (membersToAdd.length > 0) {
-      await prisma.crewMember.createMany({
-        data: membersToAdd.map((memberId: string) => ({
-          crewId: crew.id,
-          userId: memberId,
-        })),
-        skipDuplicates: true,
-      });
-    }
 
     const fullCrew = await prisma.crew.findUnique({
       where: { id: crew.id },
@@ -96,7 +91,7 @@ export const updateCrew = async (req: AuthRequest, res: Response) => {
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
     const crew = await prisma.crew.findUnique({ where: { id } });
-    if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
+    if (!crew || (role !== 'SUPERADMIN' && !belongsToOrganization(crew.organizationId, orgId))) {
       return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
     if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
@@ -127,7 +122,7 @@ export const deleteCrew = async (req: AuthRequest, res: Response) => {
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
     const crew = await prisma.crew.findUnique({ where: { id } });
-    if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
+    if (!crew || (role !== 'SUPERADMIN' && !belongsToOrganization(crew.organizationId, orgId))) {
       return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
     if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para eliminar esta cuadrilla' });
@@ -151,7 +146,7 @@ export const addCrewMember = async (req: AuthRequest, res: Response) => {
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
     const crew = await prisma.crew.findUnique({ where: { id } });
-    if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
+    if (!crew || (role !== 'SUPERADMIN' && !belongsToOrganization(crew.organizationId, orgId))) {
       return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
     if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
@@ -160,12 +155,7 @@ export const addCrewMember = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Se requiere seleccionar una persona' });
     }
 
-    const memberUser = await prisma.user.findUnique({
-      where: { id: memberId },
-      select: { id: true, currentOrgId: true },
-    });
-
-    if (!memberUser || (orgId && memberUser.currentOrgId !== orgId)) {
+    if (!await usersBelongToOrganization([memberId], crew.organizationId)) {
       return res.status(404).json({ error: 'La persona seleccionada no pertenece a esta organización' });
     }
 
@@ -177,6 +167,8 @@ export const addCrewMember = async (req: AuthRequest, res: Response) => {
         userId: memberId,
       },
     });
+
+    await syncCrewAgendaConversations(id);
 
     const updated = await prisma.crew.findUnique({
       where: { id },
@@ -202,7 +194,7 @@ export const removeCrewMember = async (req: AuthRequest, res: Response) => {
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
     const crew = await prisma.crew.findUnique({ where: { id } });
-    if (!crew || (orgId && crew.organizationId && crew.organizationId !== orgId)) {
+    if (!crew || (role !== 'SUPERADMIN' && !belongsToOrganization(crew.organizationId, orgId))) {
       return res.status(404).json({ error: 'Cuadrilla no encontrada' });
     }
     if (!canManageCrew(crew, userId, role, orgId)) return res.status(403).json({ error: 'No tenés permiso para editar esta cuadrilla' });
@@ -210,6 +202,8 @@ export const removeCrewMember = async (req: AuthRequest, res: Response) => {
     await prisma.crewMember.deleteMany({
       where: { crewId: id, userId: memberId },
     });
+
+    await syncCrewAgendaConversations(id);
 
     const updated = await prisma.crew.findUnique({
       where: { id },

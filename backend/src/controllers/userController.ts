@@ -1,9 +1,10 @@
-import { OrganizationRole, Prisma } from '@prisma/client';
+import { OrganizationRole, Prisma, Role } from '@prisma/client';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
+import { normalizeEmail, validName, validNewPassword, PASSWORD_REQUIREMENTS } from '../utils/authValidation';
 import {
   PROJECT_TAB_IDS,
   canManageOrganization,
@@ -111,11 +112,19 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     if (!hasAccess) return;
 
     const requesterRole = req.user?.role;
-    const { email, name, password, role, orgRole, organizationId } = req.body || {};
-    if (!email || !name) {
+    const { name, password, role, orgRole, organizationId } = req.body || {};
+    const email = normalizeEmail(req.body?.email);
+    if (!email || !validName(name)) {
       return res.status(400).json({ error: 'Email y nombre son requeridos' });
     }
 
+    if ((role !== undefined && !Object.values(Role).includes(role)) ||
+        (orgRole !== undefined && !Object.values(OrganizationRole).includes(orgRole))) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+    if (password !== undefined && !validNewPassword(password)) {
+      return res.status(400).json({ error: PASSWORD_REQUIREMENTS });
+    }
     if (!canAssignRole(requesterRole, role)) {
       return res.status(403).json({ error: 'No autorizado para asignar ese rol' });
     }
@@ -125,56 +134,48 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Organización requerida' });
     }
 
-    let user = await prisma.user.findUnique({ where: { email } });
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
-
-    if (!user) {
-      if (!password) {
-        return res.status(400).json({ error: 'Password requerido para crear usuario nuevo' });
-      }
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          password: hashedPassword,
-          // Los tenants solo dan de alta instaladores.
-          role: role || (isSuperadminRole(requesterRole) ? 'USER' : 'INSTALLER'),
-          currentOrgId: targetOrgId,
-        },
+    const organization = await prisma.organization.findUnique({ where: { id: targetOrgId }, select: { id: true } });
+    if (!organization) return res.status(404).json({ error: 'Organización no encontrada' });
+    let user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+    if (user && !isSuperadminRole(requesterRole)) {
+      const membership = await prisma.organizationMember.findUnique({
+        where: { organizationId_userId: { organizationId: targetOrgId, userId: user.id } },
       });
-    } else {
-      if (!isSuperadminRole(requesterRole) && user.role !== 'INSTALLER') {
-        return res.status(403).json({ error: 'Solo podés gestionar instaladores de tu organización' });
-      }
-
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          name: name || user.name,
-          role: role || user.role,
-          password: user.password || hashedPassword || undefined,
-          currentOrgId: user.currentOrgId || targetOrgId,
-        },
-      });
+      if (!membership) return res.status(403).json({ error: 'Esta cuenta no pertenece a tu organización' });
     }
-
     const membershipRole = clampOrgRoleForRequester(
       requesterRole,
       orgRole || (role === 'ADMIN' ? 'ADMIN' : 'MEMBER'),
     );
-    await prisma.organizationMember.upsert({
-      where: {
-        organizationId_userId: {
-          organizationId: targetOrgId,
-          userId: user.id,
-        },
-      },
-      create: {
-        organizationId: targetOrgId,
-        userId: user.id,
-        role: membershipRole,
-      },
-      update: { role: membershipRole },
+    if (!user && !password) return res.status(400).json({ error: 'Contraseña requerida para crear usuario nuevo' });
+    if (user && !isSuperadminRole(requesterRole) && user.role !== 'INSTALLER') {
+      return res.status(403).json({ error: 'Solo podés gestionar instaladores de tu organización' });
+    }
+    const hashedPassword = !user && password ? await bcrypt.hash(password, 12) : null;
+    const existingUser = user;
+    user = await prisma.$transaction(async (tx) => {
+      let savedUser = existingUser;
+      if (!savedUser) {
+        savedUser = await tx.user.create({
+          data: {
+            email, name: name.trim(), password: hashedPassword, provider: 'EMAIL',
+            role: role || (isSuperadminRole(requesterRole) ? 'USER' : 'INSTALLER'),
+            currentOrgId: targetOrgId,
+          },
+        });
+      } else if (isSuperadminRole(requesterRole)) {
+        // Una incorporación no cambia la contraseña de una identidad existente.
+        savedUser = await tx.user.update({
+          where: { id: savedUser.id },
+          data: { name: name.trim(), role: role || savedUser.role, currentOrgId: savedUser.currentOrgId || targetOrgId },
+        });
+      }
+      await tx.organizationMember.upsert({
+        where: { organizationId_userId: { organizationId: targetOrgId, userId: savedUser.id } },
+        create: { organizationId: targetOrgId, userId: savedUser.id, role: membershipRole },
+        update: { role: membershipRole },
+      });
+      return savedUser;
     });
 
     res.json({
@@ -185,6 +186,9 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       orgRole: membershipRole,
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'El email ya está registrado' });
+    }
     console.error('Error al crear usuario:', error);
     res.status(500).json({ error: 'Error al crear usuario' });
   }
@@ -202,6 +206,13 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'ID de usuario requerido' });
     }
 
+    if ((role !== undefined && !Object.values(Role).includes(role)) ||
+        (orgRole !== undefined && !Object.values(OrganizationRole).includes(orgRole))) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+    if (password !== undefined && !validNewPassword(password)) {
+      return res.status(400).json({ error: PASSWORD_REQUIREMENTS });
+    }
     if (!canAssignRole(requesterRole, role)) {
       return res.status(403).json({ error: 'No autorizado para asignar ese rol' });
     }
@@ -239,36 +250,37 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Solo podés gestionar instaladores de tu organización' });
     }
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        name: name ?? user.name,
-        role: role ?? user.role,
-        password: hashedPassword ?? undefined,
-      },
-    });
-
-    let updatedOrgRole = membership?.role || null;
-    if (orgRole) {
-      const clampedOrgRole = clampOrgRoleForRequester(requesterRole, orgRole);
-      const updatedMembership = await prisma.organizationMember.upsert({
-        where: {
-          organizationId_userId: {
-            organizationId: targetOrgId,
-            userId: id,
-          },
-        },
-        create: {
-          organizationId: targetOrgId,
-          userId: id,
-          role: clampedOrgRole,
-        },
-        update: { role: clampedOrgRole },
+    if (name !== undefined && !validName(name)) return res.status(400).json({ error: 'Nombre inválido' });
+    if (!isSuperadminRole(requesterRole) && (name !== undefined || password !== undefined)) {
+      const otherMembership = await prisma.organizationMember.findFirst({
+        where: { userId: id, organizationId: { not: targetOrgId } }, select: { id: true },
       });
-      updatedOrgRole = updatedMembership.role;
+      if (otherMembership) return res.status(403).json({ error: 'El perfil de una cuenta compartida lo administra el proveedor' });
     }
+    const hashedPassword = password ? await bcrypt.hash(password, 12) : undefined;
+
+    const { updatedUser, updatedOrgRole } = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id },
+        data: {
+          name: name?.trim() ?? user.name,
+          role: role ?? user.role,
+          password: hashedPassword ?? undefined,
+          ...(hashedPassword ? { sessionVersion: { increment: 1 } } : {}),
+        },
+      });
+      let updatedOrgRole = membership?.role || null;
+      if (orgRole) {
+        const clampedOrgRole = clampOrgRoleForRequester(requesterRole, orgRole);
+        const updatedMembership = await tx.organizationMember.upsert({
+          where: { organizationId_userId: { organizationId: targetOrgId, userId: id } },
+          create: { organizationId: targetOrgId, userId: id, role: clampedOrgRole },
+          update: { role: clampedOrgRole },
+        });
+        updatedOrgRole = updatedMembership.role;
+      }
+      return { updatedUser, updatedOrgRole };
+    });
 
     res.json({
       id: updatedUser.id,
@@ -391,6 +403,12 @@ export const updateUserProjectAccess = async (req: AuthRequest, res: Response) =
     }
 
     const { enabled, canEdit, canViewFinancials, allowedTabs } = req.body || {};
+    if (typeof enabled !== 'boolean' ||
+        (canEdit !== undefined && typeof canEdit !== 'boolean') ||
+        (canViewFinancials !== undefined && typeof canViewFinancials !== 'boolean') ||
+        (allowedTabs !== undefined && (!Array.isArray(allowedTabs) || allowedTabs.some((tab: unknown) => typeof tab !== 'string' || !PROJECT_TAB_IDS.includes(tab as ProjectTabId))))) {
+      return res.status(400).json({ error: 'Permisos de proyecto inválidos' });
+    }
     const [targetUser, project] = await Promise.all([
       prisma.user.findUnique({ where: { id }, select: { id: true, role: true } }),
       prisma.project.findFirst({ where: { id: projectId, organizationId: orgId }, select: { id: true, userId: true } }),

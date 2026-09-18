@@ -13,6 +13,7 @@ model User {
   password  String?  // Nullable para usuarios de OAuth
   name      String
   role      Role     @default(USER)
+  sessionVersion Int @default(0) // Revoca sesiones al cambiar la contraseña
   currentOrgId String?
   currentOrg   Organization? @relation("OrgCurrent", fields: [currentOrgId], references: [id])
 
@@ -627,6 +628,9 @@ model PoolPreset {
   updatedAt DateTime @updatedAt
 
   projects Project[]
+
+  @@index([defaultPumpId])
+  @@index([defaultFilterId])
 }
 
 enum PoolShape {
@@ -1122,4 +1126,12 @@ enum ContactStatus {
   CONVERTED
   REJECTED
   ARCHIVED
+}
+
+// Configuración global cifrada, editable únicamente por SUPERADMIN.
+model PlatformIntegrationSetting {
+  id        String   @id
+  payload   String
+  revision  Int      @default(1)
+  updatedAt DateTime @updatedAt
 }

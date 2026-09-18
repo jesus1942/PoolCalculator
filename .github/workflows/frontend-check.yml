@@ -1,76 +1,67 @@
-name: Frontend build check
+name: Application checks
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
-  group: frontend-build-${{ github.ref }}
+  group: application-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
+    name: frontend-build
     runs-on: ubuntu-latest
+    # Esta base se crea vacía para cada ejecución; no usa credenciales de producción.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: poolinstaller_test
+          POSTGRES_PASSWORD: poolinstaller_ci_test
+          POSTGRES_DB: poolinstaller_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U poolinstaller_test -d poolinstaller_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://poolinstaller_test:poolinstaller_ci_test@localhost:5432/poolinstaller_test?schema=public
+      VITE_API_URL: https://poolcalculator-production.up.railway.app/api
+      VITE_BASE: /PoolCalculator/
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Publish pending frontend status
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: 'pending',
-              context: 'frontend-build',
-              description: 'Validando TypeScript y build del frontend',
-              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
-            });
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm --prefix frontend ci --ignore-scripts
+      - name: Install workspace dependencies
+        run: npm ci --include=dev --no-fund
 
-      - name: Typecheck and build frontend
-        id: frontend_build
-        continue-on-error: true
-        run: npm --prefix frontend run build:check
-        env:
-          VITE_API_URL: https://poolcalculator-production.up.railway.app/api
-          VITE_BASE: /PoolCalculator/
+      - name: Generate Prisma client
+        run: npm --workspace backend run prisma:generate
 
-      - name: Publish frontend status
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const outcome = '${{ steps.frontend_build.outcome }}';
-            const state = outcome === 'success' ? 'success' : 'failure';
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state,
-              context: 'frontend-build',
-              description: state === 'success'
-                ? 'TypeScript y frontend compilan correctamente'
-                : 'Falló TypeScript o el build del frontend',
-              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
-            });
+      - name: Apply all migrations to the empty test database
+        run: npm exec --workspace backend -- prisma migrate deploy
 
-      - name: Fail workflow when frontend build fails
-        if: steps.frontend_build.outcome != 'success'
-        run: exit 1
+      - name: Ensure migrated database matches the application schema
+        run: npm exec --workspace backend -- prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+
+      - name: Run backend and frontend regression tests
+        run: npm test
+
+      - name: Typecheck and build both applications
+        run: npm run build

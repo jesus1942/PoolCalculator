@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/AuthContext';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,9 +21,10 @@ const PoolPresetCard: React.FC<{
   presetIndex: number;
   galleryImages: string[];
   galleryLabels: string[];
+  canEdit: boolean;
   onEdit: (preset: PoolPreset) => void;
   onDelete: (id: string) => void;
-}> = ({ preset, presetIndex, galleryImages, galleryLabels, onEdit, onDelete }) => {
+}> = ({ preset, presetIndex, galleryImages, galleryLabels, canEdit, onEdit, onDelete }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Logo por defecto si no hay imágenes adicionales
@@ -169,7 +171,7 @@ const PoolPresetCard: React.FC<{
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-4 mt-auto border-t border-zinc-800">
+              {canEdit && <div className="flex gap-2 pt-4 mt-auto border-t border-zinc-800">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -189,7 +191,7 @@ const PoolPresetCard: React.FC<{
                 >
                   <HdTrash size={16} />
                 </button>
-              </div>
+              </div>}
             </div>
           </div>
       }
@@ -271,6 +273,8 @@ const PoolPresetCard: React.FC<{
 };
 
 export const PoolModels: React.FC = () => {
+  const { user } = useAuth();
+  const canEditCatalog = user?.role === 'SUPERADMIN';
   const [presets, setPresets] = useState<PoolPreset[]>([]);
   const [equipmentPresets, setEquipmentPresets] = useState<EquipmentPreset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -364,6 +368,7 @@ export const PoolModels: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEditCatalog) return;
     try {
       if (editingPreset) {
         await poolPresetService.update(
@@ -389,6 +394,7 @@ export const PoolModels: React.FC = () => {
   };
 
   const handleEdit = (preset: PoolPreset) => {
+    if (!canEditCatalog) return;
     setEditingPreset(preset);
     setFormData({
       name: preset.name,
@@ -433,6 +439,7 @@ export const PoolModels: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canEditCatalog) return;
     if (confirm('¿Estás seguro de eliminar este modelo?')) {
       try {
         await poolPresetService.delete(id);
@@ -543,13 +550,13 @@ export const PoolModels: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button
+            {canEditCatalog && <button
               onClick={() => setShowModal(true)}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white font-semibold transition-all duration-200 hover:bg-blue-500 sm:w-auto"
             >
               <HdPlus size={20} />
               <span>Nuevo Modelo</span>
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -613,6 +620,7 @@ export const PoolModels: React.FC = () => {
                 presetIndex={index}
                 galleryImages={galleryImages}
                 galleryLabels={galleryLabels}
+                canEdit={canEditCatalog}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

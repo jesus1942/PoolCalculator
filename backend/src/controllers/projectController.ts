@@ -1,3 +1,5 @@
+import { canAccessConversation, sanitizeConversation } from '../utils/conversationAccess';
+import { pickProjectMutation } from '../utils/projectMutation';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
@@ -279,26 +281,6 @@ const getProjectPackageBaseDir = () =>
 
 const getProjectPackageDir = (project: any) =>
   path.join(getProjectPackageBaseDir(), project.id, getProjectPackageFolderName(project));
-
-const getAssignedProjectIdsForUser = async (userId: string, orgId?: string | null) => {
-  const assignedEvents = await prisma.agendaEvent.findMany({
-    where: {
-      projectId: { not: null },
-      ...(orgId ? { organizationId: orgId } : {}),
-      OR: [
-        { assignees: { some: { userId } } },
-        { crew: { members: { some: { userId } } } },
-      ],
-    },
-    select: { projectId: true },
-  });
-
-  return Array.from(new Set(
-    assignedEvents
-      .map((event) => event.projectId)
-      .filter((projectId): projectId is string => Boolean(projectId))
-  ));
-};
 
 const buildProjectExportData = async (project: any, sections?: any) => {
   const plumbingConfig = (project.plumbingConfig as any) || {};
@@ -624,7 +606,7 @@ const withProjectActivity = <T extends { projectUpdates?: Array<{ title?: string
   };
 };
 
-const appendProjectConversations = async (project: any) => {
+const appendProjectConversations = async (project: any, req: AuthRequest) => {
   if (!project?.id) return project;
   const conversations = await listConversationSummaries({
     organizationId: project.organizationId || null,
@@ -632,7 +614,8 @@ const appendProjectConversations = async (project: any) => {
   });
   return {
     ...project,
-    conversations,
+    conversations: conversations.filter((conversation: any) => canAccessConversation(conversation, req.user || {}))
+      .map((conversation: any) => sanitizeConversation(conversation, req.user || {})),
   };
 };
 
@@ -800,7 +783,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       ? await ensureProjectCode(createdProject)
       : await ensureProjectCode(project as any);
 
-    res.status(201).json(withCommercialProfile(await appendProjectConversations(normalizedCreatedProject as any)));
+    res.status(201).json(withCommercialProfile(await appendProjectConversations(normalizedCreatedProject as any, req)));
   } catch (error) {
     console.error('Error al crear proyecto:', error);
     res.status(500).json({ error: 'Error al crear proyecto' });
@@ -812,7 +795,6 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
     const role = req.user?.role;
-    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -822,9 +804,7 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
     const accessContext = await buildProjectAccessContext(userId, orgId);
 
     const projects = await prisma.project.findMany({
-      where: isAdmin
-        ? (orgId ? { organizationId: orgId } : {})
-        : { id: { in: accessibleProjectIds.length > 0 ? accessibleProjectIds : ['__none__'] } },
+      where: { id: { in: accessibleProjectIds } },
       include: {
         poolPreset: true,
         projectAdditionals: {
@@ -874,7 +854,10 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    const normalizedProjects = await Promise.all(projects.map((project) => ensureProjectCode(project)));
+    const normalizedProjects = await Promise.all(projects.map((project) =>
+      buildProjectAccessProfileFromContext(project, { userId, orgId, role }, accessContext).canEdit
+        ? ensureProjectCode(project) : project
+    ));
     const serializedProjects = normalizedProjects
       .map((project) => {
         const access = buildProjectAccessProfileFromContext(project, { userId, orgId, role }, accessContext);
@@ -943,6 +926,12 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
+    // Una lectura de un invitado no modifica materiales, costos ni códigos del proyecto.
+    if (!access.canEdit) {
+      return res.json(sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(
+        await appendProjectConversations(project, req)
+      )), access));
+    }
     project = await ensureProjectCode(project);
 
     // VALIDACIÓN: Verificar que las dimensiones de excavación sean correctas
@@ -983,7 +972,7 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
         correctedProject = await ensureProjectCode(correctedProject);
         access = await resolveProjectAccessProfile(correctedProject, { userId, orgId, role });
       }
-      res.json(correctedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(correctedProject as any))), access) : correctedProject);
+      res.json(correctedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(correctedProject as any, req))), access) : correctedProject);
       return;
     }
 
@@ -1059,14 +1048,14 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
           refreshedProject = await ensureProjectCode(refreshedProject);
           access = await resolveProjectAccessProfile(refreshedProject, { userId, orgId, role });
         }
-        res.json(refreshedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(refreshedProject as any))), access) : refreshedProject);
+        res.json(refreshedProject ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(refreshedProject as any, req))), access) : refreshedProject);
         return;
       } catch (refreshError) {
         console.error('Error al refrescar materiales del proyecto:', refreshError);
       }
     }
 
-    res.json(project ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(project as any))), access) : project);
+    res.json(project ? sanitizeProjectForAccess(withCommercialProfile(withProjectActivity(await appendProjectConversations(project as any, req))), access) : project);
   } catch (error) {
     console.error('Error al obtener proyecto:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -1076,7 +1065,6 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
 export const updateProject = async (req: AuthRequest, res: Response) => {
   try {
     console.log('Actualizando proyecto...', req.params.id);
-    console.log('Datos recibidos:', JSON.stringify(req.body, null, 2));
 
     const { id } = req.params;
     const userId = req.user?.userId;
@@ -1105,7 +1093,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
         }
       : undefined;
 
-    let updateData: any = { ...req.body };
+    let updateData: any = pickProjectMutation(req.body);
     delete updateData.includeBaseEquipment;
     if (updateData.poolPresetId === '' || updateData.poolPresetId === existingProject.poolPresetId) {
       delete updateData.poolPresetId;
@@ -1201,7 +1189,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
         if (settings) {
           console.log('Ejecutando cálculos de losetas...');
           const tileCalculations = calculateTileMaterials(
-            existingProject.poolPreset,
+            effectivePoolPreset,
             req.body.tileCalculation,
             tilePresets,
             settings,
@@ -1214,7 +1202,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
           // Calcular materiales de cama interna
           console.log('Ejecutando cálculos de cama interna...');
           const bedCalculations = calculateBedMaterials(
-            existingProject.poolPreset,
+            effectivePoolPreset,
             settings,
             materialPrices
           );
@@ -1377,7 +1365,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     const normalizedProject = await ensureProjectCode(project);
 
     console.log('Proyecto actualizado exitosamente');
-    res.json(sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(normalizedProject as any)), access));
+    res.json(sanitizeProjectForAccess(withCommercialProfile(await appendProjectConversations(normalizedProject as any, req)), access));
   } catch (error) {
     console.error('Error al actualizar proyecto:', error);
     res.status(500).json({ error: 'Error al actualizar proyecto' });
@@ -1426,7 +1414,7 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
     const { sections } = req.body;
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
 
     // Obtener el proyecto con todos sus datos
     const project = await prisma.project.findFirst({
@@ -1447,7 +1435,8 @@ export const exportToExcel = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (project.userId !== userId && !isAdmin) {
+    const access = await resolveProjectAccessProfile(project, { userId, orgId, role });
+    if (!access.canAccess || !access.canViewFinancials || !access.allowedTabs.includes('export')) {
       return res.status(403).json({ error: 'No tenés permiso para exportar este proyecto' });
     }
 
@@ -1480,7 +1469,7 @@ export const createProjectPackage = async (req: AuthRequest, res: Response) => {
     const { documents = [], excelSections, metadata = {} } = req.body || {};
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
 
     const project = await prisma.project.findFirst({
       where: { id, ...(orgId ? { organizationId: orgId } : {}) },
@@ -1497,7 +1486,8 @@ export const createProjectPackage = async (req: AuthRequest, res: Response) => {
     });
 
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
-    if (project.userId !== userId && !isAdmin) {
+    const access = await resolveProjectAccessProfile(project, { userId, orgId, role });
+    if (!access.canAccess || !access.canEdit || !access.canViewFinancials || !access.allowedTabs.includes('export')) {
       return res.status(403).json({ error: 'No tenés permiso para exportar este proyecto' });
     }
 
@@ -1555,7 +1545,7 @@ export const downloadProjectPackage = async (req: AuthRequest, res: Response) =>
     const { id } = req.params;
     const userId = req.user?.userId;
     const orgId = req.user?.orgId || null;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const role = req.user?.role;
 
     const project = await prisma.project.findFirst({
       where: { id, ...(orgId ? { organizationId: orgId } : {}) },
@@ -1564,11 +1554,13 @@ export const downloadProjectPackage = async (req: AuthRequest, res: Response) =>
         name: true,
         clientName: true,
         userId: true,
+        organizationId: true,
       },
     });
 
     if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
-    if (project.userId !== userId && !isAdmin) {
+    const access = await resolveProjectAccessProfile(project, { userId, orgId, role });
+    if (!access.canAccess || !access.canViewFinancials || !access.allowedTabs.includes('export')) {
       return res.status(403).json({ error: 'No tenés permiso para descargar este expediente' });
     }
 
