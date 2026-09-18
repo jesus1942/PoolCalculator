@@ -5,15 +5,14 @@ import { usePublicIntegrations } from '@/hooks/usePublicIntegrations';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 /** Marco accesible compartido por ingreso y registro, sin duplicar estilos ni OAuth. */
-export const AuthLayout = ({ title, description, error, children, footer }: {
+export const AuthLayout = ({ title, description, error, children, footer, showGoogle = true }: {
   title: string;
   description: string;
   error?: string;
   children: ReactNode;
   footer: ReactNode;
+  showGoogle?: boolean;
 }) => {
-  const { googleEnabled } = usePublicIntegrations();
-
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-8" style={{ background: 'var(--paper)', color: 'var(--ink)' }}>
       <div className="w-full max-w-md">
@@ -24,16 +23,23 @@ export const AuthLayout = ({ title, description, error, children, footer }: {
           <p className="mb-6 mt-2 text-center text-sm" style={{ color: 'var(--ink-soft)' }}>{description}</p>
           {error && <p role="alert" className="mb-5 rounded-xl border p-3 text-sm" style={{ borderColor: 'var(--bad)', color: 'var(--bad)' }}>{error}</p>}
           {children}
-          {googleEnabled && (
-            <>
-              <p className="my-5 text-center text-sm" style={{ color: 'var(--ink-soft)' }}>O continuá con</p>
-              <a href={`${API_URL.replace(/\/$/, '')}/auth/google`} className="flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm font-semibold" style={{ borderColor: 'var(--hair-strong)', color: 'var(--ink)', background: 'var(--paper)' }}>Continuar con Google</a>
-            </>
-          )}
+          {showGoogle && <GoogleSignIn />}
           <div className="mt-6 text-center text-sm" style={{ color: 'var(--ink-soft)' }}>{footer}</div>
         </section>
       </div>
     </main>
+  );
+};
+
+// El ingreso de clientes usa credenciales de proyecto y no solicita configuración OAuth.
+const GoogleSignIn = () => {
+  const { googleEnabled } = usePublicIntegrations();
+  if (!googleEnabled) return null;
+  return (
+    <>
+      <p className="my-5 text-center text-sm" style={{ color: 'var(--ink-soft)' }}>O continuá con</p>
+      <a href={`${API_URL.replace(/\/$/, '')}/auth/google`} className="flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm font-semibold" style={{ borderColor: 'var(--hair-strong)', color: 'var(--ink)', background: 'var(--paper)' }}>Continuar con Google</a>
+    </>
   );
 };
 

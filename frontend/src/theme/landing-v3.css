@@ -17,6 +17,13 @@
 .pl-brand-mark { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
 .pl-brand-mark.rough-panel::before { background: var(--accent); border-color: var(--accent); }
 .pl-brand-mark img { width: 29px; height: 29px; object-fit: contain; }
+.pl-story-teaser-photo { position: relative; margin: 18px 0; overflow: hidden; border-radius: 8px 13px 7px 11px; transform: rotate(-.8deg); }
+.pl-story-teaser-photo img { display: block; width: 100%; height: 190px; object-fit: cover; }
+.pl-story-teaser-photo figcaption { position: absolute; bottom: 0; inset-inline: 0; margin: 0; padding: 15px 12px 9px; background: linear-gradient(transparent, #172b2be6); color: #fff; font: 8px/1.6 'JetBrains Mono', monospace; letter-spacing: .5px; }
+.pl-story-teaser-entry > span { display: block; margin-bottom: 7px; color: var(--warm); font: 9px 'JetBrains Mono', monospace; letter-spacing: 1px; }
+.pl-story-teaser-entry > strong { font: 500 20px/1.35 'JetBrains Mono', monospace; color: var(--ink); }
+.pl-story-teaser-entry > p { margin: 9px 0 13px; max-width: 400px; font-size: 12px; line-height: 1.7; color: var(--ink-soft); }
+.pl-story-teaser-link { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font-size: 12px; font-weight: 600; min-height: 44px; }
 .pl-brand strong { display: block; font: 700 19px/1.3 'JetBrains Mono', monospace; letter-spacing: -.8px; }
 .pl-brand small { display: block; color: var(--ink-soft); font-size: 11px; margin-top: 3px; }
 .pl-desktop-nav { display: flex; gap: 21px; margin-left: auto; }

@@ -43,7 +43,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
       const token = localStorage.getItem('token');
-      const isLoginAttempt = /\/auth\/(login|register)(?:$|\?)/.test(url);
+      const isLoginAttempt = /\/(?:auth\/(?:login|register)|public\/timeline\/login)(?:$|\?)/.test(url);
+      // Las credenciales del cliente son independientes de la sesión del instalador.
       // Una respuesta de una sesión anterior no puede cerrar la sesión nueva.
       if (!isLoginAttempt && token && error.config?.headers?.Authorization === `Bearer ${token}`) {
         localStorage.removeItem('token');

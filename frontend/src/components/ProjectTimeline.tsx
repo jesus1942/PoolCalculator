@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { HdPlus, HdImage, HdX, HdClock, HdFileText, HdAlertTriangle, HdCheck, HdPackage, HdEye, HdEyeOff, HdTrash, HdEdit, HdShare, HdCalendar, HdMessageBubble } from '@/components/ui/HandDrawnIcons';
 import api from '@/services/api';
 import { ShareTimelineModal } from './ShareTimelineModal';
+import { appendStoryDraft, createStoryDraft, type StoryCategory } from '@/utils/storyDraft';
 
 interface ProjectUpdateAuthor {
   id: string;
@@ -19,7 +20,7 @@ interface ProjectUpdate {
   projectId: string;
   title: string;
   description?: string;
-  category: 'PROGRESS' | 'MILESTONE' | 'ISSUE' | 'NOTE' | 'INSPECTION' | 'DELIVERY' | 'OTHER';
+  category: StoryCategory;
   images: string[];
   metadata?: any;
   isPublic: boolean;
@@ -95,6 +96,8 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [editingUpdate, setEditingUpdate] = useState<ProjectUpdate | null>(null);
+  const [storyDraft, setStoryDraft] = useState<string | null>(null);
+  const [storyDraftApplied, setStoryDraftApplied] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -106,6 +109,20 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
     loadUpdates();
     loadClientComments();
   }, [projectId]);
+
+  useEffect(() => {
+    // Una propuesta pertenece únicamente a las fotos y al contexto de esta entrada.
+    setStoryDraft(null);
+    setStoryDraftApplied(false);
+  }, [projectId, showAddModal, formData.title, formData.category, formData.images]);
+
+  const closeUpdateEditor = () => {
+    setShowAddModal(false);
+    setEditingUpdate(null);
+    setStoryDraft(null);
+    setStoryDraftApplied(false);
+    setFormData({ title: '', description: '', category: 'PROGRESS', images: [] });
+  };
 
   const loadUpdates = async () => {
     try {
@@ -470,7 +487,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                       </div>
 
                       {item.description && (
-                        <p className="text-sm text-gray-700 mt-2 mb-3">{item.description}</p>
+                        <p className="text-sm text-gray-700 mt-2 mb-3 whitespace-pre-line">{item.description}</p>
                       )}
 
                       {item.event && (
@@ -604,16 +621,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
       {/* Modal para agregar/editar actualización */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          setEditingUpdate(null);
-          setFormData({
-            title: '',
-            description: '',
-            category: 'PROGRESS',
-            images: [],
-          });
-        }}
+        onClose={closeUpdateEditor}
         title={editingUpdate ? 'Editar Actualización' : 'Agregar Actualización'}
       >
         <div className="space-y-4">
@@ -625,8 +633,9 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
           />
 
           <div>
-            <label className="block text-sm font-medium mb-1">Categoría</label>
+            <label htmlFor="timeline-update-category" className="block text-sm font-medium mb-1">Categoría</label>
             <select
+              id="timeline-update-category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as ProjectUpdate['category'] })}
               className="w-full px-3 py-2 border rounded-md"
@@ -642,13 +651,14 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Descripción</label>
+            <label htmlFor="timeline-update-description" className="block text-sm font-medium mb-1">Descripción / relato</label>
             <textarea
+              id="timeline-update-description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border rounded-md"
-              rows={3}
-              placeholder="Detalles adicionales..."
+              rows={5}
+              placeholder="Contá qué querés compartir de este capítulo de la instalación…"
             />
           </div>
 
@@ -677,6 +687,7 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
                     <img src={image} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                     <button
                       onClick={() => handleRemoveImage(index)}
+                      aria-label={`Quitar imagen ${index + 1}`}
                       className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
                     >
                       <HdX size={12} />
@@ -687,11 +698,84 @@ export const ProjectTimeline: React.FC<ProjectTimelineProps> = ({ projectId, pro
             )}
           </div>
 
+          <section aria-labelledby="timeline-story-heading" className="rounded-xl border border-teal-200 bg-teal-50/70 p-4">
+            <div className="flex items-start gap-3">
+              <HdFileText size={22} className="mt-0.5 shrink-0 text-teal-700" />
+              <div>
+                <h4 id="timeline-story-heading" className="font-semibold text-teal-950">Una historia para estas fotos</h4>
+                <p id="timeline-story-help" className="mt-1 text-sm leading-relaxed text-teal-900">
+                  Sugerencia de texto; revisala antes de publicar. Usa el título, tipo de avance y fotos adjuntas; no interpreta el contenido de las imágenes.
+                </p>
+              </div>
+            </div>
+
+            {storyDraft === null ? (
+              <div className="mt-3 space-y-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={!formData.title.trim() || formData.images.length === 0}
+                  aria-describedby="timeline-story-help timeline-story-status"
+                  onClick={() => {
+                    setStoryDraft(createStoryDraft({
+                      title: formData.title,
+                      category: formData.category,
+                      imageCount: formData.images.length,
+                    }));
+                    setStoryDraftApplied(false);
+                  }}
+                >
+                  Proponer relato
+                </Button>
+                <p id="timeline-story-status" role="status" className="text-xs leading-relaxed text-teal-900">
+                  {storyDraftApplied
+                    ? 'Relato añadido a la descripción. Podés seguir editándolo antes de guardar.'
+                    : !formData.title.trim() || formData.images.length === 0
+                      ? 'Escribí un título y adjuntá al menos una foto para preparar el borrador.'
+                      : 'La propuesta se prepara acá, sin enviar tus fotos a un servicio externo.'}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <label htmlFor="timeline-story-draft" className="block text-sm font-semibold text-teal-950">Borrador editable</label>
+                <textarea
+                  id="timeline-story-draft"
+                  value={storyDraft}
+                  onChange={(e) => setStoryDraft(e.target.value)}
+                  aria-describedby="timeline-story-help timeline-story-apply-help"
+                  rows={6}
+                  className="w-full rounded-lg border border-teal-300 bg-white px-3 py-2 text-base leading-relaxed text-gray-900 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-200 sm:text-sm"
+                />
+                <p id="timeline-story-apply-help" className="text-xs leading-relaxed text-teal-900">
+                  {formData.description.trim()
+                    ? 'Se añadirá al final de tu descripción, conservando lo que ya escribiste.'
+                    : 'Al aplicarlo, pasará a la descripción de esta entrada.'}
+                  {' '}Todavía no se guarda ni cambia quién puede ver la actualización.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    disabled={!storyDraft.trim()}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, description: appendStoryDraft(prev.description, storyDraft) }));
+                      setStoryDraft(null);
+                      setStoryDraftApplied(true);
+                    }}
+                  >
+                    {formData.description.trim() ? 'Añadir al relato' : 'Aplicar borrador'}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setStoryDraft(null)}>Descartar</Button>
+                </div>
+              </div>
+            )}
+          </section>
+
           <div className="flex gap-3 mt-6">
             <Button onClick={handleAddUpdate} className="flex-1">
               {editingUpdate ? 'Guardar Cambios' : 'Agregar'}
             </Button>
-            <Button variant="secondary" onClick={() => setShowAddModal(false)} className="flex-1">
+            <Button variant="secondary" onClick={closeUpdateEditor} className="flex-1">
               Cancelar
             </Button>
           </div>

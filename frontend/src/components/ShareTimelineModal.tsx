@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { HdLink, HdCopy, HdCheck, HdGear, HdEye, HdEyeOff, HdX, HdDownload } from '@/components/ui/HandDrawnIcons';
-import api from '@/services/api';
+import api, { API_URL } from '@/services/api';
+import { publicAssetUrl } from '@/utils/publicAssetUrl';
 
 interface ShareTimelineModalProps {
   isOpen: boolean;
@@ -26,21 +27,29 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
   const [clientPassword, setClientPassword] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      loadShareConfig();
-    }
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setShareConfig(null);
+    setCopied(false);
+    setClientUsername('');
+    setClientPassword('');
+    setShowCosts(false);
+    setShowDetails(true);
+    loadShareConfig(controller.signal);
+    return () => controller.abort();
   }, [isOpen, projectId]);
 
-  const loadShareConfig = async () => {
+  const loadShareConfig = async (signal: AbortSignal) => {
     try {
-      const response = await api.get(`/project-share/${projectId}`);
+      const response = await api.get(`/project-share/${projectId}`, { signal });
+      if (signal.aborted) return;
       if (response.data) {
         setShareConfig(response.data);
         setShowCosts(response.data.showCosts);
         setShowDetails(response.data.showDetails);
       }
     } catch (error) {
-      console.error('Error al cargar configuración:', error);
+      if (!signal.aborted) console.error('Error al cargar configuración:', error);
     }
   };
 
@@ -104,12 +113,14 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
 
   const getShareUrl = () => {
     if (!shareConfig?.shareToken) return '';
-    return `${window.location.origin}/client-login?returnUrl=/timeline/${shareConfig.shareToken}`;
+    const url = new URL(publicAssetUrl('client-login'), window.location.origin);
+    url.searchParams.set('returnUrl', `/timeline/${encodeURIComponent(shareConfig.shareToken)}`);
+    return url.toString();
   };
 
   const getExportUrl = () => {
     if (!shareConfig?.shareToken) return '';
-    return `${window.location.origin}/api/public/timeline/${shareConfig.shareToken}/export`;
+    return `${API_URL.replace(/\/$/, '')}/public/timeline/${encodeURIComponent(shareConfig.shareToken)}/export`;
   };
 
   const handleCopyLink = () => {
@@ -123,13 +134,13 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
   const publicUpdates = updates.filter((u: any) => u.isPublic !== false);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Compartir Timeline con Cliente">
+    <Modal isOpen={isOpen} onClose={onClose} title="Compartir la historia con el cliente">
       <div className="space-y-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">Timeline Público para Clientes</h4>
+          <h4 className="font-semibold text-blue-900 mb-2">El diario de su piscina</h4>
           <p className="text-sm text-blue-700">
-            Genera un link para que tus clientes vean el progreso del proyecto en tiempo real.
-            Puedes controlar qué información se muestra.
+            Compartí un acceso para que tu cliente recorra los avances publicados de su obra.
+            Elegí qué información puede ver; las novedades privadas quedan dentro del equipo.
           </p>
         </div>
 
@@ -153,7 +164,7 @@ export const ShareTimelineModal: React.FC<ShareTimelineModalProps> = ({
             <label className="flex items-center justify-between p-3 bg-white border rounded-lg cursor-pointer hover:bg-gray-50">
               <div>
                 <div className="font-medium text-sm">Mostrar Detalles</div>
-                <div className="text-xs text-gray-600">Incluir descripciones y metadata</div>
+                <div className="text-xs text-gray-600">Incluir relatos y fotografías de las publicaciones visibles</div>
               </div>
               <input
                 type="checkbox"

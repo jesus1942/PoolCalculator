@@ -48,6 +48,18 @@ La prueba de conexión no es prueba de entrega. Google necesita URL de callback 
 
 Fuentes oficiales: [OAuth de Google](https://developers.google.com/identity/protocols/oauth2/web-server), [Bot API de Telegram](https://core.telegram.org/bots/api), [Cloud API de WhatsApp](https://developers.facebook.com/docs/whatsapp/cloud-api/overview).
 
+## Diario visual de cada piscina
+
+La vista de clientes pasa de una lista compacta a un diario editorial: portada con la fotografía más reciente disponible, capítulos fechados, índice, orden cronológico o reciente, filtro de fotografías, galería con teclado y conversación con el equipo. El indicador de lectura mide cuánto se recorrió la página; no representa avance de obra. El estado viene del proyecto, sin inventar fechas, porcentajes ni tareas terminadas.
+
+- Cada historia reutiliza exclusivamente las publicaciones marcadas como visibles para el cliente. Las fotos y relatos privados no se copian a la demostración pública.
+- La API y el CSV comparten una lista blanca. Desactivar **Mostrar detalles** oculta descripciones y fotografías; desactivar **Mostrar costos** elimina importes. La metadata técnica y el perfil comercial interno nunca se incluyen.
+- El editor de avances permite **Proponer relato**, revisarlo y aplicarlo a la descripción, conservando el texto previo. Es una ayuda editorial local basada en título, categoría y cantidad de fotos; **no analiza visualmente las imágenes ni usa una API de IA**. Nunca publica por sí sola.
+- La muestra `/demo/historia` utiliza el mismo componente que la página real, con historia ficticia e imagen ilustrativa generada. Sus mensajes están deshabilitados y no consulta proyectos de clientes.
+- Los enlaces para compartir respetan el subdirectorio de GitHub Pages y las exportaciones apuntan al backend. El acceso del cliente conserva sus credenciales de proyecto, separadas del acceso Google de usuarios de la aplicación.
+- La revisión de historias reales requiere acceso autorizado a una obra específica; no se abrieron cuentas de clientes ni se enviaron comentarios durante el desarrollo.
+- Validación local de esta ampliación: **69 pruebas aprobadas** (55 backend y 14 frontend) y compilación de ambas aplicaciones. La revisión visual pública se documenta después del despliegue.
+
 ## Despliegue y comprobación
 
 - Node 22; instalar desde raíz con `npm ci`.
