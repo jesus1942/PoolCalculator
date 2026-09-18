@@ -3,6 +3,9 @@ import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { listConversationSummaries, syncAgendaConversation, syncProjectConversation } from '../services/conversationService';
 import { storeImageFile } from '../utils/imageStorage';
+import { canAccessConversation, canManageConversation, sanitizeConversation } from '../utils/conversationAccess';
+import { belongsToOrganization, normalizeMemberIds, usersBelongToOrganization } from '../utils/tenantRelations';
+import { resolveProjectAccessProfile } from '../utils/projectAccess';
 
 const prismaAny = prisma as any;
 
@@ -34,11 +37,6 @@ const getConversationScoped = async (conversationId: string, orgId?: string | nu
     },
   });
 
-const canAccessConversation = (conversation: any, userId: string, role?: string) => {
-  if (isAdminRole(role)) return true;
-  if (conversation.createdById === userId) return true;
-  return conversation.participants.some((participant: any) => participant.userId === userId && participant.isActive);
-};
 
 const canCreateConversation = (role?: string) => role !== 'INSTALLER' && role !== 'VIEWER';
 
@@ -53,21 +51,19 @@ export const listConversations = async (req: AuthRequest, res: Response) => {
     const agendaEventId = typeof req.query.agendaEventId === 'string' ? req.query.agendaEventId : null;
     const kind = typeof req.query.kind === 'string' ? req.query.kind : null;
 
-    // Los admins listan por su organización; los invitados (instaladores,
-    // usuarios asignados) ven las conversaciones donde participan aunque la
-    // conversación viva en la org de quien los invitó.
+    // Siempre se lista dentro de la empresa activa y se comprueba la participación.
     const conversations = await listConversationSummaries({
-      organizationId: isAdminRole(role) ? orgId : null,
+      organizationId: orgId,
       projectId,
       agendaEventId,
     });
 
     const filtered = conversations.filter((conversation: any) => {
       if (kind && conversation.kind !== kind) return false;
-      return canAccessConversation(conversation, userId, role);
+      return canAccessConversation(conversation, req.user || {});
     });
 
-    res.json(filtered);
+    res.json(filtered.map((conversation: any) => sanitizeConversation(conversation, req.user || {})));
   } catch (error) {
     console.error('Error al listar conversaciones:', error);
     res.status(500).json({ error: 'Error al listar conversaciones' });
@@ -81,16 +77,16 @@ export const getConversationById = async (req: AuthRequest, res: Response) => {
     const orgId = req.user?.orgId || null;
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
+    const conversation = await getConversationScoped(req.params.id, orgId);
     if (!conversation) {
       return res.status(404).json({ error: 'Conversación no encontrada' });
     }
 
-    if (!canAccessConversation(conversation, userId, role)) {
+    if (!canAccessConversation(conversation, req.user || {})) {
       return res.status(403).json({ error: 'No tenés permiso para ver esta conversación' });
     }
 
-    res.json(conversation);
+    res.json(sanitizeConversation(conversation, req.user || {}));
   } catch (error) {
     console.error('Error al obtener conversación:', error);
     res.status(500).json({ error: 'Error al obtener conversación' });
@@ -117,9 +113,12 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
       participantUserIds = [],
     } = req.body || {};
 
-    const participantIds = Array.from(new Set(
-      [userId, ...(Array.isArray(participantUserIds) ? participantUserIds : [])].filter(Boolean)
-    ));
+    const requestedParticipants = normalizeMemberIds(participantUserIds);
+    if (!requestedParticipants) return res.status(400).json({ error: 'Participantes inválidos' });
+    const participantIds = [...new Set([userId, ...requestedParticipants])];
+    if (!await usersBelongToOrganization(participantIds, orgId)) {
+      return res.status(400).json({ error: 'Todos los participantes deben pertenecer a esta organización' });
+    }
 
     if (agendaEventId) {
       const event = await prisma.agendaEvent.findFirst({
@@ -134,11 +133,18 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ error: 'Evento no encontrado' });
       }
 
+      if (event.ownerId !== userId && !(isAdminRole(role) && belongsToOrganization(event.organizationId, orgId))) {
+        return res.status(403).json({ error: 'No tenés permiso para administrar el canal de este evento' });
+      }
+      if (projectId && projectId !== event.projectId) {
+        return res.status(400).json({ error: 'El proyecto no corresponde al evento' });
+      }
+
       const conversation = await syncAgendaConversation({
         agendaEventId: event.id,
-        projectId: event.projectId || projectId || null,
+        projectId: event.projectId || null,
         organizationId: event.organizationId || orgId,
-        createdById: userId,
+        createdById: event.ownerId,
         title: title || event.title,
         location: event.location || topic || null,
         assigneeIds: Array.from(new Set([
@@ -161,10 +167,13 @@ export const createConversation = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ error: 'Proyecto no encontrado' });
       }
 
+      const access = await resolveProjectAccessProfile(project, req.user || {});
+      if (!access.canEdit) return res.status(403).json({ error: 'No tenés permiso para administrar el canal de este proyecto' });
+
       const conversation = await syncProjectConversation({
         projectId: project.id,
         organizationId: project.organizationId || orgId,
-        createdById: userId,
+        createdById: project.userId,
         title: title || project.name,
         clientName: project.clientName,
         location: project.location || null,
@@ -246,16 +255,16 @@ export const listConversationMessages = async (req: AuthRequest, res: Response) 
     const orgId = req.user?.orgId || null;
     if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
+    const conversation = await getConversationScoped(req.params.id, orgId);
     if (!conversation) {
       return res.status(404).json({ error: 'Conversación no encontrada' });
     }
 
-    if (!canAccessConversation(conversation, userId, role)) {
+    if (!canAccessConversation(conversation, req.user || {})) {
       return res.status(403).json({ error: 'No tenés permiso para ver los mensajes de esta conversación' });
     }
 
-    const isConversationAdmin = isAdminRole(role) || conversation.createdById === userId;
+    const isConversationAdmin = canManageConversation(conversation, req.user || {});
     const messages = await prismaAny.conversationMessage.findMany({
       where: {
         conversationId: conversation.id,
@@ -288,22 +297,23 @@ export const addConversationMessage = async (req: AuthRequest, res: Response) =>
       return res.status(400).json({ error: 'Mensaje vacío' });
     }
 
+
+    const conversation = await getConversationScoped(req.params.id, orgId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    if (!canAccessConversation(conversation, req.user || {})) {
+      return res.status(403).json({ error: 'No tenés permiso para escribir en esta conversación' });
+    }
+
     const uploadedUrls = await Promise.all(
       uploadedFiles.map(file =>
         storeImageFile(file, { folder: 'chat', localDir: 'chat', filenamePrefix: 'chat' })
       )
     );
 
-    const conversation = await getConversationScoped(req.params.id, isAdminRole(role) ? orgId : null);
-    if (!conversation) {
-      return res.status(404).json({ error: 'Conversación no encontrada' });
-    }
-
-    if (!canAccessConversation(conversation, userId, role)) {
-      return res.status(403).json({ error: 'No tenés permiso para escribir en esta conversación' });
-    }
-
-    const isConversationAdmin = isAdminRole(role) || conversation.createdById === userId;
+    const isConversationAdmin = canManageConversation(conversation, req.user || {});
     const message = await prismaAny.conversationMessage.create({
       data: {
         conversationId: conversation.id,

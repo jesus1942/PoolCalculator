@@ -5,14 +5,14 @@ import {
   updateTilePreset,
   deleteTilePreset,
 } from '../controllers/tilePresetController';
-import { authenticate, isAdmin } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 
 const router = express.Router();
 
 router.get('/', getTilePresets);
 
 router.use(authenticate);
-router.use(isAdmin);
+router.use(isSuperadmin);
 
 router.post('/', createTilePreset);
 router.put('/:id', updateTilePreset);

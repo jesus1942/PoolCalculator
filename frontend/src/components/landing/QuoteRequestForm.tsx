@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calculator, User, Mail, Phone, MapPin, Home, CheckCircle, Waves } from 'lucide-react';
 import api from '@/services/api';
 import { poolPresetService } from '@/services/poolPresetService';
@@ -27,6 +27,7 @@ export const QuoteRequestForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const submitting = useRef(false);
 
   useEffect(() => {
     loadPoolModels();
@@ -61,6 +62,8 @@ export const QuoteRequestForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError('');
 
@@ -80,11 +83,12 @@ export const QuoteRequestForm: React.FC = () => {
         timeframe: 'No definido',
       });
 
-      setTimeout(() => setSuccess(false), 6000);
+
     } catch (err) {
       setError('Error al enviar la solicitud. Por favor, intenta de nuevo.');
       console.error('Error:', err);
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -100,23 +104,24 @@ export const QuoteRequestForm: React.FC = () => {
 
   if (success) {
     return (
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-12 text-center">
+      <div role="status" className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-12 text-center">
         <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6 animate-bounce" />
         <h3 className="text-3xl font-bold text-gray-900 mb-3">
           ¡Solicitud Recibida!
         </h3>
         <p className="text-lg text-gray-600 mb-4">
-          Gracias por tu interés en nuestras piscinas
+          Tu solicitud quedó registrada
         </p>
         <p className="text-gray-500">
-          Analizaremos tu solicitud y te contactaremos en las próximas 24-48 horas con un presupuesto personalizado.
+          Los datos enviados servirán para revisar tu consulta. No se realizó ningún cargo.
         </p>
+        <button type="button" onClick={() => setSuccess(false)} className="mt-6 underline">Enviar otra solicitud</button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8" aria-busy={loading}>
       {/* Personal Info Section */}
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -125,10 +130,11 @@ export const QuoteRequestForm: React.FC = () => {
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="quote-name" className="block text-sm font-medium text-gray-700 mb-2">
               Nombre Completo *
             </label>
             <input
+              id="quote-name"
               type="text"
               name="name"
               required
@@ -141,12 +147,13 @@ export const QuoteRequestForm: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="quote-email" className="block text-sm font-medium text-gray-700 mb-2">
                 <Mail className="w-4 h-4 inline mr-2" />
                 Email *
               </label>
               <input
-                type="email"
+                id="quote-email"
+              type="email"
                 name="email"
                 required
                 value={formData.email}
@@ -156,12 +163,13 @@ export const QuoteRequestForm: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="quote-phone" className="block text-sm font-medium text-gray-700 mb-2">
                 <Phone className="w-4 h-4 inline mr-2" />
                 Teléfono *
               </label>
               <input
-                type="tel"
+                id="quote-phone"
+              type="tel"
                 name="phone"
                 required
                 value={formData.phone}
@@ -173,11 +181,12 @@ export const QuoteRequestForm: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="quote-location" className="block text-sm font-medium text-gray-700 mb-2">
               <MapPin className="w-4 h-4 inline mr-2" />
               Ubicación / Ciudad *
             </label>
             <input
+              id="quote-location"
               type="text"
               name="location"
               required
@@ -198,10 +207,11 @@ export const QuoteRequestForm: React.FC = () => {
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="quote-selectedPoolId" className="block text-sm font-medium text-gray-700 mb-2">
               Modelo de Piscina (Opcional)
             </label>
             <select
+              id="quote-selectedPoolId"
               name="selectedPoolId"
               value={formData.selectedPoolId}
               onChange={handleChange}
@@ -226,6 +236,8 @@ export const QuoteRequestForm: React.FC = () => {
                 <input
                   type="number"
                   name="spaceLength"
+                  aria-label="Largo disponible, en metros"
+                  min="0.1"
                   step="0.1"
                   value={formData.spaceLength}
                   onChange={handleChange}
@@ -237,6 +249,8 @@ export const QuoteRequestForm: React.FC = () => {
                 <input
                   type="number"
                   name="spaceWidth"
+                  aria-label="Ancho disponible, en metros"
+                  min="0.1"
                   step="0.1"
                   value={formData.spaceWidth}
                   onChange={handleChange}
@@ -252,11 +266,12 @@ export const QuoteRequestForm: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="quote-budget" className="block text-sm font-medium text-gray-700 mb-2">
                 Presupuesto Estimado
               </label>
               <select
-                name="budget"
+                id="quote-budget"
+              name="budget"
                 value={formData.budget}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -270,11 +285,12 @@ export const QuoteRequestForm: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="quote-timeframe" className="block text-sm font-medium text-gray-700 mb-2">
                 Plazo de Ejecución
               </label>
               <select
-                name="timeframe"
+                id="quote-timeframe"
+              name="timeframe"
                 value={formData.timeframe}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -289,10 +305,11 @@ export const QuoteRequestForm: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="quote-additionalInfo" className="block text-sm font-medium text-gray-700 mb-2">
               Información Adicional
             </label>
             <textarea
+              id="quote-additionalInfo"
               name="additionalInfo"
               value={formData.additionalInfo}
               onChange={handleChange}
@@ -306,7 +323,7 @@ export const QuoteRequestForm: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}

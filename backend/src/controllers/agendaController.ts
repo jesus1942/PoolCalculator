@@ -1,8 +1,11 @@
+import { canAccessConversation, sanitizeConversation } from '../utils/conversationAccess';
 import { Response } from 'express';
 import prisma from '../config/database';
 import { sendEmail } from '../utils/mailer';
 import { logSystemEvent } from '../utils/systemLog';
 import { AuthRequest } from '../middleware/auth';
+import { belongsToOrganization, normalizeMemberIds, usersBelongToOrganization } from '../utils/tenantRelations';
+import { resolveProjectAccessProfile } from '../utils/projectAccess';
 import { storeImageFile } from '../utils/imageStorage';
 import { listConversationSummaries, syncAgendaConversation } from '../services/conversationService';
 import { getPushPublicKey, isPushEnabled, removePushSubscription, savePushSubscription } from '../services/pushNotificationService';
@@ -30,9 +33,8 @@ const getTypeColor = (type?: string) => TYPE_COLORS[type || 'OTHER'] || TYPE_COL
 const getStatusColor = (status?: string) => STATUS_COLORS[status || 'PLANNED'] || STATUS_COLORS.PLANNED;
 const REMINDER_OFFSET_MS = 12 * 60 * 60 * 1000;
 const ADMIN_ORG_ROLES = ['OWNER', 'ADMIN'];
-const ADMIN_USER_ROLES = ['ADMIN', 'SUPERADMIN'];
 
-const appendAgendaConversations = async (event: any) => {
+const appendAgendaConversations = async (event: any, req: AuthRequest) => {
   if (!event?.id) return event;
   const conversations = await listConversationSummaries({
     organizationId: event.organizationId || null,
@@ -40,7 +42,8 @@ const appendAgendaConversations = async (event: any) => {
   });
   return {
     ...event,
-    conversations,
+    conversations: conversations.filter((conversation: any) => canAccessConversation(conversation, req.user || {}))
+      .map((conversation: any) => sanitizeConversation(conversation, req.user || {})),
   };
 };
 
@@ -58,10 +61,9 @@ const getAdminUsersForOrg = async (orgId?: string | null) => {
     return members.map((member) => member.user).filter(Boolean);
   }
 
-  return prisma.user.findMany({
-    where: { role: { in: ADMIN_USER_ROLES as any } },
-    select: { id: true, name: true, email: true, role: true },
-  });
+  // Un evento sin empresa nunca notifica a administradores de empresas ajenas.
+  return [];
+
 };
 
 const formatEventWindow = (event: any) => {
@@ -289,12 +291,49 @@ const canEditAsAssignee = (event: any, userId: string) => {
   return isAssignee || isCrewMember;
 };
 
-const canMessageEvent = (event: any, userId: string, role?: string) => {
-  const isOwner = event.ownerId === userId;
-  const isAdmin = isAdminRole(role) && isOwner;
-  const isAssignee = event.assignees?.some((a: any) => a.userId === userId);
-  const isCrewMember = event.crew?.members?.some((m: any) => m.userId === userId);
-  return isOwner || isAdmin || isAssignee || isCrewMember;
+/** El rol administrativo solo vale dentro de la empresa activa. */
+const canManageEvent = (event: any, userId: string, role?: string, orgId?: string | null) =>
+  role === 'SUPERADMIN' || (belongsToOrganization(event.organizationId, orgId) &&
+    (event.ownerId === userId || role === 'ADMIN'));
+
+const canMessageEvent = (event: any, userId: string, role?: string, orgId?: string | null) => {
+  if (canManageEvent(event, userId, role, orgId)) return true;
+  if (!belongsToOrganization(event.organizationId, orgId)) return false;
+  return event.assignees?.some((a: any) => a.userId === userId) ||
+    event.crew?.members?.some((m: any) => m.userId === userId);
+};
+
+/** Valida las referencias antes de crear/modificar relaciones de agenda. */
+const validateEventRelations = async (req: AuthRequest, res: Response, payload: any, organizationId: string | null) => {
+  if (payload.assigneeIds !== undefined) {
+    const ids = normalizeMemberIds(payload.assigneeIds);
+    if (!ids || !await usersBelongToOrganization(ids, organizationId)) {
+      res.status(400).json({ error: 'Los asignados deben pertenecer a esta organización' });
+      return false;
+    }
+  }
+  if (payload.crewId) {
+    const crew = await prisma.crew.findFirst({ where: { id: payload.crewId, organizationId } });
+    if (!crew) {
+      res.status(400).json({ error: 'La cuadrilla no pertenece a esta organización' });
+      return false;
+    }
+  }
+  if (payload.projectId) {
+    const project = await prisma.project.findFirst({ where: { id: payload.projectId, organizationId } });
+    if (!project || !(await resolveProjectAccessProfile(project, req.user || {})).canEdit) {
+      res.status(403).json({ error: 'No tenés permiso para asignar este proyecto' });
+      return false;
+    }
+  }
+  return true;
+};
+
+/** Los participantes operativos no reciben notas reservadas a administración. */
+const sanitizeEvent = (event: any, req: AuthRequest) => {
+  if (canManageEvent(event, req.user?.userId || '', req.user?.role, req.user?.orgId)) return event;
+  const { notesInternal: _notes, ...visible } = event;
+  return visible;
 };
 
 const ASSIGNEE_ALLOWED_STATUSES = new Set(['PLANNED', 'CONFIRMED', 'IN_PROGRESS', 'DONE']);
@@ -372,7 +411,7 @@ export const listAgendaEvents = async (req: AuthRequest, res: Response) => {
     if (priority) filters.priority = String(priority);
     if (type) filters.type = String(type);
 
-    let where: any = { ...filters };
+    let where: any = { ...filters, ...(orgId ? { organizationId: orgId } : { ownerId: userId }) };
     if (isAdminRole(role)) {
       if (orgId) {
         where.organizationId = orgId;
@@ -380,9 +419,7 @@ export const listAgendaEvents = async (req: AuthRequest, res: Response) => {
         where.ownerId = userId;
       }
     } else {
-      // El invitado ve los eventos donde está asignado, integra la cuadrilla
-      // o es dueño, sin filtrar por SU organización: quien se registra arranca
-      // con una org propia vacía y el evento vive en la org de quien lo invitó.
+      // La asignación y la empresa activa se comprueban juntas.
       where.OR = [
         { ownerId: userId },
         { assignees: { some: { userId } } },
@@ -401,7 +438,7 @@ export const listAgendaEvents = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json(events);
+    res.json(events.map((event) => sanitizeEvent(event, req)));
   } catch (error) {
     console.error('Error al listar agenda:', error);
     res.status(500).json({ error: 'Error al listar agenda' });
@@ -426,22 +463,20 @@ export const getAgendaEventById = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!event) {
+    if (!event || (role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
     const isOwner = event.ownerId === userId;
     const isAssignee = event.assignees?.some((a: any) => a.userId === userId);
     const isCrewMember = event.crew?.members?.some((m: any) => m.userId === userId);
-    // Los admins solo ven eventos de su propia organización; los asignados y
-    // la cuadrilla acceden aunque el evento sea de otra org (fueron invitados).
-    const sameOrg = !orgId || !event.organizationId || event.organizationId === orgId;
 
-    if (!isOwner && !isAssignee && !isCrewMember && !(isAdminRole(role) && sameOrg)) {
+
+    if (!isOwner && !isAssignee && !isCrewMember && !canManageEvent(event, userId, role, orgId)) {
       return res.status(403).json({ error: 'No tenés permiso para ver este evento' });
     }
 
-    res.json(await appendAgendaConversations(event));
+    res.json(sanitizeEvent(await appendAgendaConversations(event, req), req));
   } catch (error) {
     console.error('Error al obtener evento:', error);
     res.status(500).json({ error: 'Error al obtener evento' });
@@ -476,6 +511,13 @@ export const createAgendaEvent = async (req: AuthRequest, res: Response) => {
       assigneeIds,
     } = req.body;
 
+    if (typeof title !== 'string' || !title.trim() ||
+        !Number.isFinite(Date.parse(startAt)) || !Number.isFinite(Date.parse(endAt)) ||
+        new Date(endAt) < new Date(startAt)) {
+      return res.status(400).json({ error: 'Título o rango de fechas inválido' });
+    }
+    if (!await validateEventRelations(req, res, req.body, orgId)) return;
+
     const event = await prisma.agendaEvent.create({
       data: {
         title,
@@ -496,18 +538,9 @@ export const createAgendaEvent = async (req: AuthRequest, res: Response) => {
         projectId: projectId || null,
         crewId: crewId || null,
         organizationId: orgId,
+        assignees: { create: (normalizeMemberIds(assigneeIds || []) || []).map((assigneeId) => ({ userId: assigneeId })) },
       },
     });
-
-    if (Array.isArray(assigneeIds) && assigneeIds.length > 0) {
-      await prisma.agendaAssignment.createMany({
-        data: assigneeIds.map((assigneeId: string) => ({
-          eventId: event.id,
-          userId: assigneeId,
-        })),
-        skipDuplicates: true,
-      });
-    }
 
     const crewMemberIds = crewId
       ? (await prisma.crewMember.findMany({
@@ -544,7 +577,7 @@ export const createAgendaEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json(await appendAgendaConversations(fullEvent));
+    res.status(201).json(await appendAgendaConversations(fullEvent, req));
   } catch (error) {
     console.error('Error al crear evento:', error);
     res.status(500).json({ error: 'Error al crear evento' });
@@ -567,14 +600,13 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!event) {
+    if (!event || (role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
-    // Sin filtro por la org del que edita: el asignado con permiso de edición
-    // puede reportar avances aunque su org personal sea otra.
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
+    // El asignado solo modifica avances y notas operativas.
     const canEdit = isOwner || isAdmin || canEditAsAssignee(event, userId);
 
     if (!canEdit) {
@@ -583,6 +615,7 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
 
     let data: any = {};
     if (isOwner || isAdmin) {
+      if (!await validateEventRelations(req, res, req.body, event.organizationId)) return;
       const {
         title,
         type,
@@ -600,6 +633,13 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
         crewId,
         assigneeIds,
       } = req.body;
+
+      const nextStart = new Date(startAt ?? event.startAt);
+      const nextEnd = new Date(endAt ?? event.endAt);
+      if (!Number.isFinite(nextStart.getTime()) || !Number.isFinite(nextEnd.getTime()) || nextEnd < nextStart ||
+          (title !== undefined && (typeof title !== 'string' || !title.trim()))) {
+        return res.status(400).json({ error: 'Título o rango de fechas inválido' });
+      }
 
       data = {
         title,
@@ -621,17 +661,13 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       };
 
       if (Array.isArray(assigneeIds)) {
-        await prisma.agendaAssignment.deleteMany({ where: { eventId: id } });
-        if (assigneeIds.length > 0) {
-          await prisma.agendaAssignment.createMany({
-            data: assigneeIds.map((assigneeId: string) => ({
-              eventId: id,
-              userId: assigneeId,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        // Reemplazar miembros y actualizar evento en una sola operación atómica.
+        data.assignees = {
+          deleteMany: {},
+          create: (normalizeMemberIds(assigneeIds) || []).map((assigneeId) => ({ userId: assigneeId })),
+        };
       }
+
     } else {
       const limited = pickAssigneeFields(req.body);
       if (limited.invalidStatus) {
@@ -678,7 +714,7 @@ export const updateAgendaEvent = async (req: AuthRequest, res: Response) => {
       actorId: userId || undefined,
     });
 
-    res.json(await appendAgendaConversations(updated));
+    res.json(sanitizeEvent(await appendAgendaConversations(updated, req), req));
   } catch (error) {
     console.error('Error al actualizar evento:', error);
     res.status(500).json({ error: 'Error al actualizar evento' });
@@ -695,10 +731,10 @@ export const deleteAgendaEvent = async (req: AuthRequest, res: Response) => {
     if (!isAdminRole(role)) return res.status(403).json({ error: 'Se requiere rol de administrador' });
 
     const event = await prisma.agendaEvent.findUnique({ where: { id } });
-    if (!event || (orgId && event.organizationId && event.organizationId !== orgId)) {
+    if (!event || (role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, orgId))) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
-    if (event.ownerId !== userId) {
+    if (!canManageEvent(event, userId, role, orgId)) {
       return res.status(403).json({ error: 'No tenés permiso para eliminar este evento' });
     }
 
@@ -731,12 +767,12 @@ export const listAgendaChecklist = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!event || (req.user?.role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const isOwner = event.ownerId === userId;
     const isAssignee = event.assignees?.some((a: any) => a.userId === userId);
     const isCrewMember = event.crew?.members?.some((m: any) => m.userId === userId);
-    if (!isOwner && !isAssignee && !isCrewMember) {
+    if (!isOwner && !isAssignee && !isCrewMember && !canManageEvent(event, userId, req.user?.role, req.user?.orgId)) {
       return res.status(403).json({ error: 'No tenés permiso para ver este checklist' });
     }
 
@@ -762,10 +798,10 @@ export const addAgendaChecklistItem = async (req: AuthRequest, res: Response) =>
         crew: { include: { members: true } },
       },
     });
-    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!event || (req.user?.role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
     const canEdit = isOwner || isAdmin || canEditAsAssignee(event, userId);
     if (!canEdit) {
       return res.status(403).json({ error: 'No tenés permiso para editar este evento' });
@@ -797,17 +833,17 @@ export const updateAgendaChecklistItem = async (req: AuthRequest, res: Response)
         crew: { include: { members: true } },
       },
     });
-    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!event || (req.user?.role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
     const canEdit = isOwner || isAdmin || canEditAsAssignee(event, userId);
     if (!canEdit) {
       return res.status(403).json({ error: 'No tenés permiso para editar este evento' });
     }
 
     const updated = await prisma.agendaChecklistItem.update({
-      where: { id: itemId },
+      where: { id: itemId, eventId: id },
       data: {
         label: label !== undefined ? label : undefined,
         done: done !== undefined ? Boolean(done) : undefined,
@@ -815,7 +851,8 @@ export const updateAgendaChecklistItem = async (req: AuthRequest, res: Response)
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'P2025') return res.status(404).json({ error: 'Elemento de checklist no encontrado' });
     console.error('Error al actualizar checklist:', error);
     res.status(500).json({ error: 'Error al actualizar checklist' });
   }
@@ -835,16 +872,17 @@ export const deleteAgendaChecklistItem = async (req: AuthRequest, res: Response)
         crew: { include: { members: true } },
       },
     });
-    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!event || (req.user?.role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) return res.status(404).json({ error: 'Evento no encontrado' });
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
     const canEdit = isOwner || isAdmin || canEditAsAssignee(event, userId);
     if (!canEdit) {
       return res.status(403).json({ error: 'No tenés permiso para editar este evento' });
     }
 
-    await prisma.agendaChecklistItem.delete({ where: { id: itemId } });
+    const removed = await prisma.agendaChecklistItem.deleteMany({ where: { id: itemId, eventId: id } });
+    if (!removed.count) return res.status(404).json({ error: 'Elemento de checklist no encontrado' });
     res.json({ message: 'Checklist eliminado' });
   } catch (error) {
     console.error('Error al eliminar checklist:', error);
@@ -867,18 +905,18 @@ export const listAgendaMessages = async (req: AuthRequest, res: Response) => {
         crew: { include: { members: true } },
       },
     });
-    if (!event) {
+    if (!event || (role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
     // Sin filtro por la org del que mira: el asignado/cuadrilla accede a los
     // mensajes aunque el evento viva en la organización de quien lo invitó.
-    if (!canMessageEvent(event, userId, role)) {
+    if (!canMessageEvent(event, userId, role, orgId)) {
       return res.status(403).json({ error: 'No tenés permiso para ver este evento' });
     }
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
 
     const messages = await prisma.agendaMessage.findMany({
       where: {
@@ -918,17 +956,17 @@ export const addAgendaMessage = async (req: AuthRequest, res: Response) => {
         crew: { include: { members: true } },
       },
     });
-    if (!event) {
+    if (!event || (role !== 'SUPERADMIN' && !belongsToOrganization(event.organizationId, req.user?.orgId))) {
       return res.status(404).json({ error: 'Evento no encontrado' });
     }
 
-    // Ídem listado: la relación (dueño/asignado/cuadrilla) manda, no la org.
-    if (!canMessageEvent(event, userId, role)) {
+    // Se exige pertenencia a la empresa y relación con el evento.
+    if (!canMessageEvent(event, userId, role, orgId)) {
       return res.status(403).json({ error: 'No tenés permiso para este evento' });
     }
 
     const isOwner = event.ownerId === userId;
-    const isAdmin = isAdminRole(role) && isOwner;
+    const isAdmin = canManageEvent(event, userId, role, req.user?.orgId);
     const nextVisibility = (isOwner || isAdmin) ? (visibility || 'ALL') : 'ALL';
 
     const imageUrls = await Promise.all(

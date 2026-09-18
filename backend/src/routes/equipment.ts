@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 import {
   getEquipmentRecommendations,
   getAllEquipment,
@@ -17,8 +17,8 @@ router.get('/', authenticate, getAllEquipment);
 router.get('/:id', authenticate, getEquipmentById);
 
 // Rutas de administración (solo admin)
-router.post('/', authenticate, createEquipment);
-router.put('/:id', authenticate, updateEquipment);
-router.delete('/:id', authenticate, deleteEquipment);
+router.post('/', authenticate, isSuperadmin, createEquipment);
+router.put('/:id', authenticate, isSuperadmin, updateEquipment);
+router.delete('/:id', authenticate, isSuperadmin, deleteEquipment);
 
 export default router;

@@ -1,59 +1,38 @@
 import nodemailer from 'nodemailer';
+import { getIntegrationConfig } from '../services/platformIntegrationService';
 
-type SendEmailPayload = {
-  to: string[];
-  subject: string;
-  html: string;
-  text?: string;
-};
+type SendEmailPayload = { to: string[]; subject: string; html: string; text?: string };
 
-let transporter: nodemailer.Transporter | null = null;
-let transporterReady = false;
+/** Construye el transporte desde la configuración vigente, sin reiniciar el servidor. */
+export async function createConfiguredMailer() {
+  const { smtp } = await getIntegrationConfig();
+  if (!smtp.enabled || !smtp.host || !smtp.user || !smtp.password || !smtp.from) return null;
+  return {
+    from: smtp.from,
+    transport: nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      requireTLS: !smtp.secure,
+      auth: { user: smtp.user, pass: smtp.password },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    }),
+  };
+}
 
-const getTransporter = () => {
-  if (transporterReady) return transporter;
-  transporterReady = true;
-
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    console.warn('[MAILER] SMTP no configurado. Emails deshabilitados.');
-    transporter = null;
-    return transporter;
-  }
-
-  try {
-    transporter = nodemailer.createTransport({
-      host,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: false,
-      auth: { user, pass },
-    });
-  } catch (error) {
-    console.error('[MAILER] Error al configurar SMTP:', error);
-    transporter = null;
-  }
-
-  return transporter;
-};
-
+/** Servicio único de correo para recuperación, agenda y formularios públicos. */
 export const sendEmail = async ({ to, subject, html, text }: SendEmailPayload) => {
-  const mailer = getTransporter();
-  if (!mailer || to.length === 0) return false;
-
+  if (!to.length) return false;
   try {
-    await mailer.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: to.join(','),
-      subject,
-      html,
-      text,
-    });
+    const mailer = await createConfiguredMailer();
+    if (!mailer) return false;
+    await mailer.transport.sendMail({ from: mailer.from, to: to.join(','), subject, html, text });
     return true;
-  } catch (error) {
-    console.error('[MAILER] Error al enviar email:', error);
+  } catch {
+    // El error de un proveedor puede incluir credenciales o direcciones: no volcarlo al log.
+    console.error('[MAILER] No se pudo enviar el correo. Revisa la conexión configurada.');
     return false;
   }
 };

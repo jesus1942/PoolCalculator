@@ -11,8 +11,8 @@ interface ProductCardProps {
   price: number;
   details: Array<{ label: string; value: string | null | undefined }>;
   badges?: (string | false | undefined | null)[];
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -124,20 +124,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                 {/* Action Buttons */}
                 <div className="flex gap-1 ml-2">
-                  <button
+                  {onEdit && <button
                     onClick={onEdit}
                     className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
                     title="Editar"
                   >
                     <HdEdit size={16} className="w-4 h-4" />
-                  </button>
-                  <button
+                  </button>}
+                  {onDelete && <button
                     onClick={onDelete}
                     className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Eliminar"
                   >
                     <HdTrash size={16} className="w-4 h-4" />
-                  </button>
+                  </button>}
                 </div>
               </div>
 

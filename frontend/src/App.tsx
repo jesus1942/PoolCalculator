@@ -1,35 +1,39 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RemindersProvider } from '@/context/RemindersContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { RoleRoute } from '@/components/RoleRoute';
 import { Layout } from '@/components/Layout';
-import { LandingExperience } from '@/pages/LandingExperience';
-import { Login } from '@/pages/Login';
-import { Register } from '@/pages/Register';
-import { ForgotPassword } from '@/pages/ForgotPassword';
-import { ResetPassword } from '@/pages/ResetPassword';
-import { AuthCallback } from '@/pages/AuthCallback';
-import { DashboardV2 } from '@/pages/DashboardV2';
-import { AgendaExperience } from '@/pages/AgendaExperience';
-import { PoolModelsExperience } from '@/pages/PoolModelsExperience';
-import { ProjectsV2 } from '@/pages/ProjectsV2';
-import { ProjectDetail } from '@/pages/ProjectDetail';
-import { Settings } from '@/pages/Settings';
-import { PublicTimeline } from '@/pages/PublicTimeline';
-import { ClientLogin } from '@/pages/ClientLogin';
-import CatalogManager from '@/pages/Admin/CatalogManager';
-import EquipmentManager from '@/pages/Admin/EquipmentManager';
-import { ProductsImageManager } from '@/pages/Admin/ProductsImageManager';
-import { DocsManager } from '@/pages/Admin/DocsManager';
-import { UsersManager } from '@/pages/Admin/UsersManager';
-import { TenantsManager } from '@/pages/Admin/TenantsManager';
-import { SorteosManager } from '@/pages/Admin/SorteosManager';
-import { OpsManager } from '@/pages/Admin/OpsManager';
-import { InstallerV2 } from '@/pages/InstallerV2';
-import { ChatExperience } from '@/pages/ChatExperience';
-import { Ayuda } from '@/pages/Ayuda';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PageLoading } from '@/components/PageLoading';
+import { NotFound } from '@/pages/NotFound';
+const LandingExperience = lazy(() => import('@/pages/LandingExperience').then((module) => ({ default: module.LandingExperience })));
+const Login = lazy(() => import('@/pages/Login').then((module) => ({ default: module.Login })));
+const Register = lazy(() => import('@/pages/Register').then((module) => ({ default: module.Register })));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then((module) => ({ default: module.ForgotPassword })));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword').then((module) => ({ default: module.ResetPassword })));
+const AuthCallback = lazy(() => import('@/pages/AuthCallback').then((module) => ({ default: module.AuthCallback })));
+const DashboardV2 = lazy(() => import('@/pages/DashboardV2').then((module) => ({ default: module.DashboardV2 })));
+const AgendaExperience = lazy(() => import('@/pages/AgendaExperience').then((module) => ({ default: module.AgendaExperience })));
+const PoolModelsExperience = lazy(() => import('@/pages/PoolModelsExperience').then((module) => ({ default: module.PoolModelsExperience })));
+const ProjectsV2 = lazy(() => import('@/pages/ProjectsV2').then((module) => ({ default: module.ProjectsV2 })));
+const ProjectDetail = lazy(() => import('@/pages/ProjectDetail').then((module) => ({ default: module.ProjectDetail })));
+const Settings = lazy(() => import('@/pages/Settings').then((module) => ({ default: module.Settings })));
+const PublicTimeline = lazy(() => import('@/pages/PublicTimeline').then((module) => ({ default: module.PublicTimeline })));
+const ClientLogin = lazy(() => import('@/pages/ClientLogin').then((module) => ({ default: module.ClientLogin })));
+const CatalogManager = lazy(() => import('@/pages/Admin/CatalogManager'));
+const EquipmentManager = lazy(() => import('@/pages/Admin/EquipmentManager'));
+const ProductsImageManager = lazy(() => import('@/pages/Admin/ProductsImageManager').then((module) => ({ default: module.ProductsImageManager })));
+const DocsManager = lazy(() => import('@/pages/Admin/DocsManager').then((module) => ({ default: module.DocsManager })));
+const UsersManager = lazy(() => import('@/pages/Admin/UsersManager').then((module) => ({ default: module.UsersManager })));
+const TenantsManager = lazy(() => import('@/pages/Admin/TenantsManager').then((module) => ({ default: module.TenantsManager })));
+
+const OpsManager = lazy(() => import('@/pages/Admin/OpsManager').then((module) => ({ default: module.OpsManager })));
+const InstallerV2 = lazy(() => import('@/pages/InstallerV2').then((module) => ({ default: module.InstallerV2 })));
+const ChatExperience = lazy(() => import('@/pages/ChatExperience').then((module) => ({ default: module.ChatExperience })));
+const Ayuda = lazy(() => import('@/pages/Ayuda').then((module) => ({ default: module.Ayuda })));
 
 function GlobalSvgFilters() {
   return (
@@ -52,11 +56,18 @@ function GlobalSvgFilters() {
   );
 }
 
+/** Aísla el estado de cada cuenta/empresa al cambiar la sesión activa. */
+function AuthenticatedLayout() {
+  const { user } = useAuth();
+  return <RemindersProvider key={`${user?.id}:${user?.currentOrgId || 'personal'}`}><Layout /></RemindersProvider>;
+}
+
 function App() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   const Router = BrowserRouter;
 
   return (
+    <ErrorBoundary>
     <ThemeProvider>
       <GlobalSvgFilters />
       <AuthProvider>
@@ -67,6 +78,7 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
+          <Suspense fallback={<PageLoading />} >
           <Routes>
             {basePath === '' && <Route path="/PoolCalculator/*" element={<Navigate to="/" replace />} />}
             <Route path="/" element={<LandingExperience />} />
@@ -80,7 +92,7 @@ function App() {
             <Route path="/client-login" element={<ClientLogin />} />
             <Route path="/timeline/:shareToken" element={<PublicTimeline />} />
 
-            <Route element={<ProtectedRoute><RemindersProvider><Layout /></RemindersProvider></ProtectedRoute>}>
+            <Route element={<ProtectedRoute><AuthenticatedLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={
                 <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
                   <DashboardV2 />
@@ -121,23 +133,18 @@ function App() {
                   <OpsManager />
                 </RoleRoute>
               } />
-              <Route path="/admin/sorteos" element={
-                <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
-                  <SorteosManager />
-                </RoleRoute>
-              } />
               <Route path="/admin/catalogs" element={
-                <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
+                <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
                   <CatalogManager />
                 </RoleRoute>
               } />
               <Route path="/admin/equipment" element={
-                <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
+                <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
                   <EquipmentManager />
                 </RoleRoute>
               } />
               <Route path="/admin/products-images" element={
-                <RoleRoute allowedRoles={['ADMIN', 'SUPERADMIN']} redirectTo="/dashboard">
+                <RoleRoute allowedRoles={['SUPERADMIN']} redirectTo="/dashboard">
                   <ProductsImageManager />
                 </RoleRoute>
               } />
@@ -147,10 +154,13 @@ function App() {
                 </RoleRoute>
               } />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </Router>
       </AuthProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

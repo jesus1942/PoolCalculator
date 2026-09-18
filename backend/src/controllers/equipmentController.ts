@@ -129,7 +129,7 @@ export const getEquipmentById = async (req: AuthRequest, res: Response) => {
  */
 export const createEquipment = async (req: AuthRequest, res: Response) => {
   try {
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const isAdmin = req.user?.role === 'SUPERADMIN';
 
     if (!isAdmin) {
       return res.status(403).json({ error: 'No tienes permiso para crear equipos' });
@@ -152,7 +152,7 @@ export const createEquipment = async (req: AuthRequest, res: Response) => {
 export const updateEquipment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const isAdmin = req.user?.role === 'SUPERADMIN';
 
     if (!isAdmin) {
       return res.status(403).json({ error: 'No tienes permiso para actualizar equipos' });
@@ -176,7 +176,7 @@ export const updateEquipment = async (req: AuthRequest, res: Response) => {
 export const deleteEquipment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPERADMIN';
+    const isAdmin = req.user?.role === 'SUPERADMIN';
 
     if (!isAdmin) {
       return res.status(403).json({ error: 'No tienes permiso para eliminar equipos' });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Calculator, Ruler, CheckCircle, Send, Mail, User, Phone } from 'lucide-react';
 import { poolPresetService } from '@/services/poolPresetService';
 import { getImageUrl } from '@/utils/imageUtils';
@@ -27,18 +27,24 @@ export const PoolCalculatorWidget: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-
-  useEffect(() => {
-    if (step === 'results' && spaceLength && spaceWidth) {
-      findMatchingPools();
-    }
-  }, [step]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState('');
+  const submitting = useRef(false);
+  const searchingRef = useRef(false);
 
   const findMatchingPools = async () => {
+    if (searchingRef.current) return;
+    const length = Number(spaceLength);
+    const width = Number(spaceWidth);
+    if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) {
+      setError('Ingresá un largo y un ancho mayores que cero.');
+      return;
+    }
+    searchingRef.current = true;
+    setSearching(true);
+    setError('');
     try {
       const allPools = await poolPresetService.getAll();
-      const length = parseFloat(spaceLength);
-      const width = parseFloat(spaceWidth);
 
       // Filtrar piscinas que caben con 30cm de margen a cada lado
       const margin = 0.3;
@@ -49,18 +55,22 @@ export const PoolCalculatorWidget: React.FC = () => {
       });
 
       setMatchingPools(fitting);
+      setStep('results');
     } catch (error) {
+      setError('No pudimos consultar el catálogo. Intentá nuevamente.');
       console.error('Error finding matching pools:', error);
+    } finally {
+      searchingRef.current = false;
+      setSearching(false);
     }
   };
 
   const handleCalculate = () => {
-    if (spaceLength && spaceWidth) {
-      setStep('results');
-    }
+    void findMatchingPools();
   };
 
   const handleSelectPool = (pool: PoolModel) => {
+    setError('');
     setSelectedPool(pool);
     setContactForm({
       ...contactForm,
@@ -71,6 +81,9 @@ export const PoolCalculatorWidget: React.FC = () => {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    setError('');
     setLoading(true);
 
     try {
@@ -83,18 +96,20 @@ export const PoolCalculatorWidget: React.FC = () => {
       });
       setSuccess(true);
     } catch (error) {
+      setError('No pudimos registrar la consulta. Tus datos siguen aquí para que puedas volver a intentarlo.');
       console.error('Error sending inquiry:', error);
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
 
   if (success) {
     return (
-      <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 text-center">
+      <div role="status" className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 text-center">
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">¡Consulta Enviada!</h3>
-        <p className="text-gray-600">Te contactaremos pronto con más información.</p>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Consulta recibida</h3>
+        <p className="text-gray-600">Tu consulta quedó registrada con el modelo seleccionado.</p>
         <button
           onClick={() => {
             setSuccess(false);
@@ -125,16 +140,21 @@ export const PoolCalculatorWidget: React.FC = () => {
       </div>
 
       <div className="p-6">
+        {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">{error}</p>}
         {/* Step 1: Measure */}
         {step === 'measure' && (
-          <div className="space-y-6">
+          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); handleCalculate(); }} aria-busy={searching}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="calculator-length" className="block text-sm font-medium text-gray-700 mb-2">
                 <Ruler className="w-4 h-4 inline mr-2" />
                 Largo del espacio disponible (metros)
               </label>
               <input
                 type="number"
+                id="calculator-length"
+                min="0.1"
+                required
+                inputMode="decimal"
                 step="0.1"
                 value={spaceLength}
                 onChange={(e) => setSpaceLength(e.target.value)}
@@ -144,12 +164,16 @@ export const PoolCalculatorWidget: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="calculator-width" className="block text-sm font-medium text-gray-700 mb-2">
                 <Ruler className="w-4 h-4 inline mr-2" />
                 Ancho del espacio disponible (metros)
               </label>
               <input
                 type="number"
+                id="calculator-width"
+                min="0.1"
+                required
+                inputMode="decimal"
                 step="0.1"
                 value={spaceWidth}
                 onChange={(e) => setSpaceWidth(e.target.value)}
@@ -159,13 +183,13 @@ export const PoolCalculatorWidget: React.FC = () => {
             </div>
 
             <button
-              onClick={handleCalculate}
-              disabled={!spaceLength || !spaceWidth}
+              type="submit"
+              disabled={searching || !spaceLength || !spaceWidth}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-semibold py-3 rounded-lg transition-colors"
             >
-              Calcular Modelos Compatibles
+              {searching ? 'Consultando catálogo…' : 'Buscar modelos compatibles'}
             </button>
-          </div>
+          </form>
         )}
 
         {/* Step 2: Results */}
@@ -198,7 +222,6 @@ export const PoolCalculatorWidget: React.FC = () => {
                   <div
                     key={pool.id}
                     className="border border-gray-200 rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer"
-                    onClick={() => handleSelectPool(pool)}
                   >
                     <div className="flex items-start gap-4">
                       {pool.imageUrl && (
@@ -215,7 +238,7 @@ export const PoolCalculatorWidget: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-2">
                           {pool.length}m × {pool.width}m
                         </p>
-                        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                        <button type="button" onClick={() => handleSelectPool(pool)} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                           Solicitar Información →
                         </button>
                       </div>
@@ -226,7 +249,7 @@ export const PoolCalculatorWidget: React.FC = () => {
             )}
 
             <button
-              onClick={() => setStep('measure')}
+              onClick={() => { setError(''); setStep('measure'); }}
               className="w-full mt-4 text-gray-600 hover:text-gray-700 font-medium py-2"
             >
               ← Volver a calcular
@@ -244,14 +267,16 @@ export const PoolCalculatorWidget: React.FC = () => {
               </p>
             </div>
 
-            <form onSubmit={handleContactSubmit} className="space-y-4">
+            <form onSubmit={handleContactSubmit} className="space-y-4" aria-busy={loading}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="calculator-contact-name" className="block text-sm font-medium text-gray-700 mb-2">
                   <User className="w-4 h-4 inline mr-2" />
                   Nombre *
                 </label>
                 <input
                   type="text"
+                  id="calculator-contact-name"
+                  autoComplete="name"
                   required
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
@@ -261,12 +286,14 @@ export const PoolCalculatorWidget: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="calculator-contact-email" className="block text-sm font-medium text-gray-700 mb-2">
                   <Mail className="w-4 h-4 inline mr-2" />
                   Email *
                 </label>
                 <input
                   type="email"
+                  id="calculator-contact-email"
+                  autoComplete="email"
                   required
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
@@ -276,12 +303,14 @@ export const PoolCalculatorWidget: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="calculator-contact-phone" className="block text-sm font-medium text-gray-700 mb-2">
                   <Phone className="w-4 h-4 inline mr-2" />
                   Teléfono *
                 </label>
                 <input
                   type="tel"
+                  id="calculator-contact-phone"
+                  autoComplete="tel"
                   required
                   value={contactForm.phone}
                   onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
@@ -291,10 +320,11 @@ export const PoolCalculatorWidget: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="calculator-contact-message" className="block text-sm font-medium text-gray-700 mb-2">
                   Mensaje
                 </label>
                 <textarea
+                  id="calculator-contact-message"
                   value={contactForm.message}
                   onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                   rows={3}
@@ -322,7 +352,7 @@ export const PoolCalculatorWidget: React.FC = () => {
             </form>
 
             <button
-              onClick={() => setStep('results')}
+              onClick={() => { setError(''); setStep('results'); }}
               className="w-full mt-4 text-gray-600 hover:text-gray-700 font-medium py-2"
             >
               ← Ver otros modelos

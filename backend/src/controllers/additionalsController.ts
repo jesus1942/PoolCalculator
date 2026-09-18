@@ -1,5 +1,7 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import prisma from '../config/database';
+import { resolveProjectAccessProfile, sanitizeProjectForAccess } from '../utils/projectAccess';
 import { generateDefaultTasks, generateTaskFromAdditional } from '../utils/taskGenerator';
 import { AuthRequest } from '../middleware/auth';
 import {
@@ -7,7 +9,6 @@ import {
   calculateVolume,
 } from '../utils/calculations';
 
-const prisma = new PrismaClient();
 const AUTO_TASK_CATEGORIES = ['excavation', 'hydraulic', 'electrical', 'floor', 'tiles', 'finishes'];
 
 const normalizeTaskName = (value: string) =>
@@ -252,11 +253,31 @@ const recalculateProjectDerivedData = async (projectId: string) => {
   });
 };
 
+/** Verifica el proyecto antes de consultar o modificar cualquiera de sus adicionales. */
+const authorizeAdditionalProject = async (req: AuthRequest, res: Response, projectId: string, write = false) => {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId }, select: { id: true, userId: true, organizationId: true },
+  });
+  const access = project ? await resolveProjectAccessProfile(project, {
+    userId: req.user?.userId, role: req.user?.role, orgId: req.user?.orgId,
+  }) : null;
+  if (!access?.canAccess) {
+    res.status(404).json({ error: 'Proyecto no encontrado' });
+    return null;
+  }
+  if (write && !access.canEdit) {
+    res.status(403).json({ error: 'No tenés permiso para editar este proyecto' });
+    return null;
+  }
+  return access;
+};
+
 // Obtener adicionales del proyecto
 export const getProjectAdditionals = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
-    
+    const access = await authorizeAdditionalProject(req, res, projectId);
+    if (!access) return;
     const additionals = await prisma.projectAdditional.findMany({
       where: { projectId },
       include: {
@@ -267,7 +288,7 @@ export const getProjectAdditionals = async (req: AuthRequest, res: Response) => 
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(additionals);
+    res.json(sanitizeProjectForAccess({ items: additionals }, access).items);
   } catch (error) {
     res.status(500).json({ error: 'Error fetching additionals' });
   }
@@ -277,7 +298,13 @@ export const getProjectAdditionals = async (req: AuthRequest, res: Response) => 
 export const processAdditionals = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
-    const { modifications } = req.body; // Array de modificaciones al preset base
+    const access = await authorizeAdditionalProject(req, res, projectId, true);
+    if (!access) return;
+    if (!access.canViewFinancials) return res.status(403).json({ error: 'No tenés permiso para modificar adicionales comerciales' });
+    const { modifications } = req.body || {}; // Array de modificaciones al preset base
+    if (!Array.isArray(modifications) || modifications.length > 100 || modifications.some((item) => !item || typeof item !== 'object')) {
+      return res.status(400).json({ error: 'Lista de modificaciones inválida' });
+    }
     const userId = req.user?.userId ?? req.user?.id;
 
     // Obtener reglas activas del usuario
@@ -485,7 +512,11 @@ export const updateAdditional = async (req: AuthRequest, res: Response) => {
     // Los precios (customPricePerUnit / customLaborCost) se editan desde la
     // pestaña Costos del proyecto; el resto de las pestañas solo maneja
     // cantidades y notas.
-    const { newQuantity, notes, customPricePerUnit, customLaborCost } = req.body;
+    const { newQuantity, notes, customPricePerUnit, customLaborCost } = req.body || {};
+    if ([newQuantity, customPricePerUnit, customLaborCost].some((value) => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) ||
+        (notes !== undefined && notes !== null && typeof notes !== 'string')) {
+      return res.status(400).json({ error: 'Cantidad, costos o notas inválidos' });
+    }
 
     const existing = await prisma.projectAdditional.findUnique({
       where: { id },
@@ -500,6 +531,11 @@ export const updateAdditional = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Adicional no encontrado' });
     }
 
+    const access = await authorizeAdditionalProject(req, res, existing.projectId, true);
+    if (!access) return;
+    if (!access.canViewFinancials && (customPricePerUnit !== undefined || customLaborCost !== undefined)) {
+      return res.status(403).json({ error: 'No tenés permiso para modificar costos' });
+    }
     const updated = await prisma.projectAdditional.update({
       where: { id },
       data: {
@@ -557,7 +593,7 @@ export const updateAdditional = async (req: AuthRequest, res: Response) => {
       await recalculateProjectDerivedData(existing.projectId);
     }
 
-    res.json(updated);
+    res.json(sanitizeProjectForAccess(updated, access));
   } catch (error) {
     res.status(500).json({ error: 'Error updating additional' });
   }
@@ -577,6 +613,8 @@ export const deleteAdditional = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Adicional no encontrado' });
     }
 
+    const access = await authorizeAdditionalProject(req, res, additional.projectId, true);
+    if (!access) return;
     // Si tiene una tarea generada, eliminarla del proyecto
     const projectForLock = await prisma.project.findUnique({
       where: { id: additional.projectId },
@@ -630,7 +668,7 @@ export const deleteAdditional = async (req: AuthRequest, res: Response) => {
 export const getBusinessRules = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId ?? req.user?.id;
-    
+    if (!userId) return res.status(401).json({ error: 'Usuario no autenticado' });
     const rules = await prisma.businessRule.findMany({
       where: { userId },
       orderBy: { category: 'asc' }
@@ -642,17 +680,35 @@ export const getBusinessRules = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/** Edita únicamente los campos de la regla y jamás relaciones de Prisma. */
 export const updateBusinessRule = async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Usuario no autenticado' });
+    if (req.user?.role === 'VIEWER') return res.status(403).json({ error: 'Acceso de solo lectura' });
     const { id } = req.params;
-    
-    const updated = await prisma.businessRule.update({
-      where: { id },
-      data: req.body
-    });
-
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Error updating rule' });
+    const existing = await prisma.businessRule.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: 'Regla no encontrada' });
+    const body = req.body || {};
+    const allowed = ['name', 'category', 'trigger', 'conditions', 'actions', 'isActive'];
+    if (Object.keys(body).some((key) => !allowed.includes(key))) {
+      return res.status(400).json({ error: 'La solicitud contiene campos no editables' });
+    }
+    for (const key of ['name', 'category', 'trigger']) {
+      if (body[key] !== undefined && (typeof body[key] !== 'string' || !body[key].trim() || body[key].length > 200)) {
+        return res.status(400).json({ error: 'Nombre, categoría o disparador inválidos' });
+      }
+    }
+    if ((body.isActive !== undefined && typeof body.isActive !== 'boolean') ||
+        (body.actions !== undefined && !Array.isArray(body.actions)) ||
+        (body.conditions !== undefined && (!body.conditions || typeof body.conditions !== 'object' || Array.isArray(body.conditions)))) {
+      return res.status(400).json({ error: 'Condiciones o acciones inválidas' });
+    }
+    const data: Prisma.BusinessRuleUpdateInput = {};
+    for (const key of allowed) if (body[key] !== undefined) (data as any)[key] = body[key];
+    const updated = await prisma.businessRule.update({ where: { id, userId }, data });
+    return res.json(updated);
+  } catch {
+    return res.status(500).json({ error: 'No se pudo actualizar la regla' });
   }
 };

@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/AuthContext';
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +11,8 @@ import { HybridImageManager } from '@/components/HybridImageManager';
 import { ProductCard } from '@/components/ProductCard';
 
 export const PlumbingManager: React.FC = () => {
+  const { user } = useAuth();
+  const canEditCatalog = user?.role === 'SUPERADMIN';
   const [items, setItems] = useState<PlumbingItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<PlumbingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +84,7 @@ export const PlumbingManager: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEditCatalog) return;
     try {
       const data = {
         ...formData,
@@ -103,6 +107,7 @@ export const PlumbingManager: React.FC = () => {
   };
 
   const handleEdit = (item: PlumbingItem) => {
+    if (!canEditCatalog) return;
     setEditingItem(item);
     setFormData({
       name: item.name,
@@ -119,6 +124,7 @@ export const PlumbingManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canEditCatalog) return;
     if (confirm('¿Estás seguro de eliminar este item?')) {
       try {
         await plumbingItemService.delete(id);
@@ -193,10 +199,10 @@ export const PlumbingManager: React.FC = () => {
             Administrá cañerías, accesorios, válvulas y otros items de plomería
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        {canEditCatalog && <Button onClick={() => setShowModal(true)}>
           <HdPlus size={16} className="mr-2" />
           Nuevo Item
-        </Button>
+        </Button>}
       </div>
 
       {/* Filtros */}
@@ -252,15 +258,15 @@ export const PlumbingManager: React.FC = () => {
           </h3>
           <p className="text-gray-600 mb-6">
             {items.length === 0 
-              ? 'Creá tu primer item de plomería para comenzar'
+              ? 'Todavía no hay items de plomería en el catálogo global'
               : 'Intentá ajustar los filtros de búsqueda'
             }
           </p>
-          {items.length === 0 && (
-            <Button onClick={() => setShowModal(true)}>
+          {items.length === 0 && canEditCatalog && (
+                    <Button onClick={() => setShowModal(true)}>
               Crear Primer Item
             </Button>
-          )}
+                  )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -280,8 +286,8 @@ export const PlumbingManager: React.FC = () => {
                 { label: 'Descripción', value: item.description }
               ]}
               badges={[]}
-              onEdit={() => handleEdit(item)}
-              onDelete={() => handleDelete(item.id)}
+              onEdit={canEditCatalog ? () => handleEdit(item) : undefined}
+              onDelete={canEditCatalog ? () => handleDelete(item.id) : undefined}
             />
           ))}
         </div>

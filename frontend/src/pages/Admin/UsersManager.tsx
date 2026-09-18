@@ -1,3 +1,4 @@
+import { passwordValidationError } from '@/utils/session';
 import React, { useEffect, useMemo, useState } from 'react';
 import { HdUsers, HdPlus, HdRefresh, HdEdit, HdSave, HdX, HdCalendar, HdMessageBubble, HdFolderOpen, HdExternalLink, HdCamera, HdShield } from '@/components/ui/HandDrawnIcons';
 import { useAuth } from '@/context/AuthContext';
@@ -133,6 +134,8 @@ export const UsersManager: React.FC = () => {
       setError('Completá nombre, email y contraseña.');
       return;
     }
+    const passwordError = passwordValidationError(createForm.password);
+    if (passwordError) { setError(passwordError); return; }
     setSaving(true);
     setError(null);
     try {
@@ -169,6 +172,8 @@ export const UsersManager: React.FC = () => {
 
   const handleUpdate = async () => {
     if (!editing) return;
+    const passwordError = editForm.password ? passwordValidationError(editForm.password) : null;
+    if (passwordError) { setError(passwordError); return; }
     setSaving(true);
     setError(null);
     try {

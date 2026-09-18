@@ -1,3 +1,4 @@
+import { useAuth } from '@/context/AuthContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { PoolModels } from '@/pages/PoolModels';
 import { poolPresetService } from '@/services/poolPresetService';
@@ -6,6 +7,7 @@ import { getImageUrl } from '@/utils/imageUtils';
 import { HdEdit, HdImage, HdSearch, HdWaves } from '@/components/ui/HandDrawnIcons';
 
 const PoolModelsMobile: React.FC<{ onOpenManager: () => void }> = ({ onOpenManager }) => {
+  const { user } = useAuth();
   const [models, setModels] = useState<PoolPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -52,7 +54,7 @@ const PoolModelsMobile: React.FC<{ onOpenManager: () => void }> = ({ onOpenManag
           style={{ border: '1.4px solid var(--hair-strong)', backgroundColor: 'var(--card)', color: 'var(--ink)' }}
         >
           <HdEdit size={17} />
-          Administrar
+          {user?.role === 'SUPERADMIN' ? 'Administrar' : 'Ver detalle'}
         </button>
       </div>
 

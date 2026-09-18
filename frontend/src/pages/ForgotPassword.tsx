@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from '@/services/api';
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -41,7 +41,7 @@ export const ForgotPassword: React.FC = () => {
               <div className="w-7 h-7 rounded-full border-2 border-white"></div>
             </div>
             <span className="text-2xl font-light text-white tracking-wide">
-              Pool <span className="font-semibold">Calculator</span>
+              Pool<span className="font-semibold">Installer</span>
             </span>
           </div>
           <h1 className="mb-2 text-2xl font-light text-white sm:text-3xl">Recuperar Contraseña</h1>

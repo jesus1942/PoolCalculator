@@ -12,12 +12,12 @@ import {
   saveAdditionalImageUrls,
   upload
 } from '../controllers/productImageController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, isSuperadmin } from '../middleware/auth';
 
 const router = express.Router();
 
 // Todas las rutas requieren autenticación
-router.use(authenticate);
+router.use(authenticate, isSuperadmin);
 
 /**
  * POST /api/products/:productType/:productId/image

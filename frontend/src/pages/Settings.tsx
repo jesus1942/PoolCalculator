@@ -25,11 +25,13 @@ import { PlumbingManager } from '@/components/PlumbingManager';
 import { HybridImageManager } from '@/components/HybridImageManager';
 import { ProductCard } from '@/components/ProductCard';
 import { useAuth } from '@/context/AuthContext';
+import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings';
 
-type TabType = 'tiles' | 'accessories' | 'equipment' | 'materials' | 'plumbing' | 'calculations';
+type TabType = 'tiles' | 'accessories' | 'equipment' | 'materials' | 'plumbing' | 'calculations' | 'integrations';
 
 export const Settings: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const canEditCatalog = user?.role === 'SUPERADMIN';
   const [activeTab, setActiveTab] = useState<TabType>('tiles');
 
   const formatDimensionCm = (value?: number | null) => {
@@ -145,7 +147,7 @@ export const Settings: React.FC = () => {
     description: '',
   });
 
-  const catalogPermissionMessage = 'Solo administradores pueden crear, editar o eliminar presets e imágenes de catálogo.';
+  const catalogPermissionMessage = 'Solo SUPERADMIN puede modificar el catálogo global compartido por las empresas.';
 
   const getErrorMessage = (error: any, fallback: string) => {
     return (
@@ -279,7 +281,7 @@ export const Settings: React.FC = () => {
   // Handlers de Losetas
   const handleTileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -322,7 +324,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteTile = async (id: string) => {
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -363,7 +365,7 @@ export const Settings: React.FC = () => {
   // Handlers de Accesorios
   const handleAccessorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -400,7 +402,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteAccessory = async (id: string) => {
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -435,7 +437,7 @@ export const Settings: React.FC = () => {
   // Handlers de Equipos
   const handleEquipmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -476,7 +478,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteEquipment = async (id: string) => {
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -515,7 +517,7 @@ export const Settings: React.FC = () => {
   // Handlers de Materiales
   const handleMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -554,7 +556,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteMaterial = async (id: string) => {
-    if (!isAdmin) {
+    if (!canEditCatalog) {
       alert(catalogPermissionMessage);
       return;
     }
@@ -596,6 +598,7 @@ export const Settings: React.FC = () => {
     { id: 'materials', label: 'Materiales' },
     { id: 'plumbing', label: 'Plomería' },
     { id: 'calculations', label: 'Config. Cálculos', icon: HdGear },
+    ...(user?.role === 'SUPERADMIN' ? [{ id: 'integrations', label: 'Integraciones', icon: HdGear }] : []),
   ];
 
   const tileTypeOptions = [
@@ -683,9 +686,9 @@ export const Settings: React.FC = () => {
             </div>
           </div>
 
-          {!isAdmin && (
+          {!canEditCatalog && (
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-300">
-              Estás viendo el catálogo en modo lectura. Para crear, editar, eliminar o subir imágenes necesitás un usuario administrador.
+              El catálogo global está disponible en modo lectura. Sus modelos, materiales e imágenes los administra SUPERADMIN. Podés ajustar tus parámetros propios en Config. Cálculos.
             </div>
           )}
         </div>
@@ -709,6 +712,7 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Tab Content - Losetas */}
+        {activeTab === 'integrations' && user?.role === 'SUPERADMIN' && <IntegrationsSettings />}
         {activeTab === 'tiles' && (
           <>
             <div className="flex justify-between items-center mb-6">
@@ -716,10 +720,10 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Losetas y Venecitas</h2>
                 <p className="text-sm text-zinc-300 mt-1">Administra los tipos de losetas disponibles</p>
               </div>
-              <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
+              {canEditCatalog && <Button onClick={() => setShowTileModal(true)}>
                 <HdPlus size={16} className="mr-2" />
                 Nueva Loseta
-              </Button>
+              </Button>}
             </div>
 
             {/* Filtros para Losetas */}
@@ -772,12 +776,12 @@ export const Settings: React.FC = () => {
                   </h3>
                   <p className="text-zinc-300 mb-6">
                     {tiles.length === 0
-                      ? 'Crea tu primera loseta para comenzar'
+                      ? 'El catálogo global todavía no tiene losetas'
                       : 'Intenta ajustar los filtros de busqueda'
                     }
                   </p>
-                  {tiles.length === 0 && (
-                    <Button onClick={() => setShowTileModal(true)} disabled={!isAdmin}>
+                  {tiles.length === 0 && canEditCatalog && (
+                    <Button onClick={() => setShowTileModal(true)}>
                       Crear Primera Loseta
                     </Button>
                   )}
@@ -808,8 +812,8 @@ export const Settings: React.FC = () => {
                       tile.hasCorner && 'Con Esquineros',
                       hasSuspiciousTileUnits(tile.width, tile.length) && 'Revisar unidad'
                     ]}
-                    onEdit={() => isAdmin ? handleEditTile(tile) : alert(catalogPermissionMessage)}
-                    onDelete={() => isAdmin ? handleDeleteTile(tile.id) : alert(catalogPermissionMessage)}
+                    onEdit={canEditCatalog ? () => handleEditTile(tile) : undefined}
+                    onDelete={canEditCatalog ? () => handleDeleteTile(tile.id) : undefined}
                   />
                 ))}
               </div>
@@ -994,10 +998,10 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Accesorios</h2>
                 <p className="text-sm text-zinc-300 mt-1">Administra los accesorios y complementos</p>
               </div>
-              <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
+              {canEditCatalog && <Button onClick={() => setShowAccessoryModal(true)}>
                 <HdPlus size={16} className="mr-2" />
                 Nuevo Accesorio
-              </Button>
+              </Button>}
             </div>
 
             {/* Filtros para Accesorios */}
@@ -1050,12 +1054,12 @@ export const Settings: React.FC = () => {
                   </h3>
                   <p className="text-zinc-300 mb-6">
                     {accessories.length === 0
-                      ? 'Crea tu primer accesorio para comenzar'
+                      ? 'El catálogo global todavía no tiene accesorios'
                       : 'Intenta ajustar los filtros de busqueda'
                     }
                   </p>
-                  {accessories.length === 0 && (
-                    <Button onClick={() => setShowAccessoryModal(true)} disabled={!isAdmin}>
+                  {accessories.length === 0 && canEditCatalog && (
+                    <Button onClick={() => setShowAccessoryModal(true)}>
                       Crear Primer Accesorio
                     </Button>
                   )}
@@ -1076,8 +1080,8 @@ export const Settings: React.FC = () => {
                       { label: 'Descripción', value: acc.description }
                     ]}
                     badges={[]}
-                    onEdit={() => isAdmin ? handleEditAccessory(acc) : alert(catalogPermissionMessage)}
-                    onDelete={() => isAdmin ? handleDeleteAccessory(acc.id) : alert(catalogPermissionMessage)}
+                    onEdit={canEditCatalog ? () => handleEditAccessory(acc) : undefined}
+                    onDelete={canEditCatalog ? () => handleDeleteAccessory(acc.id) : undefined}
                   />
                 ))}
               </div>
@@ -1179,10 +1183,10 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Equipos</h2>
                 <p className="text-sm text-zinc-300 mt-1">Administra bombas, filtros, calentadores y mas</p>
               </div>
-            <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
+            {canEditCatalog && <Button onClick={() => setShowEquipmentModal(true)}>
               <HdPlus size={16} className="mr-2" />
               Nuevo Equipo
-            </Button>
+            </Button>}
           </div>
 
             {/* Filtros para Equipos */}
@@ -1235,12 +1239,12 @@ export const Settings: React.FC = () => {
                   </h3>
                   <p className="text-zinc-300 mb-6">
                     {equipment.length === 0
-                      ? 'Crea tu primer equipo para comenzar'
+                      ? 'El catálogo global todavía no tiene equipos'
                       : 'Intenta ajustar los filtros de busqueda'
                     }
                   </p>
-                  {equipment.length === 0 && (
-                    <Button onClick={() => setShowEquipmentModal(true)} disabled={!isAdmin}>
+                  {equipment.length === 0 && canEditCatalog && (
+                    <Button onClick={() => setShowEquipmentModal(true)}>
                       Crear Primer Equipo
                     </Button>
                   )}
@@ -1262,8 +1266,8 @@ export const Settings: React.FC = () => {
                       { label: 'Potencia', value: equip.power ? `${equip.power} HP` : null }
                     ]}
                     badges={[]}
-                    onEdit={() => isAdmin ? handleEditEquipment(equip) : alert(catalogPermissionMessage)}
-                    onDelete={() => isAdmin ? handleDeleteEquipment(equip.id) : alert(catalogPermissionMessage)}
+                    onEdit={canEditCatalog ? () => handleEditEquipment(equip) : undefined}
+                    onDelete={canEditCatalog ? () => handleDeleteEquipment(equip.id) : undefined}
                   />
                 ))}
               </div>
@@ -1392,10 +1396,10 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Materiales de Construcción</h2>
                 <p className="text-sm text-zinc-300 mt-1">Administra materiales, consumibles y revestimientos como losetas</p>
               </div>
-            <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
+            {canEditCatalog && <Button onClick={() => setShowMaterialModal(true)}>
               <HdPlus size={16} className="mr-2" />
               Nuevo Material
-            </Button>
+            </Button>}
           </div>
 
             {/* Filtros para Materiales */}
@@ -1454,12 +1458,12 @@ export const Settings: React.FC = () => {
                   </h3>
                   <p className="text-zinc-300 mb-6">
                     {materials.length === 0
-                      ? 'Crea tu primer material para comenzar'
+                      ? 'El catálogo global todavía no tiene materiales'
                       : 'Intenta ajustar los filtros de busqueda'
                     }
                   </p>
-                  {materials.length === 0 && (
-                    <Button onClick={() => setShowMaterialModal(true)} disabled={!isAdmin}>
+                  {materials.length === 0 && canEditCatalog && (
+                    <Button onClick={() => setShowMaterialModal(true)}>
                       Crear Primer Material
                     </Button>
                   )}
@@ -1483,8 +1487,8 @@ export const Settings: React.FC = () => {
                       { label: 'Descripción', value: mat.description }
                     ]}
                     badges={[mat.category === 'TILES' && 'Revestimiento', mat.type === 'TILE' && 'Loseta']}
-                    onEdit={() => isAdmin ? handleEditMaterial(mat) : alert(catalogPermissionMessage)}
-                    onDelete={() => isAdmin ? handleDeleteMaterial(mat.id) : alert(catalogPermissionMessage)}
+                    onEdit={canEditCatalog ? () => handleEditMaterial(mat) : undefined}
+                    onDelete={canEditCatalog ? () => handleDeleteMaterial(mat.id) : undefined}
                   />
                 ))}
               </div>

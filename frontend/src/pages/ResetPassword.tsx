@@ -1,8 +1,9 @@
+import { passwordValidationError } from '@/utils/session';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from '@/services/api';
 
 export const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -26,7 +27,7 @@ export const ResetPassword: React.FC = () => {
       }
 
       try {
-        const response = await axios.get(`${API_URL}/password-reset/verify?token=${token}`);
+        const response = await axios.get(`${API_URL}/password-reset/verify?token=${encodeURIComponent(token)}`);
         setIsValidToken(response.data.valid);
         if (!response.data.valid) {
           setError('Este link ha expirado o es inválido');
@@ -47,8 +48,9 @@ export const ResetPassword: React.FC = () => {
     setError('');
     setMessage('');
 
-    if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+    const passwordError = passwordValidationError(newPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -104,7 +106,7 @@ export const ResetPassword: React.FC = () => {
               <div className="w-7 h-7 rounded-full border-2 border-white"></div>
             </div>
             <span className="text-2xl font-light text-white tracking-wide">
-              Pool <span className="font-semibold">Calculator</span>
+              Pool<span className="font-semibold">Installer</span>
             </span>
           </div>
           <h1 className="text-3xl font-light text-white mb-2">Resetear Contraseña</h1>
@@ -153,9 +155,9 @@ export const ResetPassword: React.FC = () => {
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all font-light"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   disabled={isSubmitting}
                 />
               </div>
@@ -171,7 +173,7 @@ export const ResetPassword: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all font-light"
                   placeholder="Confirma tu contraseña"
                   disabled={isSubmitting}

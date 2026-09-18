@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdSparkles, HdInfo } from '@/components/ui/HandDrawnIcons';
+import { HdCalendar, HdLayoutGrid, HdWaves, HdFolderOpen, HdMessageBubble, HdGear, HdArrowOut, HdUsers, HdBuilding, HdActivity, HdFileText, HdDatabase, HdMenu, HdX, HdInfo } from '@/components/ui/HandDrawnIcons';
 import { Footer } from '@/components/layout/Footer';
 import { ReminderToasts } from '@/components/reminders/ReminderToasts';
 import { BrowserNotificationPrompt } from '@/components/reminders/BrowserNotificationPrompt';
@@ -117,10 +117,9 @@ export const Layout: React.FC = () => {
     navItems.push({ to: '/admin/tenants', icon: HdBuilding, label: 'Tenants' });
     navItems.push({ to: '/admin/ops', icon: HdActivity, label: 'Ops' });
     navItems.push({ to: '/admin/docs', icon: HdFileText, label: 'Documentación' });
-    navItems.push({ to: '/admin/sorteos', icon: HdSparkles, label: 'Sorteos' });
   }
 
-  if (user?.role === 'ADMIN' || user?.email === 'admin@poolcalculator.com') {
+  if (user?.role === 'SUPERADMIN') {
     navItems.push({ to: '/admin/catalogs', icon: HdDatabase, label: 'Catálogos' });
   }
 
@@ -311,7 +310,7 @@ export const Layout: React.FC = () => {
         </header>
 
         <main className="flex-grow pb-[72px] lg:pb-0">
-          <Outlet />
+          <Outlet key={`${user?.id}:${user?.currentOrgId || 'personal'}`} />
         </main>
 
         <div className="hidden lg:block">

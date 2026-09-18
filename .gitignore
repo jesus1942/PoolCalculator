@@ -47,6 +47,12 @@ postgres-data/
 backups/*.gz
 backups/*.sql
 backups/backup.log
+# Incluye respaldos de subproyectos; nunca versionar datos ni credenciales reales.
+**/backups/**
+*.sql.gz
+*.dump
+*.backup
+*.bak
 
 # Uploads
 uploads/

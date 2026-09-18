@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database';
+import { resolveProjectAccessProfile } from '../utils/projectAccess';
 import { AuthRequest } from '../middleware/auth';
 
-const prisma = new PrismaClient();
 const projectUpdateDelegate = prisma.projectUpdate as any;
 
 const updateAuthorSelect = {
@@ -23,11 +23,42 @@ const mapUpdateAuthor = (createdBy?: { id: string; name: string | null; email: s
     : null
 );
 
+/** Todas las rutas de avance reutilizan la autorización del proyecto padre. */
+const authorizeProject = async (req: AuthRequest, res: Response, projectId: string, write = false) => {
+  if (!req.user?.userId) {
+    res.status(401).json({ error: 'No autorizado' });
+    return null;
+  }
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) {
+    res.status(404).json({ error: 'Proyecto no encontrado' });
+    return null;
+  }
+  const access = await resolveProjectAccessProfile(project, req.user);
+  if (!access.canAccess || (write && !access.canEdit)) {
+    res.status(403).json({ error: 'No tenés permiso para este proyecto' });
+    return null;
+  }
+  return access;
+};
+
+/** Resuelve el padre desde la base para impedir cambiar una actualización ajena por su ID. */
+const authorizeUpdate = async (req: AuthRequest, res: Response, id: string, write = false) => {
+  const update = await projectUpdateDelegate.findUnique({ where: { id } });
+  if (!update) {
+    res.status(404).json({ error: 'Actualización no encontrada' });
+    return null;
+  }
+  return authorizeProject(req, res, update.projectId, write);
+};
+
 export const projectUpdateController = {
   // Obtener todas las actualizaciones de un proyecto
-  async getByProject(req: Request, res: Response) {
+  async getByProject(req: AuthRequest, res: Response) {
     try {
       const { projectId } = req.params;
+      const access = await authorizeProject(req, res, projectId, false);
+      if (!access) return;
 
       const updates = await projectUpdateDelegate.findMany({
         where: { projectId },
@@ -45,9 +76,11 @@ export const projectUpdateController = {
   },
 
   // Obtener timeline combinado (actualizaciones + agenda)
-  async getTimeline(req: Request, res: Response) {
+  async getTimeline(req: AuthRequest, res: Response) {
     try {
       const { projectId } = req.params;
+      const access = await authorizeProject(req, res, projectId, false);
+      if (!access) return;
 
       const [updates, agendaEvents] = await Promise.all([
         projectUpdateDelegate.findMany({
@@ -61,6 +94,7 @@ export const projectUpdateController = {
           where: { projectId },
           include: {
             messages: {
+              ...(!['owner', 'admin'].includes(access.source) ? { where: { visibility: 'ALL' as const } } : {}),
               orderBy: { createdAt: 'asc' },
               include: {
                 user: { select: { id: true, name: true, email: true, role: true } },
@@ -142,6 +176,8 @@ export const projectUpdateController = {
   async create(req: AuthRequest, res: Response) {
     try {
       const { projectId } = req.params;
+      const access = await authorizeProject(req, res, projectId, true);
+      if (!access) return;
       const userId = req.user?.userId || null;
       const { title, description, category, images, metadata } = req.body;
 
@@ -172,9 +208,10 @@ export const projectUpdateController = {
   },
 
   // Actualizar una actualización existente
-  async update(req: Request, res: Response) {
+  async update(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!await authorizeUpdate(req, res, id, true)) return;
       const { title, description, category, images, metadata } = req.body;
 
       const update = await projectUpdateDelegate.update({
@@ -199,9 +236,10 @@ export const projectUpdateController = {
   },
 
   // Eliminar una actualización
-  async delete(req: Request, res: Response) {
+  async delete(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!await authorizeUpdate(req, res, id, true)) return;
 
       await projectUpdateDelegate.delete({
         where: { id },
@@ -215,9 +253,10 @@ export const projectUpdateController = {
   },
 
   // Obtener una actualización específica
-  async getById(req: Request, res: Response) {
+  async getById(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
+      if (!await authorizeUpdate(req, res, id, false)) return;
 
       const update = await projectUpdateDelegate.findUnique({
         where: { id },

@@ -1,154 +1,65 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
 import { generateToken } from '../config/jwt';
+import { ensureCurrentOrganization, ensureOrganizationInTransaction, getSessionRole, OrganizationAccessError } from '../utils/authOrganization';
+import { normalizeEmail, validName, validNewPassword, PASSWORD_REQUIREMENTS } from '../utils/authValidation';
 
-const ensureCurrentOrganization = async (userId: string, name: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, currentOrgId: true, role: true },
-  });
-
-  if (user?.currentOrgId) {
-    const membership = await prisma.organizationMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: user.currentOrgId,
-          userId,
-        },
-      },
-    });
-    // El superadmin puede quedar "parado" en un tenant ajeno sin ser miembro:
-    // no hay que crearle membresía al reloguear.
-    if (!membership && user.role !== 'SUPERADMIN') {
-      await prisma.organizationMember.create({
-        data: {
-          organizationId: user.currentOrgId,
-          userId,
-          role: 'MEMBER',
-        },
-      });
-    }
-    return user.currentOrgId;
-  }
-
-  const org = await prisma.organization.create({
-    data: {
-      name: `Org de ${name}`,
-      slug: `org-${userId.slice(0, 8)}`,
-      ownerId: userId,
-    },
-  });
-
-  await prisma.organizationMember.create({
-    data: {
-      organizationId: org.id,
-      userId,
-      role: 'OWNER',
-    },
-  });
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { currentOrgId: org.id },
-  });
-
-  return org.id;
-};
-
+/** Crea usuario, organización y membresía en una sola transacción. */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name } = req.body;
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'El email ya está registrado' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        provider: 'EMAIL', // Marcar como usuario de email/password
-        currentOrgId: null,
-      },
+    const { password, name } = req.body || {};
+    const email = normalizeEmail(req.body?.email);
+    if (!email || !validName(name)) return res.status(400).json({ error: 'Ingresá un email y nombre válidos' });
+    if (!validNewPassword(password)) return res.status(400).json({ error: PASSWORD_REQUIREMENTS });
+    const existingUser = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+    if (existingUser) return res.status(409).json({ error: 'El email ya está registrado' });
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const { user, orgId } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { email, password: hashedPassword, name: name.trim(), provider: 'EMAIL' },
+      });
+      const orgId = await ensureOrganizationInTransaction(tx, user.id);
+      return { user, orgId };
     });
-
-    const orgId = await ensureCurrentOrganization(user.id, user.name);
-    const token = generateToken(user.id, user.email, user.role, orgId);
-
-    res.status(201).json({
-      message: 'Usuario registrado exitosamente',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        currentOrgId: orgId,
-      },
+    const role = await getSessionRole(user.id, user.role, orgId);
+    const token = generateToken(user.id, user.email, role, orgId, user.name, user.sessionVersion);
+    return res.status(201).json({
+      message: 'Usuario registrado exitosamente', token,
+      user: { id: user.id, email: user.email, name: user.name, role, currentOrgId: orgId },
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'El email ya está registrado' });
+    }
     console.error('Error en registro:', error);
-    res.status(500).json({ error: 'Error al registrar usuario' });
+    return res.status(500).json({ error: 'Error al registrar usuario' });
   }
 };
 
+/** Comprueba credenciales sin registrar correos ni contraseñas en logs. */
 export const login = async (req: Request, res: Response) => {
   try {
-    console.log('🔐 [AUTH] Intento de login:', req.body.email);
-    const { email, password } = req.body;
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    console.log('🔍 [AUTH] Usuario encontrado:', user ? `✅ ${user.email}` : '❌ No existe');
-
-    if (!user) {
-      console.log('❌ [AUTH] Login fallido: usuario no encontrado');
+    const email = normalizeEmail(req.body?.email);
+    const password = req.body?.password;
+    if (!email || typeof password !== 'string' || !password || Buffer.byteLength(password) > 72) {
+      return res.status(400).json({ error: 'Ingresá un email y contraseña válidos' });
+    }
+    const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+    if (!user?.password || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
-
-    // Verificar si es usuario de OAuth (no tiene password)
-    if (user.provider === 'GOOGLE' && !user.password) {
-      console.log('❌ [AUTH] Login fallido: usuario de Google OAuth');
-      return res.status(400).json({
-        error: 'Esta cuenta usa inicio de sesión con Google. Por favor usa el botón de Google.',
-      });
-    }
-
-    // Verificar que tenga password
-    if (!user.password) {
-      console.log('❌ [AUTH] Login fallido: sin contraseña');
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    console.log('🔑 [AUTH] Validación contraseña:', validPassword ? '✅ Correcta' : '❌ Incorrecta');
-
-    if (!validPassword) {
-      console.log('❌ [AUTH] Login fallido: contraseña incorrecta');
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const orgId = await ensureCurrentOrganization(user.id, user.name);
-    const token = generateToken(user.id, user.email, user.role, orgId);
-    console.log('✅ [AUTH] Login exitoso:', user.email, '| Rol:', user.role);
-
-    res.json({
-      message: 'Login exitoso',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        currentOrgId: orgId,
-      },
+    const orgId = await ensureCurrentOrganization(user.id);
+    const role = await getSessionRole(user.id, user.role, orgId);
+    const token = generateToken(user.id, user.email, role, orgId, user.name, user.sessionVersion);
+    return res.json({
+      message: 'Login exitoso', token,
+      user: { id: user.id, email: user.email, name: user.name, role, currentOrgId: orgId },
     });
   } catch (error) {
+    if (error instanceof OrganizationAccessError) return res.status(403).json({ error: error.message });
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    return res.status(500).json({ error: 'Error al iniciar sesión' });
   }
 };
