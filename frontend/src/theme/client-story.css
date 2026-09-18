@@ -100,7 +100,7 @@
 .cs-index li + li { margin-top: 5px; }
 .cs-index li a { display: flex; gap: 14px; padding: 8px 0; font-size: 12px; line-height: 1.5; color: var(--cs-muted); transition: color .2s; overflow-wrap: anywhere; }
 .cs-index li a:hover { color: var(--cs-teal); }
-.cs-index li a > span { font-family: 'JetBrains Mono', monospace; color: var(--cs-warm); font-size: 10px; line-height: 1.9; }
+.cs-index li a > span { font-family: 'JetBrains Mono', monospace; color: var(--cs-warm); font-size: 10px; line-height: 1.9; flex-shrink: 0; white-space: nowrap; min-width: 2ch; }
 .cs-index-conversation { display: flex; align-items: center; gap: 7px; font-size: 11px; margin-top: 22px; padding: 20px 0; border-top: 1px solid var(--cs-hair); }
 .cs-index-doodle { padding: 34px 12px; transform: rotate(-5deg); color: #7c8875; }
 .cs-index-doodle p { font-family: Georgia, serif; font-size: 16px; font-style: italic; line-height: 1.7; margin-top: 10px; }

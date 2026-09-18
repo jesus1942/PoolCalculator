@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pool Calculator</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Abriendo Pool Installer</title>
   </head>
   <body>
     <script>
       (function () {
-        var basePath = '/PoolCalculator/';
-        var pathname = window.location.pathname.replace(basePath, '');
+        var basePath = window.location.pathname.indexOf('/PoolCalculator/') === 0 ? '/PoolCalculator/' : '/';
+        var pathname = window.location.pathname.slice(basePath.length);
         var redirect = basePath + '#/' + pathname + window.location.search + window.location.hash;
         window.location.replace(redirect);
       })();
     </script>
+    <noscript>Activá JavaScript para abrir la aplicación.</noscript>
   </body>
 </html>

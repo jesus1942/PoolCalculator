@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowDownRight, ArrowLeft, ArrowRight, BookOpen, Camera, Check, ChevronLeft, ChevronRight, Download, Heart, MessageCircle, Send, Waves, X, ZoomIn } from 'lucide-react';
 import type { ClientStoryComment, ClientStoryEntry, ClientStoryProps } from './types';
+import { useInitialPagePosition } from '@/hooks/useInitialPagePosition';
 import '@/theme/client-story.css';
 
 export type { ClientStoryProject, ClientStoryEntry, ClientStoryComment, ClientStoryProps } from './types';
@@ -108,6 +109,7 @@ export function ClientStory({ project, entries, comments, onSendComment, exportU
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
   const [reading, setReading] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
+  useInitialPagePosition(pageRef);
   const chronological = useMemo(() => entries.filter(entry => !entry.type || entry.type === 'PROJECT_UPDATE').map(entry => ({ ...entry, images: (Array.isArray(entry.images) ? entry.images : []).filter(image => typeof image === 'string' && image.trim()) })).sort((a, b) => dateValue(a.createdAt) - dateValue(b.createdAt)), [entries]);
   const photos = useMemo(() => chronological.flatMap(entry => (entry.images || []).map((src, i) => ({ src, title: entry.title, date: entry.createdAt, number: i + 1 }))), [chronological]);
   const cover = [...chronological].reverse().find(entry => entry.images?.length);

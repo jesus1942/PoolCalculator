@@ -1,9 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { restoreStaticRoute } from './utils/staticRoute';
 import './index.css';
 import './theme/artisan.css';
 import './theme/mobile-v2.css';
+
+const restoredRoute = restoreStaticRoute(window.location, import.meta.env.BASE_URL);
+if (restoredRoute) window.history.replaceState(null, '', restoredRoute);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -32,13 +36,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 );
-
-// Retira el splash tras el primer cuadro; no impone una espera artificial.
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    const splash = document.getElementById('splash');
-    if (!splash) return;
-    splash.classList.add('fade-out');
-    window.setTimeout(() => splash.remove(), 650);
-  });
-});

@@ -1,20 +1,20 @@
 {
   "name": "Pool Installer",
   "short_name": "Pool Installer",
-  "description": "Sistema profesional de calculo de materiales para piscinas.",
-  "start_url": "/",
-  "scope": "/",
+  "description": "Gestión de proyectos de piscinas y un diario de fotos, relatos y avances para cada cliente.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#2563EB",
+  "background_color": "#e8e1d1",
+  "theme_color": "#e8e1d1",
   "icons": [
     {
-      "src": "/pwa-192.png",
+      "src": "pwa-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/pwa-512.png",
+      "src": "pwa-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowRight, ArrowUpRight, Check, ClipboardList, FileText, FolderOpen, Menu, MessageCircle, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePublicIntegrations } from '@/hooks/usePublicIntegrations';
+import { useInitialPagePosition } from '@/hooks/useInitialPagePosition';
 import { publicAssetUrl } from '@/utils/publicAssetUrl';
 import { LandingReveal, TiltCard } from '@/components/landing/LandingMotion';
 import { TechnicalPoolScene } from '@/components/visual/TechnicalPoolScene';
@@ -29,6 +30,7 @@ function LoadingSection() {
 
 /** Landing comercial: la navegación, la demostración y el contacto son flujos distintos. */
 export const Landing: React.FC = () => {
+  useInitialPagePosition();
   const { isAuthenticated } = useAuth();
   const { whatsappUrl } = usePublicIntegrations();
   const [menuOpen, setMenuOpen] = useState(false);
