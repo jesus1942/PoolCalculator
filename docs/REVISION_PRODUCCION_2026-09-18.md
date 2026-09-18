@@ -51,10 +51,15 @@ Fuentes oficiales: [OAuth de Google](https://developers.google.com/identity/prot
 ## Despliegue y comprobación
 
 - Node 22; instalar desde raíz con `npm ci`.
+- Nixpacks fija el archivo `e6f23dc08d3624daab7094b701aa3954923c6bbb`, usado por su proveedor oficial de Node 22. El catálogo predeterminado anterior no incluía `nodejs_22`; el primer intento de build falló antes de iniciar la aplicación y se corrigió sin tocar la base.
 - `npm run check` genera Prisma, ejecuta regresiones y compila servidor/frontend.
-- El arranque de Railway ejecuta `prisma migrate deploy`. Hay dos migraciones aditivas: versión de sesión y configuración cifrada.
+- El arranque de Railway ejecuta `prisma migrate deploy`. La cadena contiene 44 migraciones: además de versión de sesión y configuración cifrada, se añadieron dos reparaciones de compatibilidad para campos y tablas que existían en el esquema pero faltaban en el historial de migraciones.
+- La primera reparación agrega `bedSandM3PerCementBag` antes de la migración de marzo que lo utiliza; la segunda completa el esquema mediante operaciones idempotentes, conserva los índices existentes y no modifica los valores de las filas. Ante equipos con nombres duplicados o accesos antiguos sin credenciales, aborta y revierte la transacción para permitir una revisión específica.
+- CI aplica todas las migraciones a PostgreSQL 16 vacío y exige que `prisma migrate diff --exit-code` no encuentre diferencias respecto de `schema.prisma`.
+- `scripts/run-tests.mjs` ejecuta las pruebas en procesos aislados de credenciales y destinos reales. Las consultas de prueba están simuladas y cualquier conexión no simulada apunta a un puerto local cerrado; el entorno de producción de Railway no contamina las pruebas.
 - Todos los usuarios deben iniciar sesión nuevamente. Los enlaces de recuperación emitidos antes de la corrección deben solicitarse de nuevo.
 - `/health` comprueba proceso; `/ready` comprueba base. El limitador en memoria opera por instancia: antes de múltiples réplicas, compartir contadores en Redis u otro almacén compatible.
+- Railway usa `/ready` como comprobación previa a habilitar el despliegue, con límite de 180 segundos.
 - `TRUST_PROXY_HOPS=0` si el servidor recibe al cliente directamente; por defecto producción usa 1 para el proxy. Ajustar al número real de saltos confiables.
 - Para dominio propio: registrar el dominio elegido, verificarlo en el proveedor, configurar DNS/TLS, actualizar URL pública, callback Google y compilación `VITE_API_URL`/`VITE_BASE`. No se compró ni afirmó disponibilidad de ningún dominio.
 - Las migraciones son aditivas: un rollback de código no debe borrar las columnas/tablas nuevas ni la clave de cifrado.
@@ -83,9 +88,11 @@ Hipótesis a validar con empresas argentinas: una sola ficha desde instalación 
 
 ## Verificación y estado de entrega
 
-- Comprobación local completa: 49 pruebas backend y 9 frontend aprobadas; compilación de ambas aplicaciones correcta.
+- Comprobación local: 49 pruebas backend y 9 frontend aprobadas con Node 22.23.2, también heredando un entorno padre de producción con configuración ficticia conflictiva. Las mismas pruebas y la compilación de ambas aplicaciones aprobaron en GitHub Actions y durante la construcción de Railway.
 - Entrada JavaScript: de aproximadamente 1.266 KB a 310 KB, con funciones pesadas cargadas por ruta/pestaña.
-- Migraciones contra una base PostgreSQL vacía preparadas como gate de CI; pendientes de ejecución remota.
-- Landing implementada con animaciones y accesibilidad de movimiento; [QA visual](design-qa.md) aún bloqueado por falta de preview accesible.
-- El envío a GitHub fue rechazado por revisión automática: repositorio público, cambio amplio e historial con datos sensibles; se requiere autorización explícita para publicar. Los cambios están completos en la rama local `codex/production-readiness-20260918`, no se declara despliegue realizado.
-- La clave de cifrado dedicada y Node 22 quedaron preparados en el servicio Railway sin disparar un redeploy.
+- La primera ejecución de CI detectó un fallo histórico: la migración de marzo utilizaba `bedSandM3PerCementBag` antes de crearlo. Tras repararlo, las 44 migraciones se aplicaron correctamente con Prisma a PostgreSQL WASM local y a PostgreSQL 16 en CI, sin diferencias de esquema. Repetir las dos reparaciones conservó íntegros los datos sintéticos.
+- Landing publicada con animaciones y recorrido interactivo; el alcance y las capturas de la comprobación pública se registran en [QA visual](design-qa.md).
+- El usuario autorizó explícitamente subir y desplegar esta versión. El [PR #4](https://github.com/jesus1942/PoolCalculator/pull/4) fue integrado; el ajuste posterior de Nixpacks quedó en `265fe488142f96cae51c2a7484f63dec75757e26`. La autorización cubre publicación y despliegue; el saneamiento del historial con datos sensibles sigue pendiente.
+- [CI de la versión publicada](https://github.com/jesus1942/PoolCalculator/actions/runs/35364334920): aprobado. [Publicación de Pages](https://github.com/jesus1942/PoolCalculator/actions/runs/35364335061): aprobada.
+- Railway: despliegue `daefae75-732f-46b0-bfd8-f7e955df5721` en estado **SUCCESS**. Las cuatro migraciones pendientes se aplicaron correctamente; servidor en puerto 8080 y comprobación `/ready` aprobada. La clave de cifrado dedicada está configurada fuera del repositorio.
+- URLs publicadas: [aplicación en Railway](https://poolcalculator-production.up.railway.app/) y [landing en GitHub Pages](https://jesus1942.github.io/PoolCalculator/). Este resultado no equivale a validar cobros reales ni las credenciales externas de cada integración.
