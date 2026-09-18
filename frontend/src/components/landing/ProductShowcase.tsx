@@ -1,6 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowUpRight, Check, ClipboardList, FileText, FolderOpen, Share2 } from 'lucide-react';
 import { CarouselControls, TiltCard, useLandingCarousel } from './LandingMotion';
+import { clientStoryDemoImage, clientStoryDemoProject } from '@/data/clientStoryDemo';
 
 const features = [
   {
@@ -19,9 +21,9 @@ const features = [
     highlights: ['Tareas dentro del proyecto', 'Responsables y estados', 'Agenda para organizar el trabajo'],
   },
   {
-    id: 'share', short: 'Compartí', title: 'El avance también se comunica.', icon: Share2,
-    description: 'Compartí el seguimiento del proyecto con tu cliente mediante el acceso habilitado para su obra.',
-    highlights: ['Seguimiento del proyecto', 'Avances en una línea de tiempo', 'Información vinculada a la obra'],
+    id: 'share', short: 'Compartí', title: 'Cada piscina tiene una historia.', icon: Share2,
+    description: 'Invitá a tu cliente a vivir la transformación de su patio. Las fotos y los avances se convierten en un diario de su propia obra.',
+    highlights: ['Fotos reales en cada capítulo', 'Un diario para volver a recorrer', 'Conversaciones con el equipo'],
   },
 ];
 
@@ -31,8 +33,8 @@ function ShowcasePreview({ featureId }: { featureId: string }) {
     <div className="pl-preview">
       <div className="pl-preview-header"><span>POOL INSTALLER</span><span className="pl-example">DATOS DE EJEMPLO</span></div>
       <div className="pl-preview-body">
-        <div className="pl-preview-caption">Mi espacio de trabajo</div>
-        <h4>{featureId === 'projects' ? 'Cada obra, en su lugar' : featureId === 'budget' ? 'Presupuesto de obra' : featureId === 'team' ? 'Próximas tareas' : 'Así avanza tu proyecto'}</h4>
+        <div className="pl-preview-caption">{featureId === 'share' ? 'El cuaderno del cliente' : 'Mi espacio de trabajo'}</div>
+        <h4>{featureId === 'projects' ? 'Cada obra, en su lugar' : featureId === 'budget' ? 'Presupuesto de obra' : featureId === 'team' ? 'Próximas tareas' : clientStoryDemoProject.name}</h4>
         {featureId === 'projects' && <>
           <div className="pl-preview-counts"><div><strong>03</strong><span>Proyectos</span></div><div><strong>02</strong><span>En curso</span></div><div><strong>01</strong><span>Por aprobar</span></div></div>
           <div className="pl-project-row"><FolderOpen size={19} /><div><strong>Patio residencial</strong><span>Ficha del proyecto · actualizada</span></div><span className="pl-status">En curso</span></div>
@@ -57,12 +59,12 @@ function ShowcasePreview({ featureId }: { featureId: string }) {
           <div className="pl-preview-summary"><strong>Lo próximo, a la vista.</strong><span>Una tarea. Un responsable. Un estado.</span></div>
         </>}
         {featureId === 'share' && <>
-          <p className="pl-preview-note">Portal del cliente · Patio residencial</p>
-          <ol className="pl-preview-timeline">
-            <li><span>01</span><div><strong>Proyecto registrado</strong><p>Modelo y alcance definidos.</p></div></li>
-            <li><span>02</span><div><strong>Presupuesto preparado</strong><p>Detalle disponible para revisar.</p></div></li>
-            <li><span>03</span><div><strong>Obra en seguimiento</strong><p>Avances y pendientes del proyecto.</p></div></li>
-          </ol>
+          <figure className="pl-story-teaser-photo">
+            <img src={clientStoryDemoImage} alt="Jardín con piscina al atardecer, imagen ilustrativa de la historia de ejemplo" loading="lazy" width="1672" height="941" />
+            <figcaption>IMAGEN ILUSTRATIVA · HISTORIA FICTICIA</figcaption>
+          </figure>
+          <div className="pl-story-teaser-entry"><span>CAPÍTULO 01</span><strong>Antes del agua, una idea.</strong><p>Un rincón del patio. Una conversación. Y las ganas de imaginar los días de verano.</p></div>
+          <Link to="/demo/historia" className="pl-story-teaser-link">Abrir el diario del cliente <ArrowUpRight size={16} /></Link>
         </>}
       </div>
       <div className="pl-preview-footer"><span>Una misma obra. Toda la información.</span><span>PI / 01</span></div>
@@ -85,7 +87,9 @@ export const ProductShowcase: React.FC = () => {
           <h3>{feature.title}</h3>
           <p>{feature.description}</p>
           <ul>{feature.highlights.map(item => <li key={item}><Check size={17} />{item}</li>)}</ul>
-          <a className="pl-text-link" href="#calculator">Probá el buscador de modelos <ArrowUpRight size={18} /></a>
+          {feature.id === 'share'
+            ? <Link className="pl-text-link" to="/demo/historia">Viví la historia de ejemplo <ArrowUpRight size={18} /></Link>
+            : <a className="pl-text-link" href="#calculator">Probá el buscador de modelos <ArrowUpRight size={18} /></a>}
         </div>
         <div className="pl-deck-stage">
           <TiltCard className="pl-deck-card">

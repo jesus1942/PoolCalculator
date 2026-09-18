@@ -22,6 +22,7 @@ const ProjectsV2 = lazy(() => import('@/pages/ProjectsV2').then((module) => ({ d
 const ProjectDetail = lazy(() => import('@/pages/ProjectDetail').then((module) => ({ default: module.ProjectDetail })));
 const Settings = lazy(() => import('@/pages/Settings').then((module) => ({ default: module.Settings })));
 const PublicTimeline = lazy(() => import('@/pages/PublicTimeline').then((module) => ({ default: module.PublicTimeline })));
+const ClientStoryDemo = lazy(() => import('@/pages/ClientStoryDemo').then((module) => ({ default: module.ClientStoryDemo })));
 const ClientLogin = lazy(() => import('@/pages/ClientLogin').then((module) => ({ default: module.ClientLogin })));
 const CatalogManager = lazy(() => import('@/pages/Admin/CatalogManager'));
 const EquipmentManager = lazy(() => import('@/pages/Admin/EquipmentManager'));
@@ -90,6 +91,7 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
 
             <Route path="/client-login" element={<ClientLogin />} />
+            <Route path="/demo/historia" element={<ClientStoryDemo />} />
             <Route path="/timeline/:shareToken" element={<PublicTimeline />} />
 
             <Route element={<ProtectedRoute><AuthenticatedLayout /></ProtectedRoute>}>

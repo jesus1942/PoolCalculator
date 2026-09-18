@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../config/database';
-import { buildProjectCommercialProfile } from '../utils/projectCommercialProfile';
 import { resolveProjectAccessProfile } from '../utils/projectAccess';
+import { buildPublicProject, buildPublicTimeline } from '../utils/publicTimeline';
 
 const getActor = (req: Request) => ({
   userId: req.user?.userId,
@@ -29,6 +29,42 @@ const shareIsExpired = (share: { expiresAt: Date | null }) =>
   Boolean(share.expiresAt && new Date(share.expiresAt) < new Date());
 
 const CLIENT_COMMENT_KINDS = ['COMMENT', 'PRAISE', 'SUGGESTION', 'QUESTION'] as const;
+
+// JSON y exportación leen el mismo contrato reducido; no cargan metadata ni configuración privada.
+const findPublicTimelineShare = (shareToken: string) => prisma.projectShare.findUnique({
+  where: { shareToken },
+  select: {
+    isActive: true,
+    expiresAt: true,
+    showCosts: true,
+    showDetails: true,
+    project: {
+      select: {
+        id: true,
+        name: true,
+        clientName: true,
+        status: true,
+        createdAt: true,
+        totalCost: true,
+        materialCost: true,
+        laborCost: true,
+        projectUpdates: {
+          where: { isPublic: true },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            category: true,
+            images: true,
+            isPublic: true,
+            createdAt: true,
+          },
+        },
+      },
+    },
+  },
+});
 
 // Crear o actualizar link compartido
 export const createOrUpdateShare = async (req: Request, res: Response) => {
@@ -194,31 +230,7 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
   try {
     const { shareToken } = req.params;
 
-    const projectShare = await prisma.projectShare.findUnique({
-      where: { shareToken },
-      include: {
-        project: {
-          include: {
-            projectUpdates: {
-              where: { isPublic: true },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                projectId: true,
-                title: true,
-                description: true,
-                category: true,
-                images: true,
-                metadata: true,
-                isPublic: true,
-                createdAt: true,
-                updatedAt: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const projectShare = await findPublicTimelineShare(shareToken);
 
     if (!projectShare || !projectShare.isActive) {
       return res.status(404).json({ error: 'Link no válido o expirado' });
@@ -229,17 +241,7 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
       return res.status(410).json({ error: 'Link expirado' });
     }
 
-    const timeline = projectShare.project.projectUpdates
-      .map((update) => ({
-        id: update.id,
-        type: 'PROJECT_UPDATE',
-        createdAt: update.createdAt,
-        title: update.title,
-        description: update.description,
-        category: update.category,
-        images: update.images,
-      }))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const timeline = buildPublicTimeline(projectShare.project.projectUpdates, projectShare.showDetails);
 
     const comments = await prisma.projectClientComment.findMany({
       where: { projectId: projectShare.project.id },
@@ -257,15 +259,8 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
 
     // Preparar datos a enviar
     const response = {
-      project: {
-        id: projectShare.project.id,
-        name: projectShare.project.name,
-        clientName: projectShare.project.clientName,
-        status: projectShare.project.status,
-        createdAt: projectShare.project.createdAt,
-        commercialProfile: buildProjectCommercialProfile(projectShare.project as any),
-      },
-      updates: projectShare.project.projectUpdates,
+      project: buildPublicProject(projectShare.project, projectShare.showCosts),
+      updates: timeline,
       timeline,
       comments,
       config: {
@@ -273,13 +268,6 @@ export const getPublicTimeline = async (req: Request, res: Response) => {
         showDetails: projectShare.showDetails,
       },
     };
-
-    // Agregar costos si está habilitado
-    if (projectShare.showCosts) {
-      (response.project as any).totalCost = projectShare.project.totalCost;
-      (response.project as any).materialCost = projectShare.project.materialCost;
-      (response.project as any).laborCost = projectShare.project.laborCost;
-    }
 
     res.json(response);
   } catch (error) {
@@ -302,31 +290,7 @@ export const exportPublicTimeline = async (req: Request, res: Response) => {
   try {
     const { shareToken } = req.params;
 
-    const projectShare = await prisma.projectShare.findUnique({
-      where: { shareToken },
-      include: {
-        project: {
-          include: {
-            projectUpdates: {
-              where: { isPublic: true },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                projectId: true,
-                title: true,
-                description: true,
-                category: true,
-                images: true,
-                metadata: true,
-                isPublic: true,
-                createdAt: true,
-                updatedAt: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const projectShare = await findPublicTimelineShare(shareToken);
 
     if (!projectShare || !projectShare.isActive) {
       return res.status(404).json({ error: 'Link no válido o expirado' });
@@ -336,19 +300,7 @@ export const exportPublicTimeline = async (req: Request, res: Response) => {
       return res.status(410).json({ error: 'Link expirado' });
     }
 
-    const timeline = projectShare.project.projectUpdates
-      .map((update) => ({
-        type: 'PROJECT_UPDATE',
-        createdAt: update.createdAt,
-        title: update.title,
-        description: update.description,
-        category: update.category,
-        eventStartAt: '',
-        eventEndAt: '',
-        location: '',
-        messageBody: '',
-      }))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const timeline = buildPublicTimeline(projectShare.project.projectUpdates, projectShare.showDetails);
 
     const header = [
       'Tipo',
@@ -368,10 +320,10 @@ export const exportPublicTimeline = async (req: Request, res: Response) => {
       escapeCsv(item.title),
       escapeCsv(item.description),
       escapeCsv(item.category),
-      escapeCsv(item.eventStartAt ? new Date(item.eventStartAt).toLocaleString('es-AR') : ''),
-      escapeCsv(item.eventEndAt ? new Date(item.eventEndAt).toLocaleString('es-AR') : ''),
-      escapeCsv(item.location),
-      escapeCsv(item.messageBody),
+      '',
+      '',
+      '',
+      '',
     ]);
 
     const csv = [header.join(','), ...rows.map((row) => row.join(','))].join('\n');
