@@ -373,8 +373,8 @@ export const catalogScraperService = {
           // Valores por defecto
           hasSkimmer: true,
           skimmerCount: 1,
-          hasLighting: false,
-          lightingCount: 0,
+          hasLighting: true,
+          lightingCount: 2,
           hasBottomDrain: false,
           hasHotWaterReturn: false,
           hasVacuumIntake: true,

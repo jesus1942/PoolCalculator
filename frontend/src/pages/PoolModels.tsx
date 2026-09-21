@@ -310,9 +310,9 @@ export const PoolModels: React.FC = () => {
     vacuumIntakeCount: 1,
     hasSkimmer: true,
     skimmerCount: 1,
-    hasLighting: false,
-    lightingCount: 0,
-    lightingType: '',
+    hasLighting: true,
+    lightingCount: 2,
+    lightingType: 'LED',
     defaultPumpId: '',
     defaultFilterId: '',
   });
@@ -481,9 +481,9 @@ export const PoolModels: React.FC = () => {
       vacuumIntakeCount: 1,
       hasSkimmer: true,
       skimmerCount: 1,
-      hasLighting: false,
-      lightingCount: 0,
-      lightingType: '',
+      hasLighting: true,
+      lightingCount: 2,
+      lightingType: 'LED',
       defaultPumpId: '',
       defaultFilterId: '',
     });
@@ -733,8 +733,15 @@ export const PoolModels: React.FC = () => {
               </div>
             </div>
 
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+              <h3 className="font-semibold text-cyan-200">Configuración de fábrica</h3>
+              <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+                Estas cantidades son lo que incluye este modelo por defecto. Se copian al crear una obra nueva y después pueden ajustarse en ese proyecto sin modificar el modelo original.
+              </p>
+            </div>
+
             <div className="border-t border-zinc-800 pt-4">
-              <h3 className="font-semibold text-zinc-200 mb-3">Retornos e impulsión</h3>
+              <h3 className="font-semibold text-zinc-200 mb-3">Retornos e impulsión incluidos</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input label="Cantidad de retornos" type="number" value={formData.returnsCount} onChange={(e) => setFormData({ ...formData, returnsCount: parseInt(e.target.value) })} min="0" />
                 <label className="flex items-center space-x-2 pt-7 cursor-pointer"><input type="checkbox" checked={formData.hasHotWaterReturn} onChange={(e) => setFormData({ ...formData, hasHotWaterReturn: e.target.checked })} className="rounded border-zinc-600 text-blue-600 focus:ring-blue-500 bg-zinc-800" /><span className="text-sm text-zinc-300">Retorno agua caliente</span></label>
@@ -761,19 +768,19 @@ export const PoolModels: React.FC = () => {
             </div>
 
             <div className="border-t border-zinc-800 pt-4">
-              <h3 className="font-semibold text-zinc-200 mb-3">Iluminación</h3>
+              <h3 className="font-semibold text-zinc-200 mb-3">Iluminación incluida</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={formData.hasLighting} onChange={(e) => setFormData({ ...formData, hasLighting: e.target.checked })} className="rounded border-zinc-600 text-blue-600 focus:ring-blue-500 bg-zinc-800" /><span className="text-sm text-zinc-300">Luces</span></label>
+                <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={formData.hasLighting} onChange={(e) => setFormData({ ...formData, hasLighting: e.target.checked })} className="rounded border-zinc-600 text-blue-600 focus:ring-blue-500 bg-zinc-800" /><span className="text-sm text-zinc-300">Iluminación incluida</span></label>
                 {formData.hasLighting && <>
-                  <Input label="Cantidad de luces" type="number" value={formData.lightingCount} onChange={(e) => setFormData({ ...formData, lightingCount: parseInt(e.target.value) })} min="1" />
+                  <Input label="Cantidad de luces incluidas" type="number" value={formData.lightingCount} onChange={(e) => setFormData({ ...formData, lightingCount: parseInt(e.target.value) })} min="1" />
                   <Input label="Tipo de iluminación" placeholder="LED, halógeno, fibra óptica" value={formData.lightingType} onChange={(e) => setFormData({ ...formData, lightingType: e.target.value })} />
                 </>}
               </div>
             </div>
 
             <div className="border-t border-zinc-800 pt-4">
-              <h3 className="font-semibold text-zinc-200 mb-1">Equipamiento base del modelo</h3>
-              <p className="text-sm text-zinc-500 mb-4">Opcional. Si lo dejás vacío, el modelo queda disponible para vender casco solo.</p>
+              <h3 className="font-semibold text-zinc-200 mb-1">Equipamiento incluido de fábrica</h3>
+              <p className="text-sm text-zinc-500 mb-4">La bomba y el filtro seleccionados se copian como equipamiento base cuando se crea una obra nueva. Podés dejarlos vacíos si el modelo se vende como casco solo.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Select label="Bomba base" options={[{ value: '', label: 'Sin bomba base' }, ...availablePumps.map((pump) => ({ value: pump.id, label: `${pump.name}${pump.flowRate ? ` · ${pump.flowRate} m³/h` : ''}${pump.power ? ` · ${pump.power} HP` : ''}` }))]} value={formData.defaultPumpId} onChange={(e) => setFormData({ ...formData, defaultPumpId: e.target.value })} />
                 <Select label="Filtro base" options={[{ value: '', label: 'Sin filtro base' }, ...availableFilters.map((filter) => ({ value: filter.id, label: `${filter.name}${filter.capacity ? ` · ${filter.capacity} m³/h` : ''}${filter.filterDiameter ? ` · Ø${filter.filterDiameter} mm` : ''}` }))]} value={formData.defaultFilterId} onChange={(e) => setFormData({ ...formData, defaultFilterId: e.target.value })} />

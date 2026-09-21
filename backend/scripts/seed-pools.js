@@ -124,8 +124,8 @@ async function seedPools() {
           vacuumIntakeCount: 1,
           hasSkimmer: true,
           skimmerCount: 1,
-          hasLighting: false,
-          lightingCount: 0,
+          hasLighting: true,
+          lightingCount: 2,
           userId: user.id
         }
       });

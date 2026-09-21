@@ -610,8 +610,8 @@ model PoolPreset {
   hasSkimmer        Boolean @default(true)
   skimmerCount      Int     @default(1)
   
-  hasLighting       Boolean @default(false)
-  lightingCount     Int     @default(0)
+  hasLighting       Boolean @default(true)
+  lightingCount     Int     @default(2)
   lightingType      String?
 
   defaultPumpId     String?
