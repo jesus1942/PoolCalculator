@@ -71,3 +71,11 @@ test('materiales hidráulicos respetan m², m³ y metros lineales como unidades 
  const p=project({plumbingConfig:{selectedItems:[{id:'a',unit:'m²',quantity:2,pricePerUnit:10},{id:'b',unit:'m³',quantity:2,pricePerUnit:10},{id:'c',unit:'m',quantity:2,pricePerUnit:10}]}});
  assert.deepEqual(price(p).lines.filter(l=>l.id.startsWith('plumbing:')).map(l=>l.unit),['M2','M3','ML']);
 });
+
+test('presets preservan categoría y tarifa sin aplicar cambios a partidas existentes',()=>{
+ const preset=manual({category:'Materiales de obra',rate:25});
+ const saved=validateCosting({...EMPTY_COSTING,presets:[preset],items:[manual({rate:10})]});
+ assert.equal(saved.presets[0].category,'Materiales de obra');
+ assert.equal(saved.presets[0].rate,25);assert.equal(saved.items[0].rate,10);
+ assert.throws(()=>validateCosting({...EMPTY_COSTING,presets:[manual({category:123})]}));
+});

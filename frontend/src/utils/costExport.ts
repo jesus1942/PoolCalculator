@@ -8,16 +8,34 @@ export function getQuote(project:any,settings:any={}) {
   const lines=financials.lines.filter(line=>line.included && line.quantity>0)
     .filter(line=>settings.installationMode!=='basic'||!line.id.startsWith('additional:'))
     .filter(line=>settings.includeAdditionalsPricing!==false||!line.id.startsWith('additional:'))
-    .filter(line=>full||line.kind!=='material'||((line.id.startsWith('base:material')||line.id.startsWith('base:tile'))&&settings.includeVeredaMaterials!==false));
+    .filter(line=>full||line.kind!=='material')
+    .filter(line=>!Array.isArray(settings.excludedCostLineIds)||!settings.excludedCostLineIds.includes(line.id));
   return {lines,total:roundMoney(lines.reduce((sum,line)=>sum+line.total,0)),revision:financials.settings.revision,
-    label:full?'Presupuesto completo':'Mano de obra y servicios'+(lines.some(l=>l.kind==='material')?' + materiales de obra seleccionados':''),
+    label:full?'Presupuesto completo con materiales':'Instalación · mano de obra y servicios',
     warnings:financials.warnings};
 }
-/** Tabla imprimible con importes reconciliables; escapa todos los textos editables. */
+/** La propuesta de instalación nunca toma el modo completo de una configuración antigua. */
+export const installationSettings = (settings: any = {}) => ({ ...settings, clientPricingMode: 'labor_only' });
+
+/** Las opciones visuales no cambian el importe; excluir una partida sí cambia el alcance. */
 export function renderQuoteTable(project:any,settings:any={clientPricingMode:'full'}) {
   const quote=getQuote(project,settings);
-  return `<section class="section cost-ledger"><h2>Detalle económico</h2><p>${escapeCostText(quote.label)} · ARS · Revisión ${quote.revision}</p>
-  <table style="width:100%;border-collapse:collapse;font-size:11px"><thead style="display:table-header-group"><tr style="background:#285e59;color:white">${['Concepto','Unidad','Cantidad','Tarifa','Subtotal'].map(h=>`<th style="padding:9px;text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${quote.lines.map(line=>`<tr style="break-inside:avoid;border-bottom:1px solid #deded4"><td style="padding:9px">${escapeCostText(line.name)}</td><td>${escapeCostText(COST_UNITS[line.unit])}</td><td style="text-align:right;padding:8px">${line.quantity.toLocaleString('es-AR',{maximumFractionDigits:4})}</td><td style="text-align:right;padding:8px;white-space:nowrap">${money(line.rate)}</td><td style="text-align:right;padding:8px;white-space:nowrap">${money(line.total)}</td></tr>`).join('')}</tbody><tfoot><tr style="font-size:15px;font-weight:bold;background:#f1f0e8"><td colspan="4" style="padding:14px">TOTAL COTIZADO</td><td style="text-align:right;padding:14px;white-space:nowrap">${money(quote.total)}</td></tr></tfoot></table><p style="font-size:10px;color:#66736d">Importes tomados de Costos. No se aplican impuestos, descuentos ni recargos adicionales que no estén detallados en las partidas.</p></section>`;
+  const detail=settings.showCostDetails!==false;
+  const quantity=settings.showCostQuantities!==false;
+  const rates=settings.showCostRates!==false;
+  const subtotals=settings.showCostSubtotals!==false;
+  const headers=['Trabajo / concepto',...(quantity?['Unidad','Cantidad']:[]),...(rates?['Tarifa']:[]),...(subtotals?['Subtotal']:[])];
+  const rows=quote.lines.map(line=>`<tr style="break-inside:avoid;border-bottom:1px solid #deded4"><td style="padding:9px">${escapeCostText(line.name)}</td>${quantity?`<td>${escapeCostText(COST_UNITS[line.unit])}</td><td style="text-align:right;padding:8px">${line.quantity.toLocaleString('es-AR',{maximumFractionDigits:4})}</td>`:''}${rates?`<td style="text-align:right;padding:8px;white-space:nowrap">${money(line.rate)}</td>`:''}${subtotals?`<td style="text-align:right;padding:8px;white-space:nowrap">${money(line.total)}</td>`:''}</tr>`).join('');
+  return `<section class="section cost-ledger"><h2>${settings.clientPricingMode==='full'?'Detalle económico':'Inversión en la instalación'}</h2><p>${escapeCostText(quote.label)} · ARS</p>
+  ${detail?`<table style="width:100%;border-collapse:collapse;font-size:11px"><thead style="display:table-header-group"><tr style="background:#285e59;color:white">${headers.map(h=>`<th style="padding:9px;text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`:''}
+  <div style="font-size:18px;font-weight:bold;background:#f1f0e8;padding:16px;margin-top:12px">TOTAL COTIZADO <span style="float:right">${money(quote.total)}</span></div>
+  ${settings.clientPricingMode!=='full'?'<p>El importe corresponde a los trabajos y servicios de instalación seleccionados. No incluye la provisión ni el precio de materiales o equipos.</p>':''}</section>`;
+}
+/** Versión de texto que respeta el mismo alcance y las mismas opciones de presentación. */
+export function renderQuoteMessage(project:any,settings:any={}) {
+  const quote=getQuote(project,settings);
+  const detail=settings.showCostDetails===false?'':quote.lines.map(line=>`- ${line.name}${settings.showCostQuantities!==false?` · ${line.quantity} ${COST_UNITS[line.unit]}`:''}${settings.showCostRates!==false?` × ${money(line.rate)}`:''}${settings.showCostSubtotals!==false?`: ${money(line.total)}`:''}`).join('\n');
+  return `*${quote.label.toUpperCase()}*\n${detail?detail+'\n':''}*TOTAL COTIZADO: ${money(quote.total)}*${settings.clientPricingMode!=='full'?'\nNo incluye provisión de materiales ni equipos.':''}`;
 }
 /** Presupuesto detallado independiente del editor comercial, apto para PDF/HTML/impresión. */
 export function renderDetailedCostDocument(project:any,settings:any={},logo?:string|null) {

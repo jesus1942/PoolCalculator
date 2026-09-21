@@ -1,4 +1,4 @@
-import { getQuote, renderQuoteTable, renderDetailedCostDocument } from '@/utils/costExport';
+import { installationSettings, renderQuoteMessage, getQuote, renderQuoteTable, renderDetailedCostDocument } from '@/utils/costExport';
 import React, { useState, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Card } from '@/components/ui/Card';
@@ -51,7 +51,11 @@ type ExportTemplateSettings = {
   clientPricingMode?: 'full' | 'labor_only';
   showRecommendedInstallationBox?: boolean;
   includeAdditionalsPricing?: boolean;
-  includeVeredaMaterials?: boolean;
+  excludedCostLineIds?: string[];
+  showCostDetails?: boolean;
+  showCostQuantities?: boolean;
+  showCostRates?: boolean;
+  showCostSubtotals?: boolean;
   useCustomClientBody?: boolean;
   documentBlocks?: ClientDocumentBlock[];
   customBodyHtml?: string;
@@ -100,7 +104,6 @@ const CLIENT_DYNAMIC_FIELDS: Array<{ key: string; label: string }> = [
   { key: 'waterMirrorArea', label: 'Espejo de agua' },
   { key: 'installationTier', label: 'Alcance recomendado' },
   { key: 'laborCost', label: 'Mano de obra' },
-  { key: 'materialCost', label: 'Materiales' },
   { key: 'grandTotal', label: 'Total' },
   { key: 'projectCode', label: 'Código de proyecto' },
 ];
@@ -414,7 +417,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const templates = [
     {
       id: 'client' as ExportTemplate,
-      name: 'Propuesta Comercial',
+      name: 'Propuesta de instalación',
       description: 'Documento comercial para presentar la instalación recomendada al cliente',
       icon: HdUser,
     },
@@ -432,7 +435,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     },
     {
       id: 'budget' as ExportTemplate,
-      name: 'Presupuesto Detallado',
+      name: 'Presupuesto completo',
       description: 'Presupuesto completo con costos unitarios y subtotales',
       icon: HdDollarSign,
     },
@@ -708,12 +711,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     if (template === 'client') {
       return {
         installationMode: 'with_extras' as const,
-        clientPricingMode: 'labor_only' as const,
         showRecommendedInstallationBox: true,
         includeAdditionalsPricing: true,
         pricingPosition: 'bottom' as const,
         useCustomClientBody: false,
-        ...templateSettings,
+        ...installationSettings(templateSettings),
       };
     }
 
@@ -856,7 +858,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     };
   })();
 
-  const clientPricingMode = getTemplateSettings('client').clientPricingMode || 'labor_only';
   const projectDynamicValues = {
     clientName: project.clientName || '',
     projectName: project.name || '',
@@ -867,9 +868,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     waterMirrorArea: `${effectiveProjectSpec.waterMirrorArea.toFixed(2)} m²`,
     installationTier,
     pipeSystem: getProjectPipeSystemLabel(project),
-    laborCost: formatCurrency(exportInstallationProfile.totalLaborCost),
-    materialCost: formatCurrency(computedCosts.totalMaterialCost),
-    grandTotal: formatCurrency(computedCosts.grandTotal),
+    laborCost: formatCurrency(getQuote(project,getTemplateSettings('client')).total),
+    materialCost: 'Materiales no incluidos',
+    grandTotal: formatCurrency(getQuote(project,getTemplateSettings('client')).total),
     projectCode: getProjectCode(project),
   };
 
@@ -905,17 +906,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     ...getInstallationConditionHighlights(project).map((line) => `${line}.`),
   ].filter(Boolean);
 
-  const interpolateProjectText = (value: string) =>
-    value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-      const normalizedKey = String(key);
-      return escapeHtml(String(projectDynamicValues[normalizedKey as keyof typeof projectDynamicValues] || ''));
-    });
-
-  const interpolateProjectHtml = (value: string) =>
-    value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-      const normalizedKey = String(key);
-      return escapeHtml(String(projectDynamicValues[normalizedKey as keyof typeof projectDynamicValues] || ''));
-    });
+  /** Los campos dinámicos comerciales siguen el alcance de la plantilla, también en vista previa. */
+  const getClientDynamicValues = (settings: ExportTemplateSettings = getTemplateSettings('client')) => {
+    const total = formatCurrency(getQuote(project,installationSettings(settings)).total);
+    return {...projectDynamicValues, laborCost:total, grandTotal:total};
+  };
+  const interpolateProjectText = (value: string, settings?: ExportTemplateSettings) => {
+    const values = getClientDynamicValues(settings);
+    return value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => escapeHtml(String(values[key as keyof typeof values] || '')));
+  };
+  const interpolateProjectHtml = interpolateProjectText;
 
   const commercialExtraSummaryItems = dedupeLabeledItems([
     ...extraPlumbingItems.map((item: any) => ({
@@ -930,7 +930,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       })),
   ]).filter((item) => item.quantity > 0);
 
-  const renderClientDocumentBlocks = (blocks: ClientDocumentBlock[] = []) => {
+  const renderClientDocumentBlocks = (blocks: ClientDocumentBlock[] = [], settings?: ExportTemplateSettings) => {
+    const values = getClientDynamicValues(settings);
     if (!Array.isArray(blocks) || blocks.length === 0) return '';
 
     return `
@@ -947,7 +948,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             }
 
             if (block.type === 'data_field') {
-              const fieldValue = projectDynamicValues[block.fieldKey as keyof typeof projectDynamicValues] || '';
+              const fieldValue = values[block.fieldKey as keyof typeof values] || '';
               return `
                 <div class="custom-block">
                   <div class="custom-data-field" ${style}>
@@ -968,7 +969,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               return `
                 <div class="custom-block">
                   <ul class="custom-bullets" ${style}>
-                    ${lines.map((line) => `<li>${interpolateProjectText(escapeHtml(line))}</li>`).join('')}
+                    ${lines.map((line) => `<li>${interpolateProjectText(escapeHtml(line),settings)}</li>`).join('')}
                   </ul>
                   ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
                 </div>
@@ -978,7 +979,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
             if (block.type === 'heading') {
               return `
                 <div class="custom-block">
-                  <h3 class="custom-heading" ${style}>${interpolateProjectText(escapeHtml(block.content || ''))}</h3>
+                  <h3 class="custom-heading" ${style}>${interpolateProjectText(escapeHtml(block.content || ''),settings)}</h3>
                   ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
                 </div>
               `;
@@ -986,7 +987,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
             return `
               <div class="custom-block">
-                <p class="custom-paragraph" ${style}>${interpolateProjectText(escapeHtml(block.content || '')).replace(/\n/g, '<br/>')}</p>
+                <p class="custom-paragraph" ${style}>${interpolateProjectText(escapeHtml(block.content || ''),settings).replace(/\n/g, '<br/>')}</p>
                 ${block.comments ? `<div class="custom-comment">${escapeHtml(block.comments)}</div>` : ''}
               </div>
             `;
@@ -1021,6 +1022,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const resolveClientBodyHtml = (templateSettings: ExportTemplateSettings = getTemplateSettings('client')) => {
+    templateSettings = installationSettings(templateSettings);
     const customBodyHtml = templateSettings.customBodyHtml?.trim();
     const shouldUseCustomBody =
       templateSettings.useCustomClientBody === true &&
@@ -1028,7 +1030,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       !isLegacyAutoClientHtml(customBodyHtml);
 
     if (shouldUseCustomBody) {
-      return interpolateProjectHtml(customBodyHtml) + renderQuoteTable(project,templateSettings);
+      return interpolateProjectHtml(customBodyHtml,templateSettings) + (templateSettings.sections?.costs !== false ? renderQuoteTable(project,templateSettings) : '');
     }
 
     return buildClientBudgetBody(templateSettings);
@@ -1039,17 +1041,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       ...selectedSections,
       ...(templateSettings.sections || {}),
     };
-    const { additionalsCosts, baseMaterialCost, grandTotal, totalMaterialCost } = resolveCostOverrides(templateSettings);
-    const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
     const installationMode = templateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
-    const includeAdditionalsPricing = templateSettings.includeAdditionalsPricing !== false;
-    const showMaterialsToClient = clientPricingMode === 'full';
-    const clientBaseLaborCost = exportInstallationProfile.baseLaborCost;
-    const clientHeatingLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
-    const visibleAdditionalsLaborCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.laborCost : 0;
-    const visibleAdditionalsMaterialCost = includeExtras && includeAdditionalsPricing ? additionalsCosts.materialCost : 0;
-    const visibleLaborCost = clientBaseLaborCost + clientHeatingLaborCost + visibleAdditionalsLaborCost;
     const visibleExtraPlumbingItems = includeExtras ? extraPlumbingItems : [];
     const visibleHydraulicAdditionals = includeExtras ? commercialExtraSummaryItems : [];
     const conditions = getConditionsList(templateSettings.conditions);
@@ -1076,24 +1069,6 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           `${includeExtras ? installationTier : 'Instalación base'}.`,
           ...automaticScopeLines,
         ];
-    const visibleTotal = showMaterialsToClient
-      ? grandTotal
-      : visibleLaborCost;
-    const visibleMaterialsTotal = showMaterialsToClient
-      ? Math.max(baseMaterialCost + visibleAdditionalsMaterialCost, totalMaterialCost)
-      : 0;
-    const tilesMaterialCost = Number(project.materialCost || 0);
-    const tilesLaborCost = Number((project.materials as any)?.laborBreakdown?.tileInstaller?.cost || 0);
-    const includeVeredaMaterials = templateSettings.includeVeredaMaterials !== false;
-    const hasTilesMaterialCost = tilesMaterialCost > 0 && !showMaterialsToClient && includeVeredaMaterials;
-    const hasTilesLaborCost = tilesLaborCost > 0 && !showMaterialsToClient;
-    const hasHeatingCost = clientHeatingLaborCost > 0;
-    const hasAdditionalsCost = visibleAdditionalsLaborCost > 0;
-    const hasMultipleCostLines = hasHeatingCost || hasAdditionalsCost || hasTilesMaterialCost || hasTilesLaborCost || (showMaterialsToClient && visibleMaterialsTotal > 0);
-    const fullVisibleTotal = visibleLaborCost
-      + (hasTilesMaterialCost ? tilesMaterialCost : showMaterialsToClient ? visibleMaterialsTotal : 0)
-      + (hasTilesLaborCost ? tilesLaborCost : 0);
-
     const pricingSectionHtml = sections.costs ? renderQuoteTable(project,templateSettings) : '';
 
     return `
@@ -1152,7 +1127,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
       ${pricingPosition === 'top' ? pricingSectionHtml : ''}
 
-      ${renderClientDocumentBlocks(templateSettings.documentBlocks)}
+      ${renderClientDocumentBlocks(templateSettings.documentBlocks,templateSettings)}
 
       ${sections.conditions ? `
       <div class="section">
@@ -1187,11 +1162,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       {
         id: 'client-costs',
         label: 'Costos presupuestados',
-        detail: clientPricingMode === 'labor_only' ? 'Solo mano de obra visible para cliente.' : 'Materiales, mano de obra y total.',
-        value: clientPricingMode === 'labor_only'
-          ? formatCurrency(exportInstallationProfile.totalLaborCost)
-          : `${formatCurrency(computedCosts.totalMaterialCost)} + ${formatCurrency(exportInstallationProfile.totalLaborCost)}`,
-        ready: computedCosts.grandTotal > 0,
+        detail: 'Valor de instalación según los trabajos seleccionados.',
+        value: formatCurrency(getQuote(project,getTemplateSettings('client')).total),
+        ready: getQuote(project,getTemplateSettings('client')).total > 0,
       },
       {
         id: 'client-conditions',
@@ -2518,11 +2491,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           Proyecto <strong>${project.name}</strong> para <strong>${project.clientName}</strong>.
           Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${effectiveProjectSpec.depthLabel}
           con capacidad de ${(effectiveProjectSpec.volume * 1000).toFixed(0)} litros.
-          Inversión total: <strong style="color: #111111; font-size: 18px;">$${grandTotal.toLocaleString('es-AR')}</strong>
+          Inversión en instalación: <strong style="color: #111111; font-size: 18px;">${formatCurrency(getQuote(project,getTemplateSettings('client')).total)}</strong>
         </p>
       </div>
 
-      ${generateClientBudget({...getTemplateSettings('client'),clientPricingMode:'full',installationMode:'with_extras',includeAdditionalsPricing:true}).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
+      ${generateClientBudget(getTemplateSettings('client')).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
 
       ${projectUpdates.length > 0 ? `
       <div class="section">
@@ -3591,6 +3564,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
     const clientTemplateSettings = getTemplateSettings('client');
+    sections = {...sections, ...clientTemplateSettings.sections};
     const clientPricingMode = clientTemplateSettings.clientPricingMode || 'labor_only';
     const installationMode = clientTemplateSettings.installationMode || 'with_extras';
     const includeExtras = installationMode === 'with_extras';
@@ -3642,8 +3616,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
 
     if (sections.costs) {
-      const quote = getQuote(project,clientTemplateSettings);
-      message += `\n\n*${quote.label.toUpperCase()}*\n${quote.lines.map(line=>`- ${line.name}: ${formatCurrency(line.total)}`).join('\n')}\n*TOTAL COTIZADO: ${formatCurrency(quote.total)}*`;
+      message += `\n\n${renderQuoteMessage(project,clientTemplateSettings)}`;
     }
 
     if (sections.conditions) {
@@ -4358,7 +4331,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const selectedTemplateData = templates.find((template) => template.id === selectedTemplate) || visibleTemplates[0] || templates[0];
-  const activeDraftTemplate = draftSettings.templates?.[selectedTemplate] || {};
+  const activeDraftTemplate = getTemplateSettings(selectedTemplate, draftSettings);
+  const draftQuote = getQuote(project, activeDraftTemplate);
+  const selectableQuote = getQuote(project, {...activeDraftTemplate, excludedCostLineIds: []});
   const activeClientBlocks = selectedTemplate === 'client' && Array.isArray((activeDraftTemplate as ExportTemplateSettings).documentBlocks)
     ? (activeDraftTemplate as ExportTemplateSettings).documentBlocks || []
     : [];
@@ -4757,7 +4732,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                               </p>
                             </div>
 
-                            {(selectedTemplate === 'client' || selectedTemplate === 'budget') && (
+                            {selectedTemplate === 'budget' && (
                               <div>
                                 <label className="block text-xs text-zinc-400 mb-1">Modo comercial</label>
                                 <select
@@ -4770,7 +4745,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                                 </select>
                                 <p className="text-[11px] text-zinc-500 mt-1">
                                   {selectedTemplate === 'budget'
-                                    ? 'Por defecto queda seguro para cliente: solo mano de obra. Si activás materiales, vuelve a mostrarse el presupuesto interno completo.'
+                                    ? 'Este documento permite cotizar materiales y trabajos juntos. La propuesta de instalación siempre excluye materiales.'
                                     : 'En modo cliente estándar podés ocultar materiales y mostrar solo el valor de instalación.'}
                                 </p>
                               </div>
@@ -4818,27 +4793,24 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                                   onChange={(event) => updateDraftTemplate({ includeAdditionalsPricing: event.target.checked })}
                                   className="h-4 w-4"
                                 />
-                                <span>Sumar precios de adicionales</span>
+                                <span>Incluir mano de obra de adicionales</span>
                               </label>
                               <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si lo desactivás, los adicionales se muestran como alcance pero no se suman al precio comercial exportado.</p>
-                            </div>
-                            <div>
-                              <label className="flex items-center gap-2 text-sm text-zinc-300">
-                                <input
-                                  type="checkbox"
-                                  checked={activeDraftTemplate.includeVeredaMaterials !== false}
-                                  onChange={(event) => updateDraftTemplate({ includeVeredaMaterials: event.target.checked })}
-                                  className="h-4 w-4"
-                                />
-                                <span>Cobrar materiales de vereda</span>
-                              </label>
-                              <p className="text-[11px] text-zinc-500 mt-1 ml-6">Si lo desactivás, se muestra solo la mano de obra de colocación de losetas sin sumar el costo de materiales.</p>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      <div className="rounded-lg border border-zinc-700 p-4"><h4 className="font-semibold">Importes vinculados a Costos</h4><p className="text-sm text-zinc-400">Materiales: {formatCurrency(computedCosts.totalMaterialCost)} · Mano de obra y servicios: {formatCurrency(computedCosts.totalLaborCost)} · Total completo: {formatCurrency(computedCosts.grandTotal)}</p><p className="text-xs mt-2">Los importes se modifican en Costos. La modalidad de esta exportación determina qué partidas se presentan; los totales manuales antiguos ya no se aplican.</p></div>
+                      {(selectedTemplate === 'client' || selectedTemplate === 'budget') && <div className="rounded-lg border border-zinc-700 p-4 space-y-3">
+                        <h4 className="font-semibold">Qué incluir en esta cotización</h4>
+                        <p className="text-xs text-zinc-400">{selectedTemplate === 'client' ? 'Instalación: mano de obra y servicios. Los materiales se cotizan únicamente desde Presupuesto completo.' : 'Seleccioná las partidas del presupuesto detallado.'} Desmarcar un trabajo lo quita del importe de este documento; no cambia Costos.</p>
+                        <div className="max-h-64 overflow-auto space-y-2">{selectableQuote.lines.map(line=><label key={line.id} className="flex gap-2 text-sm items-start"><input type="checkbox" checked={!activeDraftTemplate.excludedCostLineIds?.includes(line.id)} onChange={e=>updateDraftTemplate({excludedCostLineIds:e.target.checked?(activeDraftTemplate.excludedCostLineIds||[]).filter(id=>id!==line.id):[...(activeDraftTemplate.excludedCostLineIds||[]),line.id]})}/><span>{line.name}<small className="block text-zinc-400">{formatCurrency(line.total)}</small></span></label>)}</div>
+                        <strong className="block">Total de esta cotización: {formatCurrency(draftQuote.total)}</strong>
+                        <h4 className="font-semibold pt-2">Qué mostrar al cliente</h4>
+                        {([['showCostDetails','Mostrar detalle de trabajos'],['showCostQuantities','Mostrar unidades y cantidades'],['showCostRates','Mostrar tarifas unitarias'],['showCostSubtotals','Mostrar subtotales por trabajo']] as const).map(([key,label])=><label key={key} className="flex gap-2 text-sm"><input type="checkbox" checked={activeDraftTemplate[key]!==false} disabled={key!=='showCostDetails'&&activeDraftTemplate.showCostDetails===false} onChange={e=>updateDraftTemplate({[key]:e.target.checked})}/>{label}</label>)}
+                        <p className="text-xs text-zinc-400">Ocultar columnas o el detalle conserva el total. Las tarifas se editan en Costos. Revisá también el alcance escrito si excluís trabajos.</p>
+                      </div>}
+
                     </>
                   )}
 

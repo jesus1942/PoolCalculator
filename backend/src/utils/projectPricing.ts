@@ -94,7 +94,7 @@ export type CostUnit = keyof typeof COST_UNITS;
 export type CostKind = 'material' | 'labor' | 'machine' | 'transport';
 export interface CostLine {
   id: string; name: string; unit: CostUnit; quantity: number; rate: number;
-  kind: CostKind; source: string; included: boolean; capacity?: number;
+  kind: CostKind; source: string; included: boolean; capacity?: number; category?: string;
 }
 export interface CostingSettings {
   revision: number; laborMode: 'legacy' | 'tasks';
@@ -113,10 +113,10 @@ export function validateCosting(input: any): CostingSettings {
   const cleanLine = (line: any, partial = false): any => {
     if (!line || typeof line !== 'object' || Array.isArray(line)) throw new Error('Partida inválida.');
     const out: any = {};
-    for (const key of ['id','name','unit','kind','source','quantity','rate','included','capacity']) {
+    for (const key of ['id','name','unit','kind','source','quantity','rate','included','capacity','category']) {
       if (partial && line[key] === undefined) continue;
       const value = line[key];
-      if (key === 'capacity' && value === undefined) continue;
+      if (['capacity','category'].includes(key) && value === undefined) continue;
       if (['quantity','rate','capacity'].includes(key)) {
         if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1e10 || (key === 'capacity' && value === 0)) throw new Error('Cantidad, tarifa o capacidad inválida.');
       } else if (key === 'unit') { if (!Object.prototype.hasOwnProperty.call(COST_UNITS,value)) throw new Error('Unidad inválida.'); }
