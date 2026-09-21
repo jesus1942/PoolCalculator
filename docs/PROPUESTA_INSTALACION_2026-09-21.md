@@ -56,3 +56,11 @@ Costos, propuesta imprimible, texto preparado para WhatsApp y hoja económica de
 Los datos anteriores se clasifican por concepto y categoría de origen. El selector Etapa en Costos permite ajustar esa clasificación y conservarla en la obra. Las etapas vacías no aparecen en el documento. El orden no pretende reemplazar la planificación técnica particular de la obra.
 
 Validación: 116 pruebas (83 backend y 33 frontend), compilación y generación/reapertura de Excel con grupos y total conciliado. Regresión con los 16 conceptos aportados por el usuario, selección parcial sin encabezados vacíos y preservación de etapas manuales.
+
+## Editor de exportación y acceso a PDF
+
+Corrección a partir de la captura aportada: columnas con ancho mínimo controlado, panel lateral con desplazamiento propio y editor de texto en una vista ancha en lugar de duplicar una tabla dentro de 380 px. El modo ampliado se monta en el cuerpo de la página mediante portal para evitar recortes por contenedores del layout. Se conserva la paleta de papel y verde y el panel se apila en pantallas pequeñas.
+
+Exportar PDF queda visible en la cabecera, incluso en pantalla ampliada. Imprime el borrador mostrado, no una configuración guardada anterior. Usa el diálogo nativo del navegador, donde se selecciona Guardar como PDF; no es una descarga directa de servidor. El botón informa preparación y evita pulsaciones repetidas. Guardar cambios sigue siendo la acción para persistir ajustes.
+
+Verificación: compilación TypeScript y producción. Evidencia visual de origen: captura del usuario; no se afirma revisión visual de la sesión privada ni impresión real de su presupuesto.

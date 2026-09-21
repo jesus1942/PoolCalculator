@@ -1,0 +1,36 @@
+/* Editor contenido: cada columna puede encogerse sin invadir la vista previa. */
+.export-editor{color:var(--ink,#253e38);background:var(--paper,#f5f1e5);border:1px solid var(--hair-strong,#d5ccba);border-radius:18px;overflow:hidden;isolation:isolate;max-width:100%;min-width:0}
+.export-editor--fullscreen{position:fixed;inset:0;z-index:1000;width:100%;height:100dvh;border:0;border-radius:0}
+.export-editor-shell{display:flex;flex-direction:column;min-width:0;height:100%;min-height:0}
+.export-editor-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 22px;border-bottom:1px solid var(--hair-strong,#d5ccba);background:var(--paper,#f5f1e5);flex:none}
+.export-editor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.export-editor-actions button{min-height:44px}
+.export-editor .export-editor-pdf{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:#285e59!important;color:white!important;font-weight:650;border:1px solid #285e59}
+.export-editor-pdf:disabled{opacity:.55;cursor:wait}
+.export-editor-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,380px);min-width:0;min-height:0;flex:1;height:720px;overflow:hidden}
+.export-editor--fullscreen .export-editor-layout{height:auto}
+.export-editor-preview{min-width:0;min-height:0;padding:20px;background:#e7e4dc;overflow:hidden}
+.export-editor-paper{height:100%;min-height:0;background:#fff;border:1px solid #d5d2c8;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px #203f3a0d}
+.export-editor-paper iframe{display:block;width:100%;height:100%;min-height:560px;border:0}
+.export-editor--fullscreen .export-editor-paper iframe{min-height:0}
+.export-editor-sidebar{min-width:0;min-height:0;overflow:auto;overflow-x:hidden;background:var(--card,#faf8ef);border-left:1px solid var(--hair-strong,#d5ccba);overscroll-behavior:contain}
+.export-editor-tabs{position:sticky;top:0;z-index:10;display:flex;gap:4px;padding:12px 12px 0;background:var(--card,#faf8ef);border-bottom:1px solid var(--hair-strong,#d5ccba)}
+.export-editor-tabs button{flex:1;min-width:0;min-height:44px;padding:10px 6px;font-size:13px}
+.export-editor-fields{padding:20px;min-width:0;overflow-wrap:anywhere}
+.export-editor-fields>*{min-width:0;max-width:100%}
+.export-editor-fields input:not([type=checkbox]),.export-editor-fields select,.export-editor-fields textarea{max-width:100%;min-width:0}
+.export-editor-fields table{width:100%!important;table-layout:fixed}
+.export-editor-fields td,.export-editor-fields th{overflow-wrap:anywhere}
+.export-editor--document .export-editor-layout{grid-template-columns:minmax(0,1fr)}
+.export-editor--document .export-editor-preview{display:none}
+.export-editor--document .export-editor-sidebar{width:100%;max-width:1100px;justify-self:center;border-left:0;border-right:0}
+.export-editor-richtext{overflow:auto;max-width:100%;line-height:1.65}
+.export-editor button:focus-visible{outline:3px solid #528c83;outline-offset:2px}
+@media(max-width:800px){.export-editor-layout{grid-template-columns:1fr;height:auto;max-height:78dvh;overflow:auto}.export-editor--fullscreen .export-editor-layout{max-height:none}.export-editor-preview{height:55dvh;padding:12px;min-height:300px}.export-editor-paper iframe{min-height:0}.export-editor-sidebar{overflow:visible;border-left:0;border-top:1px solid #d5ccba}.export-editor-header{padding:12px;gap:10px}.export-editor-header h3{font-size:17px}.export-editor-actions{width:100%}.export-editor-actions button{flex:1;padding:8px;font-size:12px}.export-editor-fields{padding:16px}.export-editor--document .export-editor-layout{display:block}}
+/* El portal conserva la paleta de papel también fuera del contenedor de la app. */
+.export-editor :is(.text-white,.text-zinc-100,.text-zinc-200,.text-zinc-300,.text-zinc-900,.text-zinc-950){color:var(--ink,#253e38)!important}
+.export-editor :is(.text-zinc-400,.text-zinc-500){color:var(--ink-soft,#62706a)!important}
+.export-editor-fields [class*="bg-zinc-"],.export-editor-actions [class*="bg-zinc-"]{background:var(--card,#faf8ef)!important}
+.export-editor :is(input,select,textarea){background:var(--card,#fffdf7);color:var(--ink,#253e38)}
+.export-editor :is([class*="border-zinc-"]){border-color:var(--hair-strong,#d5ccba)}
+.export-editor .export-editor-richtext{background:#fff!important;color:#243e38!important}

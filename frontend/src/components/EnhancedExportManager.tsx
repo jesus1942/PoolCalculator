@@ -1,5 +1,7 @@
 import { installationSettings, renderQuoteMessage, getQuote, renderQuoteTable, renderDetailedCostDocument } from '@/utils/costExport';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import '@/theme/export-editor.css';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -37,6 +39,12 @@ type ClientDocumentBlock = {
   fontFamily?: string;
   fontSize?: number;
   align?: 'left' | 'center' | 'right';
+};
+
+/** La pantalla ampliada se monta fuera del layout para evitar recortes por sus contenedores. */
+const ExportEditorSurface: React.FC<React.PropsWithChildren<{fullscreen:boolean;className:string}>> = ({fullscreen,className,children}) => {
+  const surface=<section className={className} aria-label="Editor de exportación">{children}</section>;
+  return fullscreen?createPortal(surface,document.body):surface;
 };
 
 type ExportTemplateSettings = {
@@ -139,6 +147,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   });
   const [isEditorOpen, setIsEditorOpen] = useState(true);
   const [editorFullscreen, setEditorFullscreen] = useState(false);
+  const [exportingPDF,setExportingPDF]=useState(false);
   const [editorTab, setEditorTab] = useState<'contenido' | 'precios' | 'editor'>('contenido');
   const [draftSettings, setDraftSettings] = useState<ExportSettings>(() =>
     JSON.parse(JSON.stringify((project.exportSettings as ExportSettings) || { templates: {} }))
@@ -4004,7 +4013,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // nítido y seleccionable) y respeta los cortes de página CSS (break-inside:
   // avoid), por lo que nunca corta en el medio de una tarjeta o tabla. Se
   // imprime dentro de un iframe oculto para no depender de popups.
-  const printTemplateDocument = async (template: ExportTemplate) => {
+  const printTemplateDocument = async (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
     const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
 
     let cadImageDataUrl = '';
@@ -4013,10 +4022,10 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       poolImageDataUrl = await getPoolImageDataUrl();
     }
     if (template === 'professional') {
-      cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
+      cadImageDataUrl = await getProfessionalImageDataUrl(settings);
     }
 
-    const html = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
+    const html = getContentForTemplate(template, settings, { cadImageDataUrl, poolImageDataUrl });
 
     // Refuerzo de impresión común a todas las plantillas: A4, sin fondos de
     // pantalla, colores exactos y cortes limpios entre secciones.
@@ -4125,8 +4134,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // "Descargar PDF": usa el mismo motor nativo de impresión. En el diálogo,
   // elegí destino "Guardar como PDF" para obtener un archivo A4 nítido y con
   // los cortes de página correctos.
-  const handleExportPDF = async (template: ExportTemplate) => {
-    await printTemplateDocument(template);
+  const handleExportPDF = async (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
+    if(exportingPDF) return;
+    setExportingPDF(true);
+    try { await printTemplateDocument(template,settings); }
+    finally { setExportingPDF(false); }
   };
 
 
@@ -4497,19 +4509,17 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       </Card>
 
       {isEditorOpen && (
-        <div className={editorFullscreen
-          ? "fixed inset-0 z-50 bg-zinc-950 flex flex-col"
-          : "border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
-        }>
-          <div className={editorFullscreen ? "flex flex-col h-full" : ""}>
-            <div className="flex flex-col gap-3 border-b border-zinc-800 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <ExportEditorSurface fullscreen={editorFullscreen} className={`export-editor ${editorFullscreen?'export-editor--fullscreen':''} ${editorTab==='editor'&&selectedTemplate==='client'?'export-editor--document':''}`}>
+          <div className="export-editor-shell">
+            <div className="export-editor-header">
               <div>
                 <h3 className="text-xl font-semibold text-white">
                   {selectedTemplateData.name}
                 </h3>
-                <p className="text-sm text-zinc-400">Editá el documento y guardá los cambios</p>
+                <p className="text-sm text-zinc-400">PDF: elegí «Guardar como PDF» en el diálogo de impresión.</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="export-editor-actions">
+                <button type="button" className="export-editor-pdf" disabled={exportingPDF} onClick={()=>void handleExportPDF(selectedTemplate,draftSettings)} title="Abre impresión: elegí Guardar como PDF. Exporta la vista previa actual."><HdDownload size={18}/>{exportingPDF?'Preparando…':'Exportar PDF'}</button>
                 <button
                   onClick={() => setEditorFullscreen(!editorFullscreen)}
                   className="px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 text-sm"
@@ -4526,9 +4536,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               </div>
             </div>
 
-            <div className={`grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] ${editorFullscreen ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
-              <div className="bg-zinc-950 p-4 overflow-auto">
-                <div className={`bg-white rounded-2xl border border-zinc-800 shadow-sm overflow-hidden ${editorFullscreen ? 'h-[calc(100vh-110px)]' : 'min-h-[560px]'}`}>
+            <div className="export-editor-layout">
+              <div className="export-editor-preview">
+                <div className="export-editor-paper">
                   <iframe
                     title="preview-editor"
                     srcDoc={draftPreviewHtml}
@@ -4538,9 +4548,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                 </div>
               </div>
 
-              <div className={`border-l border-zinc-800 overflow-auto bg-zinc-950 ${editorFullscreen ? 'h-[calc(100vh-65px)]' : 'max-h-[700px]'}`}>
+              <div className="export-editor-sidebar">
                 {/* Pestañas del panel de ajustes */}
-                <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800 px-5 pt-4 pb-0 flex gap-1">
+                <div className="export-editor-tabs">
                   {([
                     { id: 'contenido' as const, label: 'Contenido' },
                     { id: 'precios' as const, label: 'Precios' },
@@ -4563,7 +4573,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                   })}
                 </div>
 
-                <div className="p-5 space-y-6">
+                <div className="export-editor-fields space-y-6">
                   {/* ============ PESTAÑA CONTENIDO ============ */}
                   {(editorTab === 'contenido' || (selectedTemplate !== 'client' && editorTab === 'editor')) && (
                     <>
@@ -4901,7 +4911,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                             contentEditable
                             suppressContentEditableWarning
                             onInput={(event) => updateDraftClientCustomBody(event.currentTarget.innerHTML)}
-                            className="min-h-[360px] rounded-xl border border-zinc-800 bg-white px-4 py-4 text-sm text-zinc-900 focus:outline-none"
+                            className="export-editor-richtext min-h-[360px] rounded-xl border border-zinc-800 bg-white px-4 py-4 text-sm text-zinc-900 focus:outline-none"
                             dangerouslySetInnerHTML={{ __html: clientDocumentEditorHtml }}
                           />
 
@@ -5043,7 +5053,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
               </div>
             </div>
           </div>
-        </div>
+        </ExportEditorSurface>
       )}
 
       {showExcelDialog && (
