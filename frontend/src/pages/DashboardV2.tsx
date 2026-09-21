@@ -214,6 +214,7 @@ export const DashboardV2: React.FC = () => {
         </div>
       </section>
 
+      <div className="mb-3 flex justify-end"><Link to="/statistics" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold" style={{color: 'var(--accent)'}}><HdActivity size={18} />Ver estadísticas e historial</Link></div>
       <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: 'Obras activas', value: activeProjects.length, icon: HdFolderOpen, tone: 'var(--accent)' },

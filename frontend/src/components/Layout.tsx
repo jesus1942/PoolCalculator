@@ -80,6 +80,7 @@ export const Layout: React.FC = () => {
     ]
     : [
       { to: '/dashboard', icon: HdLayoutGrid, label: 'Panel' },
+      { to: '/statistics', icon: HdActivity, label: 'Estadísticas' },
       { to: '/pool-models', icon: HdWaves, label: 'Modelos de Piscinas' },
       { to: '/projects', icon: HdFolderOpen, label: 'Proyectos' },
       { to: '/agenda', icon: HdCalendar, label: 'La Agenda' },

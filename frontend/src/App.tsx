@@ -15,6 +15,7 @@ const Register = lazy(() => import('@/pages/Register').then((module) => ({ defau
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then((module) => ({ default: module.ForgotPassword })));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword').then((module) => ({ default: module.ResetPassword })));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback').then((module) => ({ default: module.AuthCallback })));
+const BusinessStats = lazy(() => import('@/pages/BusinessStats').then(module => ({ default: module.BusinessStats })));
 const DashboardV2 = lazy(() => import('@/pages/DashboardV2').then((module) => ({ default: module.DashboardV2 })));
 const AgendaExperience = lazy(() => import('@/pages/AgendaExperience').then((module) => ({ default: module.AgendaExperience })));
 const PoolModelsExperience = lazy(() => import('@/pages/PoolModelsExperience').then((module) => ({ default: module.PoolModelsExperience })));
@@ -100,6 +101,7 @@ function App() {
                   <DashboardV2 />
                 </RoleRoute>
               } />
+              <Route path="/statistics" element={<RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer"><BusinessStats /></RoleRoute>} />
               <Route path="/agenda" element={<AgendaExperience />} />
               <Route path="/pool-models" element={
                 <RoleRoute disallowedRoles={['INSTALLER']} redirectTo="/installer">
