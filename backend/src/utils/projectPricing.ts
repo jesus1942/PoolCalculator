@@ -152,7 +152,7 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
   const rows: CostLine[] = [];
   const add = (id: string,name: string,kind: CostKind,quantity: number,rate: number,source: string,unit: CostUnit = 'UNIT') => rows.push({id,name,kind,quantity:amount(quantity),rate:amount(rate),source,unit,included:true});
   const materialNames: Record<string,string> = {adhesive:'Adhesivo',cement:'Cemento de vereda',sand:'Arena de vereda',gravel:'Piedra de vereda',whiteCement:'Cemento blanco',marmolina:'Marmolina',wireMesh:'Malla de vereda',waterproofing:'Impermeabilizante',geomembrane:'Geomembrana',electroweldedMesh:'Malla de apoyo',sandForBed:'Arena de relleno',cementBags:'Cemento de apoyo',drainStone:'Piedra de drenaje'};
-  const normalizeUnit = (unit:string): CostUnit => /m[³3]/.test(unit)?'M3':/m[²2]/.test(unit)?'M2':/bolsa/.test(unit)?'BAG':unit==='kg'?'KG':'UNIT';
+  const normalizeUnit = (unit:string): CostUnit => /m[³3]/.test(unit)?'M3':/m[²2]/.test(unit)?'M2':/bolsa/.test(unit)?'BAG':unit==='kg'?'KG':/^(m|ml|metro|metros)$/i.test(unit)?'ML':'UNIT';
   const materials = project.materials || {};
   const details = Object.entries(materialNames).filter(([key])=>amount(materials[key]?.quantity)>0).map(([key,name])=>({id:`base:material:${key}`,name,quantity:amount(materials[key].quantity),cost:amount(materials[key].cost),unit:normalizeUnit(materials[key].unit || '')}));
   (Array.isArray(materials.tiles)?materials.tiles:[]).forEach((tile:any,index:number)=>{if(amount(tile.quantity)>0) details.push({id:`base:tile:${tile.tileId || index}`,name:tile.tileName||'Loseta',quantity:amount(tile.quantity),cost:amount(tile.totalCost ?? tile.cost ?? amount(tile.pricePerUnit)*amount(tile.quantity)),unit:'UNIT'});});
@@ -167,7 +167,7 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
     ['plumbing',project.plumbingConfig?.selectedItems,'Hidráulica'],
     ['electrical',project.electricalConfig?.items,'Eléctrica'],
   ] as const) {
-    (Array.isArray(items) ? items : []).forEach((item: any,index: number) => add(`${key}:${item.id || item.itemId || index}`,getConfigItemName(item) || title,'material',item.quantity,item.pricePerUnit,title, /^(m|ml|metro)/i.test(item.unit || '') ? 'ML':'UNIT'));
+    (Array.isArray(items) ? items : []).forEach((item: any,index: number) => add(`${key}:${item.id || item.itemId || index}`,getConfigItemName(item) || title,'material',item.quantity,item.pricePerUnit,title, normalizeUnit(item.unit || '')));
   }
   // No descartar partidas por parecido de nombres: sólo se omite una referencia exacta al mismo catálogo.
   const configItems = [...(Array.isArray(project.plumbingConfig?.selectedItems)?project.plumbingConfig.selectedItems:[]),...(Array.isArray(project.electricalConfig?.items)?project.electricalConfig.items:[])];
@@ -211,10 +211,10 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
   const totalMaterialCost = sum(r => r.kind === 'material');
   const totalLaborCost = sum(r => r.kind !== 'material');
   const additionalsCosts = {materialCost:sum(r => r.id.startsWith('additional:') && r.kind === 'material'),laborCost:sum(r => r.id.startsWith('additional:') && r.kind !== 'material')};
-  const tileLaborCost = sum(r => r.id === 'tiles:labor');
+  const tileLaborCost = sum(r => r.id === 'tiles:labor' && r.kind !== 'material');
   return {...legacy, lines, warnings, settings, additionals, rawAdditionals: additionalsInput || getProjectAdditionals(project), duplicatedAdditionals:duplicates,
     additionalsCosts, duplicatedAdditionalsCosts:calculateAdditionalCosts(duplicates),
-    plumbingCosts:sum(r => r.id.startsWith('plumbing:')),electricalCosts:sum(r => r.id.startsWith('electrical:')),
+    plumbingCosts:sum(r => r.id.startsWith('plumbing:') && r.kind === 'material'),electricalCosts:sum(r => r.id.startsWith('electrical:') && r.kind === 'material'),
     baseMaterialCost:roundMoney(totalMaterialCost-additionalsCosts.materialCost),
     baseLaborCost:roundMoney(totalLaborCost-additionalsCosts.laborCost-tileLaborCost),
     tileLaborCost,totalMaterialCost,totalLaborCost,grandTotal:roundMoney(totalMaterialCost+totalLaborCost)};

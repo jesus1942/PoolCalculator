@@ -62,3 +62,12 @@ test('el permiso sin importes no expone el libro de costos ni sus presets',()=>{
   const result=sanitizeProjectForAccess(p,{canAccess:true,canViewFinancials:false,canEdit:false,canDelete:false,allowedTabs:['overview'],source:'assignment'});
   assert.equal(result.exportSettings.costing,undefined);assert.equal(result.totalCost,0);
 });
+
+test('cambiar el tipo contable conserva totales y no produce mano de obra negativa',()=>{
+ const p=project({materials:{laborBreakdown:{tileInstaller:{area:2,cost:50}}},exportSettings:{costing:{...EMPTY_COSTING,overrides:{'tiles:labor':{kind:'material'}}}}});
+ const costs=price(p);assert.equal(costs.tileLaborCost,0);assert.equal(costs.baseLaborCost,40);assert.equal(costs.totalMaterialCost,150);assert.equal(costs.grandTotal,190);
+});
+test('materiales hidráulicos respetan m², m³ y metros lineales como unidades distintas',()=>{
+ const p=project({plumbingConfig:{selectedItems:[{id:'a',unit:'m²',quantity:2,pricePerUnit:10},{id:'b',unit:'m³',quantity:2,pricePerUnit:10},{id:'c',unit:'m',quantity:2,pricePerUnit:10}]}});
+ assert.deepEqual(price(p).lines.filter(l=>l.id.startsWith('plumbing:')).map(l=>l.unit),['M2','M3','ML']);
+});

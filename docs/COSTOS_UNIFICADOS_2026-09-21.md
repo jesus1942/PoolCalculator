@@ -30,7 +30,7 @@ No hay migración ni reescritura masiva de proyectos. Los ajustes se guardan en 
 
 ## Verificación
 
-- 92 pruebas: 70 backend y 22 frontend; ninguna falló.
+- 94 pruebas: 72 backend y 22 frontend; ninguna falló.
 - Compilación TypeScript y build de servidor/frontend aprobados.
 - Nuevas regresiones: cantidades extra, tarifa cero, modelo/tareas, cobertura parcial de catálogo, preservación de MO, nombres parecidos, unidades equivalentes, conciliación, ajustes huérfanos, validación, aislamiento y conflictos concurrentes.
 - Exportaciones: coincidencia de totales, selección de alcance, descarte de overrides antiguos y escape de texto HTML.
