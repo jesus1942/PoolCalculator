@@ -64,3 +64,11 @@ Corrección a partir de la captura aportada: columnas con ancho mínimo controla
 Exportar PDF queda visible en la cabecera, incluso en pantalla ampliada. Imprime el borrador mostrado, no una configuración guardada anterior. Usa el diálogo nativo del navegador, donde se selecciona Guardar como PDF; no es una descarga directa de servidor. El botón informa preparación y evita pulsaciones repetidas. Guardar cambios sigue siendo la acción para persistir ajustes.
 
 Verificación: compilación TypeScript y producción. Evidencia visual de origen: captura del usuario; no se afirma revisión visual de la sesión privada ni impresión real de su presupuesto.
+
+## Consistencia de casillas y documentos personalizados
+
+Se identificó una ruta que permitía conservar una copia fija del detalle económico en customBodyHtml. Cambiar las casillas regeneraba la tabla actual, pero no retiraba la copia anterior. La composición ahora analiza el HTML, elimina los bloques económicos generados anteriores y coloca un único bloque calculado con las opciones actuales. Preserva textos y tablas libres. El editor contiene un marcador no editable para el detalle económico, evitando volver a guardar tarifas como contenido fijo.
+
+Las secciones reconocibles del documento personalizado también respetan su visibilidad. HTML, impresión/PDF, texto preparado para WhatsApp y generación del expediente usan el borrador visible cuando el editor está abierto. El dossier recibe explícitamente ese conjunto de ajustes. Un ZIP generado previamente es una instantánea y debe regenerarse para incluir cambios.
+
+Verificación: 122 pruebas (83 backend, 39 frontend), incluyendo las 16 combinaciones de columnas/detalle con HTML personalizado, copias económicas repetidas, cambio de tarifas, exclusión de partidas, ocultación completa, conservación de textos, posición y serialización/recarga de opciones false. Compilación aprobada. Se prueba la composición compartida del documento, no el diálogo nativo de impresión ni la sesión privada del usuario. No constituye una certificación integral del resto de los flujos de la aplicación.

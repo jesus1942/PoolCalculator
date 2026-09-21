@@ -1,3 +1,4 @@
+import { renderCustomClientDocument, clientDocumentEditorBody } from '@/utils/clientDocument';
 import { installationSettings, renderQuoteMessage, getQuote, renderQuoteTable, renderDetailedCostDocument } from '@/utils/costExport';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -163,7 +164,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const [copiedPwaLink, setCopiedPwaLink] = useState(false);
 
   const seedClientDocumentEditor = (html: string) => {
-    setClientDocumentEditorHtml(html);
+    setClientDocumentEditorHtml(clientDocumentEditorBody(html));
     setClientEditorSeedVersion((version) => version + 1);
   };
   const [excelSections, setExcelSections] = useState({
@@ -1039,7 +1040,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       !isLegacyAutoClientHtml(customBodyHtml);
 
     if (shouldUseCustomBody) {
-      return interpolateProjectHtml(customBodyHtml,templateSettings) + (templateSettings.sections?.costs !== false ? renderQuoteTable(project,templateSettings) : '');
+      return renderCustomClientDocument(project,{...templateSettings,sections:{...selectedSections,...templateSettings.sections}},interpolateProjectHtml(customBodyHtml,templateSettings));
     }
 
     return buildClientBudgetBody(templateSettings);
@@ -2463,9 +2464,9 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const generateDetailedBudget = (settings: ExportTemplateSettings = getTemplateSettings('budget')) => renderDetailedCostDocument(project,settings,getLogoForTemplate('budget'));
 
-  const generateCompleteReport = (templateSettings: ExportTemplateSettings = getTemplateSettings('complete')) => {
+  const generateCompleteReport = (templateSettings: ExportTemplateSettings = getTemplateSettings('complete'), settings:ExportSettings = exportSettings) => {
     const { grandTotal } = resolveCostOverrides(templateSettings);
-    const conditions = getConditionsList(getTemplateSettings('client').conditions);
+    const conditions = getConditionsList(getTemplateSettings('client',settings).conditions);
     const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
     const headerSubtitle = templateSettings.subtitle || 'Reporte Completo del Proyecto';
     const documentTitle = templateSettings.title || `Reporte Completo - ${project.name}`;
@@ -2500,11 +2501,11 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
           Proyecto <strong>${project.name}</strong> para <strong>${project.clientName}</strong>.
           Piscina de ${project.poolPreset?.length}m x ${project.poolPreset?.width}m x ${effectiveProjectSpec.depthLabel}
           con capacidad de ${(effectiveProjectSpec.volume * 1000).toFixed(0)} litros.
-          Inversión en instalación: <strong style="color: #111111; font-size: 18px;">${formatCurrency(getQuote(project,getTemplateSettings('client')).total)}</strong>
+          Inversión en instalación: <strong style="color: #111111; font-size: 18px;">${formatCurrency(getQuote(project,getTemplateSettings('client',settings)).total)}</strong>
         </p>
       </div>
 
-      ${generateClientBudget(getTemplateSettings('client')).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
+      ${generateClientBudget(getTemplateSettings('client',settings)).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
 
       ${projectUpdates.length > 0 ? `
       <div class="section">
@@ -3572,7 +3573,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const generateWhatsAppMessage = (template: ExportTemplate, sections = selectedSections): string => {
     const materials = project.materials as any;
     const plumbingConfig = project.plumbingConfig as any;
-    const clientTemplateSettings = getTemplateSettings('client');
+    const clientTemplateSettings = getTemplateSettings('client',isEditorOpen?draftSettings:exportSettings);
     sections = {...sections, ...clientTemplateSettings.sections};
     const clientPricingMode = clientTemplateSettings.clientPricingMode || 'labor_only';
     const installationMode = clientTemplateSettings.installationMode || 'with_extras';
@@ -3660,7 +3661,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       case 'budget':
         return generateDetailedBudget(templateSettings);
       case 'complete':
-        return generateCompleteReport(templateSettings);
+        return generateCompleteReport(templateSettings,settings);
       case 'overview':
         return generateOverview(templateSettings, extras.poolImageDataUrl);
       case 'hydraulic':
@@ -3891,7 +3892,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       setGeneratingPackage(true);
       const cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
       const poolImageDataUrl = await getPoolImageDataUrl();
-      const packageSettings: ExportSettings = JSON.parse(JSON.stringify(exportSettings || { templates: {} }));
+      const packageSettings: ExportSettings = JSON.parse(JSON.stringify((isEditorOpen?draftSettings:exportSettings) || { templates: {} }));
       const clientTemplate = getTemplateSettings('client', packageSettings);
       const hasRecommendedExtras = extraPlumbingItems.length > 0 || summarizedAdditionalItems.length > 0;
       const recommendedClientContent = getContentForTemplate('client', {
@@ -3986,15 +3987,16 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const handleExport = async (format: 'html', template: ExportTemplate) => {
+    const settings=isEditorOpen?draftSettings:exportSettings;
     let cadImageDataUrl = '';
     let poolImageDataUrl = '';
     if (template === 'overview' || template === 'complete') {
       poolImageDataUrl = await getPoolImageDataUrl();
     }
     if (template === 'professional') {
-      cadImageDataUrl = await getProfessionalImageDataUrl(exportSettings);
+      cadImageDataUrl = await getProfessionalImageDataUrl(settings);
     }
-    const content = getContentForTemplate(template, exportSettings, { cadImageDataUrl, poolImageDataUrl });
+    const content = getContentForTemplate(template, settings, { cadImageDataUrl, poolImageDataUrl });
     const filename = `${template}-${project.name.replace(/\s+/g, '-').toLowerCase()}.html`;
     const mimeType = 'text/html';
 
@@ -4013,7 +4015,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // nítido y seleccionable) y respeta los cortes de página CSS (break-inside:
   // avoid), por lo que nunca corta en el medio de una tarjeta o tabla. Se
   // imprime dentro de un iframe oculto para no depender de popups.
-  const printTemplateDocument = async (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
+  const printTemplateDocument = async (template: ExportTemplate, settings: ExportSettings = isEditorOpen?draftSettings:exportSettings) => {
     const nextFrame = () => new Promise<void>((res) => requestAnimationFrame(() => res()));
 
     let cadImageDataUrl = '';
@@ -4134,7 +4136,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   // "Descargar PDF": usa el mismo motor nativo de impresión. En el diálogo,
   // elegí destino "Guardar como PDF" para obtener un archivo A4 nítido y con
   // los cortes de página correctos.
-  const handleExportPDF = async (template: ExportTemplate, settings: ExportSettings = exportSettings) => {
+  const handleExportPDF = async (template: ExportTemplate, settings: ExportSettings = isEditorOpen?draftSettings:exportSettings) => {
     if(exportingPDF) return;
     setExportingPDF(true);
     try { await printTemplateDocument(template,settings); }
@@ -4294,7 +4296,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   };
 
   const handleResetClientDocument = () => {
-    const nextHtml = buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings);
+    const nextHtml = clientDocumentEditorBody(buildClientBudgetBody((draftSettings.templates?.client || {}) as ExportTemplateSettings));
     seedClientDocumentEditor(nextHtml);
     updateDraftClientCustomBody(nextHtml);
   };
@@ -4868,7 +4870,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                         <div className="flex items-center justify-between gap-3 mb-3">
                           <div>
                             <h4 className="text-sm font-semibold text-white">Documento editable</h4>
-                            <p className="text-[11px] text-zinc-500 mt-1">Editás la propuesta de este proyecto. Los placeholders siguen saliendo de la app, por ejemplo <code>{'{{clientName}}'}</code> o <code>{'{{laborCost}}'}</code>.</p>
+                            <p className="text-[11px] text-zinc-500 mt-1">Editás los textos. El detalle económico se actualiza desde Precios y no se edita aquí. Los datos del proyecto se insertan, por ejemplo <code>{'{{clientName}}'}</code> o <code>{'{{laborCost}}'}</code>.</p>
                           </div>
                           <div className="flex gap-2">
                             <button
