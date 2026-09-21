@@ -66,3 +66,14 @@ test('suministro de agua puede entrar al presupuesto completo pero no a la insta
  assert.equal(getQuote(p,installationSettings()).total,85);
  assert.equal(getQuote(p,{clientPricingMode:'full'}).total,620);
 });
+test('la propuesta agrupa por etapa y mantiene sólo encabezados con trabajos seleccionados',()=>{
+ const p={...project,tasks:{floor:[{id:'base',name:'Cama de apoyo y preparación de base',estimatedHours:1,laborCost:100}],excavation:[{id:'start',name:'Replanteo y marcación de obra',estimatedHours:1,laborCost:50}]}};
+ const settings=installationSettings();
+ const html=renderQuoteTable(p,settings);
+ assert.ok(html.indexOf('1. Replanteo y excavación')<html.indexOf('2. Preparación de base'));
+ assert.ok(!html.includes('Materiales y suministros</th>'));
+ assert.equal(getQuote(p,settings).total,155);
+ const excluded=renderQuoteTable(p,{...settings,excludedCostLineIds:['task:excavation:start']});
+ assert.ok(!excluded.includes('1. Replanteo y excavación'));
+ assert.ok(renderQuoteMessage(p,settings).includes('*2. Preparación de base*'));
+});

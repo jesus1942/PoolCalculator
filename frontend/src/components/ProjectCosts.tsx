@@ -1,7 +1,7 @@
 import { getPoolWaterVolume, calculateWaterDeliveries } from '../../../backend/src/utils/poolWaterVolume';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Project } from '@/types';
-import { calculateProjectFinancials, COST_UNITS, getCosting, validateCosting, type CostLine, type CostingSettings } from '@/utils/projectCosting';
+import { calculateProjectFinancials, COST_STAGES, COST_UNITS, getCosting, validateCosting, type CostLine, type CostingSettings } from '@/utils/projectCosting';
 import api from '@/services/api';
 import { upsertCostPreset, mergeSavedPreset } from '@/utils/costPresets';
 import { CostPresetCatalog } from './CostPresetCatalog';
@@ -86,15 +86,16 @@ export const ProjectCosts: React.FC<Props> = ({project,canEdit=false,onReload,on
     {financials.warnings.length>0 && <details><summary>Revisiones del presupuesto ({financials.warnings.length})</summary><ul>{financials.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></details>}</section>
     <section className="pcost-panel"><div className="pcost-section-title"><h3>2. Partidas del presupuesto</h3><label>Mostrar<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="installation">Instalación y servicios</option><option value="all">Todas las partidas</option>{Object.entries(kinds).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
     <p>Desmarcá una partida si está incluida en otra. Las cantidades se redondean al entero superior y las tarifas al peso superior antes de calcular. Una tarifa de $0 se respeta; no se reemplaza con el precio del catálogo.</p>
-    <fieldset disabled={!canEdit || saving}><div className="pcost-table-wrap"><table><thead><tr><th>Incluir</th><th>Concepto y origen</th><th>Tipo</th><th>Unidad</th><th>Cantidad</th><th>Tarifa ARS</th><th>Subtotal</th><th>Ajustes</th></tr></thead><tbody>{financials.lines.filter(line=>filter==='all'||(filter==='installation'?line.kind!=='material':line.kind===filter)).map(line=><tr key={line.id} className={!line.included?'pcost-excluded':''}>
+    <fieldset disabled={!canEdit || saving}><div className="pcost-table-wrap"><table><thead><tr><th>Incluir</th><th>Concepto y origen</th><th>Tipo</th><th>Etapa</th><th>Unidad</th><th>Cantidad</th><th>Tarifa ARS</th><th>Subtotal</th><th>Ajustes</th></tr></thead><tbody>{financials.lines.filter(line=>filter==='all'||(filter==='installation'?line.kind!=='material':line.kind===filter)).map((line,index,lines)=><React.Fragment key={line.id}>{(index===0||lines[index-1].stage!==line.stage)&&<tr><th colSpan={9} style={{background:'#528c8318',padding:'1rem'}}>{line.stageLabel}</th></tr>}<tr className={!line.included?'pcost-excluded':''}>
     <td><input type="checkbox" aria-label={`Incluir ${line.name}`} checked={line.included} onChange={e=>edit(line,{included:e.target.checked})}/></td>
     <td><input aria-label={`Concepto ${line.name}`} value={line.name} onChange={e=>edit(line,{name:e.target.value})}/><small>{line.source}{draft.overrides[line.id]?' · Ajustado en Costos':''}{line.capacity?` · ${line.capacity} m³/camionada`:''}</small></td>
     <td><select aria-label={`Tipo de ${line.name}`} value={line.kind} onChange={e=>edit(line,{kind:e.target.value as any})}>{Object.entries(kinds).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></td>
+    <td><select aria-label={`Etapa de ${line.name}`} value={line.stage} onChange={e=>edit(line,{stage:e.target.value as CostLine['stage']})}>{Object.entries(COST_STAGES).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></td>
     <td><select aria-label={`Unidad de ${line.name}`} value={line.unit} onChange={e=>edit(line,{unit:e.target.value as any})}>{Object.entries(COST_UNITS).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></td>
     <td><input type="number" min="0" step="1" aria-label={`Cantidad de ${line.name}`} value={line.quantity} onChange={e=>edit(line,{quantity:numeric(e.target.value)})}/></td>
     <td><input type="number" min="0" step="1" aria-label={`Tarifa de ${line.name}`} value={line.rate} onChange={e=>edit(line,{rate:numeric(e.target.value)})}/></td><td className="pcost-money">{money(line.total)}</td>
     <td><div className="pcost-row-actions">{line.id.startsWith('manual:')?<button type="button" onClick={()=>change({...draft,items:draft.items.filter(item=>item.id!==line.id)})}>Quitar</button>:draft.overrides[line.id] && <button type="button" onClick={()=>{const next={...draft.overrides};delete next[line.id];change({...draft,overrides:next});}}>Restaurar origen</button>}<button type="button" onClick={()=>void savePreset(line)}>Guardar preset</button></div></td>
-    </tr>)}</tbody></table></div></fieldset></section>
+    </tr></React.Fragment>)}</tbody></table></div></fieldset></section>
     {canEdit && <section ref={catalogRef} className="pcost-panel"><h3>3. Catálogo de presets por categoría</h3><p>Definí tus tarifas de instalación y, por separado, los materiales para presupuestos completos. Guardar preset conserva tu tarifa inmediatamente en esta obra. Las partidas se guardan con Guardar costos.</p><fieldset disabled={saving}>
     <CostPresetCatalog saved={draft.presets} focusedPreset={focusedPreset} onAdd={add} onSave={savePreset} onRemove={id=>change({...draft,presets:draft.presets.filter(item=>item.id!==id)})}/>
     <div className="pcost-panel" style={{marginTop:'1rem'}}><h4>Camiones de agua para esta piscina</h4>

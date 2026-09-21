@@ -48,3 +48,11 @@ Planificar agua no cobra automáticamente el suministro. Sólo al marcar su incl
 Migración aditiva: dos columnas en PoolPreset (volumen opcional y origen). No se alteran precios ni cantidades guardadas. La estimación geométrica no descuenta escalones ni playa húmeda; cargar la capacidad real cuando exista folleto.
 
 113 pruebas: 81 backend y 32 frontend. Verifican creación/actualización del volumen, prioridad del folleto, formas, conversión m³/litros, viajes exactos y parciales, validación, persistencia y exclusión del agua en la propuesta de instalación.
+
+## Detalle económico por etapas
+
+Costos, propuesta imprimible, texto preparado para WhatsApp y hoja económica de Excel ordenan las partidas por etapa, con encabezados de grupo. Secuencia de presentación: replanteo/excavación, base, casco, hidráulica, eléctrica/iluminación, losetas/vereda, rellenos/terminaciones y pruebas/entrega. Los importes globales se identifican como Alcance general; materiales quedan separados como suministros. No se alteran importes, inclusiones ni dependencias técnicas al ordenar.
+
+Los datos anteriores se clasifican por concepto y categoría de origen. El selector Etapa en Costos permite ajustar esa clasificación y conservarla en la obra. Las etapas vacías no aparecen en el documento. El orden no pretende reemplazar la planificación técnica particular de la obra.
+
+Validación: 116 pruebas (83 backend y 33 frontend), compilación y generación/reapertura de Excel con grupos y total conciliado. Regresión con los 16 conceptos aportados por el usuario, selección parcial sin encabezados vacíos y preservación de etapas manuales.

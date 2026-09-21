@@ -1,3 +1,5 @@
+import { COST_STAGES, sortCostLines, type CostStage } from './costStages';
+export { COST_STAGES } from './costStages';
 import { getPoolWaterVolume, calculateWaterDeliveries } from './poolWaterVolume';
 import { getCommercialInstallationProfile } from './commercialInstallationPricing';
 
@@ -95,7 +97,7 @@ export type CostUnit = keyof typeof COST_UNITS;
 export type CostKind = 'material' | 'labor' | 'machine' | 'transport';
 export interface CostLine {
   id: string; name: string; unit: CostUnit; quantity: number; rate: number;
-  kind: CostKind; source: string; included: boolean; capacity?: number; category?: string;
+  kind: CostKind; source: string; included: boolean; capacity?: number; category?: string; stage?: CostStage;
 }
 export interface CostingSettings {
   revision: number; laborMode: 'legacy' | 'tasks';
@@ -127,13 +129,14 @@ export function validateCosting(input: any): CostingSettings {
   const cleanLine = (line: any, partial = false): any => {
     if (!line || typeof line !== 'object' || Array.isArray(line)) throw new Error('Partida inválida.');
     const out: any = {};
-    for (const key of ['id','name','unit','kind','source','quantity','rate','included','capacity','category']) {
+    for (const key of ['id','name','unit','kind','source','quantity','rate','included','capacity','category','stage']) {
       if (partial && line[key] === undefined) continue;
       const value = line[key];
-      if (['capacity','category'].includes(key) && value === undefined) continue;
+      if (['capacity','category','stage'].includes(key) && value === undefined) continue;
       if (['quantity','rate','capacity'].includes(key)) {
         if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1e10 || (key === 'capacity' && value === 0)) throw new Error('Cantidad, tarifa o capacidad inválida.');
-      } else if (key === 'unit') { if (!Object.prototype.hasOwnProperty.call(COST_UNITS,value)) throw new Error('Unidad inválida.'); }
+      } else if (key === 'stage') { if (!Object.prototype.hasOwnProperty.call(COST_STAGES,value)) throw new Error('Etapa inválida.'); }
+      else if (key === 'unit') { if (!Object.prototype.hasOwnProperty.call(COST_UNITS,value)) throw new Error('Unidad inválida.'); }
       else if (key === 'kind') { if (!['material','labor','machine','transport'].includes(value)) throw new Error('Tipo de costo inválido.'); }
       else if (key === 'included') { if (typeof value !== 'boolean') throw new Error('Estado de partida inválido.'); }
       else if (typeof value !== 'string' || !value.trim() || value.length > 240 || ['__proto__','constructor','prototype'].includes(value)) throw new Error('Nombre o identificador inválido.');
@@ -227,7 +230,7 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
   const warnings: string[] = [];
   const ids = new Set(rows.map(r => r.id));
   if (ids.size !== rows.length) warnings.push('Hay identificadores repetidos en las fuentes. Revisá las partidas antes de exportar.');
-  const lines = rows.map(r => ({...r,...settings.overrides[r.id],id:r.id,source:r.source})).concat(settings.items || []).map(normalizeBudgetLine).map(r => ({...r,total:r.included ? ceilBudget(r.quantity*r.rate):0}));
+  const lines = sortCostLines(rows.map(r => ({...r,...settings.overrides[r.id],id:r.id,source:r.source})).concat(settings.items || []).map(normalizeBudgetLine).map(r => ({...r,total:r.included ? ceilBudget(r.quantity*r.rate):0})));
   for (const key of Object.keys(settings.overrides)) if (!ids.has(key)) warnings.push(`El ajuste ${key} ya no tiene una partida de origen; no se suma.`);
   if (duplicates.length) warnings.push(`${duplicates.length} adicional(es) ya representados por su referencia de catálogo en hidráulica/eléctrica; no se cobran dos veces.`);
   if (legacy.commercialPricingSource === 'model_pricing' && settings.laborMode === 'legacy') warnings.push('Instalación base por tarifa comercial del modelo; las tareas base no se suman. Podés elegir costeo por tareas.');

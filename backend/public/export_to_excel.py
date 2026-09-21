@@ -31,16 +31,24 @@ def add_costs_sheet(wb, project_data):
     ws.append(['Concepto', 'Tipo', 'Unidad', 'Cantidad', 'Tarifa ARS', 'Subtotal ARS', 'Origen'])
     units = {'HOUR':'hora','HH':'hora hombre','HM':'hora máquina','DAY':'jornada','M2':'m²','ML':'metro lineal','UNIT':'unidad','M3':'m³','LOAD':'camionada','FIXED':'global','KG':'kg','BAG':'bolsa','LITER':'litro'}
     kinds = {'material':'Material','labor':'Mano de obra','machine':'Máquina','transport':'Transporte'}
+    previous_stage = None
+    stage_rows = []
     for line in data.get('lines', []):
         if not line.get('included') or not line.get('quantity'):
             continue
+        stage = line.get('stageLabel', 'Otros trabajos y servicios')
+        if stage != previous_stage:
+            ws.append([text(stage)])
+            stage_rows.append(ws.max_row)
+            ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=7)
+            previous_stage = stage
         ws.append([text(line.get('name')), kinds.get(line.get('kind'), ''), units.get(line.get('unit'), ''), line.get('quantity', 0), line.get('rate', 0), line.get('total', 0), text(line.get('source'))])
     ws.append(['TOTAL', '', '', '', '', data.get('grandTotal', 0)])
     total_row = ws.max_row
     ws.append(['Materiales y suministros', '', '', '', '', data.get('totalMaterialCost', 0)])
     ws.append(['Mano de obra y servicios', '', '', '', '', data.get('totalLaborCost', 0)])
     ws.freeze_panes = 'D6'
-    ws.auto_filter.ref = f'A5:G{total_row-1}'
+    # Los encabezados de etapa son secciones, no filas filtrables de partidas.
     ws.print_title_rows = '1:5'
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.orientation = 'landscape'
@@ -56,6 +64,9 @@ def add_costs_sheet(wb, project_data):
             cell.alignment = Alignment(vertical='top', wrap_text=True)
             if cell.row >= 6 and cell.column in (5,6):
                 cell.number_format = '#,##0.00'
+            if cell.row in stage_rows:
+                cell.fill = PatternFill('solid', fgColor='E7EEE9')
+                cell.font = Font(name='Calibri', size=11, bold=True, color='243E38')
             if cell.row in (1,5,total_row):
                 cell.fill = PatternFill('solid', fgColor='285E59')
                 cell.font = Font(name='Calibri', size=12, bold=True, color='FFFFFF')
