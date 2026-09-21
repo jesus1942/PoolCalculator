@@ -1,3 +1,4 @@
+import { getPoolWaterVolume, calculateWaterDeliveries } from './poolWaterVolume';
 import { getCommercialInstallationProfile } from './commercialInstallationPricing';
 
 const normalize = (value: string) =>
@@ -98,6 +99,7 @@ export interface CostLine {
 }
 export interface CostingSettings {
   revision: number; laborMode: 'legacy' | 'tasks';
+  waterDelivery?: { truckLiters:number; pricePerTrip:number; included:boolean };
   overrides: Record<string, Partial<CostLine>>; items: CostLine[]; presets: CostLine[];
 }
 export const EMPTY_COSTING: CostingSettings = { revision: 0, laborMode: 'legacy', overrides: {}, items: [], presets: [] };
@@ -154,7 +156,13 @@ export function validateCosting(input: any): CostingSettings {
     if (lines.some(l => !l.id.startsWith('manual:'))) throw new Error('Identificador de partida manual inválido.');
     return lines;
   };
-  return { revision: input.revision, laborMode: input.laborMode, overrides, items: list(input.items), presets: list(input.presets) };
+  let waterDelivery: CostingSettings['waterDelivery'];
+  if(input.waterDelivery!==undefined) {
+    const w=input.waterDelivery;
+    if(!w||typeof w.truckLiters!=='number'||!Number.isFinite(w.truckLiters)||w.truckLiters<=0||w.truckLiters>1e8||typeof w.pricePerTrip!=='number'||!Number.isFinite(w.pricePerTrip)||w.pricePerTrip<0||w.pricePerTrip>1e10||typeof w.included!=='boolean') throw new Error('Capacidad o tarifa del camión inválida.');
+    waterDelivery={truckLiters:w.truckLiters,pricePerTrip:w.pricePerTrip,included:w.included};
+  }
+  return { revision: input.revision, laborMode: input.laborMode, overrides, items: list(input.items), presets: list(input.presets), ...(waterDelivery?{waterDelivery}:{}) };
 }
 
 /** Traduce fuentes guardadas a partidas trazables, sin inventar tarifas de mercado. */
@@ -211,6 +219,11 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
   if (taskExtra > extraLabor) add('additional:labor:balance','Mano de obra adicional de tareas (diferencia)','labor',1,taskExtra-extraLabor,'Tareas adicionales: sin duplicar MO por accesorio','FIXED');
   const tileArea=amount(project.materials?.laborBreakdown?.tileInstaller?.area);
   add('tiles:labor','Colocación de losetas y vereda','labor',tileArea||1,tileArea?legacy.tileLaborCost/tileArea:legacy.tileLaborCost,'Cómputo de losetas',tileArea?'M2':'FIXED');
+  if(settings.waterDelivery) {
+    const water=getPoolWaterVolume(project.poolPreset,amount(project.volume));
+    const delivery=calculateWaterDeliveries(water.volumeM3,settings.waterDelivery.truckLiters);
+    rows.push({id:'water:delivery',name:'Suministro de agua por camión',kind:'material',unit:'LOAD',quantity:delivery.trips,rate:amount(settings.waterDelivery.pricePerTrip),capacity:settings.waterDelivery.truckLiters/1000,source:water.source==='BROCHURE'?'Volumen del folleto':'Volumen estimado del modelo',included:settings.waterDelivery.included});
+  }
   const warnings: string[] = [];
   const ids = new Set(rows.map(r => r.id));
   if (ids.size !== rows.length) warnings.push('Hay identificadores repetidos en las fuentes. Revisá las partidas antes de exportar.');

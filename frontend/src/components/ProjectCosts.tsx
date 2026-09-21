@@ -1,3 +1,4 @@
+import { getPoolWaterVolume, calculateWaterDeliveries } from '../../../backend/src/utils/poolWaterVolume';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Project } from '@/types';
 import { calculateProjectFinancials, COST_UNITS, getCosting, validateCosting, type CostLine, type CostingSettings } from '@/utils/projectCosting';
@@ -26,7 +27,13 @@ export const ProjectCosts: React.FC<Props> = ({project,canEdit=false,onReload,on
   const [volume,setVolume] = useState(0);
   const [capacity,setCapacity] = useState(0);
   const [rate,setRate] = useState(0);
-  const [supply,setSupply] = useState('Agua');
+  const [supply,setSupply] = useState('Arena');
+  const waterVolume=getPoolWaterVolume(project.poolPreset,project.volume);
+  const waterTrips=calculateWaterDeliveries(waterVolume.volumeM3,draft.waterDelivery?.truckLiters || 0);
+  const setWaterDelivery=(patch:Partial<NonNullable<CostingSettings['waterDelivery']>>)=> {
+    const overrides={...draft.overrides};delete overrides['water:delivery'];
+    change({...draft,overrides,waterDelivery:{truckLiters:0,pricePerTrip:0,included:false,...draft.waterDelivery,...patch}});
+  };
   useEffect(() => { savedBasis.current=getCosting(project); if (!dirty) setDraft(savedBasis.current); },[project]);
   useEffect(() => { onDirtyChange?.(dirty); },[dirty,onDirtyChange]);
   useEffect(() => { const warn = (event: BeforeUnloadEvent) => {if(dirty){event.preventDefault();event.returnValue='';}}; window.addEventListener('beforeunload',warn); return () => window.removeEventListener('beforeunload',warn); },[dirty]);
@@ -90,8 +97,18 @@ export const ProjectCosts: React.FC<Props> = ({project,canEdit=false,onReload,on
     </tr>)}</tbody></table></div></fieldset></section>
     {canEdit && <section ref={catalogRef} className="pcost-panel"><h3>3. Catálogo de presets por categoría</h3><p>Definí tus tarifas de instalación y, por separado, los materiales para presupuestos completos. Guardar preset conserva tu tarifa inmediatamente en esta obra. Las partidas se guardan con Guardar costos.</p><fieldset disabled={saving}>
     <CostPresetCatalog saved={draft.presets} focusedPreset={focusedPreset} onAdd={add} onSave={savePreset} onRemove={id=>change({...draft,presets:draft.presets.filter(item=>item.id!==id)})}/>
+    <div className="pcost-panel" style={{marginTop:'1rem'}}><h4>Camiones de agua para esta piscina</h4>
+      <p>{waterVolume.source==='BROCHURE'?'Capacidad del folleto':'Volumen estimado del modelo'}: <strong>{waterVolume.volumeM3.toLocaleString('es-AR')} m³ · {(waterVolume.volumeM3*1000).toLocaleString('es-AR')} litros</strong></p>
+      {waterVolume.source!=='BROCHURE'&&<p>Podés cargar la capacidad real del folleto editando el modelo de piscina. Esta estimación usa sus dimensiones.</p>}
+      <div className="pcost-controls"><label>Litros que trae el camión contratado<input type="number" min="1" step="1" value={draft.waterDelivery?.truckLiters||''} placeholder="Ej.: 10000" onChange={e=>setWaterDelivery({truckLiters:numeric(e.target.value)})}/></label>
+      <label>Precio por viaje (ARS, opcional)<input type="number" min="0" step="1" value={draft.waterDelivery?.pricePerTrip||0} onChange={e=>setWaterDelivery({pricePerTrip:numeric(e.target.value)})}/></label></div>
+      <p role="status"><strong>{waterTrips.trips>0?`${waterTrips.trips} viaje${waterTrips.trips===1?'':'s'} necesario${waterTrips.trips===1?'':'s'}`:'Ingresá la capacidad del camión para calcular los viajes.'}</strong>{waterTrips.trips>0?` · Capacidad total enviada: ${(waterTrips.trips*(draft.waterDelivery?.truckLiters||0)).toLocaleString('es-AR')} litros · Excedente: ${waterTrips.surplusLiters.toLocaleString('es-AR')} litros.`:''}</p>
+      <label><span><input type="checkbox" checked={draft.waterDelivery?.included||false} disabled={!waterTrips.trips} onChange={e=>setWaterDelivery({included:e.target.checked})}/> Incluir suministro de agua en el presupuesto completo</span></label>
+      <p>Guardá Costos para conservar la capacidad contratada. Los viajes se recalculan desde el volumen del modelo. El suministro no se suma a tu propuesta de instalación.</p>
+      {draft.waterDelivery&&<button type="button" onClick={()=>{const overrides={...draft.overrides};delete overrides['water:delivery'];const next={...draft,overrides};delete next.waterDelivery;change(next);}}>Quitar planificación de agua</button>}
+    </div>
     <div className="pcost-tools"><div><h4>Horas hombre / máquina</h4><p>2 personas × 8 horas = 16 horas hombre. Para máquinas, ingresá la cantidad de equipos y horas de uso.</p><label>Personas o equipos<input type="number" min="1" value={people} onChange={e=>setPeople(numeric(e.target.value))}/></label><label>Horas por persona/equipo<input type="number" min="0" step="0.25" value={hours} onChange={e=>setHours(numeric(e.target.value))}/></label><div className="pcost-controls"><button type="button" disabled={people<=0||hours<=0} onClick={()=>add({...preset('Cuadrilla · horas hombre','HH','labor'),quantity:people*hours})}>Agregar {people*hours} HH</button><button type="button" disabled={people<=0||hours<=0} onClick={()=>add({...preset('Equipos · horas máquina','HM','machine'),quantity:people*hours})}>Agregar {people*hours} HM</button></div></div>
-    <div><h4>Suministros por camionada</h4><p>Se redondea hacia arriba la cantidad de viajes. La tarifa es por camionada completa, no por m³.</p><label>Suministro<select value={supply} onChange={e=>setSupply(e.target.value)}>{['Agua','Arena','Piedra'].map(s=><option key={s}>{s}</option>)}</select></label><div className="pcost-controls"><label>Necesidad (m³)<input type="number" min="0" step="0.01" value={volume} onChange={e=>setVolume(numeric(e.target.value))}/></label><label>Capacidad (m³/viaje)<input type="number" min="0.01" step="0.01" value={capacity} onChange={e=>setCapacity(numeric(e.target.value))}/></label><label>Precio por viaje (ARS)<input type="number" min="0" step="0.01" value={rate} onChange={e=>setRate(numeric(e.target.value))}/></label></div><button type="button" disabled={capacity<=0||volume<=0||rate<0} onClick={()=>add({...preset(`${supply} · camionada`,'LOAD','material',capacity),quantity:Math.ceil(volume/capacity),rate})}>Agregar {capacity>0?Math.ceil(volume/capacity):0} camionadas</button></div></div></fieldset></section>}
+    <div><h4>Suministros por camionada</h4><p>Se redondea hacia arriba la cantidad de viajes. La tarifa es por camionada completa, no por m³.</p><label>Suministro<select value={supply} onChange={e=>setSupply(e.target.value)}>{['Arena','Piedra'].map(s=><option key={s}>{s}</option>)}</select></label><div className="pcost-controls"><label>Necesidad (m³)<input type="number" min="0" step="0.01" value={volume} onChange={e=>setVolume(numeric(e.target.value))}/></label><label>Capacidad (m³/viaje)<input type="number" min="0.01" step="0.01" value={capacity} onChange={e=>setCapacity(numeric(e.target.value))}/></label><label>Precio por viaje (ARS)<input type="number" min="0" step="0.01" value={rate} onChange={e=>setRate(numeric(e.target.value))}/></label></div><button type="button" disabled={capacity<=0||volume<=0||rate<0} onClick={()=>add({...preset(`${supply} · camionada`,'LOAD','material',capacity),quantity:Math.ceil(volume/capacity),rate})}>Agregar {capacity>0?Math.ceil(volume/capacity):0} camionadas</button></div></div></fieldset></section>}
     {canEdit && <div className="pcost-save"><span>{dirty?'Tenés cambios sin guardar.':'Los importes guardados alimentan Vista General y Exportar.'}</span><button type="button" disabled={!dirty||saving} onClick={reset}>Descartar borrador</button><button className="pcost-primary" type="button" disabled={!dirty||saving} onClick={save}>{saving?'Guardando…':'Guardar costos'}</button></div>}
   </div>;
 };

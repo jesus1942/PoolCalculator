@@ -13,7 +13,7 @@ import productImageRoutes from '../src/routes/productImageRoutes';
 import scraperRoutes from '../src/routes/catalogScraperRoutes';
 import { updateProfessionRole } from '../src/controllers/professionRoleController';
 import { updateCalculationSettings } from '../src/controllers/calculationSettingsController';
-import { getPoolPresets } from '../src/controllers/poolPresetController';
+import { getPoolPresets, createPoolPreset, updatePoolPreset } from '../src/controllers/poolPresetController';
 
 const response = () => {
   const res: any = { statusCode: 200, body: undefined };
@@ -85,4 +85,19 @@ test('el catálogo público no consulta el correo personal del autor', async (t)
   mockMethod(t, prisma.poolPreset, 'findMany', async (args: any) => { query = args; return []; });
   await getPoolPresets({} as any, response());
   assert.equal(query.include.user.select.email, undefined);
+});
+
+test('crear modelo persiste volumen automático y actualizar preserva capacidad de folleto', async (t) => {
+ let created:any,updated:any;
+ mockMethod(t,prisma.poolPreset,'create',async ({data}:any)=>{created=data;return data;});
+ const res=response();
+ await createPoolPreset({user:{userId:'owner',role:'SUPERADMIN'},body:{name:'Modelo prueba',length:'8',width:'3',depth:'1',depthEnd:'2',shape:'RECTANGULAR',waterVolumeSource:'CALCULATED',waterVolumeM3:'999'}} as any,res);
+ assert.equal(res.statusCode,201);assert.equal(created.waterVolumeM3,36);
+ mockMethod(t,prisma.poolPreset,'findUnique',async()=>({...created,id:'test',additionalImages:[],waterVolumeSource:'BROCHURE',waterVolumeM3:31.5}));
+ mockMethod(t,prisma.poolPreset,'update',async ({data}:any)=>{updated=data;return data;});
+ await updatePoolPreset({user:{userId:'owner',role:'SUPERADMIN'},params:{id:'test'},body:{length:'10'}} as any,response());
+ assert.equal(updated.waterVolumeM3,31.5);assert.equal(updated.waterVolumeSource,'BROCHURE');
+ const invalid=response();
+ await updatePoolPreset({user:{userId:'owner',role:'SUPERADMIN'},params:{id:'test'},body:{waterVolumeM3:'NaN'}} as any,invalid);
+ assert.equal(invalid.statusCode,400);
 });

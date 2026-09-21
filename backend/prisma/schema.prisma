@@ -586,6 +586,8 @@ model PoolPreset {
   width       Float
   depth       Float
   depthEnd    Float?
+  waterVolumeM3 Float?
+  waterVolumeSource String @default("CALCULATED")
   
   shape       PoolShape
   constructionType ConstructionType @default(FIBERGLASS)

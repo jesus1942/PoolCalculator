@@ -61,3 +61,8 @@ test('la propuesta usa cantidades y tarifas redondeadas igual que Costos',()=>{
  const html=renderQuoteTable(p,settings);
  assert.ok(html.includes('780.000,00'));assert.ok(!html.includes('65000.00000000002'));assert.ok(!html.includes('11.700256'));
 });
+test('suministro de agua puede entrar al presupuesto completo pero no a la instalación',()=>{
+ const p={...project,poolPreset:{name:'Otro',waterVolumeM3:36,waterVolumeSource:'BROCHURE'},exportSettings:{costing:{...EMPTY_COSTING,waterDelivery:{truckLiters:10000,pricePerTrip:100,included:true}}}};
+ assert.equal(getQuote(p,installationSettings()).total,85);
+ assert.equal(getQuote(p,{clientPricingMode:'full'}).total,620);
+});

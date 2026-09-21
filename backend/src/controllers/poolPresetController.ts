@@ -1,3 +1,4 @@
+import { getPoolWaterVolume, preparePoolWaterVolume } from '../utils/poolWaterVolume';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
@@ -41,7 +42,7 @@ const parseFormData = (body: any) => {
   
   const editableFields = new Set([
     'name', 'description', 'imageUrl', 'additionalImages', 'backDescription', 'vendor',
-    'length', 'width', 'depth', 'depthEnd', 'shape', 'constructionType',
+    'waterVolumeM3', 'waterVolumeSource', 'length', 'width', 'depth', 'depthEnd', 'shape', 'constructionType',
     'lateralCushionSpace', 'floorCushionDepth', 'hasWetDeck', 'hasStairsOnly',
     'stairsCount', 'canaletasCount', 'returnsCount', 'hasHotWaterReturn', 'hasHydroJets',
     'hydroJetsCount', 'hasBottomDrain', 'hasVacuumIntake', 'vacuumIntakeCount',
@@ -53,7 +54,7 @@ const parseFormData = (body: any) => {
     const value = body[key];
     
     // Números
-    if (['length', 'width', 'depth', 'depthEnd', 'lateralCushionSpace', 'floorCushionDepth',
+    if (['waterVolumeM3', 'length', 'width', 'depth', 'depthEnd', 'lateralCushionSpace', 'floorCushionDepth',
          'stairsCount', 'canaletasCount', 'returnsCount', 'hydroJetsCount', 'vacuumIntakeCount', 'skimmerCount', 'lightingCount'].includes(key)) {
       parsed[key] = value ? parseFloat(value) : 0;
     }
@@ -88,6 +89,8 @@ export const createPoolPreset = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Solo SUPERADMIN puede administrar el catálogo global' });
     }
     const data = { ...parseFormData(req.body), userId };
+    try { Object.assign(data,preparePoolWaterVolume(data)); }
+    catch(error:any) { return res.status(400).json({error:error.message}); }
 
     // Manejar imagen principal
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -198,6 +201,8 @@ export const updatePoolPreset = async (req: AuthRequest, res: Response) => {
     }
 
     const data = parseFormData(req.body);
+    try { Object.assign(data,preparePoolWaterVolume({...existingPreset,...data})); }
+    catch(error:any) { return res.status(400).json({error:error.message}); }
 
     // Eliminar campos que no son parte del modelo Prisma
     delete data.existingAdditionalImages;
@@ -345,7 +350,7 @@ export const calculatePresetMeasurements = async (req: AuthRequest, res: Respons
 
     const perimeter = calculatePerimeter(dimensions);
     const waterMirrorArea = calculateWaterMirrorArea(dimensions);
-    const volume = calculateVolume(dimensions);
+    const volume = getPoolWaterVolume(preset).volumeM3;
 
     res.json({
       perimeter: parseFloat(perimeter.toFixed(2)),

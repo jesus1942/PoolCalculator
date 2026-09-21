@@ -36,3 +36,15 @@ Guardar preset persiste el catálogo inmediatamente mediante el endpoint validad
 En el libro económico, cantidades y tarifas se redondean al entero superior antes de multiplicar. Los residuos binarios próximos a un entero no suben artificialmente el precio. Ejemplo: 11,700256 m² × 65000,00000000002 pasa a 12 m² × $65.000 = $780.000. El cálculo compartido alimenta Costos, propuesta y hoja económica del Excel. Los cómputos geométricos técnicos de origen conservan su precisión; no se reescriben los proyectos históricos.
 
 Validación ampliada a 106 pruebas: 75 backend y 31 frontend, con regresiones del ejemplo de losetas, valores cero, exclusiones, exportación, categoría, deduplicación y conservación del borrador al persistir presets.
+
+## Volumen del modelo y camiones de agua
+
+Modelos incorpora Volumen de agua: capacidad del folleto en m³ o estimación automática por forma y profundidad media. Crear y actualizar el modelo guardan el volumen y su origen; los cambios de dimensiones recalculan sólo modelos automáticos. El valor de folleto se conserva. Los modelos anteriores usan cálculo al leer y guardan la estimación cuando se editan, sin atribuirles un dato de fabricante desconocido.
+
+Costos incorpora Camiones de agua: toma el volumen del modelo y permite ingresar litros por camión. Guarda capacidad contratada y precio opcional en la obra. Viajes = techo(m³ × 1000 / litros por camión), usando el volumen preciso antes de redondear los viajes. Muestra excedente y no cuenta un viaje extra cuando la división es exacta. Ejemplo: 36 m³, 10.000 litros/camión = 4 viajes y 4.000 litros de excedente.
+
+Planificar agua no cobra automáticamente el suministro. Sólo al marcar su inclusión se genera una partida material en el presupuesto completo, nunca en la propuesta de instalación. La capacidad se conserva con Guardar costos y la partida automática se recalcula desde el modelo; no requiere volver a agregarla.
+
+Migración aditiva: dos columnas en PoolPreset (volumen opcional y origen). No se alteran precios ni cantidades guardadas. La estimación geométrica no descuenta escalones ni playa húmeda; cargar la capacidad real cuando exista folleto.
+
+113 pruebas: 81 backend y 32 frontend. Verifican creación/actualización del volumen, prioridad del folleto, formas, conversión m³/litros, viajes exactos y parciales, validación, persistencia y exclusión del agua en la propuesta de instalación.

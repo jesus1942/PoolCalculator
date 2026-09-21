@@ -1,3 +1,4 @@
+import { getPoolWaterVolume } from '../../../backend/src/utils/poolWaterVolume';
 import { useAuth } from '@/context/AuthContext';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
@@ -294,6 +295,8 @@ export const PoolModels: React.FC = () => {
     width: 0,
     depth: 0,
     depthEnd: 0,
+    waterVolumeM3: 0,
+    waterVolumeSource: 'CALCULATED' as 'CALCULATED' | 'BROCHURE',
     shape: 'RECTANGULAR' as PoolShape,
     lateralCushionSpace: 0.15,
     floorCushionDepth: 0.10,
@@ -404,6 +407,8 @@ export const PoolModels: React.FC = () => {
       width: preset.width,
       depth: preset.depth,
       depthEnd: preset.depthEnd || 0,
+      waterVolumeM3: preset.waterVolumeM3 || 0,
+      waterVolumeSource: preset.waterVolumeSource || 'CALCULATED',
       shape: preset.shape,
       lateralCushionSpace: preset.lateralCushionSpace,
       floorCushionDepth: preset.floorCushionDepth,
@@ -465,6 +470,8 @@ export const PoolModels: React.FC = () => {
       width: 0,
       depth: 0,
       depthEnd: 0,
+    waterVolumeM3: 0,
+    waterVolumeSource: 'CALCULATED' as 'CALCULATED' | 'BROCHURE',
       shape: 'RECTANGULAR',
       lateralCushionSpace: 0.15,
       floorCushionDepth: 0.10,
@@ -721,6 +728,13 @@ export const PoolModels: React.FC = () => {
                 <Input label="Espacio lateral para colchón (m)" type="number" step="0.01" value={formData.lateralCushionSpace} onChange={(e) => setFormData({ ...formData, lateralCushionSpace: parseFloat(e.target.value) })} />
                 <Input label="Cama de piso (m)" type="number" step="0.01" value={formData.floorCushionDepth} onChange={(e) => setFormData({ ...formData, floorCushionDepth: parseFloat(e.target.value) })} />
               </div>
+            </div>
+
+            <div className="border-t border-zinc-800 pt-4">
+              <h3 className="font-semibold text-zinc-200 mb-3">Volumen de agua del modelo</h3>
+              <Select label="Origen del volumen" value={formData.waterVolumeSource} onChange={e=>setFormData({...formData,waterVolumeSource:e.target.value as 'CALCULATED'|'BROCHURE'})} options={[{value:'CALCULATED',label:'Calcular automáticamente desde las dimensiones'},{value:'BROCHURE',label:'Usar capacidad informada en el folleto'}]}/>
+              {formData.waterVolumeSource==='BROCHURE'?<Input label="Capacidad del folleto (m³)" type="number" min="0.001" step="0.001" required value={formData.waterVolumeM3||''} onChange={e=>setFormData({...formData,waterVolumeM3:Number(e.target.value)})}/>:<p className="text-zinc-200 mt-3">Volumen estimado: <strong>{getPoolWaterVolume({...formData,waterVolumeM3:null}).volumeM3.toLocaleString('es-AR')} m³</strong></p>}
+              <p className="text-xs text-zinc-400 mt-2">Se guarda con el modelo para calcular camiones de agua. El cálculo automático usa forma y profundidad media; la capacidad real del fabricante contempla escalones y playa húmeda. Si tenés el folleto, usá ese dato. 1 m³ = 1.000 litros.</p>
             </div>
 
             <div className="border-t border-zinc-800 pt-4">

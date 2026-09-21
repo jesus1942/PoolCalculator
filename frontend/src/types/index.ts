@@ -41,6 +41,8 @@ export interface PoolPreset {
   width: number;
   depth: number;
   depthEnd?: number;
+  waterVolumeM3?: number | null;
+  waterVolumeSource?: 'CALCULATED' | 'BROCHURE';
   shape: PoolShape;
   perimeter?: number;
   lateralCushionSpace: number;
