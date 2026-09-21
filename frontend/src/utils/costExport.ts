@@ -1,0 +1,26 @@
+import { calculateProjectFinancials, COST_UNITS, roundMoney } from './projectCosting';
+export const escapeCostText = (value: unknown) => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+const money = (n:number) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+/** Cada documento selecciona partidas del mismo libro; nunca inventa un total alternativo. */
+export function getQuote(project:any,settings:any={}) {
+  const financials=calculateProjectFinancials(project);
+  const full=settings.clientPricingMode==='full';
+  const lines=financials.lines.filter(line=>line.included && line.quantity>0)
+    .filter(line=>settings.installationMode!=='basic'||!line.id.startsWith('additional:'))
+    .filter(line=>settings.includeAdditionalsPricing!==false||!line.id.startsWith('additional:'))
+    .filter(line=>full||line.kind!=='material'||((line.id.startsWith('base:material')||line.id.startsWith('base:tile'))&&settings.includeVeredaMaterials!==false));
+  return {lines,total:roundMoney(lines.reduce((sum,line)=>sum+line.total,0)),revision:financials.settings.revision,
+    label:full?'Presupuesto completo':'Mano de obra y servicios'+(lines.some(l=>l.kind==='material')?' + materiales de obra seleccionados':''),
+    warnings:financials.warnings};
+}
+/** Tabla imprimible con importes reconciliables; escapa todos los textos editables. */
+export function renderQuoteTable(project:any,settings:any={clientPricingMode:'full'}) {
+  const quote=getQuote(project,settings);
+  return `<section class="section cost-ledger"><h2>Detalle económico</h2><p>${escapeCostText(quote.label)} · ARS · Revisión ${quote.revision}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:11px"><thead style="display:table-header-group"><tr style="background:#285e59;color:white">${['Concepto','Unidad','Cantidad','Tarifa','Subtotal'].map(h=>`<th style="padding:9px;text-align:left">${h}</th>`).join('')}</tr></thead><tbody>${quote.lines.map(line=>`<tr style="break-inside:avoid;border-bottom:1px solid #deded4"><td style="padding:9px">${escapeCostText(line.name)}</td><td>${escapeCostText(COST_UNITS[line.unit])}</td><td style="text-align:right;padding:8px">${line.quantity.toLocaleString('es-AR',{maximumFractionDigits:4})}</td><td style="text-align:right;padding:8px;white-space:nowrap">${money(line.rate)}</td><td style="text-align:right;padding:8px;white-space:nowrap">${money(line.total)}</td></tr>`).join('')}</tbody><tfoot><tr style="font-size:15px;font-weight:bold;background:#f1f0e8"><td colspan="4" style="padding:14px">TOTAL COTIZADO</td><td style="text-align:right;padding:14px;white-space:nowrap">${money(quote.total)}</td></tr></tfoot></table><p style="font-size:10px;color:#66736d">Importes tomados de Costos. No se aplican impuestos, descuentos ni recargos adicionales que no estén detallados en las partidas.</p></section>`;
+}
+/** Presupuesto detallado independiente del editor comercial, apto para PDF/HTML/impresión. */
+export function renderDetailedCostDocument(project:any,settings:any={},logo?:string|null) {
+  const safeLogo=logo && /^(data:image\/(png|jpeg|webp);base64,|https:\/\/)/.test(logo)?logo:null;
+  return `<!doctype html><html lang="es"><head><meta charset="UTF-8"><title>${escapeCostText(settings.title||`Presupuesto · ${project.name}`)}</title><style>@page{size:A4;margin:16mm}body{font:13px/1.55 Arial,sans-serif;color:#243e38;background:#fff;margin:0}.container{max-width:1000px;margin:auto;padding:32px}header{border-bottom:2px solid #285e59;padding-bottom:20px;display:flex;justify-content:space-between;gap:20px}h1{font-size:29px;margin:8px 0}h2{font-size:18px;margin-top:25px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}.meta p{margin:0}.terms{white-space:pre-line;border-top:1px solid #ddd;padding-top:18px}footer{font-size:10px;color:#64736b;margin-top:25px}thead{display:table-header-group}tr{break-inside:avoid}@media print{.container{padding:0}*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><main class="container"><header><div><span>POOL INSTALLER · PRESUPUESTO</span><h1>${escapeCostText(settings.title||project.name)}</h1><p>${escapeCostText(settings.subtitle||'Detalle de partidas y alcance económico')}</p></div>${safeLogo?`<img src="${escapeCostText(safeLogo)}" alt="Logo de la empresa" style="max-width:150px;max-height:70px;object-fit:contain">`:''}</header><div class="meta"><p><strong>Cliente</strong><br>${escapeCostText(project.clientName)}</p><p><strong>Referencia</strong><br>${escapeCostText(project.projectCode||project.id)}</p><p><strong>Ubicación</strong><br>${escapeCostText(project.location||'A confirmar')}</p><p><strong>Fecha</strong><br>${new Date().toLocaleDateString('es-AR')}</p></div>${settings.scopeSummary?`<h2>Alcance</h2><p class="terms">${escapeCostText(settings.scopeSummary)}</p>`:''}${renderQuoteTable(project,settings)}${settings.conditions?`<h2>Condiciones comerciales</h2><p class="terms">${escapeCostText(settings.conditions)}</p>`:''}<footer>Documento generado desde el presupuesto guardado de la obra. Cualquier modificación del alcance requiere una nueva revisión.</footer></main></body></html>`;
+}

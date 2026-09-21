@@ -56,7 +56,12 @@ export const ProjectDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [savingProjectMeta, setSavingProjectMeta] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<ProjectTabId>('overview');
+  const [activeTab, setActiveTabState] = useState<ProjectTabId>('overview');
+  const [costsDirty, setCostsDirty] = useState(false);
+  const setActiveTab = (tab: ProjectTabId) => {
+    if (costsDirty && !window.confirm('Hay costos sin guardar. ¿Descartar el borrador y cambiar de sección?')) return;
+    setCostsDirty(false); setActiveTabState(tab);
+  };
   const [editFormData, setEditFormData] = useState({
     name: '',
     clientName: '',
@@ -300,7 +305,7 @@ export const ProjectDetail: React.FC = () => {
 
   const readOnlyRoles = ['VIEWER', 'INSTALLER'];
   const globalReadOnlyUser = readOnlyRoles.includes(user?.role || '');
-  const fallbackAllowedTabs: ProjectTabId[] = globalReadOnlyUser ? ['overview', 'status', 'export'] : ['overview', 'status', 'tiles', 'plumbing', 'electrical', 'hydraulic_pro', 'electrical_pro', 'tasks', 'roles', 'systems', 'additionals', 'export'];
+  const fallbackAllowedTabs: ProjectTabId[] = globalReadOnlyUser ? ['overview', 'status', 'export'] : ['overview', 'status', 'costs', 'tiles', 'plumbing', 'electrical', 'hydraulic_pro', 'electrical_pro', 'tasks', 'roles', 'systems', 'additionals', 'export'];
   const currentUserAccess = project.currentUserAccess || {
     canAccess: true,
     canEdit: !globalReadOnlyUser,
@@ -350,10 +355,10 @@ export const ProjectDetail: React.FC = () => {
     { id: 'plumbing', label: 'Hidráulica', icon: HdHammer },
     { id: 'electrical', label: 'Eléctrica', icon: HdZap },
     { id: 'electrical_pro', label: 'Análisis Eléctrico', icon: HdZap },
-    { id: 'tasks', label: 'Tareas', icon: HdHammer },
-    { id: 'roles', label: 'Roles', icon: HdUsers },
+
+
     { id: 'systems', label: 'Sistemas', icon: HdCpu },
-    { id: 'additionals', label: 'Adicionales', icon: HdPackage },
+
     { id: 'export', label: 'Exportar', icon: HdFileSpreadsheet },
   ];
 
@@ -464,7 +469,14 @@ export const ProjectDetail: React.FC = () => {
         <Suspense fallback={<PageLoading label="Cargando sección del proyecto…" />}>
         {visibleActiveTab === 'overview' && <ImprovedOverviewTab project={project} canViewFinancials={canViewFinancials} />}
         {visibleActiveTab === 'costs' && canViewFinancials && (
-          <ProjectCostsTab project={project} canEdit={!isReadOnlyProjectUser} onSaveTasks={handleSaveTasksSilent} />
+          <div>
+            <ProjectCosts project={project} canEdit={!isReadOnlyProjectUser} onReload={loadProject} onDirtyChange={setCostsDirty} />
+            {!isReadOnlyProjectUser && !costsDirty && <>
+              {allowedTabsSet.has('tasks') && <details className="pcost-related"><summary>Tareas y asignación de mano de obra</summary><TasksManager project={project} onSave={handleSaveTasks} onUpdateProjectSettings={handleUpdateProjectSettings} /></details>}
+              {allowedTabsSet.has('roles') && <details className="pcost-related"><summary>Roles y tarifas de referencia</summary><RolesManager /></details>}
+              {allowedTabsSet.has('additionals') && <details className="pcost-related"><summary>Equipos y adicionales de la obra</summary><AdditionalsManager project={project} onUpdate={loadProject} /></details>}
+            </>}
+          </div>
         )}
         {visibleActiveTab === 'status' && <ProjectStatusPanel project={project} />}
         {visibleActiveTab === 'tiles' && !isReadOnlyProjectUser && <TileEditor project={project} onSave={handleSaveTileConfig} />}
@@ -487,16 +499,7 @@ export const ProjectDetail: React.FC = () => {
           </div>
         )}
         {visibleActiveTab === 'electrical_pro' && id && !isReadOnlyProjectUser && <ElectricalAnalysisPanel projectId={id} />}
-        {visibleActiveTab === 'tasks' && !isReadOnlyProjectUser && (
-          <TasksManager
-            project={project}
-            onSave={handleSaveTasks}
-            onUpdateProjectSettings={handleUpdateProjectSettings}
-          />
-        )}
-        {visibleActiveTab === 'roles' && !isReadOnlyProjectUser && <RolesManager />}
         {visibleActiveTab === 'systems' && !isReadOnlyProjectUser && <PoolSystemsRecommendations project={project} />}
-        {visibleActiveTab === 'additionals' && !isReadOnlyProjectUser && <AdditionalsManager project={project} onUpdate={loadProject} />}
         {visibleActiveTab === 'export' && allowedTabsSet.has('export') && <EnhancedExportManager project={project} />}
         </Suspense>
       </div>
@@ -658,23 +661,4 @@ const useProjectCostData = (project: Project) => {
 const ImprovedOverviewTab: React.FC<{ project: Project; canViewFinancials: boolean }> = ({ project, canViewFinancials }) => {
   const { roles, additionals, rolesCostSummary } = useProjectCostData(project);
   return <ImprovedOverview project={project} roles={roles} rolesCostSummary={rolesCostSummary} additionals={additionals} canViewFinancials={canViewFinancials} />;
-};
-
-const ProjectCostsTab: React.FC<{
-  project: Project;
-  canEdit: boolean;
-  onSaveTasks: (tasks: any) => Promise<void>;
-}> = ({ project, canEdit, onSaveTasks }) => {
-  const { roles, additionals, rolesCostSummary, reload } = useProjectCostData(project);
-  return (
-    <ProjectCosts
-      project={project}
-      roles={roles}
-      rolesCostSummary={rolesCostSummary}
-      additionals={additionals}
-      canEdit={canEdit}
-      onSaveTasks={onSaveTasks}
-      onReload={reload}
-    />
-  );
 };

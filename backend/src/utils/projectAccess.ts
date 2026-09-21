@@ -283,5 +283,6 @@ export const sanitizeProjectForAccess = <T extends Record<string, any>>(project:
   sanitized.materialCost = 0;
   sanitized.laborCost = 0;
   sanitized.totalCost = 0;
+  if (sanitized.exportSettings) delete sanitized.exportSettings.costing;
   return sanitized;
 };

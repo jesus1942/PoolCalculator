@@ -12,6 +12,8 @@ import {
 import { authenticate } from '../middleware/auth';
 import { canWrite } from '../middleware/permissions';
 
+import { saveProjectCosting } from '../controllers/projectCostingController';
+
 const router = express.Router();
 
 router.use(authenticate);
@@ -20,6 +22,7 @@ router.post('/', canWrite, createProject);
 router.get('/', getProjects);
 router.get('/:id', getProjectById);
 router.put('/:id', canWrite, updateProject);
+router.put('/:id/costing', canWrite, saveProjectCosting);
 router.delete('/:id', canWrite, deleteProject);
 router.post('/:id/export-excel', exportToExcel);
 router.post('/:id/project-package', createProjectPackage);

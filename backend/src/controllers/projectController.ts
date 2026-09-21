@@ -1,3 +1,4 @@
+import { calculateProjectFinancials } from '../utils/projectPricing';
 import { canAccessConversation, sanitizeConversation } from '../utils/conversationAccess';
 import { pickProjectMutation } from '../utils/projectMutation';
 import { Response } from 'express';
@@ -485,7 +486,7 @@ const buildProjectExportData = async (project: any, sections?: any) => {
     console.error('[EXPORT] Error al ejecutar cálculos profesionales:', calcError);
   }
 
-  return projectData;
+  return { ...projectData, financials: calculateProjectFinancials(project) };
 };
 
 const generateExcelExportFileFromProject = async (project: any, sections?: any, outputPath?: string) => {
@@ -595,6 +596,7 @@ const pruneStaleAutoTasks = (
 const withCommercialProfile = <T extends { plumbingConfig?: any; projectAdditionals?: any[] }>(project: T) => ({
   ...project,
   commercialProfile: buildProjectCommercialProfile(project),
+  totalCost: calculateProjectFinancials(project).grandTotal,
 });
 
 const withProjectActivity = <T extends { projectUpdates?: Array<{ title?: string | null; createdAt?: Date | string | null }> }>(project: T) => {
@@ -1111,6 +1113,9 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       delete updateData.status;
     }
     if (requestedExportSettings !== undefined) {
+      // Costos sólo se modifica mediante su endpoint validado y con revisión.
+      delete requestedExportSettings.costing;
+      if ((existingProject.exportSettings as any)?.costing) requestedExportSettings.costing = (existingProject.exportSettings as any).costing;
       updateData.exportSettings = requestedExportSettings;
     }
     let recalculatedTasks: Record<string, any[]> | null = null;

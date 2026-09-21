@@ -1,3 +1,4 @@
+import { getQuote, renderQuoteTable, renderDetailedCostDocument } from '@/utils/costExport';
 import React, { useState, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Card } from '@/components/ui/Card';
@@ -455,8 +456,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     },
   ];
 
-  const visibleTemplates = templates.filter((template) => !['materials', 'budget'].includes(template.id));
-  const internalTemplates = templates.filter((template) => ['materials', 'budget'].includes(template.id));
+  const visibleTemplates = templates;
+  const internalTemplates: typeof templates = [];
 
   const getTemplateName = (template: ExportTemplate) =>
     templates.find((item) => item.id === template)?.name || 'Exportación';
@@ -719,7 +720,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     if (template === 'budget') {
       return {
         installationMode: 'with_extras' as const,
-        clientPricingMode: 'labor_only' as const,
+        clientPricingMode: 'full' as const,
         ...templateSettings,
       };
     }
@@ -738,13 +739,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 
   const resolveCostOverrides = (templateSettings: ExportTemplateSettings) => {
     const costs = calculateCosts();
-    const overrides = templateSettings.values || {};
-    return {
-      ...costs,
-      totalMaterialCost: overrides.materialCost ?? costs.totalMaterialCost,
-      totalLaborCost: overrides.laborCost ?? costs.totalLaborCost,
-      grandTotal: overrides.totalCost ?? costs.grandTotal,
-    };
+    return costs; // Los importes se editan exclusivamente en Costos.
   };
 
   const getConditionsList = (customConditions?: string) => {
@@ -807,7 +802,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const hydraulicSummary = summarizeHydraulicSystem(project, commercialAdditionals);
   const summarizedAdditionalItems = dedupeLabeledItems(hydraulicSummary.added.items);
   const installationTier = getInstallationTier(extraPlumbingItems, commercialAdditionals);
-  const exportInstallationProfile = getCommercialInstallationProfile(project);
+  const canonicalCosts = calculateProjectFinancials(project);
+  const exportInstallationProfile = {...getCommercialInstallationProfile(project), baseLaborCost:canonicalCosts.baseLaborCost, heatingLaborCost:0, totalLaborCost:canonicalCosts.totalLaborCost};
   const rolesSummary = getRolesCostSummary();
   const taskMaterials = getTaskMaterials();
   const taskMaterialsByStage = getTaskMaterialsByStage();
@@ -821,7 +817,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
   const plumbingItemsCount = Array.isArray(plumbingConfig?.selectedItems) ? plumbingConfig.selectedItems.length : 0;
   const electricalItemsCount = Array.isArray(electricalConfig?.items) ? electricalConfig.items.length : 0;
   const rolesCount = Object.keys(rolesSummary).length;
-  const computedCosts = calculateProjectFinancials(project, commercialAdditionals);
+  const computedCosts = calculateProjectFinancials(project);
   const poolDepthLabel = project.poolPreset?.depthEnd && project.poolPreset.depthEnd !== project.poolPreset.depth
     ? `${project.poolPreset.depth}m a ${project.poolPreset.depthEnd}m`
     : `${project.poolPreset?.depth || 0}m`;
@@ -1032,7 +1028,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       !isLegacyAutoClientHtml(customBodyHtml);
 
     if (shouldUseCustomBody) {
-      return interpolateProjectHtml(customBodyHtml);
+      return interpolateProjectHtml(customBodyHtml) + renderQuoteTable(project,templateSettings);
     }
 
     return buildClientBudgetBody(templateSettings);
@@ -1098,47 +1094,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
       + (hasTilesMaterialCost ? tilesMaterialCost : showMaterialsToClient ? visibleMaterialsTotal : 0)
       + (hasTilesLaborCost ? tilesLaborCost : 0);
 
-    const pricingSectionHtml = sections.costs ? `
-      <div class="section">
-        <h2>Inversión</h2>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="info-label">Instalación</div>
-            <div class="info-value">${formatCurrency(clientBaseLaborCost)}</div>
-          </div>
-          ${hasHeatingCost ? `
-          <div class="info-item">
-            <div class="info-label">Calefacción</div>
-            <div class="info-value">${formatCurrency(clientHeatingLaborCost)}</div>
-          </div>` : ''}
-          ${hasAdditionalsCost ? `
-          <div class="info-item">
-            <div class="info-label">Adicionales</div>
-            <div class="info-value">${formatCurrency(visibleAdditionalsLaborCost)}</div>
-          </div>` : ''}
-          ${hasTilesMaterialCost ? `
-          <div class="info-item">
-            <div class="info-label">Materiales vereda</div>
-            <div class="info-value">${formatCurrency(tilesMaterialCost)}</div>
-          </div>` : ''}
-          ${hasTilesLaborCost ? `
-          <div class="info-item">
-            <div class="info-label">MO colocación losetas</div>
-            <div class="info-value">${formatCurrency(tilesLaborCost)}</div>
-          </div>` : ''}
-          ${showMaterialsToClient && visibleMaterialsTotal > 0 ? `
-          <div class="info-item">
-            <div class="info-label">Materiales</div>
-            <div class="info-value">${formatCurrency(visibleMaterialsTotal)}</div>
-          </div>` : ''}
-          ${hasMultipleCostLines ? `
-          <div class="info-item">
-            <div class="info-label">Total</div>
-            <div class="info-value">${formatCurrency(fullVisibleTotal)}</div>
-          </div>` : ''}
-        </div>
-      </div>
-      ` : '';
+    const pricingSectionHtml = sections.costs ? renderQuoteTable(project,templateSettings) : '';
 
     return `
       ${sections.header ? `
@@ -1324,7 +1280,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         id: 'budget-total',
         label: 'Total general',
         detail: 'Inversión total del proyecto.',
-        value: formatCurrency(computedCosts.totalMaterialCost + exportInstallationProfile.totalLaborCost),
+        value: formatCurrency(computedCosts.grandTotal),
         ready: computedCosts.grandTotal > 0,
       },
       {
@@ -2523,185 +2479,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
 </html>`;
   };
 
-  const generateDetailedBudget = (templateSettings: ExportTemplateSettings = getTemplateSettings('budget')) => {
-    const materials = project.materials as any;
-    const installationMode = templateSettings.installationMode || 'with_extras';
-    const includeExtras = installationMode === 'with_extras';
-    const clientPricingMode = templateSettings.clientPricingMode || 'labor_only';
-    const showMaterialsToClient = clientPricingMode === 'full';
-    const { additionals, additionalsCosts, totalMaterialCost, grandTotal, baseMaterialCost } = resolveCostOverrides(templateSettings);
-    const rolesSummary = getRolesCostSummary();
-    const visibleMaterialCost = includeExtras ? totalMaterialCost : baseMaterialCost;
-    const baseVisibleLaborCost = exportInstallationProfile.baseLaborCost;
-    const heatingVisibleLaborCost = includeExtras ? exportInstallationProfile.heatingLaborCost : 0;
-    const visibleLaborCost = baseVisibleLaborCost + heatingVisibleLaborCost;
-    const visibleGrandTotal = showMaterialsToClient
-      ? visibleMaterialCost + visibleLaborCost
-      : grandTotal;
-    const conditions = getConditionsList(templateSettings.conditions);
-    const visibleInstallationExclusions = getVisibleInstallationExclusions(conditions);
-    const headerSubtitle = templateSettings.subtitle || (showMaterialsToClient ? 'Presupuesto Detallado con Costos Unitarios' : 'Presupuesto de Instalación');
-    const documentTitle = templateSettings.title || `Presupuesto Detallado - ${project.name}`;
-    const logoDataUrl = getLogoForTemplate('budget');
-
-    return `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>${documentTitle}</title>
-  <style>
-    ${getCommonStyles()}
-    .budget-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .budget-table th { background: #18181b; color: white; padding: 12px; text-align: left; font-size: 13px; }
-    .budget-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-    .budget-table tr:hover { background: #f9fafb; }
-    .budget-table .subtotal-row { background: #fafafa; font-weight: 600; }
-    .budget-table .total-row { background: #111111; color: white; font-weight: 700; font-size: 16px; }
-    .text-right { text-align: right; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">${logoDataUrl ? `<img src="${logoDataUrl}" alt="Domotics IoT Solutions" style="height:34px;width:auto;vertical-align:middle;"/>` : 'POOL CALCULATOR'}</div>
-      <p class="subtitle">${headerSubtitle}</p>
-      <p class="date">${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-    </div>
-
-    <div class="content">
-      ${showMaterialsToClient ? `
-      <div class="section">
-        <h2>Materiales Base - Vereda y Estructurales</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Item</th><th>Cantidad</th><th>Unidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
-          </thead>
-          <tbody>
-            ${materials?.cement ? `<tr><td>Cemento Portland</td><td>${materials.cement.quantity}</td><td>${materials.cement.unit}</td><td class="text-right">$ ${(materials.cement.cost / materials.cement.quantity).toFixed(2)}</td><td class="text-right">$ ${materials.cement.cost.toLocaleString('es-AR')}</td></tr>` : ''}
-            ${materials?.sand ? `<tr><td>Arena Gruesa</td><td>${materials.sand.quantity}</td><td>${materials.sand.unit}</td><td class="text-right">$ ${(parseFloat(materials.sand.cost) / parseFloat(materials.sand.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.sand.cost).toLocaleString('es-AR')}</td></tr>` : ''}
-            ${materials?.gravel ? `<tr><td>Piedra/Grava</td><td>${materials.gravel.quantity}</td><td>${materials.gravel.unit}</td><td class="text-right">$ ${(parseFloat(materials.gravel.cost) / parseFloat(materials.gravel.quantity)).toFixed(2)}</td><td class="text-right">$ ${parseFloat(materials.gravel.cost).toLocaleString('es-AR')}</td></tr>` : ''}
-            ${materials?.adhesive ? `<tr><td>Adhesivo</td><td>${materials.adhesive.quantity}</td><td>${materials.adhesive.unit}</td><td class="text-right">$ ${(materials.adhesive.cost / materials.adhesive.quantity).toFixed(2)}</td><td class="text-right">$ ${materials.adhesive.cost.toLocaleString('es-AR')}</td></tr>` : ''}
-            <tr class="subtotal-row"><td colspan="4">Subtotal Materiales Base</td><td class="text-right">$ ${baseMaterialCost.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      ${showMaterialsToClient && basePlumbingItems.length > 0 ? `
-      <div class="section">
-        <h2>Instalación Hidráulica Base</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
-          </thead>
-          <tbody>
-            ${basePlumbingItems.map((item: any) =>
-              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
-            ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Subtotal Plomería Base</td><td class="text-right">$ ${basePlumbingCosts.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      ${showMaterialsToClient && includeExtras && extraPlumbingItems.length > 0 ? `
-      <div class="section">
-        <h2>Adicionales Hidráulicos</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
-          </thead>
-          <tbody>
-            ${extraPlumbingItems.map((item: any) =>
-              `<tr><td>${getPlumbingItemName(item)}</td><td>${item.quantity}</td><td class="text-right">$ ${item.pricePerUnit.toLocaleString('es-AR')}</td><td class="text-right">$ ${(item.quantity * item.pricePerUnit).toLocaleString('es-AR')}</td></tr>`
-            ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Subtotal Adicionales Hidráulicos</td><td class="text-right">$ ${extraPlumbingCosts.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      ${showMaterialsToClient && includeExtras && additionals?.length > 0 ? `
-      <div class="section">
-        <h2>Items Adicionales</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Item</th><th>Cantidad</th><th class="text-right">Precio Unit.</th><th class="text-right">Subtotal</th></tr>
-          </thead>
-          <tbody>
-            ${additionals.map((add: any) => {
-              const name = getAdditionalName(add);
-              const price = add.customPricePerUnit || add.accessory?.pricePerUnit || add.equipment?.pricePerUnit || add.material?.pricePerUnit || 0;
-              return `<tr><td>${name}</td><td>${add.newQuantity}</td><td class="text-right">$ ${price.toLocaleString('es-AR')}</td><td class="text-right">$ ${(add.newQuantity * price).toLocaleString('es-AR')}</td></tr>`;
-            }).join('')}
-            <tr class="subtotal-row"><td colspan="3">Subtotal Adicionales</td><td class="text-right">$ ${additionalsCosts.materialCost.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      <div class="section">
-        <h2>Mano de Obra</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Rol</th><th>Tareas</th><th>Horas</th><th class="text-right">Costo</th></tr>
-          </thead>
-          <tbody>
-            ${Object.values(rolesSummary).map((role: any) =>
-              `<tr><td>${role.roleName}</td><td>${role.tasksCount}</td><td>${role.hours.toFixed(1)} hs</td><td class="text-right">$ ${role.cost.toLocaleString('es-AR')}</td></tr>`
-            ).join('')}
-            <tr class="subtotal-row"><td colspan="3">Instalación base</td><td class="text-right">$ ${baseVisibleLaborCost.toLocaleString('es-AR')}</td></tr>
-            ${includeExtras && exportInstallationProfile.includesHeating ? `<tr class="subtotal-row"><td colspan="3">Adicional instalación de calefacción</td><td class="text-right">$ ${heatingVisibleLaborCost.toLocaleString('es-AR')}</td></tr>` : ''}
-            <tr class="subtotal-row"><td colspan="3">Total Mano de Obra</td><td class="text-right">$ ${visibleLaborCost.toLocaleString('es-AR')}</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="section">
-        <h2>Alcance de Instalación</h2>
-        <table class="budget-table">
-          <thead>
-            <tr><th>Concepto</th><th>Detalle</th></tr>
-          </thead>
-          <tbody>
-            ${exportInstallationProfile.baseScope.map((item) => `<tr><td>Incluye</td><td>${item}</td></tr>`).join('')}
-            ${includeExtras && exportInstallationProfile.includesHeating ? exportInstallationProfile.heatingExtras.map((item) => `<tr><td>Extra calefacción</td><td>${item}</td></tr>`).join('') : ''}
-            ${visibleInstallationExclusions.map((item) => `<tr><td>No incluye</td><td>${item}</td></tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="cost-section">
-          ${showMaterialsToClient ? `
-          <div class="cost-row">
-            <span class="cost-label">Total materiales</span>
-            <span class="cost-value">$ ${visibleMaterialCost.toLocaleString('es-AR')}</span>
-          </div>
-          ` : ''}
-          <div class="cost-row">
-            <span class="cost-label">Total mano de obra</span>
-            <span class="cost-value">$ ${visibleLaborCost.toLocaleString('es-AR')}</span>
-          </div>
-          ${showMaterialsToClient ? `
-          <div class="cost-row" style="font-weight: 700;">
-            <span class="cost-label">Inversión total del proyecto</span>
-            <span class="cost-value">$ ${visibleGrandTotal.toLocaleString('es-AR')}</span>
-          </div>
-          ` : ''}
-        </div>
-      </div>
-
-      <div class="footer">
-        <p><strong>Pool Installer</strong> | Presupuesto Detallado</p>
-        <p>Generado: ${new Date().toLocaleDateString('es-AR')} | ID: ${getProjectCode(project)}</p>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
-  };
+  const generateDetailedBudget = (settings: ExportTemplateSettings = getTemplateSettings('budget')) => renderDetailedCostDocument(project,settings,getLogoForTemplate('budget'));
 
   const generateCompleteReport = (templateSettings: ExportTemplateSettings = getTemplateSettings('complete')) => {
     const { grandTotal } = resolveCostOverrides(templateSettings);
@@ -2744,7 +2522,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
         </p>
       </div>
 
-      ${generateClientBudget(getTemplateSettings('client')).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
+      ${generateClientBudget({...getTemplateSettings('client'),clientPricingMode:'full',installationMode:'with_extras',includeAdditionalsPricing:true}).match(/<div class="content">([\s\S]*?)<\/div>\s*<\/div>\s*<\/body>/)?.[1] || ''}
 
       ${projectUpdates.length > 0 ? `
       <div class="section">
@@ -3864,33 +3642,8 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
     }
 
     if (sections.costs) {
-      if (showMaterialsToClient) {
-        message += `${message ? '\n\n' : ''}*INVERSION TOTAL*\n- Materiales base: $${project.materialCost.toLocaleString('es-AR')}`;
-
-        if (plumbingCosts > 0) {
-          message += `\n- Plomeria: $${plumbingCosts.toLocaleString('es-AR')}`;
-        }
-
-        if (electricalCosts > 0) {
-          message += `\n- Electrica: $${electricalCosts.toLocaleString('es-AR')}`;
-        }
-
-        if (visibleAdditionalsMaterialCost > 0) {
-          message += `\n- Adicionales: $${visibleAdditionalsMaterialCost.toLocaleString('es-AR')}`;
-        }
-
-        message += `\n- Total materiales: $${visibleMaterialCost.toLocaleString('es-AR')}`;
-        message += `\n\n- Mano de obra: $${visibleLaborCost.toLocaleString('es-AR')}`;
-        message += `\n\n*TOTAL PROYECTO: $${visibleGrandTotal.toLocaleString('es-AR')}*`;
-      } else {
-        message += `${message ? '\n\n' : ''}*MANO DE OBRA*\n- Instalacion base: $${clientBaseLaborCost.toLocaleString('es-AR')}`;
-
-        if (visibleHeatingLaborCost > 0) {
-          message += `\n- Instalacion de calefaccion: $${visibleHeatingLaborCost.toLocaleString('es-AR')}`;
-        }
-
-        message += `\n- Total mano de obra: $${visibleLaborCost.toLocaleString('es-AR')}`;
-      }
+      const quote = getQuote(project,clientTemplateSettings);
+      message += `\n\n*${quote.label.toUpperCase()}*\n${quote.lines.map(line=>`- ${line.name}: ${formatCurrency(line.total)}`).join('\n')}\n*TOTAL COTIZADO: ${formatCurrency(quote.total)}*`;
     }
 
     if (sections.conditions) {
@@ -5085,55 +4838,7 @@ export const EnhancedExportManager: React.FC<EnhancedExportManagerProps> = ({ pr
                         </div>
                       )}
 
-                      <div>
-                        <h4 className="text-sm font-semibold text-white mb-3">Valores y costos</h4>
-                        <div className="space-y-3">
-                          {!(selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only') && (
-                            <div>
-                              <label className="block text-xs text-zinc-400 mb-1">Materiales</label>
-                              <input
-                                type="number"
-                                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                                value={activeDraftTemplate.values?.materialCost ?? ''}
-                                onChange={(event) => {
-                                  const value = event.target.value;
-                                  updateDraftValues({ materialCost: value === '' ? undefined : Number(value) });
-                                }}
-                                placeholder={computedCosts.totalMaterialCost.toFixed(2)}
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">Mano de obra</label>
-                            <input
-                              type="number"
-                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                              value={activeDraftTemplate.values?.laborCost ?? ''}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                updateDraftValues({ laborCost: value === '' ? undefined : Number(value) });
-                              }}
-                              placeholder={computedCosts.totalLaborCost.toFixed(2)}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">Total</label>
-                            <input
-                              type="number"
-                              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-3 py-2 text-sm"
-                              value={activeDraftTemplate.values?.totalCost ?? ''}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                updateDraftValues({ totalCost: value === '' ? undefined : Number(value) });
-                              }}
-                              placeholder={selectedTemplate === 'client' && (activeDraftTemplate.clientPricingMode || 'labor_only') === 'labor_only'
-                                ? computedCosts.totalLaborCost.toFixed(2)
-                                : computedCosts.grandTotal.toFixed(2)}
-                            />
-                          </div>
-                          <p className="text-[11px] text-zinc-500">Si dejás un campo vacío se usa el valor calculado por la app (mostrado como referencia).</p>
-                        </div>
-                      </div>
+                      <div className="rounded-lg border border-zinc-700 p-4"><h4 className="font-semibold">Importes vinculados a Costos</h4><p className="text-sm text-zinc-400">Materiales: {formatCurrency(computedCosts.totalMaterialCost)} · Mano de obra y servicios: {formatCurrency(computedCosts.totalLaborCost)} · Total completo: {formatCurrency(computedCosts.grandTotal)}</p><p className="text-xs mt-2">Los importes se modifican en Costos. La modalidad de esta exportación determina qué partidas se presentan; los totales manuales antiguos ya no se aplican.</p></div>
                     </>
                   )}
 
