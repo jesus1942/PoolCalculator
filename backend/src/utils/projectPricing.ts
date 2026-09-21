@@ -103,6 +103,18 @@ export interface CostingSettings {
 export const EMPTY_COSTING: CostingSettings = { revision: 0, laborMode: 'legacy', overrides: {}, items: [], presets: [] };
 const amount = (v: unknown) => { const n = typeof v === 'number' || typeof v === 'string' ? Number(v) : 0; return Number.isFinite(n) && n >= 0 ? n : 0; };
 export const roundMoney = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+/** Redondeo comercial al entero superior; tolera sólo ruido de coma flotante. */
+export function ceilBudget(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  const nearest = Math.round(value);
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(value)) * 4;
+  return nearest > 0 && Math.abs(value-nearest) <= tolerance ? nearest : Math.ceil(value);
+}
+/** Normaliza los operandos antes de multiplicar, para que la tabla reproduzca el total. */
+export function normalizeBudgetLine<T extends CostLine>(line: T): T {
+  return {...line, quantity:ceilBudget(amount(line.quantity)), rate:ceilBudget(amount(line.rate))};
+}
+
 /** Sólo se cobran unidades extra: nunca las incluidas por el fabricante. */
 export const getAdditionalQuantity = (a: any) => Math.max(0, amount(a.newQuantity) - amount(a.baseQuantity));
 export const getCosting = (project: any): CostingSettings => ({ ...EMPTY_COSTING, ...(project.exportSettings?.costing || {}) });
@@ -202,7 +214,7 @@ export function calculateProjectFinancials(project: any, additionalsInput?: any[
   const warnings: string[] = [];
   const ids = new Set(rows.map(r => r.id));
   if (ids.size !== rows.length) warnings.push('Hay identificadores repetidos en las fuentes. Revisá las partidas antes de exportar.');
-  const lines = rows.map(r => ({...r,...settings.overrides[r.id],id:r.id,source:r.source})).concat(settings.items || []).map(r => ({...r,total:r.included ? roundMoney(amount(r.quantity)*amount(r.rate)):0}));
+  const lines = rows.map(r => ({...r,...settings.overrides[r.id],id:r.id,source:r.source})).concat(settings.items || []).map(normalizeBudgetLine).map(r => ({...r,total:r.included ? ceilBudget(r.quantity*r.rate):0}));
   for (const key of Object.keys(settings.overrides)) if (!ids.has(key)) warnings.push(`El ajuste ${key} ya no tiene una partida de origen; no se suma.`);
   if (duplicates.length) warnings.push(`${duplicates.length} adicional(es) ya representados por su referencia de catálogo en hidráulica/eléctrica; no se cobran dos veces.`);
   if (legacy.commercialPricingSource === 'model_pricing' && settings.laborMode === 'legacy') warnings.push('Instalación base por tarifa comercial del modelo; las tareas base no se suman. Podés elegir costeo por tareas.');

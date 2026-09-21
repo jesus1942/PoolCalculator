@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateProjectFinancials as price, getAdditionalQuantity, EMPTY_COSTING, validateCosting } from '../src/utils/projectPricing';
+import { calculateProjectFinancials as price, getAdditionalQuantity, EMPTY_COSTING, validateCosting, ceilBudget } from '../src/utils/projectPricing';
 import { sanitizeProjectForAccess } from '../src/utils/projectAccess';
 const project = (patch:any={}) => ({materialCost:100,laborCost:40,tasks:{},poolPreset:{name:'Otro'},...patch});
 const manual = (patch:any={}) => ({id:'manual:one',name:'Partida',kind:'material',unit:'M3',quantity:2,rate:15,source:'Manual',included:true,...patch});
@@ -78,4 +78,21 @@ test('presets preservan categoría y tarifa sin aplicar cambios a partidas exist
  assert.equal(saved.presets[0].category,'Materiales de obra');
  assert.equal(saved.presets[0].rate,25);assert.equal(saved.items[0].rate,10);
  assert.throws(()=>validateCosting({...EMPTY_COSTING,presets:[manual({category:123})]}));
+});
+
+test('redondea cantidades y tarifas hacia arriba sin cobrar residuos binarios',()=>{
+ const p=project({materials:{laborBreakdown:{tileInstaller:{area:11.700256,cost:11.700256*65000.00000000002}}}});
+ const line=price(p).lines.find(l=>l.id==='tiles:labor')!;
+ assert.equal(line.quantity,12);assert.equal(line.rate,65000);assert.equal(line.total,780000);
+ assert.equal(ceilBudget(65000.00000000002),65000);
+ assert.equal(ceilBudget(65000.01),65001);assert.equal(ceilBudget(0),0);
+ assert.equal(ceilBudget(0.01),1);assert.equal(ceilBudget(12),12);
+});
+test('el total refleja exactamente los operandos redondeados, con cero y exclusiones',()=>{
+ const p=project({exportSettings:{costing:{...EMPTY_COSTING,items:[manual({quantity:1.2,rate:10.1}),manual({id:'manual:zero',quantity:3.2,rate:0}),manual({id:'manual:excluded',quantity:5.2,rate:70.1,included:false})]}}});
+ const priced=price(p);
+ assert.equal(priced.lines.find(l=>l.id==='manual:one')!.total,22);
+ assert.equal(priced.lines.find(l=>l.id==='manual:excluded')!.total,0);
+ assert.equal(priced.grandTotal,priced.lines.reduce((sum,line)=>sum+line.total,0));
+ assert.ok(priced.lines.every(line=>Number.isInteger(line.quantity)&&Number.isInteger(line.rate)&&Number.isInteger(line.total)));
 });

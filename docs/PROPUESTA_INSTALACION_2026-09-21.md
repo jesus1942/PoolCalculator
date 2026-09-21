@@ -18,7 +18,7 @@ La Propuesta de instalación cotiza trabajos y servicios. Excluye todas las part
 
 La primera cifra destacada es la instalación. Los materiales y el total completo quedan identificados por separado. La tabla abre mostrando instalación y servicios.
 
-Catálogo por categorías: instalación base, luces/accesorios, veredas/terminaciones, horas, máquinas/traslados, materiales de obra y materiales hidráulicos/eléctricos. Cada preset permite editar nombre, categoría, tipo, unidad, cantidad y tarifa antes de agregarlo. Los presets personalizados se pueden guardar, actualizar y eliminar, sin revalorizar partidas existentes; persisten por obra al guardar Costos. No es aún un catálogo global compartido entre obras.
+Catálogo por categorías: instalación base, luces/accesorios, veredas/terminaciones, horas, máquinas/traslados, materiales de obra y materiales hidráulicos/eléctricos. Cada preset permite editar nombre, categoría, tipo, unidad, cantidad y tarifa antes de agregarlo. Los presets personalizados se pueden guardar, actualizar y eliminar, sin revalorizar partidas existentes; se guardan inmediatamente por obra con Guardar preset. Eliminar un preset sigue siendo un cambio del borrador que se confirma al guardar Costos. No es aún un catálogo global compartido entre obras.
 
 Las plantillas no inventan precios: comienzan en cero. Para luces extra se cotiza sólo la cantidad adicional; vereda puede cargarse por m² o metro lineal. No agregar una partida manual si el trabajo ya está representado en la base o en adicionales.
 
@@ -27,3 +27,12 @@ Las plantillas no inventan precios: comienzan en cero. Para luces extra se cotiz
 100 pruebas: 73 backend y 27 frontend. Incluyen exclusión estricta de materiales, compatibilidad con opciones antiguas, selección de partidas sin modificar Costos, ocultación de detalle sin alterar el total, extras por luces y superficie, y persistencia de categorías sin aplicar tarifas a partidas anteriores. Compilación TypeScript y producción verificadas.
 
 La sesión del navegador disponible redirigía al ingreso en la revisión previa. No se verificó visualmente el proyecto privado de Leonardo ni se modificó su presupuesto guardado.
+
+
+## Corrección de Guardar preset y redondeo
+
+Guardar preset persiste el catálogo inmediatamente mediante el endpoint validado de Costos, confirma el resultado, selecciona el preset y abre su categoría. Para losetas/vereda se utiliza Veredas y terminaciones. Guarda sólo el preset: conserva sin enviar las partidas todavía en edición, actualizando su revisión para el siguiente guardado. Un preset repetido se actualiza por identificador o nombre/tipo/unidad/categoría, sin crear otra copia. Los errores de permisos o revisión se informan y no se presentan como guardados.
+
+En el libro económico, cantidades y tarifas se redondean al entero superior antes de multiplicar. Los residuos binarios próximos a un entero no suben artificialmente el precio. Ejemplo: 11,700256 m² × 65000,00000000002 pasa a 12 m² × $65.000 = $780.000. El cálculo compartido alimenta Costos, propuesta y hoja económica del Excel. Los cómputos geométricos técnicos de origen conservan su precisión; no se reescriben los proyectos históricos.
+
+Validación ampliada a 106 pruebas: 75 backend y 31 frontend, con regresiones del ejemplo de losetas, valores cero, exclusiones, exportación, categoría, deduplicación y conservación del borrador al persistir presets.

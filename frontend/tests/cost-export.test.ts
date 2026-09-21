@@ -53,3 +53,11 @@ test('aumentar luces y superficie aumenta únicamente los servicios en la propue
  assert.equal(getQuote({...p,projectAdditionals:[{...p.projectAdditionals[0],newQuantity:5}]},installationSettings()).total,430);
  assert.equal(getQuote(p,{clientPricingMode:'full'}).total,2500);
 });
+test('la propuesta usa cantidades y tarifas redondeadas igual que Costos',()=>{
+ const p={...project,exportSettings:{costing:{...EMPTY_COSTING,overrides:{'base:labor':{quantity:11.700256,rate:65000.00000000002}}}}};
+ const settings=installationSettings({excludedCostLineIds:['additional:extra:labor']});
+ const quote=getQuote(p,settings);
+ assert.equal(quote.total,780000);
+ const html=renderQuoteTable(p,settings);
+ assert.ok(html.includes('780.000,00'));assert.ok(!html.includes('65000.00000000002'));assert.ok(!html.includes('11.700256'));
+});
